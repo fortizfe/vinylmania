@@ -1,13 +1,13 @@
 <!--
 Sync Impact Report
-Version change: 1.0.0 → 1.1.0
+Version change: 1.1.0 → 1.2.0
 Modified principles: none (existing principles unchanged)
 Added sections:
-  - Technology Stack (React + TypeScript frontend, Express.js backend, Firebase database)
+  - Technology Stack: added source control (GitHub) and deployment (Vercel) requirements
 Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (Technical Context fields will be filled with this
-     stack going forward — no template edit needed, it's already a fill-in-the-blank form)
+  ✅ .specify/templates/plan-template.md (Technical Context / Target Platform fields will be
+     filled with GitHub + Vercel going forward — no template edit needed)
   ✅ .specify/templates/spec-template.md (no stack-specific references found)
   ✅ .specify/templates/tasks-template.md (no stack-specific references found)
   ✅ .specify/templates/checklist-template.md (no stack-specific references found)
@@ -103,9 +103,15 @@ corruption.
   still applies: changes to document shape or field semantics that break existing
   readers/writers are MAJOR changes and MUST include a documented migration/backfill
   plan.
-- Deviating from this stack (a different frontend framework, backend framework, or
-  database) MUST be justified in writing and treated as a Complexity Tracking item
-  per the Development Workflow gates below.
+- **Source control**: The canonical code repository MUST be hosted on GitHub. All
+  branches, pull requests, and code review MUST go through GitHub.
+- **Deployment**: Vercel is the required deployment platform for the application.
+  Deployments SHOULD be triggered from GitHub (e.g., via GitHub integration/CI) so
+  that the deployed state always traces back to a reviewed commit on GitHub.
+- Deviating from this stack (a different frontend framework, backend framework,
+  database, source control host, or deployment platform) MUST be justified in
+  writing and treated as a Complexity Tracking item per the Development Workflow
+  gates below.
 **Rationale**: Locking the stack keeps a solo/small-team project consistent and
 avoids fragmenting effort across competing frameworks; it also determines what
 "Test-First" and "Observability" look like in practice (e.g., Jest/RTL for React,
@@ -139,4 +145,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 1.1.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
+**Version**: 1.2.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
