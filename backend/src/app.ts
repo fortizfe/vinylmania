@@ -1,0 +1,33 @@
+import cors from 'cors';
+import express, { type NextFunction, type Request, type Response } from 'express';
+
+import { logger } from './config/logger';
+import { authRouter } from './routes/auth';
+
+export function createApp(): express.Express {
+  const app = express();
+
+  const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim());
+
+  app.use(cors({ origin: allowedOrigins }));
+  app.use(express.json());
+
+  app.get('/health', (_req: Request, res: Response) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
+  app.use('/api/auth', authRouter);
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    logger.error({ route: 'unhandled', outcome: 'error', message: err.message });
+    res.status(500).json({
+      error: 'internal_error',
+      message: 'Something went wrong. Please try again.',
+    });
+  });
+
+  return app;
+}

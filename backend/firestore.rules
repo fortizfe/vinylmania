@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // All reads/writes to user profiles go through the backend (Admin SDK),
+    // which bypasses these rules. Deny direct client access entirely.
+    match /users/{userId} {
+      allow read, write: if false;
+    }
+  }
+}
