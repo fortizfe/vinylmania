@@ -1,15 +1,17 @@
 <!--
 Sync Impact Report
-Version change: 1.2.1 → 1.3.0
+Version change: 1.3.0 → 1.4.0
 Modified principles: none (existing principles unchanged)
-Added sections: "Commit Conventions" bullet under Development Workflow (Quality Gates),
-  requiring all commit messages to follow the Conventional Commits specification
+Added sections: "Vinyl Data Source" bullet under Technology Stack, requiring all
+  vinyl/release metadata to be sourced from the Discogs REST API
+  (https://www.discogs.com/developers), with Firebase restricted to user-specific
+  state and optional caching of Discogs responses
 Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (no commit-convention references found)
-  ✅ .specify/templates/spec-template.md (no commit-convention references found)
-  ✅ .specify/templates/tasks-template.md (no commit-convention references found)
-  ✅ .specify/templates/checklist-template.md (no commit-convention references found)
+  ✅ .specify/templates/plan-template.md (no Discogs/data-source references found)
+  ✅ .specify/templates/spec-template.md (no Discogs/data-source references found)
+  ✅ .specify/templates/tasks-template.md (no Discogs/data-source references found)
+  ✅ .specify/templates/checklist-template.md (no Discogs/data-source references found)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
 Follow-up TODOs: none
 -->
@@ -102,15 +104,24 @@ corruption.
   still applies: changes to document shape or field semantics that break existing
   readers/writers are MAJOR changes and MUST include a documented migration/backfill
   plan.
+- **Vinyl Data Source**: All vinyl/release metadata (artist, title, tracklist,
+  format, year, label, cover art, etc.) MUST be sourced from the
+  [Discogs REST API](https://www.discogs.com/developers). The application MUST NOT
+  hand-author or hardcode catalog metadata that Discogs can provide. Firebase MUST
+  be used only for user-specific state (collection membership, ownership, personal
+  notes, ratings) and MAY cache Discogs responses for performance, but MUST NOT
+  become an independent source of truth for catalog data. Discogs API rate limits
+  and outages MUST be handled gracefully (Principle V, Observability) rather than
+  silently failing.
 - **Source control**: The canonical code repository MUST be hosted on GitHub. All
   branches, pull requests, and code review MUST go through GitHub.
 - **Deployment**: Vercel is the required deployment platform for the application.
   Deployments SHOULD be triggered from GitHub (e.g., via GitHub integration/CI) so
   that the deployed state always traces back to a reviewed commit on GitHub.
 - Deviating from this stack (a different frontend framework, backend framework,
-  database, source control host, or deployment platform) MUST be justified in
-  writing and treated as a Complexity Tracking item per the Development Workflow
-  gates below.
+  database, vinyl data source, source control host, or deployment platform) MUST be
+  justified in writing and treated as a Complexity Tracking item per the
+  Development Workflow gates below.
 **Rationale**: Locking the stack keeps a solo/small-team project consistent and
 avoids fragmenting effort across competing frameworks; it also determines what
 "Test-First" and "Observability" look like in practice (e.g., Jest/RTL for React,
@@ -153,4 +164,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 1.3.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
+**Version**: 1.4.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
