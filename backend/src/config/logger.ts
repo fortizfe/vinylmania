@@ -1,10 +1,21 @@
-export type LogOutcome = 'verified' | 'unauthorized' | 'error' | 'created' | 'reused';
+export type LogOutcome =
+  | 'verified'
+  | 'unauthorized'
+  | 'error'
+  | 'created'
+  | 'reused'
+  | 'success'
+  | 'not_found'
+  | 'rate_limited'
+  | 'unavailable'
+  | 'validation_error';
 
 export interface LogEvent {
   route: string;
   outcome: LogOutcome;
   uid?: string;
   message?: string;
+  meta?: Record<string, unknown>;
 }
 
 function emit(level: 'info' | 'warn' | 'error', event: LogEvent): void {
