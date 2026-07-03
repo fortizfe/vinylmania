@@ -1,20 +1,17 @@
 <!--
 Sync Impact Report
-Version change: 1.2.0 → 1.2.1
+Version change: 1.2.1 → 1.3.0
 Modified principles: none (existing principles unchanged)
-Added sections: none
-Renamed: project name corrected from "Vynilmania" to "Vinylmania" (title and intro
-  paragraph) to match the canonical GitHub repository name (github.com/fortizfe/vinylmania)
+Added sections: "Commit Conventions" bullet under Development Workflow (Quality Gates),
+  requiring all commit messages to follow the Conventional Commits specification
 Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (no project-name references found)
-  ✅ .specify/templates/spec-template.md (no project-name references found)
-  ✅ .specify/templates/tasks-template.md (no project-name references found)
-  ✅ .specify/templates/checklist-template.md (no project-name references found)
+  ✅ .specify/templates/plan-template.md (no commit-convention references found)
+  ✅ .specify/templates/spec-template.md (no commit-convention references found)
+  ✅ .specify/templates/tasks-template.md (no commit-convention references found)
+  ✅ .specify/templates/checklist-template.md (no commit-convention references found)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
-Follow-up TODOs:
-  - Local repository folder on disk remains named "vynilmania" per user's explicit choice
-    (declined rename to avoid breaking the open VSCode workspace); revisit manually if desired.
+Follow-up TODOs: none
 -->
 
 # Vinylmania Constitution
@@ -128,6 +125,15 @@ Firebase emulator for integration tests).
   description (what, why, simpler alternative considered and rejected).
 - Complexity that violates Principle III or IV MUST be justified in writing; if it
   cannot be justified, the PR MUST be simplified before merge.
+- All commit messages MUST follow the [Conventional Commits](https://www.conventionalcommits.org)
+  specification: `<type>[optional scope]: <description>` (e.g., `feat:`, `fix:`,
+  `docs:`, `refactor:`, `test:`, `chore:`). Breaking changes MUST be flagged with a
+  `!` after the type/scope or a `BREAKING CHANGE:` footer, consistent with
+  Principle VI (Versioning & Breaking Changes). Reviewers MUST reject PRs containing
+  commits that do not comply.
+**Rationale**: A consistent commit format makes history greppable, enables automated
+changelog/version generation, and gives every commit a machine-readable link to
+Principle VI's versioning policy (feat → MINOR, fix → PATCH, `!`/BREAKING CHANGE → MAJOR).
 
 ## Governance
 
@@ -147,4 +153,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 1.2.1 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
+**Version**: 1.3.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
