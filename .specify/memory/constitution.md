@@ -1,23 +1,25 @@
 <!--
 Sync Impact Report
-Version change: 1.1.0 → 1.2.0
+Version change: 1.2.0 → 1.2.1
 Modified principles: none (existing principles unchanged)
-Added sections:
-  - Technology Stack: added source control (GitHub) and deployment (Vercel) requirements
+Added sections: none
+Renamed: project name corrected from "Vynilmania" to "Vinylmania" (title and intro
+  paragraph) to match the canonical GitHub repository name (github.com/fortizfe/vinylmania)
 Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (Technical Context / Target Platform fields will be
-     filled with GitHub + Vercel going forward — no template edit needed)
-  ✅ .specify/templates/spec-template.md (no stack-specific references found)
-  ✅ .specify/templates/tasks-template.md (no stack-specific references found)
-  ✅ .specify/templates/checklist-template.md (no stack-specific references found)
+  ✅ .specify/templates/plan-template.md (no project-name references found)
+  ✅ .specify/templates/spec-template.md (no project-name references found)
+  ✅ .specify/templates/tasks-template.md (no project-name references found)
+  ✅ .specify/templates/checklist-template.md (no project-name references found)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
-Follow-up TODOs: none
+Follow-up TODOs:
+  - Local repository folder on disk remains named "vynilmania" per user's explicit choice
+    (declined rename to avoid breaking the open VSCode workspace); revisit manually if desired.
 -->
 
-# Vynilmania Constitution
+# Vinylmania Constitution
 
-Vynilmania is a web application for vinyl record collectors, focused on managing and
+Vinylmania is a web application for vinyl record collectors, focused on managing and
 organizing a personal vinyl library.
 
 ## Core Principles
@@ -145,4 +147,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 1.2.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
+**Version**: 1.2.1 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
