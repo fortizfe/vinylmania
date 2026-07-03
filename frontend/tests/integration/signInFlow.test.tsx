@@ -29,14 +29,22 @@ describe('Sign-in flow (US2)', () => {
       callback(null);
       return () => undefined;
     });
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        uid: 'abc123',
-        displayName: 'Jane Doe',
-        email: 'jane@example.com',
-        photoURL: 'https://example.com/photo.png',
-      }),
+    global.fetch = vi.fn().mockImplementation((input: string) => {
+      if (input.includes('/api/library')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ items: [], page: 1, pageSize: 20, totalItems: 0 }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          uid: 'abc123',
+          displayName: 'Jane Doe',
+          email: 'jane@example.com',
+          photoURL: 'https://example.com/photo.png',
+        }),
+      });
     }) as unknown as typeof fetch;
   });
 
@@ -44,7 +52,7 @@ describe('Sign-in flow (US2)', () => {
     global.fetch = originalFetch;
   });
 
-  it('takes the visitor from the landing CTA to the authenticated placeholder screen', async () => {
+  it('takes the visitor from the landing CTA to their library', async () => {
     mockSignInWithPopup.mockResolvedValue({
       user: {
         uid: 'abc123',
@@ -72,6 +80,6 @@ describe('Sign-in flow (US2)', () => {
       await user.click(screen.getByRole('button', { name: /sign in with google/i }));
     });
 
-    await waitFor(() => expect(screen.getByText(/jane doe/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/your library/i)).toBeInTheDocument());
   });
 });

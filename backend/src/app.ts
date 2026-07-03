@@ -3,6 +3,8 @@ import express, { type NextFunction, type Request, type Response } from 'express
 
 import { logger } from './config/logger';
 import { authRouter } from './routes/auth';
+import { discogsRouter } from './routes/discogs';
+import { libraryRouter } from './routes/library';
 
 export function createApp(): express.Express {
   const app = express();
@@ -19,6 +21,8 @@ export function createApp(): express.Express {
   });
 
   app.use('/api/auth', authRouter);
+  app.use('/api/discogs', discogsRouter);
+  app.use('/api/library', libraryRouter);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

@@ -31,14 +31,22 @@ describe('Sign-out flow (US3)', () => {
       callback(null);
       return () => undefined;
     });
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        uid: 'abc123',
-        displayName: 'Jane Doe',
-        email: 'jane@example.com',
-        photoURL: 'https://example.com/photo.png',
-      }),
+    global.fetch = vi.fn().mockImplementation((input: string) => {
+      if (input.includes('/api/library')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ items: [], page: 1, pageSize: 20, totalItems: 0 }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          uid: 'abc123',
+          displayName: 'Jane Doe',
+          email: 'jane@example.com',
+          photoURL: 'https://example.com/photo.png',
+        }),
+      });
     }) as unknown as typeof fetch;
   });
 
@@ -73,7 +81,7 @@ describe('Sign-out flow (US3)', () => {
       await user.click(screen.getByRole('button', { name: /sign in with google/i }));
     });
 
-    await waitFor(() => expect(screen.getByText(/jane doe/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/your library/i)).toBeInTheDocument());
 
     await act(async () => {
       await user.click(screen.getByRole('button', { name: /sign out/i }));

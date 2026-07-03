@@ -16,11 +16,17 @@ project's governing principles and required stack.
 
 ## Local setup
 
-The current feature (landing page + Google sign-in) has a full setup guide,
-including which Firebase console settings and environment variables you need
-and how to run both projects locally:
+Start with feature 001's guide for Firebase console settings and environment
+variables, then run both projects locally:
 
 ➡️ [specs/001-landing-google-login/quickstart.md](specs/001-landing-google-login/quickstart.md)
+
+## Manage your library
+
+Once signed in, collectors can search Discogs to add records to their
+personal library, view/edit/remove them — see
+[specs/003-vinyl-library-crud/quickstart.md](specs/003-vinyl-library-crud/quickstart.md)
+for the manual validation script covering the full CRUD flow.
 
 Quick summary:
 
