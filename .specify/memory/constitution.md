@@ -1,22 +1,16 @@
 <!--
 Sync Impact Report
-Version change: [TEMPLATE] → 1.0.0
-Modified principles: N/A (initial ratification from template)
+Version change: 1.0.0 → 1.1.0
+Modified principles: none (existing principles unchanged)
 Added sections:
-  - I. Test-First (NON-NEGOTIABLE)
-  - II. Library-First & Modularity
-  - III. Simplicity, YAGNI & KISS
-  - IV. SOLID Design
-  - V. Observability
-  - VI. Versioning & Breaking Changes
-  - Additional Constraints (Web Application Standards)
-  - Development Workflow (Quality Gates)
-Removed sections: none (all template placeholders resolved)
+  - Technology Stack (React + TypeScript frontend, Express.js backend, Firebase database)
+Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (Constitution Check is derived dynamically — no edits needed)
-  ✅ .specify/templates/spec-template.md (no principle-specific references found)
-  ✅ .specify/templates/tasks-template.md (no principle-specific references found)
-  ✅ .specify/templates/checklist-template.md (no principle-specific references found)
+  ✅ .specify/templates/plan-template.md (Technical Context fields will be filled with this
+     stack going forward — no template edit needed, it's already a fill-in-the-blank form)
+  ✅ .specify/templates/spec-template.md (no stack-specific references found)
+  ✅ .specify/templates/tasks-template.md (no stack-specific references found)
+  ✅ .specify/templates/checklist-template.md (no stack-specific references found)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
 Follow-up TODOs: none
 -->
@@ -97,6 +91,26 @@ corruption.
   error details MUST NOT leak to end users but MUST be available in logs
   (Principle V).
 
+## Technology Stack
+
+- **Frontend**: React with TypeScript is the required stack for all UI code. New
+  frontend code MUST NOT be written in plain JavaScript; existing plain-JS code
+  MUST be migrated to TypeScript before material extension.
+- **Backend**: Express.js (Node.js) is the required framework for all server-side
+  API code.
+- **Database**: Firebase (Firestore/Realtime Database) is the required data store.
+  Given Firebase's schemaless nature, Principle VI (Versioning & Breaking Changes)
+  still applies: changes to document shape or field semantics that break existing
+  readers/writers are MAJOR changes and MUST include a documented migration/backfill
+  plan.
+- Deviating from this stack (a different frontend framework, backend framework, or
+  database) MUST be justified in writing and treated as a Complexity Tracking item
+  per the Development Workflow gates below.
+**Rationale**: Locking the stack keeps a solo/small-team project consistent and
+avoids fragmenting effort across competing frameworks; it also determines what
+"Test-First" and "Observability" look like in practice (e.g., Jest/RTL for React,
+Firebase emulator for integration tests).
+
 ## Development Workflow (Quality Gates)
 
 - Every pull request MUST verify compliance with these principles before merge;
@@ -125,4 +139,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
+**Version**: 1.1.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
