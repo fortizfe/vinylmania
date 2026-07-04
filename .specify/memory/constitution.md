@@ -1,17 +1,22 @@
 <!--
 Sync Impact Report
-Version change: 1.3.0 → 1.4.0
+Version change: 1.4.0 → 1.5.0
 Modified principles: none (existing principles unchanged)
-Added sections: "Vinyl Data Source" bullet under Technology Stack, requiring all
-  vinyl/release metadata to be sourced from the Discogs REST API
-  (https://www.discogs.com/developers), with Firebase restricted to user-specific
-  state and optional caching of Discogs responses
+Added sections:
+  - New major section "UI Design System & Styling (Tailwind CSS v4)" defining
+    CSS-first Tailwind configuration, card-based layout via a reusable <Card>
+    component, mandatory atomic/reusable components, skeleton loading states,
+    visual-lightness rules, no-layout-shift consistency, theme-variable dark
+    mode, Tailwind v4 utility naming, and a no-custom-CSS-without-justification
+    rule.
+  - New "Styling" reference added to the Technology Stack "Frontend" bullet
+    pointing to the new section.
 Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (no Discogs/data-source references found)
-  ✅ .specify/templates/spec-template.md (no Discogs/data-source references found)
-  ✅ .specify/templates/tasks-template.md (no Discogs/data-source references found)
-  ✅ .specify/templates/checklist-template.md (no Discogs/data-source references found)
+  ✅ .specify/templates/plan-template.md (no Tailwind/UI-system references found; no change needed)
+  ✅ .specify/templates/spec-template.md (no Tailwind/UI-system references found; no change needed)
+  ✅ .specify/templates/tasks-template.md (no Tailwind/UI-system references found; no change needed)
+  ✅ .specify/templates/checklist-template.md (no Tailwind/UI-system references found; no change needed)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
 Follow-up TODOs: none
 -->
@@ -97,6 +102,9 @@ corruption.
 - **Frontend**: React with TypeScript is the required stack for all UI code. New
   frontend code MUST NOT be written in plain JavaScript; existing plain-JS code
   MUST be migrated to TypeScript before material extension.
+- **Styling**: Tailwind CSS v4 is the required styling solution for all UI code.
+  See "UI Design System & Styling (Tailwind CSS v4)" below for the governing
+  rules on configuration, components, loading states, and theming.
 - **Backend**: Express.js (Node.js) is the required framework for all server-side
   API code.
 - **Database**: Firebase (Firestore/Realtime Database) is the required data store.
@@ -126,6 +134,60 @@ corruption.
 avoids fragmenting effort across competing frameworks; it also determines what
 "Test-First" and "Observability" look like in practice (e.g., Jest/RTL for React,
 Firebase emulator for integration tests).
+
+## UI Design System & Styling (Tailwind CSS v4)
+
+- **CSS-first configuration**: Tailwind configuration MUST live in the main CSS
+  entry file via `@import "tailwindcss"` and an `@theme` block (colors, fonts,
+  and spacing exposed as `--color-*`, `--font-*`, `--spacing-*` variables). A
+  `tailwind.config.js` file MUST NOT be created or depended upon unless
+  strictly required for a plugin that has no CSS-first equivalent.
+- **Card-based layout**: Primary content blocks MUST be presented as "card"
+  components using Tailwind v4 utilities (`rounded-xl`, `border`,
+  `shadow-sm`/`shadow-md` from the v4 named shadow scale, and consistent
+  padding — `p-4` or `p-6`). A reusable `<Card>` component MUST centralize
+  these classes; the card-pattern utility string MUST NOT be repeated inline
+  across screens.
+- **Reusable atomic components**: All UI MUST be composed from a shared set of
+  atomic, reusable components (`Card`, `Button`, `Badge`, `Avatar`, `Input`,
+  etc.) that encapsulate their Tailwind classes. Any utility-class combination
+  that defines a visual pattern MUST NOT be hand-repeated across files; once it
+  appears twice or more, it MUST be extracted into a component or a utility
+  function (e.g., `clsx`, `tailwind-variants`).
+- **Skeleton loading states**: Any content that depends on an asynchronous
+  request MUST show a skeleton loader built with Tailwind utilities
+  (`bg-gray-200`/`dark:bg-gray-800`, `animate-pulse`, `rounded-md`) that
+  mirrors the exact shape and dimensions of the final content (same card
+  structure, same approximate number of lines/blocks). Generic spinners and
+  blank screens MUST NOT be used as the default loading state.
+- **Visual lightness**: Layouts MUST use the spacing scale generously (`gap-4`,
+  `space-y-4`, `p-6`); typography MUST rely on `font-medium`/`font-semibold`
+  for hierarchy rather than heavy bold weights; the color palette MUST stay
+  reduced and defined in `@theme` (neutrals such as gray/slate plus one accent
+  via `--color-primary`); and shadows MUST stay soft (`shadow-sm`), reserving
+  `shadow-xl`/`shadow-2xl` for floating elements such as modals.
+- **No layout shift**: All states of a given component (skeleton, empty,
+  error, populated) MUST share the same sizing classes (`w-*`, `h-*`,
+  `min-h-*`) so that transitioning between states never causes layout shift.
+- **Theme-variable dark mode**: Dark mode MUST be implemented with Tailwind's
+  `dark:` prefix, combined with CSS variables in the `@theme` block so colors
+  respond without duplicating utility variants. Every component, including
+  skeletons, MUST support dark mode.
+- **v4-current utility naming**: Only current Tailwind v4 utility names MUST
+  be used (e.g., `bg-linear-*` instead of the deprecated `bg-gradient-to-*`,
+  and explicit-suffix shadow/radius/blur scales). Deprecated v3-era class
+  names MUST NOT be introduced.
+- **No custom CSS without justification**: Tailwind utilities MUST be
+  preferred over custom CSS files or styled-components. A value outside the
+  default scale MUST be added as a variable inside the `@theme` block in the
+  main CSS file rather than written as ad-hoc CSS; any exception MUST be
+  documented with a rationale.
+**Rationale**: These rules keep Vinylmania's UI consistent, lightweight, and
+maintainable as the catalog and library screens grow. Centralizing visual
+patterns in atomic components and CSS-first theme variables prevents drift
+between screens; skeleton-first loading avoids jarring blank/spinner states on
+a data-heavy collection app; and adherence to Tailwind v4's current API avoids
+technical debt from deprecated v3 utility names.
 
 ## Development Workflow (Quality Gates)
 
@@ -164,4 +226,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 1.4.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-03
+**Version**: 1.5.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-04
