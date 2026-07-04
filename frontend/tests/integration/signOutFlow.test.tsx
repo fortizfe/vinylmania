@@ -81,7 +81,9 @@ describe('Sign-out flow (US3)', () => {
       await user.click(screen.getByRole('button', { name: /sign in with google/i }));
     });
 
-    await waitFor(() => expect(screen.getByText(/your library/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument(),
+    );
 
     await act(async () => {
       await user.click(screen.getByRole('button', { name: /sign out/i }));

@@ -46,7 +46,7 @@ export function LibraryListPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Your library</h1>
         <Link
-          to="/app/add"
+          to="/app/library/add"
           className="text-sm font-medium text-primary hover:opacity-80 dark:text-primary"
         >
           Add a record

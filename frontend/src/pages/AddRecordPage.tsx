@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react';
 
+import { BackLink } from '../components/ui/BackLink';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -81,6 +82,7 @@ export function AddRecordPage() {
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6 sm:p-8">
+      <BackLink to="/app/library" />
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Add a record</h1>
 
       <Card>

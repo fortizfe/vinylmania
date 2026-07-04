@@ -21,10 +21,10 @@ function LibraryListStub() {
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/app/records/entry-1']}>
+    <MemoryRouter initialEntries={['/app/library/records/entry-1']}>
       <Routes>
-        <Route path="/app/records/:entryId" element={<RecordDetailPage />} />
-        <Route path="/app" element={<LibraryListStub />} />
+        <Route path="/app/library/records/:entryId" element={<RecordDetailPage />} />
+        <Route path="/app/library" element={<LibraryListStub />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -66,6 +66,10 @@ describe('Record detail flow (US3)', () => {
     expect(screen.getByText(/Östermalm/)).toBeInTheDocument();
     expect(screen.getByText(/Near Mint/)).toBeInTheDocument();
     expect(screen.getByText(/Bought at a record fair/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute(
+      'href',
+      '/app/library',
+    );
   });
 
   it('shows a skeleton placeholder while the record is loading, then replaces it with content', async () => {

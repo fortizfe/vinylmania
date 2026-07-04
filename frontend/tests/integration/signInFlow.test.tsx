@@ -52,7 +52,7 @@ describe('Sign-in flow (US2)', () => {
     global.fetch = originalFetch;
   });
 
-  it('takes the visitor from the landing CTA to their library', async () => {
+  it('takes the visitor from the landing CTA to the Dashboard', async () => {
     mockSignInWithPopup.mockResolvedValue({
       user: {
         uid: 'abc123',
@@ -80,6 +80,9 @@ describe('Sign-in flow (US2)', () => {
       await user.click(screen.getByRole('button', { name: /sign in with google/i }));
     });
 
-    await waitFor(() => expect(screen.getByText(/your library/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/under construction/i)).toBeInTheDocument();
   });
 });

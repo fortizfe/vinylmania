@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import clsx from 'clsx';
 
 import { Button } from './Button';
 import { Card } from './Card';
@@ -8,7 +9,18 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
+  position?: 'center' | 'end';
 }
+
+const backdropPositionClasses: Record<NonNullable<ModalProps['position']>, string> = {
+  center: 'items-center justify-center p-4',
+  end: 'justify-end',
+};
+
+const dialogPositionClasses: Record<NonNullable<ModalProps['position']>, string> = {
+  center: 'max-h-[90vh] w-full max-w-lg overflow-y-auto',
+  end: 'h-dvh w-full max-w-xs overflow-y-auto rounded-none',
+};
 
 function CloseIcon() {
   return (
@@ -18,7 +30,7 @@ function CloseIcon() {
   );
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, position = 'center' }: ModalProps) {
   useEffect(() => {
     if (!open) return;
 
@@ -35,11 +47,19 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   return (
     <div
       data-testid="modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className={clsx(
+        'fixed inset-0 z-50 flex bg-black/50',
+        backdropPositionClasses[position],
+      )}
       onClick={onClose}
     >
-      <div role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-        <Card className="max-h-[90vh] w-full max-w-lg overflow-y-auto">
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={(event) => event.stopPropagation()}
+        className={dialogPositionClasses[position]}
+      >
+        <Card className="h-full overflow-y-auto">
           <div className="mb-4 flex items-center justify-between gap-4">
             {title && (
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>

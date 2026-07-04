@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
+import { HamburgerMenu } from './HamburgerMenu';
 import { Button } from './ui/Button';
 
 export function AppHeader() {
@@ -11,9 +12,12 @@ export function AppHeader() {
       <Link to="/app" className="text-lg font-semibold text-gray-900 no-underline dark:text-gray-100">
         Vinylmania
       </Link>
-      <Button variant="secondary" onClick={signOut}>
-        Sign out
-      </Button>
+      <div className="flex items-center gap-2">
+        <HamburgerMenu />
+        <Button variant="secondary" onClick={signOut}>
+          Sign out
+        </Button>
+      </div>
     </header>
   );
 }

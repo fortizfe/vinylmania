@@ -27,7 +27,7 @@ export function RecordCard({ entry }: RecordCardProps) {
   return (
     <li>
       <Card padding="sm" className="flex flex-col gap-2">
-        <Link to={`/app/records/${entry.id}`} className="flex flex-col gap-2">
+        <Link to={`/app/library/records/${entry.id}`} className="flex flex-col gap-2">
           {cover ? (
             <img src={cover} alt="" className="aspect-square w-full rounded-md object-cover" />
           ) : (

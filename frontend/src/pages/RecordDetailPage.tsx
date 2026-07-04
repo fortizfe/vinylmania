@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { RecordDetailSkeleton } from '../components/RecordDetailSkeleton';
+import { BackLink } from '../components/ui/BackLink';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import * as libraryApi from '../services/libraryApi';
@@ -42,7 +43,7 @@ export function RecordDetailPage() {
       return;
     }
     await libraryApi.remove(entryId);
-    navigate('/app');
+    navigate('/app/library');
   }
 
   function startEditing() {
@@ -65,6 +66,7 @@ export function RecordDetailPage() {
   if (notFound) {
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+        <BackLink to="/app/library" />
         <Card>
           <p className="text-gray-500 dark:text-gray-400">
             Couldn&apos;t find that record in your library.
@@ -77,6 +79,7 @@ export function RecordDetailPage() {
   if (!entry) {
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+        <BackLink to="/app/library" />
         <RecordDetailSkeleton />
       </main>
     );
@@ -146,6 +149,7 @@ export function RecordDetailPage() {
   if (entry.catalogStatus === 'unavailable' || !entry.release) {
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+        <BackLink to="/app/library" />
         <Card>
           <p className="text-gray-500 dark:text-gray-400">
             Couldn&apos;t load catalog details for this record right now.
@@ -160,6 +164,7 @@ export function RecordDetailPage() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+      <BackLink to="/app/library" />
       <Card>
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
           {release.title}

@@ -24,10 +24,10 @@ function LibraryListStub() {
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/app/add']}>
+    <MemoryRouter initialEntries={['/app/library/add']}>
       <Routes>
-        <Route path="/app/add" element={<AddRecordPage />} />
-        <Route path="/app" element={<LibraryListStub />} />
+        <Route path="/app/library/add" element={<AddRecordPage />} />
+        <Route path="/app/library" element={<LibraryListStub />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -72,6 +72,10 @@ describe('Add record flow (US1)', () => {
 
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
     expect(mockSearch).toHaveBeenCalledWith('Stockholm', 'release', 1, 20);
+    expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute(
+      'href',
+      '/app/library',
+    );
 
     await act(async () => {
       await user.click(screen.getByRole('button', { name: /add to library/i }));

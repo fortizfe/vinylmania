@@ -66,4 +66,39 @@ describe('Modal', () => {
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('defaults to a centered position', () => {
+    render(
+      <Modal open onClose={() => {}}>
+        Content
+      </Modal>,
+    );
+
+    expect(screen.getByRole('dialog').className).toMatch(/max-w-lg/);
+  });
+
+  it('renders as a full-height end-anchored drawer when position="end"', () => {
+    render(
+      <Modal open onClose={() => {}} position="end">
+        Content
+      </Modal>,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toMatch(/h-dvh/);
+  });
+
+  it('still supports backdrop click, close button, and Escape when position="end"', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <Modal open onClose={onClose} position="end">
+        Content
+      </Modal>,
+    );
+
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
+    await user.click(screen.getByRole('button', { name: /close/i }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
