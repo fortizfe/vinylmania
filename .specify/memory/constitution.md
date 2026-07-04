@@ -1,25 +1,25 @@
 <!--
 Sync Impact Report
-Version change: 1.6.0 → 1.7.0
+Version change: 1.8.0 → 1.8.1
 Modified principles: none (existing principles unchanged)
-Added sections:
-  - New quality gate under "Development Workflow (Quality Gates)" requiring
-    every development touching /backend or /frontend to keep that package's
-    CHANGELOG.md (backend/CHANGELOG.md, frontend/CHANGELOG.md) up to date in
-    the same PR, following Keep a Changelog categorization aligned with
-    Principle VI's semantic version classification; reviewers MUST reject
-    PRs missing the matching changelog entry.
+Added sections: none
+Changed sections:
+  - Corrected the "Development Workflow (Quality Gates)" CHANGELOG/version-bump
+    gate (added in 1.8.0) to drop its assumption of an `[Unreleased]` staging
+    section: this project has none, since Vercel deploys `main` on every
+    merge, so every changelog entry is already deployed by the time it lands.
+    The gate now reads "add the entry directly under a new, dated version
+    heading" instead of "move the entry out of `[Unreleased]`".
 Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (no CHANGELOG-specific gate references found; no change needed)
-  ✅ .specify/templates/spec-template.md (no CHANGELOG-specific gate references found; no change needed)
-  ✅ .specify/templates/tasks-template.md (no CHANGELOG-specific gate references found; no change needed)
-  ✅ .specify/templates/checklist-template.md (no CHANGELOG-specific gate references found; no change needed)
+  ✅ .specify/templates/plan-template.md (no CHANGELOG/version-bump gate references found; no change needed)
+  ✅ .specify/templates/spec-template.md (no CHANGELOG/version-bump gate references found; no change needed)
+  ✅ .specify/templates/tasks-template.md (no CHANGELOG/version-bump gate references found; no change needed)
+  ✅ .specify/templates/checklist-template.md (no CHANGELOG/version-bump gate references found; no change needed)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
-Follow-up TODOs:
-  - backend/CHANGELOG.md and frontend/CHANGELOG.md do not yet exist in the
-    repo; the next PR touching either package MUST create it (Keep a
-    Changelog format) alongside its first entry.
+Follow-up TODOs: none — backend/package.json (0.1.0) and frontend/package.json
+  (0.2.0) and their CHANGELOG.md files were brought into compliance with this
+  gate in the same change that produced this amendment.
 -->
 
 # Vinylmania Constitution
@@ -229,10 +229,27 @@ regressions that unit tests structurally cannot.
   `Removed` categorization and aligned with Principle VI's semantic version
   classification). Reviewers MUST reject PRs that change `/backend` or
   `/frontend` code without a matching changelog entry.
+- Whenever a `CHANGELOG.md` entry is added, the same PR MUST bump that
+  package's `version` field in its `package.json` to match the semantic-version
+  classification of the change (MAJOR/MINOR/PATCH per Principle VI), and MUST
+  add the entry directly under a new version heading dated with the release
+  date. This project has no `[Unreleased]` staging section in either
+  changelog — Vercel deploys `main` on every merge (see Technology Stack:
+  Deployment), so every changelog entry is already deployed by the time it
+  lands; there is no pending/undeployed state to stage entries under.
+  Reviewers MUST reject PRs that add a changelog entry without a matching
+  version bump, or that bump a version without a corresponding changelog
+  entry.
 **Rationale**: A per-package changelog gives collectors, contributors, and
 reviewers a human-readable history of what shipped in each deployable unit,
 independent of git log archaeology, and keeps the changelog entry — not an
 afterthought — tied to the same PR that introduces the change it describes.
+Tying the version bump to the same PR keeps `package.json` and
+`CHANGELOG.md` from drifting apart, and keeps every release's version number
+a direct, reviewable consequence of Principle VI's classification rather than
+a separate, easy-to-forget release step. Dropping `[Unreleased]` reflects
+that continuous deployment leaves no meaningful "not yet released" state to
+track.
 
 ## Governance
 
@@ -252,4 +269,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 1.7.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-04
+**Version**: 1.8.1 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-04

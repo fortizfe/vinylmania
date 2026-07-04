@@ -4,9 +4,11 @@ All notable changes to the Vinylmania frontend are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/) independently
-of the `backend` package.
+of the `backend` package. Every entry below is already deployed — this project
+has no `[Unreleased]` staging section, since Vercel deploys `main` on every
+merge, so a changelog entry and its version bump land in the same PR.
 
-## [Unreleased]
+## [0.2.0] - 2026-07-04
 
 ### Added
 
@@ -15,6 +17,8 @@ of the `backend` package.
   Discogs search now renders instantly from cache instead of re-fetching, and
   a user's own edits/adds/removes invalidate the relevant cached data so
   changes are always reflected immediately.
+
+## [0.1.0] - 2026-07-04
 
 ### Changed
 
@@ -28,7 +32,7 @@ of the `backend` package.
 - Expanded the disc information block to show release year, format, and
   genre alongside the existing title and artist(s).
 
-## [1.0.0] - 2026-07-04
+## [0.0.1] - 2026-07-04
 
 ### Added
 

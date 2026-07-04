@@ -4,9 +4,11 @@ All notable changes to the Vinylmania backend are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/) independently
-of the `frontend` package.
+of the `frontend` package. Every entry below is already deployed — this project
+has no `[Unreleased]` staging section, since Vercel deploys `main` on every
+merge, so a changelog entry and its version bump land in the same PR.
 
-## [Unreleased]
+## [0.1.0] - 2026-07-04
 
 ### Added
 
@@ -16,7 +18,7 @@ of the `frontend` package.
   fetching directly from Discogs if Redis is unconfigured or unavailable, so
   a cache outage never fails a request.
 
-## [1.0.0] - 2026-07-04
+## [0.0.1] - 2026-07-04
 
 ### Added
 
