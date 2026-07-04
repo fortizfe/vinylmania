@@ -32,6 +32,10 @@ for the manual validation script covering the full CRUD flow.
 Quick summary:
 
 ```bash
+# Optional: local Redis for backend response caching (see docker-compose.yml).
+# Without it, the backend just falls back to uncached direct fetches.
+docker compose up -d redis
+
 # Backend
 cd backend && npm install && npm run dev
 
