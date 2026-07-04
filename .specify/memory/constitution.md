@@ -1,24 +1,25 @@
 <!--
 Sync Impact Report
-Version change: 1.4.0 → 1.5.0
+Version change: 1.6.0 → 1.7.0
 Modified principles: none (existing principles unchanged)
 Added sections:
-  - New major section "UI Design System & Styling (Tailwind CSS v4)" defining
-    CSS-first Tailwind configuration, card-based layout via a reusable <Card>
-    component, mandatory atomic/reusable components, skeleton loading states,
-    visual-lightness rules, no-layout-shift consistency, theme-variable dark
-    mode, Tailwind v4 utility naming, and a no-custom-CSS-without-justification
-    rule.
-  - New "Styling" reference added to the Technology Stack "Frontend" bullet
-    pointing to the new section.
+  - New quality gate under "Development Workflow (Quality Gates)" requiring
+    every development touching /backend or /frontend to keep that package's
+    CHANGELOG.md (backend/CHANGELOG.md, frontend/CHANGELOG.md) up to date in
+    the same PR, following Keep a Changelog categorization aligned with
+    Principle VI's semantic version classification; reviewers MUST reject
+    PRs missing the matching changelog entry.
 Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (no Tailwind/UI-system references found; no change needed)
-  ✅ .specify/templates/spec-template.md (no Tailwind/UI-system references found; no change needed)
-  ✅ .specify/templates/tasks-template.md (no Tailwind/UI-system references found; no change needed)
-  ✅ .specify/templates/checklist-template.md (no Tailwind/UI-system references found; no change needed)
+  ✅ .specify/templates/plan-template.md (no CHANGELOG-specific gate references found; no change needed)
+  ✅ .specify/templates/spec-template.md (no CHANGELOG-specific gate references found; no change needed)
+  ✅ .specify/templates/tasks-template.md (no CHANGELOG-specific gate references found; no change needed)
+  ✅ .specify/templates/checklist-template.md (no CHANGELOG-specific gate references found; no change needed)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
-Follow-up TODOs: none
+Follow-up TODOs:
+  - backend/CHANGELOG.md and frontend/CHANGELOG.md do not yet exist in the
+    repo; the next PR touching either package MUST create it (Keep a
+    Changelog format) alongside its first entry.
 -->
 
 # Vinylmania Constitution
@@ -207,6 +208,31 @@ technical debt from deprecated v3 utility names.
 **Rationale**: A consistent commit format makes history greppable, enables automated
 changelog/version generation, and gives every commit a machine-readable link to
 Principle VI's versioning policy (feat → MINOR, fix → PATCH, `!`/BREAKING CHANGE → MAJOR).
+- Any pull request that changes code under `/frontend` MUST be accompanied by
+  passing end-to-end (e2e) test coverage for the affected user flow, added or
+  updated under `/e2e` (Playwright) before the feature is considered complete.
+  A frontend PR MUST NOT be merged solely on unit/component test coverage
+  (Principle I still applies for those) — the e2e suite MUST be run and pass
+  against the changed flow, and reviewers MUST reject frontend PRs that lack
+  corresponding e2e coverage or that leave the e2e suite failing.
+**Rationale**: Component and unit tests validate isolated logic, but Vinylmania's
+frontend risk lives in cross-cutting flows (auth, search, navigation, collection
+management) that only fail when real user journeys are exercised end-to-end;
+requiring e2e coverage at the close of frontend work catches integration
+regressions that unit tests structurally cannot.
+- Every development MUST keep a `CHANGELOG.md` up to date in each package it
+  touches: `backend/CHANGELOG.md` for `/backend` changes and
+  `frontend/CHANGELOG.md` for `/frontend` changes. Any PR that modifies code
+  under one of these directories MUST include a corresponding entry in that
+  package's `CHANGELOG.md` describing the change (following the
+  [Keep a Changelog](https://keepachangelog.com) `Added`/`Changed`/`Fixed`/
+  `Removed` categorization and aligned with Principle VI's semantic version
+  classification). Reviewers MUST reject PRs that change `/backend` or
+  `/frontend` code without a matching changelog entry.
+**Rationale**: A per-package changelog gives collectors, contributors, and
+reviewers a human-readable history of what shipped in each deployable unit,
+independent of git log archaeology, and keeps the changelog entry — not an
+afterthought — tied to the same PR that introduces the change it describes.
 
 ## Governance
 
@@ -226,4 +252,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 1.5.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-04
+**Version**: 1.7.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-04
