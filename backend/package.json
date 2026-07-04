@@ -10,8 +10,7 @@
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "test": "cross-env NODE_ENV=test jest",
-    "test:emulators": "firebase emulators:exec --only auth,firestore \"npm test\""
+    "test": "firebase emulators:exec --only auth,firestore \"cross-env NODE_ENV=test jest\""
   },
   "keywords": [],
   "author": "",

@@ -42,8 +42,8 @@ cd frontend && npm install && npm run dev
 
 ```bash
 cd frontend && npm test   # Vitest + React Testing Library
-cd backend && npm test    # Jest + Supertest (needs the Firebase emulators running)
-cd backend && npm run test:emulators  # runs the emulators and the test suite together
+cd backend && npm test    # Jest + Supertest — starts/stops the Firebase emulators itself
+cd e2e && npm test        # Playwright — real browser, real Google sign-in bridge (no real Google account); see e2e/README.md
 ```
 
 ## Deployment

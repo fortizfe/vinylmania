@@ -32,6 +32,9 @@ firebase-debug.*.log
 # Testing / coverage
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
+blob-report/
 
 # Logs
 logs/

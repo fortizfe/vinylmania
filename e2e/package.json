@@ -1,0 +1,16 @@
+{
+  "name": "e2e",
+  "version": "1.0.0",
+  "description": "Vinylmania end-to-end tests (Playwright) — drives the real app through a browser against the Firebase Local Emulator Suite, with no real Google account required",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "npx firebase --config ../backend/firebase.json emulators:exec --only auth,firestore --project vinylmania-test \"playwright test\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^22.7.5",
+    "dotenv": "^16.4.5",
+    "firebase-tools": "^13.20.2"
+  }
+}
