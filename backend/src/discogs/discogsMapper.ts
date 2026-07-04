@@ -1,7 +1,7 @@
 import { z, type ZodType } from 'zod';
 
 import { DiscogsValidationError } from './discogsErrors';
-import type { Artist, CatalogSearchResult, Release } from './types';
+import type { Artist, CatalogSearchResult, CommunityStats, Release, ReleaseIdentifier } from './types';
 
 function parseOrThrow<T>(schema: ZodType<T>, raw: unknown): T {
   const result = schema.safeParse(raw);
@@ -90,16 +90,35 @@ const rawImageSchema = z.object({
   height: z.number().optional(),
 });
 
+const rawIdentifierSchema = z.object({
+  type: z.string(),
+  value: z.string(),
+  description: z.string().optional(),
+});
+
+const rawCommunitySchema = z.object({
+  have: z.number(),
+  want: z.number(),
+  rating: z.object({
+    average: z.number(),
+    count: z.number(),
+  }),
+});
+
 const rawReleaseSchema = z.object({
   id: z.number(),
   title: z.string(),
   year: z.number().optional(),
   country: z.string().optional(),
+  released: z.string().optional(),
+  notes: z.string().optional(),
   artists: z.array(rawReleaseArtistSchema),
   labels: z.array(rawLabelSchema).optional(),
   formats: z.array(rawFormatSchema).optional(),
   genres: z.array(z.string()).optional(),
   styles: z.array(z.string()).optional(),
+  identifiers: z.array(rawIdentifierSchema).optional(),
+  community: rawCommunitySchema.optional(),
   tracklist: z.array(rawTrackSchema).optional(),
   images: z.array(rawImageSchema).optional(),
   master_id: z.number().optional(),
@@ -109,11 +128,30 @@ const rawReleaseSchema = z.object({
 export function mapRelease(raw: unknown): Release {
   const parsed = parseOrThrow(rawReleaseSchema, raw);
 
+  const identifiers: ReleaseIdentifier[] = (parsed.identifiers ?? []).map((identifier) => ({
+    type: identifier.type,
+    value: identifier.value,
+    ...(identifier.description ? { description: identifier.description } : {}),
+  }));
+
+  const community: CommunityStats | undefined = parsed.community
+    ? {
+        have: parsed.community.have,
+        want: parsed.community.want,
+        rating: {
+          average: parsed.community.rating.average,
+          count: parsed.community.rating.count,
+        },
+      }
+    : undefined;
+
   return {
     discogsId: parsed.id,
     title: parsed.title,
     ...(parsed.year !== undefined ? { year: parsed.year } : {}),
     ...(parsed.country ? { country: parsed.country } : {}),
+    ...(parsed.released ? { releaseDate: parsed.released } : {}),
+    ...(parsed.notes ? { notes: parsed.notes } : {}),
     artists: parsed.artists.map((artist) => ({
       discogsArtistId: artist.id,
       name: artist.name,
@@ -132,6 +170,8 @@ export function mapRelease(raw: unknown): Release {
     })),
     genres: parsed.genres ?? [],
     styles: parsed.styles ?? [],
+    identifiers,
+    ...(community ? { community } : {}),
     tracklist: (parsed.tracklist ?? []).map((track) => ({
       position: track.position,
       title: track.title,

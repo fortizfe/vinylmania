@@ -10,6 +10,8 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   position?: 'center' | 'end';
+  size?: 'md' | 'lg';
+  hideScrollbar?: boolean;
 }
 
 const backdropPositionClasses: Record<NonNullable<ModalProps['position']>, string> = {
@@ -17,9 +19,9 @@ const backdropPositionClasses: Record<NonNullable<ModalProps['position']>, strin
   end: 'justify-end',
 };
 
-const dialogPositionClasses: Record<NonNullable<ModalProps['position']>, string> = {
-  center: 'max-h-[90vh] w-full max-w-lg overflow-y-auto',
-  end: 'h-dvh w-full max-w-xs overflow-y-auto rounded-none',
+const centerSizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
+  md: 'max-w-lg',
+  lg: 'max-w-3xl',
 };
 
 function CloseIcon() {
@@ -30,7 +32,15 @@ function CloseIcon() {
   );
 }
 
-export function Modal({ open, onClose, title, children, position = 'center' }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  position = 'center',
+  size = 'md',
+  hideScrollbar = false,
+}: ModalProps) {
   useEffect(() => {
     if (!open) return;
 
@@ -57,9 +67,14 @@ export function Modal({ open, onClose, title, children, position = 'center' }: M
         role="dialog"
         aria-modal="true"
         onClick={(event) => event.stopPropagation()}
-        className={dialogPositionClasses[position]}
+        className={clsx(
+          position === 'end'
+            ? 'h-dvh w-full max-w-xs overflow-y-auto rounded-none'
+            : clsx('max-h-[90vh] w-full overflow-y-auto', centerSizeClasses[size]),
+          hideScrollbar && 'scrollbar-hidden',
+        )}
       >
-        <Card className="h-full overflow-y-auto">
+        <Card className={clsx('h-full overflow-y-auto', hideScrollbar && 'scrollbar-hidden')}>
           <div className="mb-4 flex items-center justify-between gap-4">
             {title && (
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>

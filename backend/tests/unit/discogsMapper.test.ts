@@ -48,11 +48,18 @@ describe('mapRelease', () => {
     title: 'Stockholm',
     year: 1999,
     country: 'Sweden',
+    released: '1999-05-01',
+    notes: 'Recorded at Stockholm Sound Studio.',
     artists: [{ id: 1, name: 'The Persuader', anv: '', join: '', role: '' }],
     labels: [{ id: 5, name: 'Svek', catno: 'SK032' }],
     formats: [{ name: 'Vinyl', qty: '2', descriptions: ['12"', '33 ⅓ RPM'] }],
     genres: ['Electronic'],
     styles: ['Deep House'],
+    identifiers: [
+      { type: 'Barcode', value: '7 39051 23421 6' },
+      { type: 'Matrix / Runout', value: 'SK032-A', description: 'Side A Runout' },
+    ],
+    community: { have: 214, want: 58, rating: { average: 4.3, count: 37 } },
     tracklist: [{ position: 'A', type_: 'track', title: 'Östermalm', duration: '4:45' }],
     images: [{ type: 'primary', uri: 'https://example.com/cover.jpg', width: 600, height: 600 }],
     master_id: 1660109,
@@ -65,11 +72,18 @@ describe('mapRelease', () => {
       title: 'Stockholm',
       year: 1999,
       country: 'Sweden',
+      releaseDate: '1999-05-01',
+      notes: 'Recorded at Stockholm Sound Studio.',
       artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
       labels: [{ discogsLabelId: 5, name: 'Svek', catalogNumber: 'SK032' }],
       formats: [{ name: 'Vinyl', quantity: 2, descriptions: ['12"', '33 ⅓ RPM'] }],
       genres: ['Electronic'],
       styles: ['Deep House'],
+      identifiers: [
+        { type: 'Barcode', value: '7 39051 23421 6' },
+        { type: 'Matrix / Runout', value: 'SK032-A', description: 'Side A Runout' },
+      ],
+      community: { have: 214, want: 58, rating: { average: 4.3, count: 37 } },
       tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
       images: [{ url: 'https://example.com/cover.jpg', imageType: 'primary', width: 600, height: 600 }],
       masterId: 1660109,
@@ -103,6 +117,17 @@ describe('mapRelease', () => {
     expect(mapped.tracklist).toEqual([]);
     expect(mapped.images).toEqual([]);
     expect(mapped.masterId).toBeUndefined();
+  });
+
+  it('omits releaseDate, notes, and community, and defaults identifiers to [], when Discogs has none of them', () => {
+    const { released: _released, notes: _notes, identifiers: _identifiers, community: _community, ...rawWithoutNewFields } = baseRawRelease;
+
+    const mapped = mapRelease(rawWithoutNewFields);
+
+    expect(mapped.releaseDate).toBeUndefined();
+    expect(mapped.notes).toBeUndefined();
+    expect(mapped.community).toBeUndefined();
+    expect(mapped.identifiers).toEqual([]);
   });
 });
 

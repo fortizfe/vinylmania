@@ -115,6 +115,7 @@ describe('Add record flow (US1)', () => {
       formats: [],
       genres: [],
       styles: [],
+      identifiers: [],
       tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
       images: [],
       discogsUrl: 'https://www.discogs.com/release/1',

@@ -32,16 +32,35 @@ export interface CatalogImage {
   height?: number;
 }
 
+export interface ReleaseIdentifier {
+  type: string;
+  value: string;
+  description?: string;
+}
+
+export interface CommunityStats {
+  have: number;
+  want: number;
+  rating: {
+    average: number;
+    count: number;
+  };
+}
+
 export interface Release {
   discogsId: number;
   title: string;
   year?: number;
   country?: string;
+  releaseDate?: string;
+  notes?: string;
   artists: ReleaseArtistCredit[];
   labels: LabelCredit[];
   formats: FormatDescriptor[];
   genres: string[];
   styles: string[];
+  identifiers: ReleaseIdentifier[];
+  community?: CommunityStats;
   tracklist: Track[];
   images: CatalogImage[];
   masterId?: number;

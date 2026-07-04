@@ -77,6 +77,43 @@ describe('Modal', () => {
     expect(screen.getByRole('dialog').className).toMatch(/max-w-lg/);
   });
 
+  it('defaults to size "md" (max-w-lg) when size is not passed', () => {
+    render(
+      <Modal open onClose={() => {}}>
+        Content
+      </Modal>,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toMatch(/max-w-lg/);
+    expect(dialog.className).not.toMatch(/max-w-3xl/);
+  });
+
+  it('renders a wider dialog when size="lg"', () => {
+    render(
+      <Modal open onClose={() => {}} size="lg">
+        Content
+      </Modal>,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toMatch(/max-w-3xl/);
+    expect(dialog.className).not.toMatch(/max-w-lg\b/);
+  });
+
+  it('ignores size for an end-positioned drawer, keeping its own width/height classes', () => {
+    render(
+      <Modal open onClose={() => {}} position="end" size="lg">
+        Content
+      </Modal>,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toMatch(/h-dvh/);
+    expect(dialog.className).toMatch(/max-w-xs/);
+    expect(dialog.className).not.toMatch(/max-w-3xl/);
+  });
+
   it('renders as a full-height end-anchored drawer when position="end"', () => {
     render(
       <Modal open onClose={() => {}} position="end">
@@ -86,6 +123,26 @@ describe('Modal', () => {
 
     const dialog = screen.getByRole('dialog');
     expect(dialog.className).toMatch(/h-dvh/);
+  });
+
+  it('does not hide its scrollbar by default', () => {
+    render(
+      <Modal open onClose={() => {}}>
+        Content
+      </Modal>,
+    );
+
+    expect(screen.getByRole('dialog').className).not.toMatch(/scrollbar-hidden/);
+  });
+
+  it('hides its scrollbar only when hideScrollbar is explicitly passed', () => {
+    render(
+      <Modal open onClose={() => {}} hideScrollbar>
+        Content
+      </Modal>,
+    );
+
+    expect(screen.getByRole('dialog').className).toMatch(/scrollbar-hidden/);
   });
 
   it('still supports backdrop click, close button, and Escape when position="end"', async () => {

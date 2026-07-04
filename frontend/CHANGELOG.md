@@ -8,6 +8,34 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.4.0] - 2026-07-04
+
+### Changed
+
+- Redesigned the release preview popup's layout: the image gallery (cover
+  plus vertical thumbnail carousel) now spans the full width of the popup in
+  a square format; key release details (title, artist, genres, styles,
+  release date, label) and the tracklist now sit side by side directly below
+  it; notes, identifiers, and community stats moved into their own section
+  below that. On mobile, the sections stack in the same reading order:
+  gallery, key details, tracklist, then the remaining details.
+- Hid the scrollbar on the thumbnail carousel and on the preview popup itself
+  (content remains fully scrollable) for a cleaner, more modern appearance;
+  other popups/modals in the app are unaffected.
+
+## [0.3.0] - 2026-07-04
+
+### Changed
+
+- Redesigned the release preview popup (opened from a search result card):
+  it now shows a full release-details section (label/catalogue number,
+  country, release date, genres, styles, notes, identifiers, and community
+  stats) above the tracklist, in a layout that splits into two columns on
+  wide viewports and stacks into one column on mobile.
+- Replaced the popup's single static cover image with an image gallery: a
+  primary image plus a vertical, clickable thumbnail list built from every
+  image Discogs returns for the release.
+
 ## [0.2.0] - 2026-07-04
 
 ### Added

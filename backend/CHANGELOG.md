@@ -8,6 +8,15 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.2.0] - 2026-07-04
+
+### Added
+
+- Widened the Discogs `Release` model with `releaseDate`, `notes`,
+  `identifiers`, and `community` statistics (have/want counts, rating),
+  mapped from the Discogs `/releases/{id}` response and returned from
+  `GET /api/discogs/releases/:discogsId`.
+
 ## [0.1.0] - 2026-07-04
 
 ### Added
