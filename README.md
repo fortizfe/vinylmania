@@ -45,3 +45,9 @@ cd frontend && npm test   # Vitest + React Testing Library
 cd backend && npm test    # Jest + Supertest (needs the Firebase emulators running)
 cd backend && npm run test:emulators  # runs the emulators and the test suite together
 ```
+
+## Deployment
+
+Backend and frontend deploy as two independent Vercel projects — see
+[docs/deployment-vercel.md](docs/deployment-vercel.md) for the full step-by-step
+guide (project creation, environment variables, and verification).
