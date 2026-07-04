@@ -10,11 +10,6 @@ verifies.
 
 ```json
 {
-  "functions": {
-    "api/index.ts": {
-      "runtime": "@vercel/node@3"
-    }
-  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index.ts" }
   ]
@@ -28,9 +23,16 @@ verifies.
 - The rewrite MUST catch every path (`/(.*)`) so both `/health` and every
   `/api/*` route continue to resolve to the same Express app, unchanged
   (FR-001, FR-009).
+- MUST NOT declare an explicit `functions.*.runtime` for `api/index.ts`.
+  Vercel auto-detects the Node.js builder for `.ts`/`.js` files under `api/`;
+  pinning `runtime` requires an *exact* published version of `@vercel/node`
+  (e.g. `@vercel/node@3.2.29`), not a bare major tag like `@vercel/node@3` —
+  the latter fails deployment with "Function Runtimes must have a valid
+  version". Letting Vercel auto-detect avoids maintaining a pinned version at
+  all.
 - MUST NOT declare a `buildCommand`/`installCommand` that runs the frontend;
-  this project only needs its own `npm install` (or none, since the function
-  is transpiled by the Vercel Node runtime directly from `api/index.ts`).
+  this project only needs its own `npm install` (handled automatically by
+  Vercel for the project's Root Directory).
 
 ## `frontend/vercel.json`
 

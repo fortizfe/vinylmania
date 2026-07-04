@@ -23,10 +23,10 @@ decisions and why each was chosen.
 
 ## 2. Backend routing inside its own project
 
-- **Decision**: `backend/vercel.json` declares the existing `api/index.ts` as
-  the function entry point (`@vercel/node@3` runtime, same as today) and adds a
-  catch-all rewrite: every incoming path (`/(.*)`) is rewritten to
-  `/api/index.ts`.
+- **Decision**: `backend/vercel.json` relies on Vercel's auto-detected Node.js
+  builder for the existing `api/index.ts` entry point (no explicit
+  `functions.*.runtime` override) and adds a catch-all rewrite: every incoming
+  path (`/(.*)`) is rewritten to `/api/index.ts`.
 - **Rationale**: The Express app in `src/app.ts` does its own internal routing
   (`/health`, `/api/auth`, `/api/discogs`, `/api/library`). Vercel's zero-config
   file-based routing would only expose `api/index.ts` at `/api` by default —
@@ -41,7 +41,13 @@ decisions and why each was chosen.
 - **Alternatives considered**: Renaming `/health` to `/api/health` (rejected —
   changes an existing route path, forbidden by FR-009); one Vercel function per
   route instead of a single Express catch-all (rejected — large unrelated
-  refactor of the backend's routing, not needed to satisfy this feature).
+  refactor of the backend's routing, not needed to satisfy this feature);
+  explicitly pinning `functions."api/index.ts".runtime` to `@vercel/node@3`
+  (tried, then rejected — Vercel requires an *exact* published version like
+  `@vercel/node@3.2.29` for this field, not a bare major tag; the bare tag
+  failed deployment with "Function Runtimes must have a valid version".
+  Omitting `runtime` entirely and letting Vercel auto-detect the builder is
+  simpler and avoids maintaining a pinned version at all).
 
 ## 3. Frontend SPA routing inside its own project
 

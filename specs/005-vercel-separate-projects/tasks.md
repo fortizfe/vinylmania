@@ -74,9 +74,10 @@ alone (no frontend project involved), and confirm `/health` and the existing
 
 ### Implementation for User Story 1
 
-- [X] T003 [US1] Create `backend/vercel.json` with the `api/index.ts` function
-      declaration and catch-all rewrite, exactly per
-      contracts/vercel-config.md "`backend/vercel.json`" (depends on T001)
+- [X] T003 [US1] Create `backend/vercel.json` with the catch-all rewrite to
+      `api/index.ts` (no explicit `functions.runtime` override — Vercel
+      auto-detects the Node.js builder), exactly per contracts/vercel-config.md
+      "`backend/vercel.json`" (depends on T001)
 - [ ] T004 [US1] **(operator action)** Create the `vinylmania-backend` Vercel
       project via "Import Git Repository" against `fortizfe/vinylmania`,
       setting Root Directory to `backend`, per data-model.md §1
