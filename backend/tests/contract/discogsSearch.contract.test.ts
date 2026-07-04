@@ -43,12 +43,117 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       {
         discogsId: 1,
         resultType: 'release',
-        title: 'The Persuader - Stockholm',
+        title: 'Stockholm',
+        artist: 'The Persuader',
         year: 1999,
         formats: ['Vinyl'],
       },
     ]);
     expect(res.body.pagination).toEqual({ page: 1, pages: 1, items: 1, perPage: 50 });
+  });
+
+  it('splits the artist out of a raw "Artist - Title" search result title', async () => {
+    const { idToken } = await getTestIdToken('search-artist-split-user');
+
+    discogsScope()
+      .get('/database/search')
+      .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+      .reply(200, {
+        pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+        results: [
+          {
+            id: 2,
+            type: 'release',
+            title: 'Miles Davis - Kind Of Blue',
+            year: '1959',
+            thumb: '',
+            cover_image: '',
+            resource_url: 'https://api.discogs.com/releases/2',
+          },
+        ],
+      });
+
+    const res = await request(app)
+      .get('/api/discogs/search')
+      .query({ q: 'Stockholm', type: 'release' })
+      .set('Authorization', `Bearer ${idToken}`);
+
+    expect(res.body.results[0]).toEqual({
+      discogsId: 2,
+      resultType: 'release',
+      title: 'Kind Of Blue',
+      artist: 'Miles Davis',
+      year: 1959,
+    });
+  });
+
+  it('keeps the full title with no artist when no "Artist - Title" separator is present', async () => {
+    const { idToken } = await getTestIdToken('search-no-artist-user');
+
+    discogsScope()
+      .get('/database/search')
+      .query({ q: 'Untitled', type: 'release', page: '1', per_page: '50' })
+      .reply(200, {
+        pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+        results: [
+          {
+            id: 3,
+            type: 'release',
+            title: 'Untitled',
+            thumb: '',
+            cover_image: '',
+            resource_url: 'https://api.discogs.com/releases/3',
+          },
+        ],
+      });
+
+    const res = await request(app)
+      .get('/api/discogs/search')
+      .query({ q: 'Untitled', type: 'release' })
+      .set('Authorization', `Bearer ${idToken}`);
+
+    expect(res.body.results[0]).toEqual({
+      discogsId: 3,
+      resultType: 'release',
+      title: 'Untitled',
+    });
+  });
+
+  it('forwards page and perPage query params to the catalog search', async () => {
+    const { idToken } = await getTestIdToken('search-pagination-user');
+
+    discogsScope()
+      .get('/database/search')
+      .query({ q: 'love', type: 'release', page: '2', per_page: '10' })
+      .reply(200, {
+        pagination: { page: 2, pages: 5, items: 47, per_page: 10 },
+        results: [],
+      });
+
+    const res = await request(app)
+      .get('/api/discogs/search')
+      .query({ q: 'love', type: 'release', page: '2', perPage: '10' })
+      .set('Authorization', `Bearer ${idToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.pagination).toEqual({ page: 2, pages: 5, items: 47, perPage: 10 });
+  });
+
+  it('defaults to page 1 when an invalid page value is sent', async () => {
+    const { idToken } = await getTestIdToken('search-invalid-page-user');
+
+    discogsScope()
+      .get('/database/search')
+      .query({ q: 'love', type: 'release', page: '1', per_page: '50' })
+      .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+
+    const res = await request(app)
+      .get('/api/discogs/search')
+      .query({ q: 'love', type: 'release', page: 'not-a-number' })
+      .set('Authorization', `Bearer ${idToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.pagination.page).toBe(1);
   });
 
   it('returns 401 when no Authorization header is sent', async () => {

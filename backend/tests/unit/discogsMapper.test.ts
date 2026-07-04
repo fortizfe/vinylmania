@@ -16,7 +16,8 @@ describe('mapSearchResult', () => {
     expect(mapped).toEqual({
       discogsId: 1,
       resultType: 'release',
-      title: 'The Persuader - Stockholm',
+      title: 'Stockholm',
+      artist: 'The Persuader',
       year: 1999,
       formats: ['Vinyl', '12"', '33 ⅓ RPM'],
       thumbnailUrl: 'https://example.com/cover.jpg',

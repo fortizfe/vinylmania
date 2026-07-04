@@ -2,6 +2,7 @@ export interface CatalogSearchResult {
   discogsId: number;
   resultType: 'release' | 'artist';
   title: string;
+  artist?: string;
   thumbnailUrl?: string;
   year?: number;
   formats?: string[];

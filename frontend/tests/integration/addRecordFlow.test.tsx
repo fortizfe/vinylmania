@@ -7,9 +7,11 @@ import { AddRecordPage } from '../../src/pages/AddRecordPage';
 
 const mockSearch = vi.fn();
 const mockCreate = vi.fn();
+const mockGetRelease = vi.fn();
 
 vi.mock('../../src/services/discogsApi', () => ({
   search: (...args: unknown[]) => mockSearch(...args),
+  getRelease: (...args: unknown[]) => mockGetRelease(...args),
 }));
 
 vi.mock('../../src/services/libraryApi', () => ({
@@ -35,15 +37,17 @@ describe('Add record flow (US1)', () => {
   beforeEach(() => {
     mockSearch.mockReset();
     mockCreate.mockReset();
+    mockGetRelease.mockReset();
   });
 
-  it('searches Discogs, lets the collector pick a result, and adds it to the library', async () => {
+  it('searches Discogs, lets the collector pick a result, and adds it to the library without leaving the results', async () => {
     mockSearch.mockResolvedValue({
       results: [
         {
           discogsId: 1,
           resultType: 'release',
-          title: 'The Persuader - Stockholm',
+          title: 'Stockholm',
+          artist: 'The Persuader',
           year: 1999,
           formats: ['Vinyl'],
         },
@@ -66,17 +70,71 @@ describe('Add record flow (US1)', () => {
       await user.click(screen.getByRole('button', { name: /search/i }));
     });
 
-    await waitFor(() =>
-      expect(screen.getByText(/the persuader - stockholm/i)).toBeInTheDocument(),
-    );
-    expect(mockSearch).toHaveBeenCalledWith('Stockholm', 'release');
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+    expect(mockSearch).toHaveBeenCalledWith('Stockholm', 'release', 1, 20);
 
     await act(async () => {
       await user.click(screen.getByRole('button', { name: /add to library/i }));
     });
 
     expect(mockCreate).toHaveBeenCalledWith(1);
-    await waitFor(() => expect(screen.getByText('Library list')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /added to library/i })).toBeInTheDocument(),
+    );
+    expect(screen.queryByText('Library list')).not.toBeInTheDocument();
+    expect(screen.getByText('Stockholm')).toBeInTheDocument();
+  });
+
+  it('previews a result in an overlay without adding it or losing the search results', async () => {
+    mockSearch.mockResolvedValue({
+      results: [
+        {
+          discogsId: 1,
+          resultType: 'release',
+          title: 'Stockholm',
+          artist: 'The Persuader',
+          year: 1999,
+        },
+      ],
+      pagination: { page: 1, pages: 1, items: 1, perPage: 50 },
+    });
+    mockGetRelease.mockResolvedValue({
+      discogsId: 1,
+      title: 'Stockholm',
+      year: 1999,
+      artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+      labels: [],
+      formats: [],
+      genres: [],
+      styles: [],
+      tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
+      images: [],
+      discogsUrl: 'https://www.discogs.com/release/1',
+    });
+
+    renderPage();
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('textbox', { name: /search/i }), 'Stockholm');
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /search/i }));
+    });
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /preview details/i }));
+    });
+
+    await waitFor(() => expect(screen.getByText(/Östermalm/)).toBeInTheDocument());
+    expect(mockGetRelease).toHaveBeenCalledWith(1);
+    expect(mockCreate).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /close/i }));
+    });
+
+    expect(screen.queryByText(/Östermalm/)).not.toBeInTheDocument();
+    expect(screen.getByText('Stockholm')).toBeInTheDocument();
   });
 
   it('shows skeleton placeholders in the results area while a search is pending', async () => {
@@ -136,5 +194,56 @@ describe('Add record flow (US1)', () => {
     });
 
     await waitFor(() => expect(screen.getByText(/no results/i)).toBeInTheDocument());
+  });
+
+  it('paginates a large result set without a full reload, and resets to page 1 on a new search', async () => {
+    mockSearch.mockResolvedValueOnce({
+      results: [
+        { discogsId: 1, resultType: 'release', title: 'Stockholm', artist: 'The Persuader' },
+      ],
+      pagination: { page: 1, pages: 3, items: 47, perPage: 20 },
+    });
+
+    renderPage();
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('textbox', { name: /search/i }), 'love');
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /search/i }));
+    });
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    expect(screen.getByRole('button', { name: /^next$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^previous$/i })).toBeDisabled();
+
+    mockSearch.mockResolvedValueOnce({
+      results: [{ discogsId: 2, resultType: 'release', title: 'Page Two Result' }],
+      pagination: { page: 2, pages: 3, items: 47, perPage: 20 },
+    });
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /^next$/i }));
+    });
+
+    await waitFor(() => expect(screen.getByText('Page Two Result')).toBeInTheDocument());
+    expect(mockSearch).toHaveBeenLastCalledWith('love', 'release', 2, 20);
+    expect(screen.getByRole('button', { name: /^previous$/i })).not.toBeDisabled();
+
+    mockSearch.mockResolvedValueOnce({
+      results: [
+        { discogsId: 3, resultType: 'release', title: 'Fresh Search Result' },
+      ],
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+    });
+
+    await user.clear(screen.getByRole('textbox', { name: /search/i }));
+    await user.type(screen.getByRole('textbox', { name: /search/i }), 'fresh');
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /search/i }));
+    });
+
+    await waitFor(() => expect(screen.getByText('Fresh Search Result')).toBeInTheDocument());
+    expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 20);
+    expect(screen.queryByRole('button', { name: /^next$/i })).not.toBeInTheDocument();
   });
 });

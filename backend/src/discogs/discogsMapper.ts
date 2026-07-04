@@ -21,17 +21,37 @@ const rawSearchResultSchema = z.object({
   format: z.array(z.string()).optional(),
 });
 
+const ARTIST_TITLE_SEPARATOR = ' - ';
+
+function splitArtistFromTitle(rawTitle: string): { title: string; artist?: string } {
+  const separatorIndex = rawTitle.indexOf(ARTIST_TITLE_SEPARATOR);
+  if (separatorIndex === -1) {
+    return { title: rawTitle };
+  }
+
+  const artist = rawTitle.slice(0, separatorIndex).trim();
+  const title = rawTitle.slice(separatorIndex + ARTIST_TITLE_SEPARATOR.length).trim();
+  if (!artist || !title) {
+    return { title: rawTitle };
+  }
+
+  return { title, artist };
+}
+
 export function mapSearchResult(raw: unknown): CatalogSearchResult {
   const parsed = parseOrThrow(rawSearchResultSchema, raw);
 
   const thumbnailUrl = parsed.cover_image || parsed.thumb || undefined;
   const year = parsed.year === undefined ? undefined : Number(parsed.year);
   const formats = parsed.format && parsed.format.length > 0 ? parsed.format : undefined;
+  const { title, artist } =
+    parsed.type === 'release' ? splitArtistFromTitle(parsed.title) : { title: parsed.title };
 
   return {
     discogsId: parsed.id,
     resultType: parsed.type,
-    title: parsed.title,
+    title,
+    ...(artist ? { artist } : {}),
     ...(thumbnailUrl ? { thumbnailUrl } : {}),
     ...(year !== undefined && !Number.isNaN(year) ? { year } : {}),
     ...(formats ? { formats } : {}),

@@ -1,31 +1,45 @@
 import { type FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
-import { Skeleton } from '../components/ui/Skeleton';
+import { ReleasePreviewModal } from '../components/ReleasePreviewModal';
+import { SearchResultCard } from '../components/SearchResultCard';
+import { SearchResultCardSkeleton } from '../components/SearchResultCardSkeleton';
 import * as discogsApi from '../services/discogsApi';
 import * as libraryApi from '../services/libraryApi';
+import type { Release } from '../services/libraryApi';
 import type { CatalogSearchResult } from '../services/discogsApi';
 
+const SKELETON_COUNT = 8;
+const PAGE_SIZE = 20;
+const resultsGridClasses =
+  'grid list-none grid-cols-2 gap-4 p-0 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
+
 export function AddRecordPage() {
-  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CatalogSearchResult[]>([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [addingId, setAddingId] = useState<number | null>(null);
+  const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
 
-  async function handleSearch(event: FormEvent) {
-    event.preventDefault();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewRelease, setPreviewRelease] = useState<Release | null>(null);
+
+  async function runSearch(pageToLoad: number) {
     setLoading(true);
     setError(null);
     try {
-      const response = await discogsApi.search(query, 'release');
+      const response = await discogsApi.search(query, 'release', pageToLoad, PAGE_SIZE);
       setResults(response.results);
       setSearched(true);
+      setPage(response.pagination.page);
+      setTotalPages(response.pagination.pages);
     } catch {
       setError('Something went wrong while searching. Please try again.');
     } finally {
@@ -33,20 +47,40 @@ export function AddRecordPage() {
     }
   }
 
+  async function handleSearch(event: FormEvent) {
+    event.preventDefault();
+    await runSearch(1);
+  }
+
   async function handleAdd(discogsId: number) {
     setAddingId(discogsId);
     setError(null);
     try {
       await libraryApi.create(discogsId);
-      navigate('/app');
+      setAddedIds((prev) => new Set(prev).add(discogsId));
     } catch {
       setError('Something went wrong while adding this record. Please try again.');
+    } finally {
       setAddingId(null);
     }
   }
 
+  async function handlePreview(discogsId: number) {
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    setPreviewRelease(null);
+    try {
+      const release = await discogsApi.getRelease(discogsId);
+      setPreviewRelease(release);
+    } catch {
+      setPreviewRelease(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+    <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6 sm:p-8">
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Add a record</h1>
 
       <Card>
@@ -77,39 +111,57 @@ export function AddRecordPage() {
       )}
 
       {loading && (
-        <ul className="flex list-none flex-col gap-3 p-0" data-testid="search-results-skeleton">
-          {Array.from({ length: 3 }, (_, index) => (
+        <ul className={resultsGridClasses} data-testid="search-results-skeleton">
+          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
             <li key={index}>
-              <Card padding="sm" className="flex items-center justify-between gap-4">
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-8 w-28" />
-              </Card>
+              <SearchResultCardSkeleton />
             </li>
           ))}
         </ul>
       )}
 
       {!loading && results.length > 0 && (
-        <ul className="flex list-none flex-col gap-3 p-0">
-          {results.map((result) => (
-            <li key={result.discogsId}>
-              <Card padding="sm" className="flex items-center justify-between gap-4">
-                <span className="text-gray-900 dark:text-gray-100">
-                  {result.title}
-                  {result.year !== undefined && ` (${result.year})`}
-                </span>
-                <Button
-                  variant="secondary"
-                  onClick={() => handleAdd(result.discogsId)}
-                  loading={addingId === result.discogsId}
-                >
-                  {addingId === result.discogsId ? 'Adding…' : 'Add to library'}
-                </Button>
-              </Card>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className={resultsGridClasses}>
+            {results.map((result) => (
+              <li key={result.discogsId}>
+                <SearchResultCard
+                  result={result}
+                  onAdd={() => handleAdd(result.discogsId)}
+                  onPreview={() => handlePreview(result.discogsId)}
+                  adding={addingId === result.discogsId}
+                  added={addedIds.has(result.discogsId)}
+                />
+              </li>
+            ))}
+          </ul>
+          {totalPages > 1 && (
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                disabled={page <= 1}
+                onClick={() => runSearch(page - 1)}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={page >= totalPages}
+                onClick={() => runSearch(page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
+
+      <ReleasePreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        release={previewRelease}
+        loading={previewLoading}
+      />
     </main>
   );
 }
