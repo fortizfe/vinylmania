@@ -50,6 +50,7 @@ following, scoped to **Production**:
 | `DISCOGS_TOKEN` | Discogs API personal access token | Discogs → Settings → Developers → "Generate new token" |
 | `DISCOGS_USER_AGENT` | Required `User-Agent` header for Discogs API requests | Any descriptive string you choose, e.g. `Vinylmania/1.0 +https://vinylmania-frontend.vercel.app` |
 | `FRONTEND_ORIGIN` | CORS allow-list — must exactly match the frontend's URL (no trailing slash) | Not known yet — set a temporary placeholder now (e.g. `https://localhost`) and come back to fix it in Step 5 |
+| `REDIS_URL` | Connection string for the Redis instance backing the Discogs response cache | Your managed Redis provider's connection string (e.g. `redis://` or `rediss://`). The backend falls back to uncached direct fetches if this is unset or unreachable, so it's safe to add later, but caching won't be active until it's set. |
 
 After adding these, trigger a redeploy (Vercel does this automatically on the
 next push to `main`, or use **Deployments → Redeploy**).

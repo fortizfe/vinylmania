@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosResponse, isAxiosError } from 'axios';
 
+import { withCache } from '../cache/cacheAside';
 import { logger } from '../config/logger';
 import {
   DiscogsNotFoundError,
@@ -99,6 +100,13 @@ export interface SearchCatalogOptions {
   perPage?: number;
 }
 
+// Discogs catalog data changes rarely, so search results (which can shift
+// as the catalog grows) get a shorter TTL than individual release/artist
+// lookups (which are effectively immutable once published).
+const SEARCH_CACHE_TTL_SECONDS = 30 * 60;
+const RELEASE_CACHE_TTL_SECONDS = 6 * 60 * 60;
+const ARTIST_CACHE_TTL_SECONDS = 6 * 60 * 60;
+
 export async function searchCatalog(
   query: string,
   options: SearchCatalogOptions = {},
@@ -107,37 +115,43 @@ export async function searchCatalog(
     return { results: [], pagination: { page: 1, pages: 0, items: 0, perPage: 0 } };
   }
 
-  const response = await getDiscogsHttpClient().get('/database/search', {
-    params: {
-      q: query,
-      type: options.resultType,
-      page: options.page ?? 1,
-      per_page: options.perPage ?? 50,
-    },
+  const resultType = options.resultType ?? '';
+  const page = options.page ?? 1;
+  const perPage = options.perPage ?? 50;
+  const cacheKey = `discogs:search:${resultType}:${query}:${page}:${perPage}`;
+
+  return withCache(cacheKey, SEARCH_CACHE_TTL_SECONDS, async () => {
+    const response = await getDiscogsHttpClient().get('/database/search', {
+      params: { q: query, type: options.resultType, page, per_page: perPage },
+    });
+
+    const { pagination, results } = response.data as {
+      pagination: { page: number; pages: number; items: number; per_page: number };
+      results: unknown[];
+    };
+
+    return {
+      results: results.map(mapSearchResult),
+      pagination: {
+        page: pagination.page,
+        pages: pagination.pages,
+        items: pagination.items,
+        perPage: pagination.per_page,
+      },
+    };
   });
-
-  const { pagination, results } = response.data as {
-    pagination: { page: number; pages: number; items: number; per_page: number };
-    results: unknown[];
-  };
-
-  return {
-    results: results.map(mapSearchResult),
-    pagination: {
-      page: pagination.page,
-      pages: pagination.pages,
-      items: pagination.items,
-      perPage: pagination.per_page,
-    },
-  };
 }
 
 export async function getRelease(discogsReleaseId: number): Promise<Release> {
-  const response = await getDiscogsHttpClient().get(`/releases/${discogsReleaseId}`);
-  return mapRelease(response.data);
+  return withCache(`discogs:release:${discogsReleaseId}`, RELEASE_CACHE_TTL_SECONDS, async () => {
+    const response = await getDiscogsHttpClient().get(`/releases/${discogsReleaseId}`);
+    return mapRelease(response.data);
+  });
 }
 
 export async function getArtist(discogsArtistId: number): Promise<Artist> {
-  const response = await getDiscogsHttpClient().get(`/artists/${discogsArtistId}`);
-  return mapArtist(response.data);
+  return withCache(`discogs:artist:${discogsArtistId}`, ARTIST_CACHE_TTL_SECONDS, async () => {
+    const response = await getDiscogsHttpClient().get(`/artists/${discogsArtistId}`);
+    return mapArtist(response.data);
+  });
 }

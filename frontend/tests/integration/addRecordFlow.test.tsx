@@ -1,9 +1,11 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AddRecordPage } from '../../src/pages/AddRecordPage';
+import { createTestQueryClient } from '../testUtils';
 
 const mockSearch = vi.fn();
 const mockCreate = vi.fn();
@@ -24,12 +26,14 @@ function LibraryListStub() {
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/app/library/add']}>
-      <Routes>
-        <Route path="/app/library/add" element={<AddRecordPage />} />
-        <Route path="/app/library" element={<LibraryListStub />} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={createTestQueryClient()}>
+      <MemoryRouter initialEntries={['/app/library/add']}>
+        <Routes>
+          <Route path="/app/library/add" element={<AddRecordPage />} />
+          <Route path="/app/library" element={<LibraryListStub />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

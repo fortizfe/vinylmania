@@ -1,3 +1,4 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -5,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from '../../src/App';
 import { AuthProvider } from '../../src/auth/AuthContext';
+import { createTestQueryClient } from '../testUtils';
 
 const mockOnAuthStateChanged = vi.fn();
 
@@ -45,11 +47,13 @@ function renderAuthenticatedApp(initialEntry: string) {
   }) as unknown as typeof fetch;
 
   return render(
-    <MemoryRouter initialEntries={[initialEntry]}>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </MemoryRouter>,
+    <QueryClientProvider client={createTestQueryClient()}>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -96,11 +100,13 @@ describe('Navigation menu (US2)', () => {
     });
 
     render(
-      <MemoryRouter initialEntries={['/']}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </MemoryRouter>,
+      <QueryClientProvider client={createTestQueryClient()}>
+        <MemoryRouter initialEntries={['/']}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
 
     await waitFor(() =>

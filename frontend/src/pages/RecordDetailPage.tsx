@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { DiscInfoCard } from '../components/DiscInfoCard';
@@ -9,8 +9,11 @@ import { BackLink } from '../components/ui/BackLink';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { InlineEditableField, type InlineEditableFieldHandle } from '../components/ui/InlineEditableField';
-import * as libraryApi from '../services/libraryApi';
-import type { EnrichedLibraryEntry } from '../services/libraryApi';
+import {
+  useLibraryEntry,
+  useRemoveLibraryEntry,
+  useUpdateLibraryEntry,
+} from '../queries/libraryQueries';
 
 const CONDITION_OPTIONS = ['Mint', 'Near Mint', 'Very Good Plus', 'Good', 'Fair', 'Poor'];
 
@@ -21,44 +24,25 @@ const labelClasses = 'text-sm font-medium text-gray-700 dark:text-gray-300';
 export function RecordDetailPage() {
   const { entryId } = useParams<{ entryId: string }>();
   const navigate = useNavigate();
-  const [entry, setEntry] = useState<EnrichedLibraryEntry | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  const { data: entry, isLoading, isError: notFound } = useLibraryEntry(entryId);
+  const updateEntry = useUpdateLibraryEntry(entryId ?? '');
+  const removeEntry = useRemoveLibraryEntry();
 
   const conditionFieldRef = useRef<InlineEditableFieldHandle>(null);
   const notesFieldRef = useRef<InlineEditableFieldHandle>(null);
-
-  useEffect(() => {
-    if (!entryId) return;
-    let cancelled = false;
-
-    libraryApi
-      .getOne(entryId)
-      .then((result) => {
-        if (!cancelled) setEntry(result);
-      })
-      .catch(() => {
-        if (!cancelled) setNotFound(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [entryId]);
 
   async function handleRemove() {
     if (!entryId) return;
     if (!window.confirm('Remove this record from your library? This cannot be undone.')) {
       return;
     }
-    await libraryApi.remove(entryId);
+    await removeEntry.mutateAsync(entryId);
     navigate('/app/library');
   }
 
   async function saveCondition(newCondition: string) {
-    if (!entryId) return;
     try {
-      const updated = await libraryApi.update(entryId, newCondition);
-      setEntry(updated);
+      await updateEntry.mutateAsync({ condition: newCondition });
     } catch (error) {
       console.error('Failed to save condition for library entry', entryId, error);
       throw error;
@@ -66,10 +50,8 @@ export function RecordDetailPage() {
   }
 
   async function saveNotes(newNotes: string) {
-    if (!entryId) return;
     try {
-      const updated = await libraryApi.update(entryId, undefined, newNotes);
-      setEntry(updated);
+      await updateEntry.mutateAsync({ notes: newNotes });
     } catch (error) {
       console.error('Failed to save notes for library entry', entryId, error);
       throw error;
@@ -89,7 +71,7 @@ export function RecordDetailPage() {
     );
   }
 
-  if (!entry) {
+  if (isLoading || !entry) {
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
         <BackLink to="/app/library" />

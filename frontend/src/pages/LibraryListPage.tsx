@@ -1,44 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { RecordCard } from '../components/RecordCard';
 import { RecordCardSkeleton } from '../components/RecordCardSkeleton';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import * as libraryApi from '../services/libraryApi';
-import type { EnrichedLibraryEntry } from '../services/libraryApi';
+import { useLibraryList } from '../queries/libraryQueries';
 
 const SKELETON_COUNT = 8;
 const gridClasses = 'grid list-none grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-4 p-0';
 
 export function LibraryListPage() {
-  const [entries, setEntries] = useState<EnrichedLibraryEntry[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
   const [page, setPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
   const pageSize = 20;
 
-  useEffect(() => {
-    let cancelled = false;
-    setEntries(null);
-    setLoadError(false);
-
-    libraryApi
-      .list(page, pageSize)
-      .then((response) => {
-        if (cancelled) return;
-        setEntries(response.items);
-        setTotalItems(response.totalItems);
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [page]);
-
+  const { data, isLoading, isError: loadError } = useLibraryList(page, pageSize);
+  const entries = data?.items ?? null;
+  const totalItems = data?.totalItems ?? 0;
   const hasNextPage = page * pageSize < totalItems;
 
   return (
@@ -61,7 +39,7 @@ export function LibraryListPage() {
         </Card>
       )}
 
-      {!loadError && entries === null && (
+      {!loadError && isLoading && (
         <ul className={gridClasses}>
           {Array.from({ length: SKELETON_COUNT }, (_, index) => (
             <RecordCardSkeleton key={index} />

@@ -1,8 +1,10 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LibraryListPage } from '../../src/pages/LibraryListPage';
+import { createTestQueryClient } from '../testUtils';
 
 const mockList = vi.fn();
 
@@ -12,9 +14,11 @@ vi.mock('../../src/services/libraryApi', () => ({
 
 function renderPage() {
   return render(
-    <MemoryRouter>
-      <LibraryListPage />
-    </MemoryRouter>,
+    <QueryClientProvider client={createTestQueryClient()}>
+      <MemoryRouter>
+        <LibraryListPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

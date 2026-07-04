@@ -8,6 +8,14 @@ of the `frontend` package.
 
 ## [Unreleased]
 
+### Added
+
+- Redis (via ioredis) response caching for the Discogs catalog client
+  (`searchCatalog`, `getRelease`, `getArtist`), including the per-entry
+  release lookups made during library-list enrichment. Falls back to
+  fetching directly from Discogs if Redis is unconfigured or unavailable, so
+  a cache outage never fails a request.
+
 ## [1.0.0] - 2026-07-04
 
 ### Added

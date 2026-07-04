@@ -7,10 +7,8 @@ import { Input } from '../components/ui/Input';
 import { ReleasePreviewModal } from '../components/ReleasePreviewModal';
 import { SearchResultCard } from '../components/SearchResultCard';
 import { SearchResultCardSkeleton } from '../components/SearchResultCardSkeleton';
-import * as discogsApi from '../services/discogsApi';
-import * as libraryApi from '../services/libraryApi';
-import type { Release } from '../services/libraryApi';
-import type { CatalogSearchResult } from '../services/discogsApi';
+import { useCatalogRelease, useCatalogSearch } from '../queries/discogsQueries';
+import { useCreateLibraryEntry } from '../queries/libraryQueries';
 
 const SKELETON_COUNT = 8;
 const PAGE_SIZE = 20;
@@ -18,65 +16,41 @@ const resultsGridClasses =
   'grid list-none grid-cols-2 gap-4 p-0 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
 export function AddRecordPage() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<CatalogSearchResult[]>([]);
-  const [searched, setSearched] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [queryInput, setQueryInput] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState('');
+  const [page, setPage] = useState(1);
   const [addingId, setAddingId] = useState<number | null>(null);
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [previewDiscogsId, setPreviewDiscogsId] = useState<number | null>(null);
 
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewRelease, setPreviewRelease] = useState<Release | null>(null);
+  const searchQuery = useCatalogSearch(submittedQuery, 'release', page, PAGE_SIZE);
+  const previewQuery = useCatalogRelease(previewDiscogsId ?? undefined);
+  const createEntry = useCreateLibraryEntry();
 
-  async function runSearch(pageToLoad: number) {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await discogsApi.search(query, 'release', pageToLoad, PAGE_SIZE);
-      setResults(response.results);
-      setSearched(true);
-      setPage(response.pagination.page);
-      setTotalPages(response.pagination.pages);
-    } catch {
-      setError('Something went wrong while searching. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const searched = submittedQuery.trim().length > 0;
+  const loading = searchQuery.isLoading;
+  const results = searchQuery.data?.results ?? [];
+  const totalPages = searchQuery.data?.pagination.pages ?? 0;
+  const error = addError ?? (searchQuery.isError ? 'Something went wrong while searching. Please try again.' : null);
 
-  async function handleSearch(event: FormEvent) {
+  function handleSearch(event: FormEvent) {
     event.preventDefault();
-    await runSearch(1);
+    setAddError(null);
+    setPage(1);
+    setSubmittedQuery(queryInput);
   }
 
   async function handleAdd(discogsId: number) {
     setAddingId(discogsId);
-    setError(null);
+    setAddError(null);
     try {
-      await libraryApi.create(discogsId);
+      await createEntry.mutateAsync({ discogsReleaseId: discogsId });
       setAddedIds((prev) => new Set(prev).add(discogsId));
     } catch {
-      setError('Something went wrong while adding this record. Please try again.');
+      setAddError('Something went wrong while adding this record. Please try again.');
     } finally {
       setAddingId(null);
-    }
-  }
-
-  async function handlePreview(discogsId: number) {
-    setPreviewOpen(true);
-    setPreviewLoading(true);
-    setPreviewRelease(null);
-    try {
-      const release = await discogsApi.getRelease(discogsId);
-      setPreviewRelease(release);
-    } catch {
-      setPreviewRelease(null);
-    } finally {
-      setPreviewLoading(false);
     }
   }
 
@@ -92,8 +66,8 @@ export function AddRecordPage() {
               id="record-search"
               label="Search Discogs"
               type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              value={queryInput}
+              onChange={(event) => setQueryInput(event.target.value)}
             />
           </div>
           <Button type="submit" loading={loading}>
@@ -130,7 +104,7 @@ export function AddRecordPage() {
                 <SearchResultCard
                   result={result}
                   onAdd={() => handleAdd(result.discogsId)}
-                  onPreview={() => handlePreview(result.discogsId)}
+                  onPreview={() => setPreviewDiscogsId(result.discogsId)}
                   adding={addingId === result.discogsId}
                   added={addedIds.has(result.discogsId)}
                 />
@@ -139,17 +113,13 @@ export function AddRecordPage() {
           </ul>
           {totalPages > 1 && (
             <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                disabled={page <= 1}
-                onClick={() => runSearch(page - 1)}
-              >
+              <Button variant="secondary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 Previous
               </Button>
               <Button
                 variant="secondary"
                 disabled={page >= totalPages}
-                onClick={() => runSearch(page + 1)}
+                onClick={() => setPage((p) => p + 1)}
               >
                 Next
               </Button>
@@ -159,10 +129,10 @@ export function AddRecordPage() {
       )}
 
       <ReleasePreviewModal
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        release={previewRelease}
-        loading={previewLoading}
+        open={previewDiscogsId !== null}
+        onClose={() => setPreviewDiscogsId(null)}
+        release={previewQuery.data ?? null}
+        loading={previewQuery.isLoading}
       />
     </main>
   );

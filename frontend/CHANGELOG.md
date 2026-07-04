@@ -8,6 +8,14 @@ of the `backend` package.
 
 ## [Unreleased]
 
+### Added
+
+- Client-side state caching for library and catalog reads using TanStack
+  Query: revisiting the library list, a record's detail page, or a repeated
+  Discogs search now renders instantly from cache instead of re-fetching, and
+  a user's own edits/adds/removes invalidate the relevant cached data so
+  changes are always reflected immediately.
+
 ### Changed
 
 - Redesigned the record detail view into a responsive four-block layout

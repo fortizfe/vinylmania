@@ -8,7 +8,10 @@ export type LogOutcome =
   | 'not_found'
   | 'rate_limited'
   | 'unavailable'
-  | 'validation_error';
+  | 'validation_error'
+  | 'cache_hit'
+  | 'cache_miss'
+  | 'cache_unavailable';
 
 export interface LogEvent {
   route: string;
