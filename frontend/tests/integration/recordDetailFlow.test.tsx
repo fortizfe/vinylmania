@@ -183,7 +183,7 @@ describe('Record detail flow (US3)', () => {
     expect(mockRemove).not.toHaveBeenCalled();
   });
 
-  it('edits condition and notes and reflects the change afterward', async () => {
+  it('edits condition inline and autosaves on blur, with no Edit/Save buttons (US1)', async () => {
     const baseEntry = {
       id: 'entry-1',
       discogsReleaseId: 1,
@@ -205,31 +205,179 @@ describe('Record detail flow (US3)', () => {
       },
     };
     mockGetOne.mockResolvedValue(baseEntry);
-    mockUpdate.mockResolvedValue({
-      ...baseEntry,
-      condition: 'Mint',
-      notes: 'Regraded after cleaning',
+    mockUpdate.mockResolvedValue({ ...baseEntry, condition: 'Mint' });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText(/Original notes/)).toBeInTheDocument());
+
+    expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^save$/i })).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('Good'));
+    await user.selectOptions(screen.getByLabelText('Condition'), 'Mint');
+    await act(async () => {
+      screen.getByLabelText('Condition').blur();
     });
+
+    expect(mockUpdate).toHaveBeenCalledWith('entry-1', 'Mint');
+    await waitFor(() => expect(screen.getByText('Mint')).toBeInTheDocument());
+  });
+
+  it('edits notes inline and reverts on Escape without saving (US1)', async () => {
+    const baseEntry = {
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      condition: 'Good',
+      notes: 'Original notes',
+      catalogStatus: 'ok' as const,
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    };
+    mockGetOne.mockResolvedValue(baseEntry);
 
     renderPage();
 
     await waitFor(() => expect(screen.getByText(/Original notes/)).toBeInTheDocument());
 
     const user = userEvent.setup();
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /edit/i }));
-    });
-
-    const notesField = screen.getByLabelText(/notes/i);
+    await user.click(screen.getByText('Original notes'));
+    const notesField = screen.getByLabelText('Notes');
     await user.clear(notesField);
-    await user.type(notesField, 'Regraded after cleaning');
-    await user.selectOptions(screen.getByLabelText(/condition/i), 'Mint');
+    await user.type(notesField, 'Discarded edit');
+    await user.keyboard('{Escape}');
 
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /save/i }));
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(screen.getByText('Original notes')).toBeInTheDocument();
+  });
+
+  it('resolves the condition field before activating the notes field (US1, FR-017)', async () => {
+    const baseEntry = {
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      condition: 'Good',
+      notes: 'Original notes',
+      catalogStatus: 'ok' as const,
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    };
+    mockGetOne.mockResolvedValue(baseEntry);
+    mockUpdate.mockResolvedValue({ ...baseEntry, condition: 'Mint' });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText(/Original notes/)).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('Good'));
+    await user.selectOptions(screen.getByLabelText('Condition'), 'Mint');
+
+    // Activating notes while condition is mid-edit must resolve (save) condition first.
+    await user.click(screen.getByText('Original notes'));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith('entry-1', 'Mint'));
+    expect(screen.queryByLabelText('Condition')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Notes')).toBeInTheDocument();
+  });
+
+  it('renders the four blocks in a responsive grid: full-width image, left column, right column (US2)', async () => {
+    mockGetOne.mockResolvedValue({
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
     });
 
-    expect(mockUpdate).toHaveBeenCalledWith('entry-1', 'Mint', 'Regraded after cleaning');
-    await waitFor(() => expect(screen.getByText(/Regraded after cleaning/)).toBeInTheDocument());
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    const grid = screen.getByText('Stockholm').closest('main')?.querySelector('.grid');
+    expect(grid).toHaveClass('grid-cols-1', 'lg:grid-cols-2');
+
+    const imageWrapper = screen
+      .getByText(/no cover image available/i)
+      .closest(String.raw`.lg\:col-span-2`);
+    expect(imageWrapper).not.toBeNull();
+
+    // DOM order must be: header image, disc info, my copy, tracklist (stacked order, FR-002).
+    const main = screen.getByText('Stockholm').closest('main');
+    const text = main?.textContent ?? '';
+    expect(text.indexOf('No cover image available')).toBeLessThan(text.indexOf('Stockholm'));
+    expect(text.indexOf('Stockholm')).toBeLessThan(text.indexOf('Your copy'));
+    expect(text.indexOf('Your copy')).toBeLessThan(text.indexOf('Tracklist'));
+  });
+
+  it('shows every credited artist, format descriptor, and genre when there is more than one (US3)', async () => {
+    mockGetOne.mockResolvedValue({
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [
+          { discogsArtistId: 1, name: 'The Persuader' },
+          { discogsArtistId: 2, name: 'Rune Lindbæk' },
+        ],
+        labels: [],
+        formats: [
+          { name: 'Vinyl', descriptions: ['12"'] },
+          { name: 'File', descriptions: ['MP3'] },
+        ],
+        genres: ['Electronic', 'House'],
+        styles: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    expect(screen.getByText(/The Persuader/)).toBeInTheDocument();
+    expect(screen.getByText(/Rune Lindbæk/)).toBeInTheDocument();
+    expect(screen.getByText(/Vinyl/)).toBeInTheDocument();
+    expect(screen.getByText(/File/)).toBeInTheDocument();
+    expect(screen.getByText('Electronic')).toBeInTheDocument();
+    expect(screen.getByText('House')).toBeInTheDocument();
   });
 });
