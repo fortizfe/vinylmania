@@ -62,4 +62,28 @@ describe('Library list flow (US2)', () => {
 
     await waitFor(() => expect(screen.getByText(/no records yet/i)).toBeInTheDocument());
   });
+
+  it('shows skeleton placeholders while the library is loading, then replaces them with content', async () => {
+    let resolveList!: (value: {
+      items: unknown[];
+      page: number;
+      pageSize: number;
+      totalItems: number;
+    }) => void;
+    mockList.mockReturnValue(
+      new Promise((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+
+    renderPage();
+
+    expect(screen.getAllByTestId('record-card-skeleton').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/loading your library/i)).not.toBeInTheDocument();
+
+    resolveList({ items: [], page: 1, pageSize: 20, totalItems: 0 });
+
+    await waitFor(() => expect(screen.getByText(/no records yet/i)).toBeInTheDocument());
+    expect(screen.queryByTestId('record-card-skeleton')).not.toBeInTheDocument();
+  });
 });

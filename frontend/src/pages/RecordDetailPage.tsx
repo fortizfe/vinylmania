@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { RecordDetailSkeleton } from '../components/RecordDetailSkeleton';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import * as libraryApi from '../services/libraryApi';
 import type { EnrichedLibraryEntry } from '../services/libraryApi';
 
@@ -61,68 +64,94 @@ export function RecordDetailPage() {
 
   if (notFound) {
     return (
-      <main className="app-page">
-        <p>Couldn&apos;t find that record in your library.</p>
+      <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+        <Card>
+          <p className="text-gray-500 dark:text-gray-400">
+            Couldn&apos;t find that record in your library.
+          </p>
+        </Card>
       </main>
     );
   }
 
   if (!entry) {
     return (
-      <main className="app-page">
-        <p>Loading…</p>
+      <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+        <RecordDetailSkeleton />
       </main>
     );
   }
 
+  const fieldClasses =
+    'rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100';
+  const labelClasses = 'text-sm font-medium text-gray-700 dark:text-gray-300';
+
   const yourCopy = isEditing ? (
-    <div>
-      <label htmlFor="record-condition">Condition</label>
-      <select
-        id="record-condition"
-        value={conditionInput}
-        onChange={(event) => setConditionInput(event.target.value)}
-      >
-        <option value="">—</option>
-        {CONDITION_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <label htmlFor="record-condition" className={labelClasses}>
+          Condition
+        </label>
+        <select
+          id="record-condition"
+          value={conditionInput}
+          onChange={(event) => setConditionInput(event.target.value)}
+          className={fieldClasses}
+        >
+          <option value="">—</option>
+          {CONDITION_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <label htmlFor="record-notes">Notes</label>
-      <textarea
-        id="record-notes"
-        value={notesInput}
-        onChange={(event) => setNotesInput(event.target.value)}
-      />
+      <div className="flex flex-col gap-1">
+        <label htmlFor="record-notes" className={labelClasses}>
+          Notes
+        </label>
+        <textarea
+          id="record-notes"
+          value={notesInput}
+          onChange={(event) => setNotesInput(event.target.value)}
+          className={fieldClasses}
+        />
+      </div>
 
-      <button type="button" onClick={handleSave}>
-        Save
-      </button>
-      <button type="button" onClick={() => setIsEditing(false)}>
-        Cancel
-      </button>
+      <div className="flex gap-3">
+        <Button onClick={handleSave}>Save</Button>
+        <Button variant="secondary" onClick={() => setIsEditing(false)}>
+          Cancel
+        </Button>
+      </div>
     </div>
   ) : (
-    <div>
-      {entry.condition && <p>Condition: {entry.condition}</p>}
-      {entry.notes && <p>Notes: {entry.notes}</p>}
-      <button type="button" onClick={startEditing}>
-        Edit
-      </button>
-      <button type="button" onClick={handleRemove}>
-        Remove from library
-      </button>
+    <div className="flex flex-col gap-3">
+      {entry.condition && (
+        <p className="text-gray-700 dark:text-gray-300">Condition: {entry.condition}</p>
+      )}
+      {entry.notes && <p className="text-gray-700 dark:text-gray-300">Notes: {entry.notes}</p>}
+      <div className="flex gap-3">
+        <Button variant="secondary" onClick={startEditing}>
+          Edit
+        </Button>
+        <Button variant="secondary" onClick={handleRemove}>
+          Remove from library
+        </Button>
+      </div>
     </div>
   );
 
   if (entry.catalogStatus === 'unavailable' || !entry.release) {
     return (
-      <main className="app-page">
-        <p>Couldn&apos;t load catalog details for this record right now.</p>
-        {yourCopy}
+      <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+        <Card>
+          <p className="text-gray-500 dark:text-gray-400">
+            Couldn&apos;t load catalog details for this record right now.
+          </p>
+        </Card>
+        <Card>{yourCopy}</Card>
       </main>
     );
   }
@@ -130,16 +159,24 @@ export function RecordDetailPage() {
   const { release } = entry;
 
   return (
-    <main className="app-page">
-      <h1>{release.title}</h1>
-      {release.artists.map((artist) => (
-        <p key={artist.discogsArtistId}>{artist.name}</p>
-      ))}
+    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+      <Card>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          {release.title}
+        </h1>
+        {release.artists.map((artist) => (
+          <p key={artist.discogsArtistId} className="text-gray-500 dark:text-gray-400">
+            {artist.name}
+          </p>
+        ))}
+      </Card>
 
       {release.tracklist.length > 0 && (
-        <>
-          <h2>Tracklist</h2>
-          <ol>
+        <Card>
+          <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Tracklist
+          </h2>
+          <ol className="flex flex-col gap-1 text-gray-700 dark:text-gray-300">
             {release.tracklist.map((track) => (
               <li key={`${track.position}-${track.title}`}>
                 {track.position}. {track.title}
@@ -147,11 +184,13 @@ export function RecordDetailPage() {
               </li>
             ))}
           </ol>
-        </>
+        </Card>
       )}
 
-      <h2>Your copy</h2>
-      {yourCopy}
+      <Card>
+        <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">Your copy</h2>
+        {yourCopy}
+      </Card>
     </main>
   );
 }

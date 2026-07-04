@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 
 import type { EnrichedLibraryEntry } from '../services/libraryApi';
+import { Badge } from './ui/Badge';
+import { Card } from './ui/Card';
 
 interface RecordCardProps {
   entry: EnrichedLibraryEntry;
@@ -9,9 +11,11 @@ interface RecordCardProps {
 export function RecordCard({ entry }: RecordCardProps) {
   if (entry.catalogStatus === 'unavailable' || !entry.release) {
     return (
-      <li className="record-card record-card--unavailable">
-        <p>Couldn&apos;t load catalog details for this record right now.</p>
-        {entry.condition && <p>Condition: {entry.condition}</p>}
+      <li>
+        <Card padding="sm" className="flex flex-col gap-1 text-gray-500 italic dark:text-gray-400">
+          <p>Couldn&apos;t load catalog details for this record right now.</p>
+          {entry.condition && <p>Condition: {entry.condition}</p>}
+        </Card>
       </li>
     );
   }
@@ -21,13 +25,25 @@ export function RecordCard({ entry }: RecordCardProps) {
   const cover = release.images[0]?.url;
 
   return (
-    <li className="record-card">
-      <Link to={`/app/records/${entry.id}`}>
-        {cover && <img src={cover} alt="" className="record-card__cover" />}
-        <span className="record-card__title">{release.title}</span>
-        {primaryArtist && <span className="record-card__artist">{primaryArtist}</span>}
-      </Link>
-      {entry.condition && <span className="record-card__condition">{entry.condition}</span>}
+    <li>
+      <Card padding="sm" className="flex flex-col gap-2">
+        <Link to={`/app/records/${entry.id}`} className="flex flex-col gap-2">
+          {cover ? (
+            <img src={cover} alt="" className="aspect-square w-full rounded-md object-cover" />
+          ) : (
+            <div className="aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-800" />
+          )}
+          <span className="truncate font-semibold text-gray-900 dark:text-gray-100">
+            {release.title}
+          </span>
+          {primaryArtist && (
+            <span className="truncate text-sm text-gray-500 dark:text-gray-400">
+              {primaryArtist}
+            </span>
+          )}
+        </Link>
+        {entry.condition && <Badge>{entry.condition}</Badge>}
+      </Card>
     </li>
   );
 }

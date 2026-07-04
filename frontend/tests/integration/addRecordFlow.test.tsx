@@ -79,6 +79,48 @@ describe('Add record flow (US1)', () => {
     await waitFor(() => expect(screen.getByText('Library list')).toBeInTheDocument());
   });
 
+  it('shows skeleton placeholders in the results area while a search is pending', async () => {
+    let resolveSearch!: (value: {
+      results: unknown[];
+      pagination: { page: number; pages: number; items: number; perPage: number };
+    }) => void;
+    mockSearch.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSearch = resolve;
+      }),
+    );
+
+    renderPage();
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('textbox', { name: /search/i }), 'Stockholm');
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /search/i }));
+    });
+
+    expect(screen.getByTestId('search-results-skeleton')).toBeInTheDocument();
+
+    await act(async () => {
+      resolveSearch({
+        results: [
+          {
+            discogsId: 1,
+            resultType: 'release',
+            title: 'The Persuader - Stockholm',
+            year: 1999,
+            formats: ['Vinyl'],
+          },
+        ],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 50 },
+      });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText(/the persuader - stockholm/i)).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId('search-results-skeleton')).not.toBeInTheDocument();
+  });
+
   it('shows a clear empty state when the search has no matches', async () => {
     mockSearch.mockResolvedValue({
       results: [],

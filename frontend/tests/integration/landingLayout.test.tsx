@@ -34,7 +34,6 @@ describe('LandingPage layout', () => {
     renderLandingPage();
 
     const viewport = screen.getByTestId('landing-viewport');
-    expect(viewport).toHaveClass('landing-viewport');
 
     const heading = screen.getByRole('heading', { level: 1 });
     const cta = screen.getByRole('button', { name: /sign in with google/i });

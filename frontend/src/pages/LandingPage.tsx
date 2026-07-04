@@ -12,7 +12,10 @@ export function LandingPage() {
   }
 
   return (
-    <main className="landing-viewport" data-testid="landing-viewport">
+    <main
+      data-testid="landing-viewport"
+      className="flex h-dvh w-full flex-col items-center justify-center gap-8 overflow-hidden p-6 text-center sm:gap-12 sm:p-12"
+    >
       <LandingHero />
       <GoogleSignInButton onClick={signIn} loading={signingIn} error={error} />
     </main>

@@ -68,6 +68,41 @@ describe('Record detail flow (US3)', () => {
     expect(screen.getByText(/Bought at a record fair/)).toBeInTheDocument();
   });
 
+  it('shows a skeleton placeholder while the record is loading, then replaces it with content', async () => {
+    let resolveGetOne!: (value: unknown) => void;
+    mockGetOne.mockReturnValue(
+      new Promise((resolve) => {
+        resolveGetOne = resolve;
+      }),
+    );
+
+    renderPage();
+
+    expect(screen.getByTestId('record-detail-skeleton')).toBeInTheDocument();
+
+    resolveGetOne({
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    });
+
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+    expect(screen.queryByTestId('record-detail-skeleton')).not.toBeInTheDocument();
+  });
+
   it('shows a not-found state for an entry that does not exist', async () => {
     mockGetOne.mockRejectedValue({ status: 404, code: 'entry_not_found' });
 

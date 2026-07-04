@@ -1,18 +1,19 @@
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
+import { Button } from './ui/Button';
 
 export function AppHeader() {
   const { signOut } = useAuth();
 
   return (
-    <header className="app-header">
-      <Link to="/app" className="app-header__brand">
+    <header className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-gray-800 sm:px-6">
+      <Link to="/app" className="text-lg font-semibold text-gray-900 no-underline dark:text-gray-100">
         Vinylmania
       </Link>
-      <button type="button" onClick={signOut}>
+      <Button variant="secondary" onClick={signOut}>
         Sign out
-      </button>
+      </Button>
     </header>
   );
 }

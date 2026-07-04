@@ -1,3 +1,5 @@
+import { Button } from './ui/Button';
+
 interface GoogleSignInButtonProps {
   onClick: () => void;
   loading?: boolean;
@@ -10,18 +12,12 @@ export function GoogleSignInButton({
   error = null,
 }: GoogleSignInButtonProps) {
   return (
-    <div className="google-signin">
-      <button
-        type="button"
-        className="google-signin__button"
-        onClick={onClick}
-        disabled={loading}
-        aria-busy={loading}
-      >
+    <div className="flex flex-col items-center gap-3">
+      <Button onClick={onClick} loading={loading} className="rounded-full px-8 py-3.5">
         {loading ? 'Signing in…' : 'Sign in with Google'}
-      </button>
+      </Button>
       {error && (
-        <p role="alert" className="google-signin__error">
+        <p role="alert" className="max-w-96 text-sm text-red-600 dark:text-red-400">
           {error}
         </p>
       )}
