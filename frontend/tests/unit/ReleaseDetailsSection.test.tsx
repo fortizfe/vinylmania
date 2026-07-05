@@ -64,4 +64,38 @@ describe('ReleaseDetailsSection', () => {
 
     expect(screen.queryByText('Sweden')).not.toBeInTheDocument();
   });
+
+  it('renders a single format descriptor as a badge', () => {
+    render(
+      <ReleaseDetailsSection
+        release={buildRelease({ formats: [{ name: 'Vinyl', descriptions: ['12"'] }] })}
+      />,
+    );
+
+    expect(screen.getByText(/Vinyl/)).toBeInTheDocument();
+    expect(screen.getByText(/12"/)).toBeInTheDocument();
+  });
+
+  it('renders every format descriptor when there is more than one', () => {
+    render(
+      <ReleaseDetailsSection
+        release={buildRelease({
+          formats: [
+            { name: 'Vinyl', descriptions: ['12"'] },
+            { name: 'File', descriptions: ['MP3'] },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/Vinyl/)).toBeInTheDocument();
+    expect(screen.getByText(/File/)).toBeInTheDocument();
+  });
+
+  it('still omits the meta row when formats is also empty, alongside the other optional fields', () => {
+    render(<ReleaseDetailsSection release={buildRelease({ formats: [] })} />);
+
+    expect(screen.queryByText(/Vinyl/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Sweden')).not.toBeInTheDocument();
+  });
 });

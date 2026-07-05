@@ -1,25 +1,18 @@
-import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { DiscInfoCard } from '../components/DiscInfoCard';
+import { MyCopySection } from '../components/MyCopySection';
 import { RecordDetailSkeleton } from '../components/RecordDetailSkeleton';
-import { RecordHeaderImage } from '../components/RecordHeaderImage';
-import { TracklistCard } from '../components/TracklistCard';
+import { ReleaseAdditionalInfoSection } from '../components/ReleaseAdditionalInfoSection';
+import { ReleaseDetailsSection } from '../components/ReleaseDetailsSection';
+import { ReleaseImageGallery } from '../components/ReleaseImageGallery';
+import { ReleaseTracklistSection } from '../components/ReleaseTracklistSection';
 import { BackLink } from '../components/ui/BackLink';
-import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { InlineEditableField, type InlineEditableFieldHandle } from '../components/ui/InlineEditableField';
 import {
   useLibraryEntry,
   useRemoveLibraryEntry,
   useUpdateLibraryEntry,
 } from '../queries/libraryQueries';
-
-const CONDITION_OPTIONS = ['Mint', 'Near Mint', 'Very Good Plus', 'Good', 'Fair', 'Poor'];
-
-const fieldClasses =
-  'rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100';
-const labelClasses = 'text-sm font-medium text-gray-700 dark:text-gray-300';
 
 export function RecordDetailPage() {
   const { entryId } = useParams<{ entryId: string }>();
@@ -27,9 +20,6 @@ export function RecordDetailPage() {
   const { data: entry, isLoading, isError: notFound } = useLibraryEntry(entryId);
   const updateEntry = useUpdateLibraryEntry(entryId ?? '');
   const removeEntry = useRemoveLibraryEntry();
-
-  const conditionFieldRef = useRef<InlineEditableFieldHandle>(null);
-  const notesFieldRef = useRef<InlineEditableFieldHandle>(null);
 
   async function handleRemove() {
     if (!entryId) return;
@@ -73,77 +63,21 @@ export function RecordDetailPage() {
 
   if (isLoading || !entry) {
     return (
-      <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+      <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8">
         <BackLink to="/app/library" />
         <RecordDetailSkeleton />
       </main>
     );
   }
 
-  const yourCopyCard = (
-    <Card>
-      <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">Your copy</h2>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <span className={labelClasses}>Condition</span>
-          <InlineEditableField
-            ref={conditionFieldRef}
-            value={entry.condition ?? ''}
-            placeholder="Add a condition"
-            fieldLabel="Condition"
-            onActivate={() => notesFieldRef.current?.commit()}
-            onSave={saveCondition}
-            renderEditor={({ value, onChange, onBlur, onKeyDown, autoFocus }) => (
-              <select
-                aria-label="Condition"
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                onBlur={onBlur}
-                onKeyDown={onKeyDown}
-                autoFocus={autoFocus}
-                className={fieldClasses}
-              >
-                <option value="">—</option>
-                {CONDITION_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            )}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className={labelClasses}>Notes</span>
-          <InlineEditableField
-            ref={notesFieldRef}
-            value={entry.notes ?? ''}
-            placeholder="Add notes"
-            fieldLabel="Notes"
-            onActivate={() => conditionFieldRef.current?.commit()}
-            onSave={saveNotes}
-            renderEditor={({ value, onChange, onBlur, onKeyDown, autoFocus }) => (
-              <textarea
-                aria-label="Notes"
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                onBlur={onBlur}
-                onKeyDown={onKeyDown}
-                autoFocus={autoFocus}
-                className={fieldClasses}
-              />
-            )}
-          />
-        </div>
-
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={handleRemove}>
-            Remove from library
-          </Button>
-        </div>
-      </div>
-    </Card>
+  const myCopySection = (
+    <MyCopySection
+      condition={entry.condition}
+      notes={entry.notes}
+      onSaveCondition={saveCondition}
+      onSaveNotes={saveNotes}
+      onRemove={handleRemove}
+    />
   );
 
   if (entry.catalogStatus === 'unavailable' || !entry.release) {
@@ -155,7 +89,7 @@ export function RecordDetailPage() {
             Couldn&apos;t load catalog details for this record right now.
           </p>
         </Card>
-        {yourCopyCard}
+        <Card>{myCopySection}</Card>
       </main>
     );
   }
@@ -165,18 +99,35 @@ export function RecordDetailPage() {
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8">
       <BackLink to="/app/library" />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="lg:col-span-2">
-          <RecordHeaderImage images={release.images} alt={release.title} />
+      <Card>
+        <div
+          data-testid="record-detail-content"
+          className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+        >
+          <div data-testid="record-detail-gallery" className="lg:col-span-2">
+            <ReleaseImageGallery images={release.images} alt={release.title} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2">
+            <div data-testid="record-detail-details" className="flex flex-col gap-6">
+              <ReleaseDetailsSection release={release} />
+              {myCopySection}
+            </div>
+
+            <div data-testid="record-detail-tracklist">
+              <ReleaseTracklistSection tracklist={release.tracklist} />
+            </div>
+          </div>
+
+          <div data-testid="record-detail-additional-info" className="lg:col-span-2">
+            <ReleaseAdditionalInfoSection
+              notes={release.notes}
+              identifiers={release.identifiers}
+              community={release.community}
+            />
+          </div>
         </div>
-        <div className="flex flex-col gap-6">
-          <DiscInfoCard release={release} />
-          {yourCopyCard}
-        </div>
-        <div>
-          <TracklistCard tracks={release.tracklist} />
-        </div>
-      </div>
+      </Card>
     </main>
   );
 }

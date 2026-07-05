@@ -8,6 +8,27 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.5.0] - 2026-07-05
+
+### Changed
+
+- Redesigned the record detail page to match the release preview's layout:
+  a full-width square cover gallery with browsable thumbnails, key release
+  details (title, artist, format, genres, styles, release date, label) and
+  the tracklist side by side directly below it, and notes, identifiers, and
+  community stats in their own section below that — all inside a single
+  bordered container instead of several separate cards. On mobile, the
+  sections stack in the same order: gallery, key details, my copy, tracklist,
+  then the remaining details.
+- Moved "Your copy" (condition and notes, inline-editable) into its own
+  `MyCopySection` component, positioned directly below the key release
+  details in the left column; all existing inline-edit behavior (autosave,
+  Escape to cancel, save confirmation, editable-field affordance) and the
+  "Remove from library" action are unchanged.
+- Added the format field (e.g. "Vinyl (12\")") to the shared key-details
+  presentation used by both the record detail page and the release preview,
+  so no previously-visible information is lost by this redesign.
+
 ## [0.4.0] - 2026-07-04
 
 ### Changed

@@ -58,6 +58,7 @@ describe('Record detail flow (US3)', () => {
         genres: ['Electronic'],
         styles: ['Deep House'],
         tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
+        identifiers: [],
         images: [],
         discogsUrl: 'https://www.discogs.com/release/1',
       },
@@ -102,6 +103,7 @@ describe('Record detail flow (US3)', () => {
         genres: [],
         styles: [],
         tracklist: [],
+        identifiers: [],
         images: [],
         discogsUrl: 'https://www.discogs.com/release/1',
       },
@@ -119,6 +121,65 @@ describe('Record detail flow (US3)', () => {
     await waitFor(() => expect(screen.getByText(/couldn't find that record/i)).toBeInTheDocument());
   });
 
+  it('shows an explanatory message plus an editable my-copy section when catalog details are unavailable (US4)', async () => {
+    mockGetOne.mockResolvedValue({
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      condition: 'Good',
+      notes: 'Original notes',
+      catalogStatus: 'unavailable',
+      release: null,
+    });
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText(/couldn't load catalog details/i)).toBeInTheDocument(),
+    );
+    expect(screen.getByText('Your copy')).toBeInTheDocument();
+    expect(screen.getByText('Good')).toBeInTheDocument();
+    expect(screen.getByText('Original notes')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('Good'));
+    expect(screen.getByLabelText('Condition')).toBeInTheDocument();
+  });
+
+  it('omits the key-details meta row and tracklist section when that data is missing, while title/artist and my copy still render (US4)', async () => {
+    mockGetOne.mockResolvedValue({
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      condition: 'Good',
+      notes: 'Original notes',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        identifiers: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    expect(screen.getByText('The Persuader')).toBeInTheDocument();
+    expect(screen.getByText('Your copy')).toBeInTheDocument();
+    expect(screen.getByText('Good')).toBeInTheDocument();
+    expect(screen.queryByText('Tracklist')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No tracklist available/i)).not.toBeInTheDocument();
+  });
+
   it('removes the record after confirmation and returns to the library', async () => {
     mockGetOne.mockResolvedValue({
       id: 'entry-1',
@@ -134,6 +195,7 @@ describe('Record detail flow (US3)', () => {
         genres: [],
         styles: [],
         tracklist: [],
+        identifiers: [],
         images: [],
         discogsUrl: 'https://www.discogs.com/release/1',
       },
@@ -169,6 +231,7 @@ describe('Record detail flow (US3)', () => {
         genres: [],
         styles: [],
         tracklist: [],
+        identifiers: [],
         images: [],
         discogsUrl: 'https://www.discogs.com/release/1',
       },
@@ -204,6 +267,7 @@ describe('Record detail flow (US3)', () => {
         genres: [],
         styles: [],
         tracklist: [],
+        identifiers: [],
         images: [],
         discogsUrl: 'https://www.discogs.com/release/1',
       },
@@ -246,6 +310,7 @@ describe('Record detail flow (US3)', () => {
         genres: [],
         styles: [],
         tracklist: [],
+        identifiers: [],
         images: [],
         discogsUrl: 'https://www.discogs.com/release/1',
       },
@@ -284,6 +349,7 @@ describe('Record detail flow (US3)', () => {
         genres: [],
         styles: [],
         tracklist: [],
+        identifiers: [],
         images: [],
         discogsUrl: 'https://www.discogs.com/release/1',
       },
@@ -307,7 +373,7 @@ describe('Record detail flow (US3)', () => {
     expect(screen.getByLabelText('Notes')).toBeInTheDocument();
   });
 
-  it('renders the four blocks in a responsive grid: full-width image, left column, right column (US2)', async () => {
+  it('renders the gallery, key details, tracklist, and additional info in the same structure as the release preview (US1)', async () => {
     mockGetOne.mockResolvedValue({
       id: 'entry-1',
       discogsReleaseId: 1,
@@ -321,6 +387,9 @@ describe('Record detail flow (US3)', () => {
         formats: [],
         genres: [],
         styles: [],
+        notes: 'Recorded at Stockholm Sound Studio.',
+        identifiers: [{ type: 'Barcode', value: '7 39051 23421 6' }],
+        community: { have: 214, want: 58, rating: { average: 4.3, count: 37 } },
         tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
         images: [],
         discogsUrl: 'https://www.discogs.com/release/1',
@@ -331,23 +400,44 @@ describe('Record detail flow (US3)', () => {
 
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
 
-    const grid = screen.getByText('Stockholm').closest('main')?.querySelector('.grid');
-    expect(grid).toHaveClass('grid-cols-1', 'lg:grid-cols-2');
+    const content = screen.getByTestId('record-detail-content');
+    expect(content.className).toMatch(/grid-cols-1/);
+    expect(content.className).toMatch(/lg:grid-cols-2/);
 
-    const imageWrapper = screen
-      .getByText(/no cover image available/i)
-      .closest(String.raw`.lg\:col-span-2`);
-    expect(imageWrapper).not.toBeNull();
+    // The whole page's content sits inside a single shared bordered surface (Card) —
+    // none of the individual sections gets its own independent border (spec Clarifications).
+    expect(content.parentElement?.className).toMatch(/rounded-xl/);
+    expect(content.parentElement?.className).toMatch(/border/);
 
-    // DOM order must be: header image, disc info, my copy, tracklist (stacked order, FR-002).
-    const main = screen.getByText('Stockholm').closest('main');
-    const text = main?.textContent ?? '';
-    expect(text.indexOf('No cover image available')).toBeLessThan(text.indexOf('Stockholm'));
-    expect(text.indexOf('Stockholm')).toBeLessThan(text.indexOf('Your copy'));
-    expect(text.indexOf('Your copy')).toBeLessThan(text.indexOf('Tracklist'));
+    const gallery = screen.getByTestId('record-detail-gallery');
+    const details = screen.getByTestId('record-detail-details');
+    const tracklist = screen.getByTestId('record-detail-tracklist');
+    const additionalInfo = screen.getByTestId('record-detail-additional-info');
+
+    expect(gallery.className).toMatch(/lg:col-span-2/);
+    expect(details.parentElement?.className).toMatch(/lg:grid-cols-2/);
+    expect(details.parentElement).toBe(tracklist.parentElement);
+    expect(additionalInfo.className).toMatch(/lg:col-span-2/);
+
+    [gallery, details, tracklist, additionalInfo].forEach((section) => {
+      expect(section.className).not.toMatch(/rounded-xl/);
+    });
+
+    // DOM order: gallery, details (which contains my copy), tracklist, additional info.
+    const order = [gallery, details, tracklist, additionalInfo];
+    for (let i = 0; i < order.length - 1; i += 1) {
+      expect(
+        order[i].compareDocumentPosition(order[i + 1]) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+
+    expect(screen.getByText(/Östermalm/)).toBeInTheDocument();
+    expect(screen.getByText('Recorded at Stockholm Sound Studio.')).toBeInTheDocument();
+    expect(screen.getByText(/Barcode/)).toBeInTheDocument();
+    expect(screen.getByText(/214/)).toBeInTheDocument();
   });
 
-  it('shows every credited artist, format descriptor, and genre when there is more than one (US3)', async () => {
+  it('shows every credited artist, format descriptor, genre, style, label, and date when there is more than one (US1)', async () => {
     mockGetOne.mockResolvedValue({
       id: 'entry-1',
       discogsReleaseId: 1,
@@ -356,18 +446,21 @@ describe('Record detail flow (US3)', () => {
       release: {
         discogsId: 1,
         title: 'Stockholm',
+        country: 'Sweden',
+        releaseDate: '1999-05-01',
         artists: [
           { discogsArtistId: 1, name: 'The Persuader' },
           { discogsArtistId: 2, name: 'Rune Lindbæk' },
         ],
-        labels: [],
+        labels: [{ discogsLabelId: 5, name: 'Svek', catalogNumber: 'SK032' }],
         formats: [
           { name: 'Vinyl', descriptions: ['12"'] },
           { name: 'File', descriptions: ['MP3'] },
         ],
         genres: ['Electronic', 'House'],
-        styles: [],
+        styles: ['Deep House'],
         tracklist: [],
+        identifiers: [],
         images: [],
         discogsUrl: 'https://www.discogs.com/release/1',
       },
@@ -383,5 +476,47 @@ describe('Record detail flow (US3)', () => {
     expect(screen.getByText(/File/)).toBeInTheDocument();
     expect(screen.getByText('Electronic')).toBeInTheDocument();
     expect(screen.getByText('House')).toBeInTheDocument();
+    expect(screen.getByText('Deep House')).toBeInTheDocument();
+    expect(screen.getByText('Sweden')).toBeInTheDocument();
+    expect(screen.getByText('1999-05-01')).toBeInTheDocument();
+    expect(screen.getByText(/Svek/)).toBeInTheDocument();
+  });
+
+  it('stacks gallery, key details, my copy, tracklist, and additional info in that DOM order (US3)', async () => {
+    mockGetOne.mockResolvedValue({
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      condition: 'Near Mint',
+      notes: 'Bought at a record fair',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        notes: 'Recorded at Stockholm Sound Studio.',
+        identifiers: [],
+        tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    const main = screen.getByText('Stockholm').closest('main');
+    const text = main?.textContent ?? '';
+    expect(text.indexOf('No cover image available')).toBeLessThan(text.indexOf('Stockholm'));
+    expect(text.indexOf('Stockholm')).toBeLessThan(text.indexOf('Your copy'));
+    expect(text.indexOf('Your copy')).toBeLessThan(text.indexOf('Östermalm'));
+    expect(text.indexOf('Östermalm')).toBeLessThan(
+      text.indexOf('Recorded at Stockholm Sound Studio.'),
+    );
   });
 });
