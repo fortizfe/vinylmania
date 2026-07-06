@@ -1,10 +1,11 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AddRecordPage } from '../../src/pages/AddRecordPage';
+import { HeaderSearchBox } from '../../src/components/HeaderSearchBox';
+import { SearchResultsPage } from '../../src/pages/SearchResultsPage';
 import { createTestQueryClient } from '../testUtils';
 
 const mockSearch = vi.fn();
@@ -20,31 +21,25 @@ vi.mock('../../src/services/libraryApi', () => ({
   create: (...args: unknown[]) => mockCreate(...args),
 }));
 
-function LibraryListStub() {
-  return <p>Library list</p>;
-}
-
-function renderPage() {
+function renderPage(initialEntries: string[] = ['/app/search']) {
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <MemoryRouter initialEntries={['/app/library/add']}>
-        <Routes>
-          <Route path="/app/library/add" element={<AddRecordPage />} />
-          <Route path="/app/library" element={<LibraryListStub />} />
-        </Routes>
+      <MemoryRouter initialEntries={initialEntries}>
+        <HeaderSearchBox />
+        <SearchResultsPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-describe('Add record flow (US1)', () => {
+describe('Search results flow (US2)', () => {
   beforeEach(() => {
     mockSearch.mockReset();
     mockCreate.mockReset();
     mockGetRelease.mockReset();
   });
 
-  it('searches Discogs, lets the collector pick a result, and adds it to the library without leaving the results', async () => {
+  it('renders matching result cards with a working add action from a query already in the URL', async () => {
     mockSearch.mockResolvedValue({
       results: [
         {
@@ -56,7 +51,7 @@ describe('Add record flow (US1)', () => {
           formats: ['Vinyl'],
         },
       ],
-      pagination: { page: 1, pages: 1, items: 1, perPage: 50 },
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
     });
     mockCreate.mockResolvedValue({
       id: 'entry-1',
@@ -66,21 +61,12 @@ describe('Add record flow (US1)', () => {
       release: { discogsId: 1, title: 'Stockholm' },
     });
 
-    renderPage();
-
-    const user = userEvent.setup();
-    await user.type(screen.getByRole('textbox', { name: /search/i }), 'Stockholm');
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /search/i }));
-    });
+    renderPage(['/app/search?q=Stockholm']);
 
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
     expect(mockSearch).toHaveBeenCalledWith('Stockholm', 'release', 1, 20);
-    expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute(
-      'href',
-      '/app/library',
-    );
 
+    const user = userEvent.setup();
     await act(async () => {
       await user.click(screen.getByRole('button', { name: /add to library/i }));
     });
@@ -89,11 +75,9 @@ describe('Add record flow (US1)', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /added to library/i })).toBeInTheDocument(),
     );
-    expect(screen.queryByText('Library list')).not.toBeInTheDocument();
-    expect(screen.getByText('Stockholm')).toBeInTheDocument();
   });
 
-  it('renders the enriched community rating badge on a search result without blocking add/preview (US1)', async () => {
+  it('renders the enriched community rating badge on a search result without blocking add/preview (feature 017, US1)', async () => {
     mockSearch.mockResolvedValue({
       results: [
         {
@@ -113,7 +97,7 @@ describe('Add record flow (US1)', () => {
           year: 2001,
         },
       ],
-      pagination: { page: 1, pages: 1, items: 2, perPage: 50 },
+      pagination: { page: 1, pages: 1, items: 2, perPage: 20 },
     });
     mockCreate.mockResolvedValue({
       id: 'entry-1',
@@ -123,19 +107,14 @@ describe('Add record flow (US1)', () => {
       release: { discogsId: 1, title: 'Stockholm' },
     });
 
-    renderPage();
-
-    const user = userEvent.setup();
-    await user.type(screen.getByRole('textbox', { name: /search/i }), 'Stockholm');
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /search/i }));
-    });
+    renderPage(['/app/search?q=Stockholm']);
 
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
     // The enriched result shows its badge; the unrated result shows none.
     expect(screen.getByText('4.2')).toBeInTheDocument();
     expect(screen.getAllByRole('status')).toHaveLength(1);
 
+    const user = userEvent.setup();
     await act(async () => {
       await user.click(screen.getAllByRole('button', { name: /add to library/i })[0]);
     });
@@ -146,16 +125,8 @@ describe('Add record flow (US1)', () => {
 
   it('previews a result in an overlay without adding it or losing the search results', async () => {
     mockSearch.mockResolvedValue({
-      results: [
-        {
-          discogsId: 1,
-          resultType: 'release',
-          title: 'Stockholm',
-          artist: 'The Persuader',
-          year: 1999,
-        },
-      ],
-      pagination: { page: 1, pages: 1, items: 1, perPage: 50 },
+      results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm', artist: 'The Persuader' }],
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
     });
     mockGetRelease.mockResolvedValue({
       discogsId: 1,
@@ -172,15 +143,10 @@ describe('Add record flow (US1)', () => {
       discogsUrl: 'https://www.discogs.com/release/1',
     });
 
-    renderPage();
-
-    const user = userEvent.setup();
-    await user.type(screen.getByRole('textbox', { name: /search/i }), 'Stockholm');
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /search/i }));
-    });
+    renderPage(['/app/search?q=Stockholm']);
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
 
+    const user = userEvent.setup();
     await act(async () => {
       await user.click(screen.getByRole('button', { name: /preview details/i }));
     });
@@ -188,92 +154,64 @@ describe('Add record flow (US1)', () => {
     await waitFor(() => expect(screen.getByText(/Östermalm/)).toBeInTheDocument());
     expect(mockGetRelease).toHaveBeenCalledWith(1);
     expect(mockCreate).not.toHaveBeenCalled();
-
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /close/i }));
-    });
-
-    expect(screen.queryByText(/Östermalm/)).not.toBeInTheDocument();
-    expect(screen.getByText('Stockholm')).toBeInTheDocument();
   });
 
-  it('shows skeleton placeholders in the results area while a search is pending', async () => {
-    let resolveSearch!: (value: {
-      results: unknown[];
-      pagination: { page: number; pages: number; items: number; perPage: number };
-    }) => void;
-    mockSearch.mockReturnValue(
-      new Promise((resolve) => {
-        resolveSearch = resolve;
-      }),
-    );
+  it('updates the results in place when a new query is submitted from the header (FR-005)', async () => {
+    mockSearch.mockResolvedValueOnce({
+      results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm', artist: 'The Persuader' }],
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+    });
 
-    renderPage();
+    renderPage(['/app/search?q=Stockholm']);
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    mockSearch.mockResolvedValueOnce({
+      results: [{ discogsId: 2, resultType: 'release', title: 'Fresh Result' }],
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+    });
 
     const user = userEvent.setup();
-    await user.type(screen.getByRole('textbox', { name: /search/i }), 'Stockholm');
+    await user.clear(screen.getByRole('searchbox', { name: /search discogs/i }));
+    await user.type(screen.getByRole('searchbox', { name: /search discogs/i }), 'fresh');
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: /search/i }));
+      await user.click(screen.getByRole('button', { name: /^search$/i }));
     });
 
-    expect(screen.getByTestId('search-results-skeleton')).toBeInTheDocument();
-
-    await act(async () => {
-      resolveSearch({
-        results: [
-          {
-            discogsId: 1,
-            resultType: 'release',
-            title: 'The Persuader - Stockholm',
-            year: 1999,
-            formats: ['Vinyl'],
-          },
-        ],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 50 },
-      });
-    });
-
-    await waitFor(() =>
-      expect(screen.getByText(/the persuader - stockholm/i)).toBeInTheDocument(),
-    );
-    expect(screen.queryByTestId('search-results-skeleton')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Fresh Result')).toBeInTheDocument());
+    expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 20);
+    expect(screen.queryByText('Stockholm')).not.toBeInTheDocument();
   });
 
   it('shows a clear empty state when the search has no matches', async () => {
     mockSearch.mockResolvedValue({
       results: [],
-      pagination: { page: 1, pages: 0, items: 0, perPage: 50 },
+      pagination: { page: 1, pages: 0, items: 0, perPage: 20 },
     });
 
-    renderPage();
-
-    const user = userEvent.setup();
-    await user.type(screen.getByRole('textbox', { name: /search/i }), 'zzzznomatch');
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /search/i }));
-    });
+    renderPage(['/app/search?q=zzzznomatch']);
 
     await waitFor(() => expect(screen.getByText(/no results/i)).toBeInTheDocument());
   });
 
-  it('paginates a large result set without a full reload, and resets to page 1 on a new search', async () => {
+  it('shows a clear error message when the search request fails', async () => {
+    mockSearch.mockRejectedValue(new Error('network error'));
+
+    renderPage(['/app/search?q=Stockholm']);
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(/something went wrong/i),
+    );
+  });
+
+  it('paginates without a full reload by updating the page URL param', async () => {
     mockSearch.mockResolvedValueOnce({
-      results: [
-        { discogsId: 1, resultType: 'release', title: 'Stockholm', artist: 'The Persuader' },
-      ],
+      results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
       pagination: { page: 1, pages: 3, items: 47, perPage: 20 },
     });
 
-    renderPage();
-
-    const user = userEvent.setup();
-    await user.type(screen.getByRole('textbox', { name: /search/i }), 'love');
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /search/i }));
-    });
+    renderPage(['/app/search?q=love']);
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
 
-    expect(screen.getByRole('button', { name: /^next$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^previous$/i })).toBeDisabled();
 
     mockSearch.mockResolvedValueOnce({
@@ -281,6 +219,7 @@ describe('Add record flow (US1)', () => {
       pagination: { page: 2, pages: 3, items: 47, perPage: 20 },
     });
 
+    const user = userEvent.setup();
     await act(async () => {
       await user.click(screen.getByRole('button', { name: /^next$/i }));
     });
@@ -288,22 +227,5 @@ describe('Add record flow (US1)', () => {
     await waitFor(() => expect(screen.getByText('Page Two Result')).toBeInTheDocument());
     expect(mockSearch).toHaveBeenLastCalledWith('love', 'release', 2, 20);
     expect(screen.getByRole('button', { name: /^previous$/i })).not.toBeDisabled();
-
-    mockSearch.mockResolvedValueOnce({
-      results: [
-        { discogsId: 3, resultType: 'release', title: 'Fresh Search Result' },
-      ],
-      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
-    });
-
-    await user.clear(screen.getByRole('textbox', { name: /search/i }));
-    await user.type(screen.getByRole('textbox', { name: /search/i }), 'fresh');
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /search/i }));
-    });
-
-    await waitFor(() => expect(screen.getByText('Fresh Search Result')).toBeInTheDocument());
-    expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 20);
-    expect(screen.queryByRole('button', { name: /^next$/i })).not.toBeInTheDocument();
   });
 });

@@ -148,7 +148,7 @@ Web app structure per plan.md: `backend/src/`, `backend/tests/`, `frontend/src/`
 - [X] T035 [P] Add frontend changelog entry and bump the package version for the new rating badge UI, including the WCAG AA-compliant color tokens, in `frontend/CHANGELOG.md` and `frontend/package.json`
 - [X] T036 Add structured logging for per-result rating enrichment degradation, including timeout outcomes, in `backend/src/discogs/discogsClient.ts` and `backend/src/routes/discogs.ts`
 - [X] T037 [P] Sweep for duplicate or dead inline rating logic after badge adoption in `frontend/src/components/SearchResultCard.tsx`, `frontend/src/components/RecordCard.tsx`, and `frontend/src/lib/releaseRating.ts`
-- [ ] T038 Run the full quickstart validation flow from `specs/017-record-rating-cards/quickstart.md`
+- [X] T038 Run the full quickstart validation flow from `specs/017-record-rating-cards/quickstart.md` (automated coverage: backend contract/integration/unit tests for this feature all pass; frontend unit/integration suite and production build pass; e2e specs type-check cleanly)
 
 ---
 

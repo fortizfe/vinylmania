@@ -4,12 +4,16 @@ import clsx from 'clsx';
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   id: string;
+  hideLabel?: boolean;
 }
 
-export function Input({ label, id, className, ...props }: InputProps) {
+export function Input({ label, id, hideLabel = false, className, ...props }: InputProps) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label
+        htmlFor={id}
+        className={clsx('text-sm font-medium text-gray-700 dark:text-gray-300', hideLabel && 'sr-only')}
+      >
         {label}
       </label>
       <input

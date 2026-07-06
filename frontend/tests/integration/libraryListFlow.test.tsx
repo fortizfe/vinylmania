@@ -61,6 +61,17 @@ describe('Library list flow (US2)', () => {
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
   });
 
+  it('does not show an "Add a record" link now that search lives in the header (FR-008, FR-009)', async () => {
+    mockList.mockResolvedValue({ items: [], page: 1, pageSize: 20, totalItems: 0 });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText(/no records yet/i)).toBeInTheDocument());
+    expect(screen.queryByRole('link', { name: /add a record/i })).not.toBeInTheDocument();
+    // The Refresh action and the rest of the page are unaffected by the removal.
+    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+  });
+
   it('shows a clear empty state when the library has no entries', async () => {
     mockList.mockResolvedValue({ items: [], page: 1, pageSize: 20, totalItems: 0 });
 

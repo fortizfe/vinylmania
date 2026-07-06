@@ -8,6 +8,29 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.9.0] - 2026-07-06
+
+### Added
+
+- A search textbox is now always visible, centered in the app header, on
+  every authenticated page (feature 018). Submitting a query navigates to a
+  new `/app/search` results page showing matching Discogs catalog records as
+  cards, with the same add-to-library, preview, and pagination behavior the
+  former "Add a record" page had.
+
+### Changed
+
+- The header search box resets to empty whenever you navigate away from the
+  search results page, so it doesn't carry a stale query onto unrelated
+  pages.
+
+### Removed
+
+- The standalone "Add a record" page and its `/app/library/add` route are
+  retired; searching is now reached from the header on any page instead.
+- The "Add a record" link on the "My Library" page is removed, since the
+  header search box replaces it.
+
 ## [0.8.0] - 2026-07-06
 
 ### Added

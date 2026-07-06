@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import { LibraryLinkRequired } from '../components/LibraryLinkRequired';
 import { RecordCard } from '../components/RecordCard';
@@ -48,21 +47,9 @@ export function LibraryListPage() {
     <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Your library</h1>
-        <div className="flex items-center gap-4">
-          <Button
-            variant="secondary"
-            loading={refresh.isPending}
-            onClick={() => refresh.mutate()}
-          >
-            {refresh.isPending ? 'Refreshing…' : 'Refresh'}
-          </Button>
-          <Link
-            to="/app/library/add"
-            className="text-sm font-medium text-primary hover:opacity-80 dark:text-primary"
-          >
-            Add a record
-          </Link>
-        </div>
+        <Button variant="secondary" loading={refresh.isPending} onClick={() => refresh.mutate()}>
+          {refresh.isPending ? 'Refreshing…' : 'Refresh'}
+        </Button>
       </div>
 
       {refresh.isError && (

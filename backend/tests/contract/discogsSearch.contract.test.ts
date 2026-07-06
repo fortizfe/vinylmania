@@ -61,9 +61,13 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   it('splits the artist out of a raw "Artist - Title" search result title', async () => {
     const { idToken } = await getTestIdToken('search-artist-split-user');
 
+    // Distinct query string from other tests in this file — the search
+    // response is cache-keyed by query+page+perPage, and this machine may
+    // have a real local Redis reachable, so reusing another test's exact
+    // query would return that test's cached response instead of this one's.
     discogsScope()
       .get('/database/search')
-      .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+      .query({ q: 'Kind Of Blue', type: 'release', page: '1', per_page: '50' })
       .reply(200, {
         pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
         results: [
@@ -81,7 +85,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
     const res = await request(app)
       .get('/api/discogs/search')
-      .query({ q: 'Stockholm', type: 'release' })
+      .query({ q: 'Kind Of Blue', type: 'release' })
       .set('Authorization', `Bearer ${idToken}`);
 
     expect(res.body.results[0]).toEqual({
@@ -197,12 +201,18 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   });
 
   describe('additive communityRating enrichment (feature 017)', () => {
+    // Each test below uses a distinct search query string. The search
+    // response is cache-keyed by query+page+perPage, and this environment
+    // may have a real Redis reachable at the default local URL, so reusing
+    // the same query across tests would return a previous test's cached
+    // response instead of hitting each test's own nock stub.
+
     it('includes an additive communityRating for a release with a valid rating', async () => {
       const { idToken } = await getTestIdToken('search-rating-user');
 
       discogsScope()
         .get('/database/search')
-        .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+        .query({ q: 'RatingEnrichmentValid', type: 'release', page: '1', per_page: '50' })
         .reply(200, {
           pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
           results: [rawSearchResultItem({ id: 10 })],
@@ -211,7 +221,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
       const res = await request(app)
         .get('/api/discogs/search')
-        .query({ q: 'Stockholm', type: 'release' })
+        .query({ q: 'RatingEnrichmentValid', type: 'release' })
         .set('Authorization', `Bearer ${idToken}`);
 
       expect(res.status).toBe(200);
@@ -223,7 +233,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
       discogsScope()
         .get('/database/search')
-        .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+        .query({ q: 'RatingEnrichmentUnvoted', type: 'release', page: '1', per_page: '50' })
         .reply(200, {
           pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
           results: [rawSearchResultItem({ id: 11 })],
@@ -232,7 +242,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
       const res = await request(app)
         .get('/api/discogs/search')
-        .query({ q: 'Stockholm', type: 'release' })
+        .query({ q: 'RatingEnrichmentUnvoted', type: 'release' })
         .set('Authorization', `Bearer ${idToken}`);
 
       expect(res.status).toBe(200);
@@ -244,7 +254,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
       discogsScope()
         .get('/database/search')
-        .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+        .query({ q: 'RatingEnrichmentFailure', type: 'release', page: '1', per_page: '50' })
         .reply(200, {
           pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
           results: [rawSearchResultItem({ id: 12 })],
@@ -253,7 +263,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
       const res = await request(app)
         .get('/api/discogs/search')
-        .query({ q: 'Stockholm', type: 'release' })
+        .query({ q: 'RatingEnrichmentFailure', type: 'release' })
         .set('Authorization', `Bearer ${idToken}`);
 
       expect(res.status).toBe(200);
@@ -268,7 +278,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
         discogsScope()
           .get('/database/search')
-          .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+          .query({ q: 'RatingEnrichmentTimeout', type: 'release', page: '1', per_page: '50' })
           .reply(200, {
             pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
             results: [rawSearchResultItem({ id: 13 })],
@@ -278,7 +288,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
         const startedAt = Date.now();
         const res = await request(app)
           .get('/api/discogs/search')
-          .query({ q: 'Stockholm', type: 'release' })
+          .query({ q: 'RatingEnrichmentTimeout', type: 'release' })
           .set('Authorization', `Bearer ${idToken}`);
         const elapsedMs = Date.now() - startedAt;
 

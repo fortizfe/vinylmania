@@ -3,13 +3,13 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { useAuth } from './auth/AuthContext';
 import { AppHeader } from './components/AppHeader';
-import { AddRecordPage } from './pages/AddRecordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DiscogsCallbackPage } from './pages/DiscogsCallbackPage';
 import { LandingPage } from './pages/LandingPage';
 import { LibraryListPage } from './pages/LibraryListPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RecordDetailPage } from './pages/RecordDetailPage';
+import { SearchResultsPage } from './pages/SearchResultsPage';
 import { WishlistPage } from './pages/WishlistPage';
 
 function AuthenticatedLayout({ children }: { children: ReactNode }) {
@@ -52,10 +52,10 @@ function App() {
         }
       />
       <Route
-        path="/app/library/add"
+        path="/app/search"
         element={
           <AuthenticatedLayout>
-            <AddRecordPage />
+            <SearchResultsPage />
           </AuthenticatedLayout>
         }
       />
