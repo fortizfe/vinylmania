@@ -84,3 +84,56 @@ export function stubCollectionPage(
       releases: instances,
     });
 }
+
+// ---------------------------------------------------------------------------
+// Feature 017: record rating badges. Search-result rating enrichment fetches
+// GET /releases/{id}/rating per release; these builders cover the enriched,
+// unrated, failed, and slow/timed-out cases the backend must degrade against.
+// ---------------------------------------------------------------------------
+
+export interface RawSearchResultOverrides {
+  id?: number;
+  type?: 'release' | 'artist';
+  title?: string;
+  thumb?: string;
+  cover_image?: string;
+  year?: string | number;
+  format?: string[];
+}
+
+/** Builds a raw `/database/search` result item as Discogs returns it. */
+export function rawSearchResultItem(overrides: RawSearchResultOverrides = {}) {
+  return {
+    id: 1,
+    type: 'release' as const,
+    title: 'The Persuader - Stockholm',
+    thumb: '',
+    cover_image: '',
+    year: '1999',
+    format: ['Vinyl'],
+    ...overrides,
+  };
+}
+
+/** Stubs a successful community-rating lookup for a release. */
+export function stubReleaseRating(
+  releaseId: number,
+  rating: { average: number; count: number },
+): nock.Scope {
+  return discogsScope()
+    .get(`/releases/${releaseId}/rating`)
+    .reply(200, { release_id: releaseId, rating });
+}
+
+/** Stubs a rating lookup that never resolves within the 2-second lookup timeout. */
+export function stubReleaseRatingNeverResolves(releaseId: number): nock.Scope {
+  return discogsScope()
+    .get(`/releases/${releaseId}/rating`)
+    .delay(2_500)
+    .reply(200, { release_id: releaseId, rating: { average: 4.5, count: 10 } });
+}
+
+/** Stubs a rating lookup that fails outright (service error). */
+export function stubReleaseRatingUnavailable(releaseId: number): nock.Scope {
+  return discogsScope().get(`/releases/${releaseId}/rating`).reply(503, { message: 'unavailable' });
+}

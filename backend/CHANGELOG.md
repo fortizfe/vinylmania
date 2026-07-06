@@ -8,6 +8,25 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.5.0] - 2026-07-06
+
+### Added
+
+- `GET /api/discogs/search` now additively enriches each release-type result
+  with an optional `communityRating: { average, count }` block (feature 017),
+  fetched from Discogs' `GET /releases/{id}/rating` endpoint and cached for
+  30 minutes. Enrichment runs per-release, in parallel, with a 2-second
+  timeout per lookup; a lookup that fails, times out, or resolves with zero
+  votes simply omits `communityRating` from that result — the base search
+  response is never blocked, delayed past the timeout budget, or failed as a
+  whole because of a rating-enrichment problem. Existing consumers that
+  ignore unknown fields are unaffected.
+
+### Changed
+
+- `LogOutcome` gained an `omitted` value for structured logging of per-result
+  rating-enrichment degradation.
+
 ## [0.4.0] - 2026-07-06
 
 ### Added

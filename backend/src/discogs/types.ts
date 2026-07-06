@@ -1,3 +1,8 @@
+export interface CommunityRating {
+  average: number;
+  count: number;
+}
+
 export interface CatalogSearchResult {
   discogsId: number;
   resultType: 'release' | 'artist';
@@ -6,6 +11,8 @@ export interface CatalogSearchResult {
   thumbnailUrl?: string;
   year?: number;
   formats?: string[];
+  /** Additive enrichment (feature 017); present only when a valid, votable rating exists. */
+  communityRating?: CommunityRating;
 }
 
 export interface CatalogSearchResponse {

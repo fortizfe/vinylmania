@@ -1,7 +1,14 @@
 import { z, type ZodType } from 'zod';
 
 import { DiscogsValidationError } from './discogsErrors';
-import type { Artist, CatalogSearchResult, CommunityStats, Release, ReleaseIdentifier } from './types';
+import type {
+  Artist,
+  CatalogSearchResult,
+  CommunityRating,
+  CommunityStats,
+  Release,
+  ReleaseIdentifier,
+} from './types';
 
 function parseOrThrow<T>(schema: ZodType<T>, raw: unknown): T {
   const result = schema.safeParse(raw);
@@ -56,6 +63,19 @@ export function mapSearchResult(raw: unknown): CatalogSearchResult {
     ...(year !== undefined && !Number.isNaN(year) ? { year } : {}),
     ...(formats ? { formats } : {}),
   };
+}
+
+const rawReleaseRatingSchema = z.object({
+  rating: z.object({
+    average: z.number(),
+    count: z.number(),
+  }),
+});
+
+/** Maps the raw `GET /releases/{id}/rating` response (feature 017). */
+export function mapReleaseRating(raw: unknown): CommunityRating {
+  const parsed = parseOrThrow(rawReleaseRatingSchema, raw);
+  return { average: parsed.rating.average, count: parsed.rating.count };
 }
 
 const rawReleaseArtistSchema = z.object({

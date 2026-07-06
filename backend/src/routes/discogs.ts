@@ -26,7 +26,14 @@ discogsRouter.get('/search', requireAuth, async (req: Request, res: Response) =>
 
   try {
     const result = await searchCatalog(query, { resultType, page, perPage });
-    logger.info({ route: '/api/discogs/search', outcome: 'success', uid: req.auth?.uid });
+    const releaseResults = result.results.filter((r) => r.resultType === 'release');
+    const enrichedCount = releaseResults.filter((r) => r.communityRating !== undefined).length;
+    logger.info({
+      route: '/api/discogs/search',
+      outcome: 'success',
+      uid: req.auth?.uid,
+      meta: { releases: releaseResults.length, ratingEnriched: enrichedCount },
+    });
     res.status(200).json(result);
   } catch (err) {
     if (err instanceof DiscogsRateLimitError || err instanceof DiscogsUnavailableError) {

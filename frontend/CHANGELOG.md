@@ -8,6 +8,26 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.8.0] - 2026-07-06
+
+### Added
+
+- Search-result and library cards now show a compact rounded-square rating
+  badge in the thumbnail's upper-right corner whenever a release has a valid
+  community rating (feature 017). The badge's background communicates the
+  rating band — red for 0.00–2.50, yellow for 2.51–4.09, green for
+  4.10–5.00 — and its text meets WCAG AA contrast (>=4.5:1) against all three
+  bands. Cards with no valid, votable rating simply omit the badge; the
+  overlay is purely presentational and never blocks add/preview/open-record
+  interactions or shifts the surrounding layout.
+- New `ReleaseRatingBadge` atomic component
+  (`src/components/ui/ReleaseRatingBadge.tsx`) and a shared
+  `src/lib/releaseRating.ts` helper (visibility rules, one-decimal
+  formatting, band selection) reused by both `SearchResultCard` and
+  `RecordCard`.
+- New `--color-rating-low` / `--color-rating-medium` / `--color-rating-high`
+  theme tokens in `src/styles/global.css`.
+
 ## [0.7.0] - 2026-07-06
 
 ### Added

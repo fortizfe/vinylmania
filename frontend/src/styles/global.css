@@ -4,6 +4,15 @@
   --color-primary: #6366f1;
   --font-sans:
     system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /*
+   * Release rating badge bands (feature 017). Chosen for WCAG AA text
+   * contrast (>=4.5:1) against their paired text color — see
+   * specs/017-record-rating-cards/research.md §8 for the computed ratios.
+   */
+  --color-rating-low: #dc2626;
+  --color-rating-medium: #fbbf24;
+  --color-rating-high: #15803d;
 }
 
 @utility scrollbar-hidden {

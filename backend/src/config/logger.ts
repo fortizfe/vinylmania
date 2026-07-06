@@ -25,7 +25,9 @@ export type LogOutcome =
   | 'first_sync_migrated'
   | 'entry_added'
   | 'entry_removed'
-  | 'migration_failed';
+  | 'migration_failed'
+  // Search-result rating enrichment degradation (feature 017)
+  | 'omitted';
 
 export interface LogEvent {
   route: string;
