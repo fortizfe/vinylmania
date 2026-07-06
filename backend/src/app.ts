@@ -4,6 +4,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { logger } from './config/logger';
 import { authRouter } from './routes/auth';
 import { discogsRouter } from './routes/discogs';
+import { discogsOauthRouter } from './routes/discogsOauth';
 import { libraryRouter } from './routes/library';
 
 export function createApp(): express.Express {
@@ -21,6 +22,8 @@ export function createApp(): express.Express {
   });
 
   app.use('/api/auth', authRouter);
+  // Mounted before /api/discogs so the more specific OAuth path wins.
+  app.use('/api/discogs/oauth', discogsOauthRouter);
   app.use('/api/discogs', discogsRouter);
   app.use('/api/library', libraryRouter);
 

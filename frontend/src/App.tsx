@@ -5,6 +5,7 @@ import { useAuth } from './auth/AuthContext';
 import { AppHeader } from './components/AppHeader';
 import { AddRecordPage } from './pages/AddRecordPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { DiscogsCallbackPage } from './pages/DiscogsCallbackPage';
 import { LandingPage } from './pages/LandingPage';
 import { LibraryListPage } from './pages/LibraryListPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -79,6 +80,14 @@ function App() {
         element={
           <AuthenticatedLayout>
             <ProfilePage />
+          </AuthenticatedLayout>
+        }
+      />
+      <Route
+        path="/app/profile/discogs/callback"
+        element={
+          <AuthenticatedLayout>
+            <DiscogsCallbackPage />
           </AuthenticatedLayout>
         }
       />
