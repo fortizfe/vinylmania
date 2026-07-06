@@ -10,6 +10,7 @@ dotenv.config({ path: path.resolve(__dirname, '../frontend/.env.test') });
 
 const FRONTEND_URL = 'http://localhost:5173';
 const BACKEND_URL = 'http://localhost:3001';
+const DISCOGS_STUB_URL = 'http://localhost:4571';
 const FIREBASE_PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID ?? 'vinylmania-test';
 const AUTH_EMULATOR_HOST = 'localhost:9099';
 const FIRESTORE_EMULATOR_HOST = 'localhost:8080';
@@ -45,6 +46,15 @@ export default defineConfig({
   // unrelated process fails fast instead of silently testing against it.
   webServer: [
     {
+      // Local Discogs OAuth stub (feature 015) — keeps e2e hermetic; the
+      // backend below is pointed at it instead of the real Discogs hosts.
+      command: 'node helpers/discogsOauthStub.ts',
+      cwd: __dirname,
+      url: 'http://localhost:4571/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 15_000,
+    },
+    {
       command: 'npm run dev',
       cwd: path.resolve(__dirname, '../backend'),
       url: `${BACKEND_URL}/health`,
@@ -56,6 +66,13 @@ export default defineConfig({
         FIREBASE_PROJECT_ID,
         FIRESTORE_EMULATOR_HOST,
         FIREBASE_AUTH_EMULATOR_HOST: AUTH_EMULATOR_HOST,
+        // Feature 015: Discogs OAuth account linking, targeting the stub
+        // above with fake consumer credentials (never the real key/secret).
+        DISCOGS_OAUTH_BASE_URL: DISCOGS_STUB_URL,
+        DISCOGS_AUTHORIZE_BASE_URL: `${DISCOGS_STUB_URL}/oauth/authorize`,
+        DISCOGS_CONSUMER_KEY: 'e2e-fake-consumer-key',
+        DISCOGS_CONSUMER_SECRET: 'e2e-fake-consumer-secret',
+        DISCOGS_OAUTH_CALLBACK_URL: `${FRONTEND_URL}/app/profile/discogs/callback`,
       },
     },
     {

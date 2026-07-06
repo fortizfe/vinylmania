@@ -11,7 +11,12 @@ export type LogOutcome =
   | 'validation_error'
   | 'cache_hit'
   | 'cache_miss'
-  | 'cache_unavailable';
+  | 'cache_unavailable'
+  // Discogs OAuth account-linking lifecycle (feature 015)
+  | 'link_started'
+  | 'link_completed'
+  | 'link_failed'
+  | 'disconnected';
 
 export interface LogEvent {
   route: string;

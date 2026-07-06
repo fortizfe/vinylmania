@@ -8,6 +8,24 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.3.0] - 2026-07-06
+
+### Added
+
+- Discogs account linking via OAuth 1.0a (feature 015): new authenticated
+  endpoints `POST /api/discogs/oauth/request`, `POST /api/discogs/oauth/complete`,
+  `GET /api/discogs/oauth/status`, and `DELETE /api/discogs/oauth/connection`.
+  The flow uses Discogs' PLAINTEXT signature over HTTPS, verifies the linked
+  identity against `/oauth/identity`, and persists at most one connection per
+  user in the new `discogsConnections/{uid}` Firestore collection (pending
+  attempts live in `discogsOAuthRequests/{oauthToken}` with a 15-minute
+  validity window). User access tokens never leave the backend; the app's
+  consumer key/secret are read exclusively from environment variables
+  (`DISCOGS_CONSUMER_KEY`, `DISCOGS_CONSUMER_SECRET`,
+  `DISCOGS_OAUTH_CALLBACK_URL`). Linking lifecycle events are logged as
+  structured `link_started` / `link_completed` / `link_failed` /
+  `disconnected` outcomes.
+
 ## [0.2.0] - 2026-07-04
 
 ### Added

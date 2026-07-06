@@ -8,6 +8,20 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.6.0] - 2026-07-06
+
+### Added
+
+- Profile section now hosts a "Discogs" connection card (feature 015): link
+  your Vinylmania account with your Discogs account through Discogs' own
+  authorization page, see the linked Discogs username and link date at a
+  glance, and disconnect with an inline confirmation (two interactions).
+  A new `/app/profile/discogs/callback` route completes the return leg from
+  Discogs and reports the outcome (linked, not completed, expired, or error)
+  as a dismissible message on the profile. The card renders from stored
+  state with a skeleton while loading, supports dark mode, and never shifts
+  layout between states.
+
 ## [0.5.0] - 2026-07-05
 
 ### Changed
