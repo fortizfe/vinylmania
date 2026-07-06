@@ -1,31 +1,31 @@
 <!--
 Sync Impact Report
-Version change: 1.8.0 → 1.8.1
-Modified principles: none (existing principles unchanged)
+Version change: 1.8.1 → 2.0.0
+Modified principles:
+  - II. Library-First & Modularity → II. Discogs Integration-First & Modularity
 Added sections: none
 Changed sections:
-  - Corrected the "Development Workflow (Quality Gates)" CHANGELOG/version-bump
-    gate (added in 1.8.0) to drop its assumption of an `[Unreleased]` staging
-    section: this project has none, since Vercel deploys `main` on every
-    merge, so every changelog entry is already deployed by the time it lands.
-    The gate now reads "add the entry directly under a new, dated version
-    heading" instead of "move the entry out of `[Unreleased]`".
+  - Reframed project scope as a Discogs-powered integration app and strengthened
+    Discogs optimization requirements (source-of-truth use, efficient retrieval,
+    graceful rate-limit handling).
+  - Updated Development Workflow quality gates: e2e coverage remains mandatory,
+    but mandatory execution moved from each development task to deployment
+    pipeline validation.
 Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (no CHANGELOG/version-bump gate references found; no change needed)
-  ✅ .specify/templates/spec-template.md (no CHANGELOG/version-bump gate references found; no change needed)
-  ✅ .specify/templates/tasks-template.md (no CHANGELOG/version-bump gate references found; no change needed)
-  ✅ .specify/templates/checklist-template.md (no CHANGELOG/version-bump gate references found; no change needed)
+  ✅ .specify/templates/plan-template.md (Constitution Check remains generic; no conflicting e2e-per-development rule)
+  ✅ .specify/templates/spec-template.md (no mandatory per-development e2e clause; no change needed)
+  ✅ .specify/templates/tasks-template.md (test tasks remain optional unless requested; no conflicting gate)
+  ✅ .specify/templates/checklist-template.md (generic checklist template; no conflicting gate)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
-Follow-up TODOs: none — backend/package.json (0.1.0) and frontend/package.json
-  (0.2.0) and their CHANGELOG.md files were brought into compliance with this
-  gate in the same change that produced this amendment.
+Follow-up TODOs: none
 -->
 
 # Vinylmania Constitution
 
-Vinylmania is a web application for vinyl record collectors, focused on managing and
-organizing a personal vinyl library.
+Vinylmania is a Discogs-powered web integration for vinyl record collectors, focused
+on exploiting Discogs metadata efficiently while managing each user's personal
+library state.
 
 ## Core Principles
 
@@ -39,15 +39,16 @@ would have failed without the change.
 tracklists, ownership state). Writing tests first forces requirements to be explicit
 before code exists, and prevents regressions in core cataloging logic.
 
-### II. Library-First & Modularity
-Every feature MUST be built as a self-contained, independently testable module (a
-library, service, or component) with a clear, single-purpose responsibility. Modules
-MUST expose a well-defined interface (API, CLI, or component contract) rather than
-relying on shared mutable state or implicit coupling. No module MAY exist purely for
-organizational convenience — each MUST have a clear, documented purpose.
-**Rationale**: Independent modules can be tested, versioned, and reasoned about in
-isolation, which keeps the codebase navigable as the catalog domain (records, artists,
-collections, marketplace features) grows.
+### II. Discogs Integration-First & Modularity
+Every feature touching catalog metadata MUST integrate with the Discogs API as the
+primary source of truth and MUST optimize Discogs usage through reusable, independently
+testable modules (service/client/cache layers with clear contracts). Metadata that
+Discogs can provide MUST NOT be manually curated as an alternate catalog source.
+Integration modules MUST implement rate-limit-aware behavior, explicit error handling,
+and cache/normalization strategies that reduce redundant Discogs requests.
+**Rationale**: Vinylmania's core value is leveraging Discogs data quality at scale;
+making Discogs integration explicit and modular preserves correctness, performance, and
+maintainability as collectors' libraries grow.
 
 ### III. Simplicity, YAGNI & KISS
 Start with the simplest design that satisfies the current, stated requirement. Do not
@@ -119,9 +120,10 @@ corruption.
   hand-author or hardcode catalog metadata that Discogs can provide. Firebase MUST
   be used only for user-specific state (collection membership, ownership, personal
   notes, ratings) and MAY cache Discogs responses for performance, but MUST NOT
-  become an independent source of truth for catalog data. Discogs API rate limits
-  and outages MUST be handled gracefully (Principle V, Observability) rather than
-  silently failing.
+  become an independent source of truth for catalog data. Discogs integration MUST
+  minimize redundant requests via cache reuse and normalized metadata handling.
+  Discogs API rate limits and outages MUST be handled gracefully (Principle V,
+  Observability) rather than silently failing.
 - **Source control**: The canonical code repository MUST be hosted on GitHub. All
   branches, pull requests, and code review MUST go through GitHub.
 - **Deployment**: Vercel is the required deployment platform for the application.
@@ -208,18 +210,17 @@ technical debt from deprecated v3 utility names.
 **Rationale**: A consistent commit format makes history greppable, enables automated
 changelog/version generation, and gives every commit a machine-readable link to
 Principle VI's versioning policy (feat → MINOR, fix → PATCH, `!`/BREAKING CHANGE → MAJOR).
-- Any pull request that changes code under `/frontend` MUST be accompanied by
-  passing end-to-end (e2e) test coverage for the affected user flow, added or
-  updated under `/e2e` (Playwright) before the feature is considered complete.
-  A frontend PR MUST NOT be merged solely on unit/component test coverage
-  (Principle I still applies for those) — the e2e suite MUST be run and pass
-  against the changed flow, and reviewers MUST reject frontend PRs that lack
-  corresponding e2e coverage or that leave the e2e suite failing.
+- Any pull request that changes code under `/frontend` MUST include end-to-end
+  (e2e) coverage for the affected user flow under `/e2e` (Playwright). Execution
+  of the full e2e suite is required as part of the deployment pipeline quality
+  gates, not as a mandatory step in each local development iteration. Reviewers
+  MUST reject frontend PRs that remove required e2e coverage or leave pipeline
+  e2e checks failing.
 **Rationale**: Component and unit tests validate isolated logic, but Vinylmania's
 frontend risk lives in cross-cutting flows (auth, search, navigation, collection
-management) that only fail when real user journeys are exercised end-to-end;
-requiring e2e coverage at the close of frontend work catches integration
-regressions that unit tests structurally cannot.
+management) that only fail when real user journeys are exercised end-to-end.
+Keeping e2e mandatory at pipeline level preserves release confidence without
+forcing every local development cycle to run the full suite.
 - Every development MUST keep a `CHANGELOG.md` up to date in each package it
   touches: `backend/CHANGELOG.md` for `/backend` changes and
   `frontend/CHANGELOG.md` for `/frontend` changes. Any PR that modifies code
@@ -269,4 +270,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 1.8.1 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-04
+**Version**: 2.0.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-06
