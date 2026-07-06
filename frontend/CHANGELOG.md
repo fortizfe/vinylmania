@@ -8,6 +8,47 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.7.0] - 2026-07-06
+
+### Added
+
+- Library list page now synchronizes with the linked user's Discogs collection
+  on load (feature 016). A **Refresh** button forces an immediate re-sync.
+  Unlinked users see a gate card explaining they must link their Discogs
+  account from their profile; users whose stored link becomes invalid see a
+  "re-link your account" variant.
+- Record detail page's **Your copy** panel is rebuilt around the Discogs
+  per-copy data: a 5-star rating control (`StarRating`), media condition and
+  sleeve condition dropdowns (exact Discogs grading vocabulary), and an
+  inline-editable notes field. Each field autosaves on change. Controls are
+  disabled with an explanatory hint when the matching Discogs custom field
+  has been deleted by the user on discogs.com.
+- New `StarRating` component (`src/components/ui/StarRating.tsx`): atomic
+  5-star rating control, keyboard-accessible, dark-mode-aware, tapping the
+  current value clears to 0.
+- New `LibraryLinkRequired` component (`src/components/LibraryLinkRequired.tsx`)
+  with two variants: `not-linked` (never connected) and `relink`
+  (credentials revoked), both with a CTA to `/app/profile`.
+- Add-record page surfaces Discogs gate errors (`discogs_not_linked`,
+  `discogs_link_invalid`) with a link to the profile instead of a generic
+  failure message.
+
+### Changed
+
+- **BREAKING**: `EnrichedLibraryEntry` no longer carries top-level
+  `condition` or `notes` fields. They are replaced by a `discogs` object
+  matching `EntryDiscogsData` (per the backend 0.4.0 contract).
+- `useUpdateLibraryEntry` now invalidates all library queries on success
+  (previously it only updated the single detail query in cache).
+- Add-record flow sends only `{ discogsReleaseId }` — `condition` and `notes`
+  are no longer accepted and the form no longer has those fields.
+
+### Removed
+
+- Legacy `CONDITION_OPTIONS` constant and free-text condition editing from
+  `MyCopySection`. The component now uses the Discogs grading vocabulary
+  exclusively.
+
 ## [0.6.0] - 2026-07-06
 
 ### Added

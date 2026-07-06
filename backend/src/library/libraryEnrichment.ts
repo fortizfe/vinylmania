@@ -9,7 +9,7 @@ const ENRICHMENT_CONCURRENCY = 5;
 export async function enrichEntry(entry: LibraryEntry): Promise<EnrichedLibraryEntry> {
   try {
     const release = await getRelease(entry.discogsReleaseId);
-    return { ...entry, catalogStatus: 'ok', release };
+    return { ...entry, catalogStatus: 'ok', release, discogs: null };
   } catch (err) {
     const cause = err instanceof DiscogsError ? err.code : 'unknown';
     logger.warn({
@@ -17,7 +17,7 @@ export async function enrichEntry(entry: LibraryEntry): Promise<EnrichedLibraryE
       outcome: 'unavailable',
       message: `Failed to enrich entry ${entry.id} (release ${entry.discogsReleaseId}): ${cause}`,
     });
-    return { ...entry, catalogStatus: 'unavailable', release: null };
+    return { ...entry, catalogStatus: 'unavailable', release: null, discogs: null };
   }
 }
 

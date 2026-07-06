@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 
 import type { EnrichedLibraryEntry } from '../services/libraryApi';
-import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 
 interface RecordCardProps {
@@ -14,7 +13,9 @@ export function RecordCard({ entry }: RecordCardProps) {
       <li>
         <Card padding="sm" className="flex flex-col gap-1 text-gray-500 italic dark:text-gray-400">
           <p>Couldn&apos;t load catalog details for this record right now.</p>
-          {entry.condition && <p>Condition: {entry.condition}</p>}
+          <Link to={`/app/library/records/${entry.id}`} className="text-sm underline">
+            Open record
+          </Link>
         </Card>
       </li>
     );
@@ -42,7 +43,6 @@ export function RecordCard({ entry }: RecordCardProps) {
             </span>
           )}
         </Link>
-        {entry.condition && <Badge>{entry.condition}</Badge>}
       </Card>
     </li>
   );

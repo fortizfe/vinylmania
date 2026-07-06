@@ -46,9 +46,16 @@ describe('Record detail flow (US3)', () => {
       id: 'entry-1',
       discogsReleaseId: 1,
       addedAt: '2026-07-03T00:00:00.000Z',
-      condition: 'Near Mint',
-      notes: 'Bought at a record fair',
       catalogStatus: 'ok',
+      discogs: {
+        instanceId: 11,
+        folderId: 1,
+        rating: 0,
+        mediaCondition: 'Near Mint (NM or M-)',
+        sleeveCondition: null,
+        notes: 'Bought at a record fair',
+        editable: { mediaCondition: true, sleeveCondition: true, notes: true },
+      },
       release: {
         discogsId: 1,
         title: 'Stockholm',
@@ -69,7 +76,8 @@ describe('Record detail flow (US3)', () => {
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
     expect(screen.getByText('The Persuader')).toBeInTheDocument();
     expect(screen.getByText(/Östermalm/)).toBeInTheDocument();
-    expect(screen.getByText(/Near Mint/)).toBeInTheDocument();
+    const mediaSelect = screen.getByLabelText('Media Condition') as HTMLSelectElement;
+    expect(mediaSelect.value).toBe('Near Mint (NM or M-)');
     expect(screen.getByText(/Bought at a record fair/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute(
       'href',
@@ -126,9 +134,16 @@ describe('Record detail flow (US3)', () => {
       id: 'entry-1',
       discogsReleaseId: 1,
       addedAt: '2026-07-03T00:00:00.000Z',
-      condition: 'Good',
-      notes: 'Original notes',
       catalogStatus: 'unavailable',
+      discogs: {
+        instanceId: 11,
+        folderId: 1,
+        rating: 0,
+        mediaCondition: 'Good (G)',
+        sleeveCondition: null,
+        notes: 'Original notes',
+        editable: { mediaCondition: true, sleeveCondition: true, notes: true },
+      },
       release: null,
     });
 
@@ -138,12 +153,9 @@ describe('Record detail flow (US3)', () => {
       expect(screen.getByText(/couldn't load catalog details/i)).toBeInTheDocument(),
     );
     expect(screen.getByText('Your copy')).toBeInTheDocument();
-    expect(screen.getByText('Good')).toBeInTheDocument();
-    expect(screen.getByText('Original notes')).toBeInTheDocument();
-
-    const user = userEvent.setup();
-    await user.click(screen.getByText('Good'));
-    expect(screen.getByLabelText('Condition')).toBeInTheDocument();
+    const mediaSelect = screen.getByLabelText('Media Condition') as HTMLSelectElement;
+    expect(mediaSelect.value).toBe('Good (G)');
+    expect(screen.getByText(/Original notes/)).toBeInTheDocument();
   });
 
   it('omits the key-details meta row and tracklist section when that data is missing, while title/artist and my copy still render (US4)', async () => {
@@ -151,9 +163,8 @@ describe('Record detail flow (US3)', () => {
       id: 'entry-1',
       discogsReleaseId: 1,
       addedAt: '2026-07-03T00:00:00.000Z',
-      condition: 'Good',
-      notes: 'Original notes',
       catalogStatus: 'ok',
+      discogs: null,
       release: {
         discogsId: 1,
         title: 'Stockholm',
@@ -175,7 +186,6 @@ describe('Record detail flow (US3)', () => {
 
     expect(screen.getByText('The Persuader')).toBeInTheDocument();
     expect(screen.getByText('Your copy')).toBeInTheDocument();
-    expect(screen.getByText('Good')).toBeInTheDocument();
     expect(screen.queryByText('Tracklist')).not.toBeInTheDocument();
     expect(screen.queryByText(/No tracklist available/i)).not.toBeInTheDocument();
   });
@@ -250,14 +260,22 @@ describe('Record detail flow (US3)', () => {
     expect(mockRemove).not.toHaveBeenCalled();
   });
 
-  it('edits condition inline and autosaves on blur, with no Edit/Save buttons (US1)', async () => {
+  it('edits media condition via select and calls update with the new value (US2)', async () => {
+    const baseDiscogs = {
+      instanceId: 11,
+      folderId: 1,
+      rating: 0,
+      mediaCondition: 'Good (G)',
+      sleeveCondition: null,
+      notes: 'Original notes',
+      editable: { mediaCondition: true, sleeveCondition: true, notes: true },
+    };
     const baseEntry = {
       id: 'entry-1',
       discogsReleaseId: 1,
       addedAt: '2026-07-03T00:00:00.000Z',
-      condition: 'Good',
-      notes: 'Original notes',
       catalogStatus: 'ok' as const,
+      discogs: baseDiscogs,
       release: {
         discogsId: 1,
         title: 'Stockholm',
@@ -273,34 +291,33 @@ describe('Record detail flow (US3)', () => {
       },
     };
     mockGetOne.mockResolvedValue(baseEntry);
-    mockUpdate.mockResolvedValue({ ...baseEntry, condition: 'Mint' });
+    mockUpdate.mockResolvedValue({ ...baseEntry, discogs: { ...baseDiscogs, mediaCondition: 'Mint (M)' } });
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByText(/Original notes/)).toBeInTheDocument());
-
-    expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^save$/i })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
 
     const user = userEvent.setup();
-    await user.click(screen.getByText('Good'));
-    await user.selectOptions(screen.getByLabelText('Condition'), 'Mint');
-    await act(async () => {
-      screen.getByLabelText('Condition').blur();
-    });
+    await user.selectOptions(screen.getByLabelText('Media Condition'), 'Mint (M)');
 
-    expect(mockUpdate).toHaveBeenCalledWith('entry-1', 'Mint');
-    await waitFor(() => expect(screen.getByText('Mint')).toBeInTheDocument());
+    expect(mockUpdate).toHaveBeenCalledWith('entry-1', { mediaCondition: 'Mint (M)' });
   });
 
-  it('edits notes inline and reverts on Escape without saving (US1)', async () => {
+  it('edits notes inline and reverts on Escape without saving (US2)', async () => {
     const baseEntry = {
       id: 'entry-1',
       discogsReleaseId: 1,
       addedAt: '2026-07-03T00:00:00.000Z',
-      condition: 'Good',
-      notes: 'Original notes',
       catalogStatus: 'ok' as const,
+      discogs: {
+        instanceId: 11,
+        folderId: 1,
+        rating: 0,
+        mediaCondition: null,
+        sleeveCondition: null,
+        notes: 'Original notes',
+        editable: { mediaCondition: true, sleeveCondition: true, notes: true },
+      },
       release: {
         discogsId: 1,
         title: 'Stockholm',
@@ -330,47 +347,6 @@ describe('Record detail flow (US3)', () => {
 
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(screen.getByText('Original notes')).toBeInTheDocument();
-  });
-
-  it('resolves the condition field before activating the notes field (US1, FR-017)', async () => {
-    const baseEntry = {
-      id: 'entry-1',
-      discogsReleaseId: 1,
-      addedAt: '2026-07-03T00:00:00.000Z',
-      condition: 'Good',
-      notes: 'Original notes',
-      catalogStatus: 'ok' as const,
-      release: {
-        discogsId: 1,
-        title: 'Stockholm',
-        artists: [],
-        labels: [],
-        formats: [],
-        genres: [],
-        styles: [],
-        tracklist: [],
-        identifiers: [],
-        images: [],
-        discogsUrl: 'https://www.discogs.com/release/1',
-      },
-    };
-    mockGetOne.mockResolvedValue(baseEntry);
-    mockUpdate.mockResolvedValue({ ...baseEntry, condition: 'Mint' });
-
-    renderPage();
-
-    await waitFor(() => expect(screen.getByText(/Original notes/)).toBeInTheDocument());
-
-    const user = userEvent.setup();
-    await user.click(screen.getByText('Good'));
-    await user.selectOptions(screen.getByLabelText('Condition'), 'Mint');
-
-    // Activating notes while condition is mid-edit must resolve (save) condition first.
-    await user.click(screen.getByText('Original notes'));
-
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith('entry-1', 'Mint'));
-    expect(screen.queryByLabelText('Condition')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Notes')).toBeInTheDocument();
   });
 
   it('renders the gallery, key details, tracklist, and additional info in the same structure as the release preview (US1)', async () => {
@@ -487,9 +463,8 @@ describe('Record detail flow (US3)', () => {
       id: 'entry-1',
       discogsReleaseId: 1,
       addedAt: '2026-07-03T00:00:00.000Z',
-      condition: 'Near Mint',
-      notes: 'Bought at a record fair',
       catalogStatus: 'ok',
+      discogs: null,
       release: {
         discogsId: 1,
         title: 'Stockholm',

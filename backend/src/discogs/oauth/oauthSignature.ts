@@ -48,7 +48,7 @@ export function buildAccessTokenHeader(
   });
 }
 
-export function buildIdentityHeader(
+export function buildProtectedResourceHeader(
   credentials: ConsumerCredentials,
   access: { token: string; tokenSecret: string },
 ): string {
@@ -56,4 +56,11 @@ export function buildIdentityHeader(
     ...baseParams(credentials, access.tokenSecret),
     oauth_token: access.token,
   });
+}
+
+export function buildIdentityHeader(
+  credentials: ConsumerCredentials,
+  access: { token: string; tokenSecret: string },
+): string {
+  return buildProtectedResourceHeader(credentials, access);
 }

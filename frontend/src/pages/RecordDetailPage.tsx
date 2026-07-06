@@ -26,26 +26,28 @@ export function RecordDetailPage() {
     if (!window.confirm('Remove this record from your library? This cannot be undone.')) {
       return;
     }
-    await removeEntry.mutateAsync(entryId);
-    navigate('/app/library');
-  }
-
-  async function saveCondition(newCondition: string) {
     try {
-      await updateEntry.mutateAsync({ condition: newCondition });
-    } catch (error) {
-      console.error('Failed to save condition for library entry', entryId, error);
-      throw error;
+      await removeEntry.mutateAsync(entryId);
+      navigate('/app/library');
+    } catch {
+      // Error handled by removeEntry.isError
     }
   }
 
-  async function saveNotes(newNotes: string) {
-    try {
-      await updateEntry.mutateAsync({ notes: newNotes });
-    } catch (error) {
-      console.error('Failed to save notes for library entry', entryId, error);
-      throw error;
-    }
+  async function saveRating(rating: number) {
+    await updateEntry.mutateAsync({ rating });
+  }
+
+  async function saveMediaCondition(value: string | null) {
+    await updateEntry.mutateAsync({ mediaCondition: value ?? undefined });
+  }
+
+  async function saveSleeveCondition(value: string | null) {
+    await updateEntry.mutateAsync({ sleeveCondition: value ?? undefined });
+  }
+
+  async function saveNotes(notes: string) {
+    await updateEntry.mutateAsync({ notes });
   }
 
   if (notFound) {
@@ -72,9 +74,10 @@ export function RecordDetailPage() {
 
   const myCopySection = (
     <MyCopySection
-      condition={entry.condition}
-      notes={entry.notes}
-      onSaveCondition={saveCondition}
+      discogs={entry.discogs}
+      onSaveRating={saveRating}
+      onSaveMediaCondition={saveMediaCondition}
+      onSaveSleeveCondition={saveSleeveCondition}
       onSaveNotes={saveNotes}
       onRemove={handleRemove}
     />

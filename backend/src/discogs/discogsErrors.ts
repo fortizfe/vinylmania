@@ -1,5 +1,5 @@
 export abstract class DiscogsError extends Error {
-  abstract readonly code: 'not_found' | 'rate_limited' | 'unavailable' | 'validation_error';
+  abstract readonly code: 'not_found' | 'rate_limited' | 'unavailable' | 'validation_error' | 'auth_failed';
 
   constructor(
     message: string,
@@ -39,5 +39,13 @@ export class DiscogsValidationError extends DiscogsError {
 
   constructor(cause?: unknown) {
     super('Received unexpected data from the catalog service.', cause);
+  }
+}
+
+export class DiscogsAuthError extends DiscogsError {
+  readonly code = 'auth_failed' as const;
+
+  constructor(cause?: unknown) {
+    super('Discogs rejected the linked account credentials.', cause);
   }
 }

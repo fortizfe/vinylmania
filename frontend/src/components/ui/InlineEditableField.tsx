@@ -22,13 +22,15 @@ interface InlineEditableFieldProps {
   renderEditor: (props: EditorRenderProps) => ReactNode;
   onSave: (value: string) => Promise<void>;
   onActivate?: () => void;
+  /** When true, the field shows its value but cannot be activated for editing. */
+  disabled?: boolean;
 }
 
 type Mode = 'read' | 'editing' | 'saving' | 'saved' | 'error';
 
 export const InlineEditableField = forwardRef<InlineEditableFieldHandle, InlineEditableFieldProps>(
   function InlineEditableField(
-    { value, placeholder, fieldLabel, renderEditor, onSave, onActivate },
+    { value, placeholder, fieldLabel, renderEditor, onSave, onActivate, disabled = false },
     ref,
   ) {
     const [mode, setMode] = useState<Mode>('read');
@@ -49,6 +51,7 @@ export const InlineEditableField = forwardRef<InlineEditableFieldHandle, InlineE
     }, []);
 
     function startEditing() {
+      if (disabled) return;
       setDraftValue(savedValue);
       setMode('editing');
       onActivate?.();

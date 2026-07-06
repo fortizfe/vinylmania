@@ -8,6 +8,61 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.4.0] - 2026-07-06
+
+### Added
+
+- Library is now synchronized with the linked user's Discogs collection
+  (feature 016). `GET /api/library` triggers a sync-on-read against the
+  Discogs collection API (OAuth-signed, throttled by a 5-minute Redis marker;
+  `?refresh=true` forces an immediate re-sync). On first sync the existing
+  Firestore library entries are union-merged into the Discogs collection and
+  pre-016 `condition`/`notes` values are migrated to the matching Discogs
+  custom fields per-entry (media condition maps to the Discogs grading
+  vocabulary; anything unmappable is appended verbatim to notes). Subsequent
+  syncs treat Discogs as the sole source of truth.
+- New `GET /api/library/:id` enriches the entry with fresh per-copy data
+  fetched from the Discogs collection instance.
+- `PATCH /api/library/:id` writes one per-copy field at a time (rating via
+  the instance endpoint, media/sleeve condition and notes via the custom-fields
+  endpoint). Each write is confirmed by Discogs before the response is sent.
+- New `backend/src/discogs/collection/` module: `collectionClient.ts`
+  (OAuth-signed Discogs collection client), `collectionTypes.ts`, and
+  `conditionGrading.ts` (closed Discogs grading vocabulary + legacy mapping).
+- `invalidateCache(key)` helper in `cacheAside.ts`.
+- Structured logging for all sync outcomes: `sync_completed`,
+  `first_sync_migrated`, `entry_added`, `entry_removed`, `entry_removed`,
+  auth failures, and rate-limit metadata.
+
+### Changed
+
+- **BREAKING**: `POST /api/library` body now accepts only
+  `{ discogsReleaseId: number }`. The previously accepted `condition` and
+  `notes` fields are rejected with `400 invalid_request`.
+- **BREAKING**: `PATCH /api/library/:id` body is now
+  `{ rating?, mediaCondition?, sleeveCondition?, notes? }`. The previous
+  `{ condition, notes }` shape is rejected with `400 invalid_request`.
+- **BREAKING**: All library entry responses now include a `discogs` object
+  (`instanceId`, `folderId`, `rating`, `mediaCondition`, `sleeveCondition`,
+  `notes`, `editable`) in place of the previous top-level `condition` and
+  `notes` fields.
+- All library endpoints now require an active Discogs connection. Without one
+  they return `409 discogs_not_linked`; revoked credentials return
+  `401 discogs_link_invalid`.
+- `LibraryEntry` Firestore documents gain `discogsInstanceId` and
+  `discogsFolderId`; the legacy `condition` and `notes` fields are deleted
+  per-entry after confirmed migration (first sync only).
+- `discogsConnections/{uid}` gains `initialLibrarySyncAt` to track first-sync
+  completion; absent ⇒ next sync runs in union-merge mode.
+
+### Migration
+
+Existing library entries that carry `condition`/`notes` will be migrated
+automatically on first library load by each user after this deployment.
+No manual data-migration step is required; the migration is per-entry and
+resumable (a failure on one entry retries on the next load; the entry retains
+its legacy fields until the Discogs write succeeds).
+
 ## [0.3.0] - 2026-07-06
 
 ### Added

@@ -1,7 +1,9 @@
 import { isAxiosError } from 'axios';
 
+import { invalidateCache } from '../../cache/cacheAside';
 import { getFirestoreDb } from '../../config/firebase-admin';
 import { logger } from '../../config/logger';
+import { fieldsCacheKey } from '../collection/collectionClient';
 import {
   createOauthHttpClient,
   getAuthorizeBaseUrl,
@@ -174,7 +176,18 @@ export async function getConnection(uid: string): Promise<DiscogsConnection | nu
     accessToken: data.accessToken,
     accessTokenSecret: data.accessTokenSecret,
     linkedAt: data.linkedAt.toDate().toISOString(),
+    ...(data.initialLibrarySyncAt
+      ? { initialLibrarySyncAt: data.initialLibrarySyncAt.toDate().toISOString() }
+      : {}),
   };
+}
+
+/**
+ * Marks the connection's first library synchronization (union merge + legacy
+ * migration, feature 016) as completed; later syncs run in mirror mode.
+ */
+export async function markInitialLibrarySync(uid: string): Promise<void> {
+  await connectionDoc(uid).update({ initialLibrarySyncAt: new Date() });
 }
 
 export async function getStatus(uid: string): Promise<ConnectionStatus> {
@@ -191,6 +204,8 @@ export async function getStatus(uid: string): Promise<ConnectionStatus> {
 
 export async function disconnect(uid: string): Promise<void> {
   await connectionDoc(uid).delete();
+  // The cached collection field map belongs to the departing Discogs account.
+  await invalidateCache(fieldsCacheKey(uid));
   logger.info({ route: 'discogs-oauth', outcome: 'disconnected', uid });
 }
 

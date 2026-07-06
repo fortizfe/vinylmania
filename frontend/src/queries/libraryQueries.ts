@@ -7,7 +7,11 @@ import {
 } from '@tanstack/react-query';
 
 import * as libraryApi from '../services/libraryApi';
-import type { EnrichedLibraryEntry, PaginatedLibraryEntries } from '../services/libraryApi';
+import type {
+  EnrichedLibraryEntry,
+  PaginatedLibraryEntries,
+  UpdateCopyDataPatch,
+} from '../services/libraryApi';
 
 export const libraryKeys = {
   all: ['library'] as const,
@@ -21,6 +25,22 @@ export function useLibraryList(page: number, pageSize: number): UseQueryResult<P
   return useQuery({
     queryKey: libraryKeys.list(page, pageSize),
     queryFn: () => libraryApi.list(page, pageSize),
+    retry: false,
+  });
+}
+
+/** Forces a fresh Discogs synchronization for the current page (FR-014). */
+export function useRefreshLibrary(
+  page: number,
+  pageSize: number,
+): UseMutationResult<PaginatedLibraryEntries, unknown, void> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => libraryApi.list(page, pageSize, true),
+    onSuccess: (data) => {
+      queryClient.setQueryData(libraryKeys.list(page, pageSize), data);
+    },
   });
 }
 
@@ -29,24 +49,21 @@ export function useLibraryEntry(entryId: string | undefined): UseQueryResult<Enr
     queryKey: libraryKeys.detail(entryId ?? ''),
     queryFn: () => libraryApi.getOne(entryId ?? ''),
     enabled: entryId !== undefined,
+    retry: false,
   });
 }
 
-export interface UpdateLibraryEntryArgs {
-  condition?: string;
-  notes?: string;
-}
-
+/**
+ * Persists one per-copy field (rating, media/sleeve condition, or notes) to
+ * the user's Discogs collection — the detail panel autosaves per field.
+ */
 export function useUpdateLibraryEntry(
   entryId: string,
-): UseMutationResult<EnrichedLibraryEntry, unknown, UpdateLibraryEntryArgs> {
+): UseMutationResult<EnrichedLibraryEntry, unknown, UpdateCopyDataPatch> {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ condition, notes }: UpdateLibraryEntryArgs) =>
-      notes === undefined
-        ? libraryApi.update(entryId, condition)
-        : libraryApi.update(entryId, condition, notes),
+    mutationFn: (patch: UpdateCopyDataPatch) => libraryApi.update(entryId, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: libraryKeys.all });
     },
@@ -66,8 +83,6 @@ export function useRemoveLibraryEntry(): UseMutationResult<void, unknown, string
 
 export interface CreateLibraryEntryArgs {
   discogsReleaseId: number;
-  condition?: string;
-  notes?: string;
 }
 
 export function useCreateLibraryEntry(): UseMutationResult<
@@ -78,11 +93,8 @@ export function useCreateLibraryEntry(): UseMutationResult<
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ discogsReleaseId, condition, notes }: CreateLibraryEntryArgs) => {
-      if (notes !== undefined) return libraryApi.create(discogsReleaseId, condition, notes);
-      if (condition !== undefined) return libraryApi.create(discogsReleaseId, condition);
-      return libraryApi.create(discogsReleaseId);
-    },
+    mutationFn: ({ discogsReleaseId }: CreateLibraryEntryArgs) =>
+      libraryApi.create(discogsReleaseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: libraryKeys.all });
     },

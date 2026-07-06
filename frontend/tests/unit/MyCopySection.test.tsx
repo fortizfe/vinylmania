@@ -1,99 +1,83 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MyCopySection } from '../../src/components/MyCopySection';
+import type { EntryDiscogsData } from '../../src/services/libraryApi';
+
+const baseDiscogs: EntryDiscogsData = {
+  instanceId: 100,
+  folderId: 1,
+  rating: 0,
+  mediaCondition: null,
+  sleeveCondition: null,
+  notes: null,
+  editable: { mediaCondition: true, sleeveCondition: true, notes: true },
+};
+
+function makeProps(overrides: Partial<EntryDiscogsData> = {}) {
+  return {
+    discogs: { ...baseDiscogs, ...overrides },
+    onSaveRating: vi.fn().mockResolvedValue(undefined),
+    onSaveMediaCondition: vi.fn().mockResolvedValue(undefined),
+    onSaveSleeveCondition: vi.fn().mockResolvedValue(undefined),
+    onSaveNotes: vi.fn().mockResolvedValue(undefined),
+    onRemove: vi.fn(),
+  };
+}
 
 describe('MyCopySection', () => {
-  it('renders condition and notes read-mode text when present', () => {
-    render(
-      <MyCopySection
-        condition="Near Mint"
-        notes="Bought at a record fair"
-        onSaveCondition={vi.fn()}
-        onSaveNotes={vi.fn()}
-        onRemove={vi.fn()}
-      />,
-    );
+  it('renders the star rating with current value', () => {
+    render(<MyCopySection {...makeProps({ rating: 3 })} />);
 
-    expect(screen.getByText('Near Mint')).toBeInTheDocument();
-    expect(screen.getByText('Bought at a record fair')).toBeInTheDocument();
+    const stars = screen.getAllByRole('button', { name: /stars/i });
+    expect(stars).toHaveLength(5);
+    expect(stars[2]).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('shows placeholders when condition and notes are absent', () => {
-    render(
-      <MyCopySection
-        onSaveCondition={vi.fn()}
-        onSaveNotes={vi.fn()}
-        onRemove={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText('Add a condition')).toBeInTheDocument();
-    expect(screen.getByText('Add notes')).toBeInTheDocument();
-  });
-
-  it('edits condition via a fixed-option select and calls onSaveCondition on blur', async () => {
-    const onSaveCondition = vi.fn().mockResolvedValue(undefined);
-    render(
-      <MyCopySection
-        condition="Good"
-        notes=""
-        onSaveCondition={onSaveCondition}
-        onSaveNotes={vi.fn()}
-        onRemove={vi.fn()}
-      />,
-    );
+  it('calls onSaveRating when a star is clicked', async () => {
+    const props = makeProps({ rating: 0 });
+    render(<MyCopySection {...props} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByText('Good'));
-    const select = screen.getByLabelText('Condition');
+    await user.click(screen.getByRole('button', { name: /4 stars/i }));
+
+    expect(props.onSaveRating).toHaveBeenCalledWith(4);
+  });
+
+  it('renders media condition select with Discogs grading options', () => {
+    render(<MyCopySection {...makeProps({ mediaCondition: 'Very Good Plus (VG+)' })} />);
+
+    const select = screen.getByLabelText('Media Condition');
     expect(select.tagName).toBe('SELECT');
-    await user.selectOptions(select, 'Mint');
-    await act(async () => {
-      select.blur();
-    });
-
-    expect(onSaveCondition).toHaveBeenCalledWith('Mint');
+    expect((select as HTMLSelectElement).value).toBe('Very Good Plus (VG+)');
   });
 
-  it('edits notes via a textarea and discards the change on Escape without saving', async () => {
-    const onSaveNotes = vi.fn();
-    render(
-      <MyCopySection
-        condition=""
-        notes="Original notes"
-        onSaveCondition={vi.fn()}
-        onSaveNotes={onSaveNotes}
-        onRemove={vi.fn()}
-      />,
-    );
+  it('calls onSaveMediaCondition when a condition is selected', async () => {
+    const props = makeProps();
+    render(<MyCopySection {...props} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByText('Original notes'));
-    const textarea = screen.getByLabelText('Notes');
-    expect(textarea.tagName).toBe('TEXTAREA');
-    await user.clear(textarea);
-    await user.type(textarea, 'Discarded edit');
-    await user.keyboard('{Escape}');
+    await user.selectOptions(screen.getByLabelText('Media Condition'), 'Mint (M)');
 
-    expect(onSaveNotes).not.toHaveBeenCalled();
-    expect(screen.getByText('Original notes')).toBeInTheDocument();
+    expect(props.onSaveMediaCondition).toHaveBeenCalledWith('Mint (M)');
+  });
+
+  it('disables media condition select with a hint when editable is false', () => {
+    render(<MyCopySection {...makeProps({ editable: { mediaCondition: false, sleeveCondition: true, notes: true } })} />);
+
+    const select = screen.getByLabelText('Media Condition');
+    expect(select).toBeDisabled();
+    expect(screen.getByText(/Media Condition.*not available/i)).toBeInTheDocument();
   });
 
   it('calls onRemove when "Remove from library" is clicked', async () => {
-    const onRemove = vi.fn();
-    render(
-      <MyCopySection
-        onSaveCondition={vi.fn()}
-        onSaveNotes={vi.fn()}
-        onRemove={onRemove}
-      />,
-    );
+    const props = makeProps();
+    render(<MyCopySection {...props} />);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /remove from library/i }));
 
-    expect(onRemove).toHaveBeenCalled();
+    expect(props.onRemove).toHaveBeenCalled();
   });
 });

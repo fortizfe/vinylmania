@@ -1,6 +1,7 @@
 import {
   buildAccessTokenHeader,
   buildIdentityHeader,
+  buildProtectedResourceHeader,
   buildRequestTokenHeader,
 } from '../../src/discogs/oauth/oauthSignature';
 
@@ -80,5 +81,31 @@ describe('buildIdentityHeader', () => {
     expect(params.oauth_signature).toBe('test-secret&access-secret');
     expect(params.oauth_verifier).toBeUndefined();
     expect(params.oauth_callback).toBeUndefined();
+  });
+});
+
+describe('buildProtectedResourceHeader', () => {
+  it('signs an arbitrary protected-resource request with the access token pair', () => {
+    const header = buildProtectedResourceHeader(CREDENTIALS, {
+      token: 'access-token',
+      tokenSecret: 'access-secret',
+    });
+    const params = parseOauthHeader(header);
+
+    expect(params.oauth_consumer_key).toBe('test-key');
+    expect(params.oauth_signature_method).toBe('PLAINTEXT');
+    expect(params.oauth_token).toBe('access-token');
+    expect(params.oauth_signature).toBe('test-secret&access-secret');
+    expect(params.oauth_nonce).toBeTruthy();
+    expect(Number(params.oauth_timestamp)).toBeGreaterThan(0);
+    expect(params.oauth_verifier).toBeUndefined();
+    expect(params.oauth_callback).toBeUndefined();
+  });
+
+  it('generates a unique nonce per call', () => {
+    const access = { token: 't', tokenSecret: 's' };
+    const first = parseOauthHeader(buildProtectedResourceHeader(CREDENTIALS, access));
+    const second = parseOauthHeader(buildProtectedResourceHeader(CREDENTIALS, access));
+    expect(first.oauth_nonce).not.toBe(second.oauth_nonce);
   });
 });

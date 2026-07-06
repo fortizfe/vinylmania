@@ -16,7 +16,16 @@ export type LogOutcome =
   | 'link_started'
   | 'link_completed'
   | 'link_failed'
-  | 'disconnected';
+  | 'disconnected'
+  // Library ⇄ Discogs collection sync lifecycle (feature 016)
+  | 'auth_failed'
+  | 'sync_started'
+  | 'sync_completed'
+  | 'sync_skipped'
+  | 'first_sync_migrated'
+  | 'entry_added'
+  | 'entry_removed'
+  | 'migration_failed';
 
 export interface LogEvent {
   route: string;

@@ -5,7 +5,6 @@ import type {
   CreateLibraryEntryInput,
   LibraryEntry,
   PaginatedLibraryEntries,
-  UpdateLibraryEntryInput,
 } from './types';
 
 function entriesCollection(uid: string) {
@@ -17,8 +16,11 @@ function toLibraryEntry(id: string, data: FirebaseFirestore.DocumentData): Libra
     id,
     discogsReleaseId: data.discogsReleaseId,
     addedAt: data.addedAt?.toDate?.().toISOString() ?? new Date().toISOString(),
-    ...(data.condition ? { condition: data.condition } : {}),
-    ...(data.notes ? { notes: data.notes } : {}),
+    ...(data.discogsInstanceId !== undefined ? { discogsInstanceId: data.discogsInstanceId } : {}),
+    ...(data.discogsFolderId !== undefined ? { discogsFolderId: data.discogsFolderId } : {}),
+    // Pre-016 per-copy fields, kept only until their first-sync migration.
+    ...(data.condition ? { legacyCondition: data.condition } : {}),
+    ...(data.notes ? { legacyNotes: data.notes } : {}),
   };
 }
 
@@ -29,9 +31,9 @@ export async function createEntry(
   const docRef = entriesCollection(uid).doc();
   await docRef.set({
     discogsReleaseId: input.discogsReleaseId,
-    addedAt: FieldValue.serverTimestamp(),
-    ...(input.condition ? { condition: input.condition } : {}),
-    ...(input.notes ? { notes: input.notes } : {}),
+    discogsInstanceId: input.discogsInstanceId,
+    discogsFolderId: input.discogsFolderId,
+    addedAt: input.addedAt ?? FieldValue.serverTimestamp(),
   });
 
   const snapshot = await docRef.get();
@@ -70,28 +72,30 @@ export async function listEntries(
   };
 }
 
-export async function updateEntry(
+/** Every entry, unpaginated — the sync reconciles the full mirror at once. */
+export async function listAllEntries(uid: string): Promise<LibraryEntry[]> {
+  const querySnapshot = await entriesCollection(uid).orderBy('addedAt', 'desc').get();
+  return querySnapshot.docs.map((doc) => toLibraryEntry(doc.id, doc.data()));
+}
+
+/** Points an entry at its managed Discogs collection instance. */
+export async function updateEntryInstance(
   uid: string,
   entryId: string,
-  input: UpdateLibraryEntryInput,
-): Promise<LibraryEntry | null> {
-  const docRef = entriesCollection(uid).doc(entryId);
-  const existing = await docRef.get();
-  if (!existing.exists) {
-    return null;
-  }
+  instance: { discogsInstanceId: number; discogsFolderId: number },
+): Promise<void> {
+  await entriesCollection(uid).doc(entryId).update(instance);
+}
 
-  const updates: Record<string, unknown> = {};
-  if (input.condition !== undefined) {
-    updates.condition = input.condition;
-  }
-  if (input.notes !== undefined) {
-    updates.notes = input.notes;
-  }
-  await docRef.update(updates);
-
-  const snapshot = await docRef.get();
-  return toLibraryEntry(snapshot.id, snapshot.data()!);
+/**
+ * Removes the pre-016 per-copy fields. Only called after the Discogs write
+ * that migrated them has been confirmed (FR-010).
+ */
+export async function clearLegacyFields(uid: string, entryId: string): Promise<void> {
+  await entriesCollection(uid).doc(entryId).update({
+    condition: FieldValue.delete(),
+    notes: FieldValue.delete(),
+  });
 }
 
 export async function deleteEntry(uid: string, entryId: string): Promise<boolean> {

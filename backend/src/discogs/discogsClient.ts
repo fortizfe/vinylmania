@@ -12,7 +12,11 @@ import type { Artist, CatalogSearchResponse, Release } from './types';
 
 export { DiscogsError } from './discogsErrors';
 
-const DISCOGS_BASE_URL = 'https://api.discogs.com';
+const DEFAULT_DISCOGS_BASE_URL = 'https://api.discogs.com';
+
+export function getDiscogsBaseUrl(): string {
+  return process.env.DISCOGS_BASE_URL ?? DEFAULT_DISCOGS_BASE_URL;
+}
 
 function buildAuthorizationHeader(): string | undefined {
   const token = process.env.DISCOGS_TOKEN;
@@ -23,7 +27,7 @@ export function createDiscogsHttpClient(): AxiosInstance {
   const authorization = buildAuthorizationHeader();
 
   const instance = axios.create({
-    baseURL: DISCOGS_BASE_URL,
+    baseURL: getDiscogsBaseUrl(),
     timeout: 10_000,
     headers: {
       'User-Agent': process.env.DISCOGS_USER_AGENT || 'Vinylmania/0.1',

@@ -67,14 +67,34 @@ export interface Release {
   discogsUrl: string;
 }
 
+/**
+ * Per-copy data held in the user's Discogs collection (feature 016).
+ * `editable` flags are false when the matching Discogs custom field was
+ * deleted by the user on discogs.com.
+ */
+export interface EntryDiscogsData {
+  instanceId: number;
+  folderId: number;
+  /** 0–5; 0 means unrated. */
+  rating: number;
+  mediaCondition: string | null;
+  sleeveCondition: string | null;
+  notes: string | null;
+  editable: {
+    mediaCondition: boolean;
+    sleeveCondition: boolean;
+    notes: boolean;
+  };
+}
+
 export interface EnrichedLibraryEntry {
   id: string;
   discogsReleaseId: number;
   addedAt: string;
-  condition?: string;
-  notes?: string;
   catalogStatus: 'ok' | 'unavailable';
   release: Release | null;
+  /** Null in list responses and when the copy is gone from Discogs. */
+  discogs: EntryDiscogsData | null;
 }
 
 export interface PaginatedLibraryEntries {
@@ -84,20 +104,31 @@ export interface PaginatedLibraryEntries {
   totalItems: number;
 }
 
-export async function create(
-  discogsReleaseId: number,
-  condition?: string,
-  notes?: string,
-): Promise<EnrichedLibraryEntry> {
+/** One field per call — the detail panel autosaves field by field. */
+export interface UpdateCopyDataPatch {
+  rating?: number;
+  mediaCondition?: string;
+  sleeveCondition?: string;
+  notes?: string;
+}
+
+export async function create(discogsReleaseId: number): Promise<EnrichedLibraryEntry> {
   const res = await authorizedFetch('/api/library', {
     method: 'POST',
-    body: JSON.stringify({ discogsReleaseId, condition, notes }),
+    body: JSON.stringify({ discogsReleaseId }),
   });
   return res.json();
 }
 
-export async function list(page = 1, pageSize = 20): Promise<PaginatedLibraryEntries> {
+export async function list(
+  page = 1,
+  pageSize = 20,
+  refresh = false,
+): Promise<PaginatedLibraryEntries> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (refresh) {
+    params.set('refresh', 'true');
+  }
   const res = await authorizedFetch(`/api/library?${params.toString()}`);
   return res.json();
 }
@@ -113,12 +144,11 @@ export async function remove(entryId: string): Promise<void> {
 
 export async function update(
   entryId: string,
-  condition?: string,
-  notes?: string,
+  patch: UpdateCopyDataPatch,
 ): Promise<EnrichedLibraryEntry> {
   const res = await authorizedFetch(`/api/library/${entryId}`, {
     method: 'PATCH',
-    body: JSON.stringify({ condition, notes }),
+    body: JSON.stringify(patch),
   });
   return res.json();
 }

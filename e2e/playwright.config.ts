@@ -69,6 +69,7 @@ export default defineConfig({
         // Feature 015: Discogs OAuth account linking, targeting the stub
         // above with fake consumer credentials (never the real key/secret).
         DISCOGS_OAUTH_BASE_URL: DISCOGS_STUB_URL,
+        DISCOGS_BASE_URL: DISCOGS_STUB_URL,
         DISCOGS_AUTHORIZE_BASE_URL: `${DISCOGS_STUB_URL}/oauth/authorize`,
         DISCOGS_CONSUMER_KEY: 'e2e-fake-consumer-key',
         DISCOGS_CONSUMER_SECRET: 'e2e-fake-consumer-secret',

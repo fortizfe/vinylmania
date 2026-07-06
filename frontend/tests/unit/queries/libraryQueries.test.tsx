@@ -75,7 +75,7 @@ describe('libraryQueries', () => {
   });
 
   it('useUpdateLibraryEntry invalidates library queries on success', async () => {
-    mockUpdate.mockResolvedValue({ id: 'entry-1', discogsReleaseId: 1, condition: 'Mint' });
+    mockUpdate.mockResolvedValue({ id: 'entry-1', discogsReleaseId: 1, discogs: null });
 
     const client = createTestQueryClient();
     const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
@@ -86,7 +86,7 @@ describe('libraryQueries', () => {
     const { useUpdateLibraryEntry, libraryKeys } = await import('../../../src/queries/libraryQueries');
     const { result } = renderHook(() => useUpdateLibraryEntry('entry-1'), { wrapper: localWrapper });
 
-    await result.current.mutateAsync({ condition: 'Mint' });
+    await result.current.mutateAsync({ rating: 4 });
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: libraryKeys.all });
   });

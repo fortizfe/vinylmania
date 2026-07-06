@@ -1,35 +1,75 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { LibraryLinkRequired } from '../components/LibraryLinkRequired';
 import { RecordCard } from '../components/RecordCard';
 import { RecordCardSkeleton } from '../components/RecordCardSkeleton';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { useLibraryList } from '../queries/libraryQueries';
+import { useLibraryList, useRefreshLibrary } from '../queries/libraryQueries';
+import { ApiError } from '../services/apiClient';
 
 const SKELETON_COUNT = 8;
 const gridClasses = 'grid list-none grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-4 p-0';
+
+function gateVariant(error: unknown): 'not-linked' | 'relink' | null {
+  if (error instanceof ApiError && error.code === 'discogs_not_linked') {
+    return 'not-linked';
+  }
+  if (error instanceof ApiError && error.code === 'discogs_link_invalid') {
+    return 'relink';
+  }
+  return null;
+}
 
 export function LibraryListPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
-  const { data, isLoading, isError: loadError } = useLibraryList(page, pageSize);
+  const { data, isLoading, isError: loadError, error } = useLibraryList(page, pageSize);
+  const refresh = useRefreshLibrary(page, pageSize);
   const entries = data?.items ?? null;
   const totalItems = data?.totalItems ?? 0;
   const hasNextPage = page * pageSize < totalItems;
+  const gate = loadError ? gateVariant(error) : null;
+
+  // FR-003: while the accounts are not linked, the library shows only the
+  // gate — no records, no add/refresh actions.
+  if (gate) {
+    return (
+      <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Your library</h1>
+        <LibraryLinkRequired variant={gate} />
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Your library</h1>
-        <Link
-          to="/app/library/add"
-          className="text-sm font-medium text-primary hover:opacity-80 dark:text-primary"
-        >
-          Add a record
-        </Link>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="secondary"
+            loading={refresh.isPending}
+            onClick={() => refresh.mutate()}
+          >
+            {refresh.isPending ? 'Refreshing…' : 'Refresh'}
+          </Button>
+          <Link
+            to="/app/library/add"
+            className="text-sm font-medium text-primary hover:opacity-80 dark:text-primary"
+          >
+            Add a record
+          </Link>
+        </div>
       </div>
+
+      {refresh.isError && (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          Couldn&apos;t refresh from Discogs right now. Please try again.
+        </p>
+      )}
 
       {loadError && (
         <Card>

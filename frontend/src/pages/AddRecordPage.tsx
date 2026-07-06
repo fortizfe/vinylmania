@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { BackLink } from '../components/ui/BackLink';
 import { Button } from '../components/ui/Button';
@@ -9,6 +10,7 @@ import { SearchResultCard } from '../components/SearchResultCard';
 import { SearchResultCardSkeleton } from '../components/SearchResultCardSkeleton';
 import { useCatalogRelease, useCatalogSearch } from '../queries/discogsQueries';
 import { useCreateLibraryEntry } from '../queries/libraryQueries';
+import { ApiError } from '../services/apiClient';
 
 const SKELETON_COUNT = 8;
 const PAGE_SIZE = 20;
@@ -22,6 +24,7 @@ export function AddRecordPage() {
   const [addingId, setAddingId] = useState<number | null>(null);
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
   const [addError, setAddError] = useState<string | null>(null);
+  const [gateError, setGateError] = useState<'not-linked' | 'relink' | null>(null);
   const [previewDiscogsId, setPreviewDiscogsId] = useState<number | null>(null);
 
   const searchQuery = useCatalogSearch(submittedQuery, 'release', page, PAGE_SIZE);
@@ -44,11 +47,18 @@ export function AddRecordPage() {
   async function handleAdd(discogsId: number) {
     setAddingId(discogsId);
     setAddError(null);
+    setGateError(null);
     try {
       await createEntry.mutateAsync({ discogsReleaseId: discogsId });
       setAddedIds((prev) => new Set(prev).add(discogsId));
-    } catch {
-      setAddError('Something went wrong while adding this record. Please try again.');
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'discogs_not_linked') {
+        setGateError('not-linked');
+      } else if (err instanceof ApiError && err.code === 'discogs_link_invalid') {
+        setGateError('relink');
+      } else {
+        setAddError('Something went wrong while adding this record. Please try again.');
+      }
     } finally {
       setAddingId(null);
     }
@@ -75,6 +85,22 @@ export function AddRecordPage() {
           </Button>
         </form>
       </Card>
+
+      {gateError && (
+        <Card>
+          <p className="text-gray-700 dark:text-gray-300">
+            {gateError === 'not-linked'
+              ? 'You need to link your Discogs account before adding records to your library.'
+              : 'Your Discogs link is no longer valid. Please re-link your account to add records.'}
+          </p>
+          <Link
+            to="/app/profile"
+            className="mt-2 inline-block text-sm font-medium text-primary hover:opacity-80"
+          >
+            Go to your profile
+          </Link>
+        </Card>
+      )}
 
       {error && (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">

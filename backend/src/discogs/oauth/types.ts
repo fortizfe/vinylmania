@@ -9,6 +9,13 @@ export interface DiscogsConnection {
   accessToken: string;
   accessTokenSecret: string;
   linkedAt: string; // ISO 8601
+  /**
+   * Set once the first library synchronization (union merge + legacy
+   * migration, feature 016) completes for this connection. Absent ⇒ the
+   * next sync runs in first-sync mode. Deleted with the doc on disconnect,
+   * so relinking re-runs the merge.
+   */
+  initialLibrarySyncAt?: string; // ISO 8601
 }
 
 /**

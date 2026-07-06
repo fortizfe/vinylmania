@@ -95,3 +95,45 @@ describe('withCache', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('invalidateCache', () => {
+  const originalRedisUrl = process.env.REDIS_URL;
+
+  beforeEach(() => {
+    jest.resetModules();
+    process.env.REDIS_URL = 'redis://localhost:6379/0';
+  });
+
+  afterAll(() => {
+    process.env.REDIS_URL = originalRedisUrl;
+  });
+
+  it('deletes the key so the next read misses', async () => {
+    const { invalidateCache } = await import('../../../src/cache/cacheAside');
+    const { getRedisClient } = await import('../../../src/cache/redisClient');
+
+    const client = getRedisClient()!;
+    await client.set('key:inv', JSON.stringify({ value: 'stale' }));
+
+    await invalidateCache('key:inv');
+
+    expect(await client.get('key:inv')).toBeNull();
+  });
+
+  it('does not throw when Redis errors on delete', async () => {
+    const { invalidateCache } = await import('../../../src/cache/cacheAside');
+    const { getRedisClient } = await import('../../../src/cache/redisClient');
+
+    jest.spyOn(getRedisClient()!, 'del').mockRejectedValueOnce(new Error('connection reset'));
+
+    await expect(invalidateCache('key:inv-err')).resolves.toBeUndefined();
+  });
+
+  it('is a no-op when REDIS_URL is unset', async () => {
+    delete process.env.REDIS_URL;
+
+    const { invalidateCache } = await import('../../../src/cache/cacheAside');
+
+    await expect(invalidateCache('key:inv-none')).resolves.toBeUndefined();
+  });
+});

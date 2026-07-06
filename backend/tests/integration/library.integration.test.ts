@@ -16,11 +16,12 @@ describe('Library service live integration: createEntry', () => {
 
     const entry = await createEntry(uid, {
       discogsReleaseId: 1,
-      condition: 'Very Good Plus',
+      discogsInstanceId: 42,
+      discogsFolderId: 1,
     });
 
     expect(entry.discogsReleaseId).toBe(1);
-    expect(entry.condition).toBe('Very Good Plus');
+    expect(entry.discogsInstanceId).toBe(42);
 
     const snapshot = await getFirestoreDb()
       .collection('users')
