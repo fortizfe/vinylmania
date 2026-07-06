@@ -1,6 +1,12 @@
 import request from 'supertest';
 
-import { discogsScope } from '../helpers/nock';
+import {
+  discogsScope,
+  rawSearchResultItem,
+  stubReleaseRating,
+  stubReleaseRatingNeverResolves,
+  stubReleaseRatingUnavailable,
+} from '../helpers/nock';
 import { createApp } from '../../src/app';
 import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
 
@@ -188,5 +194,101 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
     expect(res.status).toBe(502);
     expect(res.body.error).toBe('catalog_unavailable');
+  });
+
+  describe('additive communityRating enrichment (feature 017)', () => {
+    it('includes an additive communityRating for a release with a valid rating', async () => {
+      const { idToken } = await getTestIdToken('search-rating-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+          results: [rawSearchResultItem({ id: 10 })],
+        });
+      stubReleaseRating(10, { average: 4.19, count: 47 });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'Stockholm', type: 'release' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.results[0].communityRating).toEqual({ average: 4.19, count: 47 });
+    });
+
+    it('omits communityRating when the release has no votes (count 0)', async () => {
+      const { idToken } = await getTestIdToken('search-rating-unvoted-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+          results: [rawSearchResultItem({ id: 11 })],
+        });
+      stubReleaseRating(11, { average: 0, count: 0 });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'Stockholm', type: 'release' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.results[0].communityRating).toBeUndefined();
+    });
+
+    it('omits communityRating and still returns 200 when a per-release rating lookup fails', async () => {
+      const { idToken } = await getTestIdToken('search-rating-failure-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+          results: [rawSearchResultItem({ id: 12 })],
+        });
+      stubReleaseRatingUnavailable(12);
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'Stockholm', type: 'release' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.results[0].communityRating).toBeUndefined();
+      expect(res.body.results[0].title).toBe('Stockholm');
+    });
+
+    it(
+      'omits communityRating when a rating lookup exceeds the 2-second timeout (SC-006), without delaying the response',
+      async () => {
+        const { idToken } = await getTestIdToken('search-rating-timeout-user');
+
+        discogsScope()
+          .get('/database/search')
+          .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+          .reply(200, {
+            pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+            results: [rawSearchResultItem({ id: 13 })],
+          });
+        stubReleaseRatingNeverResolves(13);
+
+        const startedAt = Date.now();
+        const res = await request(app)
+          .get('/api/discogs/search')
+          .query({ q: 'Stockholm', type: 'release' })
+          .set('Authorization', `Bearer ${idToken}`);
+        const elapsedMs = Date.now() - startedAt;
+
+        expect(res.status).toBe(200);
+        expect(res.body.results[0].communityRating).toBeUndefined();
+        // The lookup timeout (2s) bounds the wait; the stub's artificial 2.5s
+        // delay must not be allowed to stretch the overall response past it.
+        expect(elapsedMs).toBeLessThan(2_400);
+      },
+      8_000,
+    );
   });
 });

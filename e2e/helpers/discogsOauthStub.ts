@@ -274,7 +274,17 @@ function urlencoded(params: Record<string, string>): string {
  * Minimal catalog release response for GET /releases/:id.
  * Maps to the Discogs release shape consumed by the backend's discogsMapper.
  */
+// Feature 017: releases ending in 1 get a "high"-band community rating so
+// e2e specs can assert the rating badge renders on library cards without a
+// separate control endpoint; every other release stays unrated.
+function stubCommunity(releaseId: number) {
+  return releaseId % 10 === 1
+    ? { have: 20, want: 5, rating: { average: 4.5, count: 30 } }
+    : undefined;
+}
+
 function stubRelease(releaseId: number) {
+  const community = stubCommunity(releaseId);
   return {
     id: releaseId,
     title: `Stub Release ${releaseId}`,
@@ -288,6 +298,7 @@ function stubRelease(releaseId: number) {
     tracklist: [{ position: 'A1', type_: 'track', title: 'Stub Track', duration: '6:00' }],
     identifiers: [],
     images: [],
+    ...(community ? { community } : {}),
     uri: `http://localhost:${PORT}/releases/${releaseId}`,
   };
 }

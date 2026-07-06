@@ -1,6 +1,8 @@
+import { presentRating } from '../lib/releaseRating';
 import type { CatalogSearchResult } from '../services/discogsApi';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
+import { ReleaseRatingBadge } from './ui/ReleaseRatingBadge';
 import { ResultCardActions } from './ResultCardActions';
 
 interface SearchResultCardProps {
@@ -19,21 +21,29 @@ export function SearchResultCard({
   added,
 }: SearchResultCardProps) {
   const format = result.formats?.[0];
+  const rating = presentRating(result.communityRating);
 
   return (
     <Card padding="sm" className="flex flex-col gap-2">
-      {result.thumbnailUrl ? (
-        <img
-          src={result.thumbnailUrl}
-          alt={result.title}
-          className="aspect-square w-full rounded-md object-cover"
-        />
-      ) : (
-        <div
-          data-testid="search-result-thumbnail-placeholder"
-          className="aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-800"
-        />
-      )}
+      <div className="relative">
+        {result.thumbnailUrl ? (
+          <img
+            src={result.thumbnailUrl}
+            alt={result.title}
+            className="aspect-square w-full rounded-md object-cover"
+          />
+        ) : (
+          <div
+            data-testid="search-result-thumbnail-placeholder"
+            className="aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-800"
+          />
+        )}
+        {rating && (
+          <div className="absolute top-2 right-2">
+            <ReleaseRatingBadge displayValue={rating.displayValue} band={rating.band} />
+          </div>
+        )}
+      </div>
       <span className="truncate font-semibold text-gray-900 dark:text-gray-100">
         {result.title}
       </span>

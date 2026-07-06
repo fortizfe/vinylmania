@@ -6,7 +6,12 @@ jest.mock('ioredis', () => ({
   default: RedisMock,
 }));
 
-import { discogsScope } from '../helpers/nock';
+import {
+  discogsScope,
+  rawSearchResultItem,
+  stubReleaseRating,
+  stubReleaseRatingNeverResolves,
+} from '../helpers/nock';
 
 import { createApp } from '../../src/app';
 import { getRedisClient } from '../../src/cache/redisClient';
@@ -97,5 +102,57 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
 
     expect(res.status).toBe(200);
     expect(res.body.title).toBe('Stockholm');
+  });
+
+  describe('rating enrichment during a Redis outage (feature 017)', () => {
+    it('still enriches a result with its community rating when every Redis read fails', async () => {
+      jest.spyOn(getRedisClient()!, 'get').mockRejectedValue(new Error('connection reset'));
+
+      const { idToken } = await getTestIdToken('outage-rating-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+          results: [rawSearchResultItem({ id: 950 })],
+        });
+      stubReleaseRating(950, { average: 4.19, count: 47 });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'Stockholm', type: 'release' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.results[0].communityRating).toEqual({ average: 4.19, count: 47 });
+    });
+
+    it(
+      'omits communityRating without failing the response when a rating lookup times out during a Redis outage',
+      async () => {
+        jest.spyOn(getRedisClient()!, 'get').mockRejectedValue(new Error('connection reset'));
+
+        const { idToken } = await getTestIdToken('outage-rating-timeout-user');
+
+        discogsScope()
+          .get('/database/search')
+          .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+          .reply(200, {
+            pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+            results: [rawSearchResultItem({ id: 951 })],
+          });
+        stubReleaseRatingNeverResolves(951);
+
+        const res = await request(app)
+          .get('/api/discogs/search')
+          .query({ q: 'Stockholm', type: 'release' })
+          .set('Authorization', `Bearer ${idToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.results[0].communityRating).toBeUndefined();
+      },
+      8_000,
+    );
   });
 });

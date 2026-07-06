@@ -69,4 +69,33 @@ describe('SearchResultCard', () => {
     expect(screen.getByRole('button', { name: /add to library/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /preview details/i })).toBeInTheDocument();
   });
+
+  describe('rating badge (feature 017)', () => {
+    it('renders the rating badge in the thumbnail corner when a valid community rating is present', () => {
+      renderCard({ ...baseResult, communityRating: { average: 4.19, count: 47 } });
+
+      expect(screen.getByText('4.2')).toBeInTheDocument();
+    });
+
+    it('omits the badge when there is no community rating', () => {
+      renderCard(baseResult);
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('omits the badge when the community rating has no votes', () => {
+      renderCard({ ...baseResult, communityRating: { average: 0, count: 0 } });
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('does not displace the title, artist, year, or format', () => {
+      renderCard({ ...baseResult, communityRating: { average: 4.19, count: 47 } });
+
+      expect(screen.getByText('Kind Of Blue')).toBeInTheDocument();
+      expect(screen.getByText('Miles Davis')).toBeInTheDocument();
+      expect(screen.getByText('1959')).toBeInTheDocument();
+      expect(screen.getByText('Vinyl')).toBeInTheDocument();
+    });
+  });
 });

@@ -93,6 +93,57 @@ describe('Add record flow (US1)', () => {
     expect(screen.getByText('Stockholm')).toBeInTheDocument();
   });
 
+  it('renders the enriched community rating badge on a search result without blocking add/preview (US1)', async () => {
+    mockSearch.mockResolvedValue({
+      results: [
+        {
+          discogsId: 1,
+          resultType: 'release',
+          title: 'Stockholm',
+          artist: 'The Persuader',
+          year: 1999,
+          formats: ['Vinyl'],
+          communityRating: { average: 4.19, count: 47 },
+        },
+        {
+          discogsId: 2,
+          resultType: 'release',
+          title: 'Unrated Release',
+          artist: 'Nobody',
+          year: 2001,
+        },
+      ],
+      pagination: { page: 1, pages: 1, items: 2, perPage: 50 },
+    });
+    mockCreate.mockResolvedValue({
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: { discogsId: 1, title: 'Stockholm' },
+    });
+
+    renderPage();
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('textbox', { name: /search/i }), 'Stockholm');
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /search/i }));
+    });
+
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+    // The enriched result shows its badge; the unrated result shows none.
+    expect(screen.getByText('4.2')).toBeInTheDocument();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+
+    await act(async () => {
+      await user.click(screen.getAllByRole('button', { name: /add to library/i })[0]);
+    });
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: /added to library/i })[0]).toBeInTheDocument(),
+    );
+  });
+
   it('previews a result in an overlay without adding it or losing the search results', async () => {
     mockSearch.mockResolvedValue({
       results: [

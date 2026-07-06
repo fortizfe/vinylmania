@@ -50,4 +50,60 @@ describe('RecordCard', () => {
 
     expect(screen.getByText(/couldn't load catalog details/i)).toBeInTheDocument();
   });
+
+  describe('rating badge (feature 017)', () => {
+    function entryWithCommunity(community?: { have: number; want: number; rating: { average: number; count: number } }) {
+      return {
+        id: 'entry-3',
+        discogsReleaseId: 3,
+        addedAt: '2026-07-03T00:00:00.000Z',
+        catalogStatus: 'ok' as const,
+        release: {
+          discogsId: 3,
+          title: 'Stockholm',
+          artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+          labels: [],
+          formats: [],
+          genres: [],
+          styles: [],
+          identifiers: [],
+          ...(community ? { community } : {}),
+          tracklist: [],
+          images: [],
+          discogsUrl: 'https://www.discogs.com/release/3',
+        },
+        discogs: null,
+      };
+    }
+
+    it('renders the rating badge when the release has a valid community rating', () => {
+      renderCard(entryWithCommunity({ have: 10, want: 5, rating: { average: 4.19, count: 47 } }));
+
+      expect(screen.getByText('4.2')).toBeInTheDocument();
+    });
+
+    it('omits the badge when the release has no community rating', () => {
+      renderCard(entryWithCommunity());
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('omits the badge when the community rating has no votes', () => {
+      renderCard(entryWithCommunity({ have: 10, want: 5, rating: { average: 0, count: 0 } }));
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('does not render a badge for an unavailable catalog entry', () => {
+      renderCard({
+        id: 'entry-4',
+        discogsReleaseId: 4,
+        addedAt: '2026-07-03T00:00:00.000Z',
+        catalogStatus: 'unavailable',
+        release: null,
+      });
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+  });
 });

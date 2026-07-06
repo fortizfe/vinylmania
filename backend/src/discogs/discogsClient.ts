@@ -7,8 +7,8 @@ import {
   DiscogsRateLimitError,
   DiscogsUnavailableError,
 } from './discogsErrors';
-import { mapArtist, mapRelease, mapSearchResult } from './discogsMapper';
-import type { Artist, CatalogSearchResponse, Release } from './types';
+import { mapArtist, mapRelease, mapReleaseRating, mapSearchResult } from './discogsMapper';
+import type { Artist, CatalogSearchResponse, CatalogSearchResult, CommunityRating, Release } from './types';
 
 export { DiscogsError } from './discogsErrors';
 
@@ -110,6 +110,50 @@ export interface SearchCatalogOptions {
 const SEARCH_CACHE_TTL_SECONDS = 30 * 60;
 const RELEASE_CACHE_TTL_SECONDS = 6 * 60 * 60;
 const ARTIST_CACHE_TTL_SECONDS = 6 * 60 * 60;
+const RATING_CACHE_TTL_SECONDS = 30 * 60;
+
+// Spec SC-006: a per-release rating lookup that hasn't resolved within 2
+// seconds is treated identically to a failed lookup, so search results are
+// never blocked or perceptibly delayed by rating enrichment.
+const RATING_LOOKUP_TIMEOUT_MS = 2_000;
+
+/** Fetches (and caches) one release's community rating; rejects if the lookup fails or times out. */
+export async function getReleaseRating(discogsReleaseId: number): Promise<CommunityRating> {
+  return withCache(`discogs:rating:${discogsReleaseId}`, RATING_CACHE_TTL_SECONDS, async () => {
+    const response = await getDiscogsHttpClient().get(`/releases/${discogsReleaseId}/rating`, {
+      timeout: RATING_LOOKUP_TIMEOUT_MS,
+    });
+    return mapReleaseRating(response.data);
+  });
+}
+
+/**
+ * Enriches one release-type search result with its community rating.
+ * Any failure (not found, rate-limited, unavailable, or a lookup exceeding
+ * the 2-second timeout) degrades to omitting `communityRating` rather than
+ * failing the search response (spec FR-008/SC-006).
+ */
+async function enrichWithRating(result: CatalogSearchResult): Promise<CatalogSearchResult> {
+  if (result.resultType !== 'release') {
+    return result;
+  }
+
+  try {
+    const rating = await getReleaseRating(result.discogsId);
+    if (rating.count <= 0) {
+      return result;
+    }
+    return { ...result, communityRating: rating };
+  } catch (err) {
+    logger.warn({
+      route: 'discogs:rating',
+      outcome: 'omitted',
+      meta: { discogsReleaseId: result.discogsId },
+      message: err instanceof Error ? err.message : 'unknown error',
+    });
+    return result;
+  }
+}
 
 export async function searchCatalog(
   query: string,
@@ -134,8 +178,11 @@ export async function searchCatalog(
       results: unknown[];
     };
 
+    const mappedResults = results.map(mapSearchResult);
+    const enrichedResults = await Promise.all(mappedResults.map(enrichWithRating));
+
     return {
-      results: results.map(mapSearchResult),
+      results: enrichedResults,
       pagination: {
         page: pagination.page,
         pages: pagination.pages,

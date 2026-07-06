@@ -138,6 +138,29 @@ test.describe('Library ⇄ Discogs Collection Sync (feature 016)', () => {
         expect(collection.some((r) => r.basic_information.id === 2001)).toBe(false);
     });
 
+    // --- Feature 017: rating badge on library cards (US2) ---
+
+    test('feature-017: library card shows the rating badge for a release with a community rating', async ({
+        page,
+    }) => {
+        // Release IDs ending in 1 get a stubbed "high"-band community rating
+        // (see stubCommunity() in discogsOauthStub.ts); others stay unrated.
+        await seedCollection([{ releaseId: 4002 }, { releaseId: 4011 }]);
+
+        await signInAndLinkDiscogs(page);
+        await page.goto('/app/library');
+
+        await expect(page.getByText(/Stub Release 4002/)).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByText(/Stub Release 4011/)).toBeVisible();
+
+        const ratedCard = page.locator('li', { hasText: 'Stub Release 4011' });
+        await expect(ratedCard.getByRole('status')).toBeVisible();
+        await expect(ratedCard.getByText('4.5')).toBeVisible();
+
+        const unratedCard = page.locator('li', { hasText: 'Stub Release 4002' });
+        await expect(unratedCard.getByRole('status')).not.toBeVisible();
+    });
+
     // --- US3: Add propagation ---
 
     test('T036-a: adding a release adds it to both the library and the Discogs collection', async ({
