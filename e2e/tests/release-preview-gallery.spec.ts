@@ -68,9 +68,9 @@ test.describe('Release preview popup — details and gallery', () => {
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
 
-    await page.goto('/app/library/add');
     await page.getByLabel('Search Discogs').fill('Stockholm');
     await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
 
     await expect(page.getByText('Stockholm')).toBeVisible();
     await page.getByRole('button', { name: 'Preview details' }).click();
@@ -101,9 +101,9 @@ test.describe('Release preview popup — details and gallery', () => {
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
 
-    await page.goto('/app/library/add');
     await page.getByLabel('Search Discogs').fill('Stockholm');
     await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
 
     await expect(page.getByText('Stockholm')).toBeVisible();
     await page.getByRole('button', { name: 'Preview details' }).click();
@@ -144,9 +144,9 @@ test.describe('Release preview popup — details and gallery', () => {
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
 
-    await page.goto('/app/library/add');
     await page.getByLabel('Search Discogs').fill('Stockholm');
     await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
 
     await expect(page.getByText('Stockholm')).toBeVisible();
     await page.getByRole('button', { name: 'Preview details' }).click();
@@ -184,9 +184,9 @@ test.describe('Release preview popup — details and gallery', () => {
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
 
-    await page.goto('/app/library/add');
     await page.getByLabel('Search Discogs').fill('Stockholm');
     await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
 
     await expect(page.getByText('Stockholm')).toBeVisible();
     await page.getByRole('button', { name: 'Preview details' }).click();
@@ -230,9 +230,9 @@ test.describe('Release preview popup — details and gallery', () => {
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
 
-    await page.goto('/app/library/add');
     await page.getByLabel('Search Discogs').fill('Stockholm');
     await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
 
     await expect(page.getByText('Stockholm')).toBeVisible();
     await page.getByRole('button', { name: 'Preview details' }).click();
@@ -281,9 +281,9 @@ test.describe('Release preview popup — details and gallery', () => {
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
 
-    await page.goto('/app/library/add');
     await page.getByLabel('Search Discogs').fill('Stockholm');
     await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
 
     await expect(page.getByText('Stockholm')).toBeVisible();
     await page.getByRole('button', { name: 'Preview details' }).click();
@@ -329,9 +329,9 @@ test.describe('Release preview popup — details and gallery', () => {
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
 
-    await page.goto('/app/library/add');
     await page.getByLabel('Search Discogs').fill('Stockholm');
     await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
 
     await expect(page.getByText('Stockholm')).toBeVisible();
     await page.getByRole('button', { name: 'Preview details' }).click();
@@ -363,9 +363,9 @@ test.describe('Release preview popup — details and gallery', () => {
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
 
-    await page.goto('/app/library/add');
     await page.getByLabel('Search Discogs').fill('Stockholm');
     await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
 
     await expect(page.getByText('Stockholm')).toBeVisible();
     await page.getByRole('button', { name: 'Preview details' }).click();

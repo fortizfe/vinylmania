@@ -2,17 +2,22 @@ import { Link } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
 import { HamburgerMenu } from './HamburgerMenu';
+import { HeaderSearchBox } from './HeaderSearchBox';
 import { Button } from './ui/Button';
 
 export function AppHeader() {
   const { signOut } = useAuth();
 
   return (
-    <header className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-gray-800 sm:px-6">
-      <Link to="/app" className="text-lg font-semibold text-gray-900 no-underline dark:text-gray-100">
+    <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-gray-200 px-4 py-4 dark:border-gray-800 sm:px-6">
+      <Link
+        to="/app"
+        className="justify-self-start truncate text-lg font-semibold text-gray-900 no-underline dark:text-gray-100"
+      >
         Vinylmania
       </Link>
-      <div className="flex items-center gap-2">
+      <HeaderSearchBox />
+      <div className="flex items-center justify-self-end gap-2">
         <HamburgerMenu />
         <Button variant="secondary" onClick={signOut}>
           Sign out

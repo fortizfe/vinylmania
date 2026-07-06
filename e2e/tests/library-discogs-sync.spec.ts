@@ -168,10 +168,9 @@ test.describe('Library ⇄ Discogs Collection Sync (feature 016)', () => {
     }) => {
         await signInAndLinkDiscogs(page);
 
-        // Navigate to add-record page and search for a release.
-        await page.goto('/app/library/add');
         await page.getByLabel(/search discogs/i).fill('stub test vinyl');
         await page.getByRole('button', { name: /^search$/i }).click();
+        await expect(page).toHaveURL(/\/app\/search/);
 
         // The stub returns one result for any query.
         await expect(page.getByText(/stub search result/i)).toBeVisible({ timeout: 10_000 });
@@ -197,9 +196,9 @@ test.describe('Library ⇄ Discogs Collection Sync (feature 016)', () => {
         await signInAndLinkDiscogs(page);
         await setFailureMode('unavailable');
 
-        await page.goto('/app/library/add');
         await page.getByLabel(/search discogs/i).fill('stub test vinyl');
         await page.getByRole('button', { name: /^search$/i }).click();
+        await expect(page).toHaveURL(/\/app\/search/);
         await expect(page.getByText(/stub search result/i)).toBeVisible({ timeout: 10_000 });
 
         await page.getByRole('button', { name: /add to library/i }).first().click();

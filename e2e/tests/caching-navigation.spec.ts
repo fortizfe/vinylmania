@@ -173,9 +173,9 @@ test.describe('Record rating badges on search-result cards (feature 017, US1)', 
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
 
-    await page.goto('/app/library/add');
     await page.getByLabel(/search discogs/i).fill('rated');
     await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
 
     await expect(page.getByText('Highly Rated Release')).toBeVisible();
     await expect(page.getByText('Unrated Release')).toBeVisible();
@@ -216,9 +216,9 @@ test.describe('Record rating badges on search-result cards (feature 017, US1)', 
     await signInAsFakeGoogleUser(page);
 
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/app/library/add');
     await page.getByLabel(/search discogs/i).fill('narrow');
     await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
 
     await expect(page.getByText('Narrow Viewport Release')).toBeVisible();
 
