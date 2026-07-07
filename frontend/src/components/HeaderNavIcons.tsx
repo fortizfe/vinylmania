@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 
 import { NAV_LINKS, type HeaderNavLink } from './headerNavLinks';
@@ -34,7 +35,7 @@ function LibraryIcon() {
   );
 }
 
-const ICONS: Record<HeaderNavLink['key'], () => JSX.Element> = {
+const ICONS: Record<HeaderNavLink['key'], () => ReactElement> = {
   library: LibraryIcon,
   wishlist: WishlistIcon,
   profile: ProfileIcon,
