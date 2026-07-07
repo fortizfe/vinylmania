@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
 import { HamburgerMenu } from './HamburgerMenu';
+import { HeaderNavIcons } from './HeaderNavIcons';
 import { HeaderSearchBox } from './HeaderSearchBox';
 import { Button } from './ui/Button';
 
@@ -18,6 +19,7 @@ export function AppHeader() {
       </Link>
       <HeaderSearchBox />
       <div className="flex items-center justify-self-end gap-2">
+        <HeaderNavIcons />
         <HamburgerMenu />
         <Button variant="secondary" onClick={signOut}>
           Sign out

@@ -18,6 +18,18 @@ const sizeClasses: Record<NonNullable<ButtonProps['size']>, string> = {
   icon: 'inline-flex h-9 w-9 items-center justify-center p-0',
 };
 
+const baseClassName =
+  'rounded-xl font-medium transition-opacity disabled:cursor-default disabled:opacity-60';
+
+/**
+ * Class string for a `size="icon" variant="secondary"` `Button`, for
+ * non-`<button>` elements (e.g. a `Link`) that must look identical to one
+ * without nesting an interactive element inside another.
+ */
+export function iconButtonClassName(className?: string) {
+  return clsx(baseClassName, sizeClasses.icon, variantClasses.secondary, className);
+}
+
 export function Button({
   variant = 'primary',
   size = 'md',
@@ -33,12 +45,7 @@ export function Button({
       {...props}
       disabled={disabled || loading}
       aria-busy={loading}
-      className={clsx(
-        'rounded-xl font-medium transition-opacity disabled:cursor-default disabled:opacity-60',
-        sizeClasses[size],
-        variantClasses[variant],
-        className,
-      )}
+      className={clsx(baseClassName, sizeClasses[size], variantClasses[variant], className)}
     >
       {children}
     </button>

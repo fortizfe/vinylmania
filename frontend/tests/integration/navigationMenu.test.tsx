@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -75,19 +75,19 @@ describe('Navigation menu (US2)', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /menu/i }));
-    await user.click(screen.getByRole('link', { name: /my library/i }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('link', { name: /my library/i }));
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /your library/i })).toBeInTheDocument(),
     );
 
     await user.click(screen.getByRole('button', { name: /menu/i }));
-    await user.click(screen.getByRole('link', { name: /my wishlist/i }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('link', { name: /my wishlist/i }));
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /wishlist/i })).toBeInTheDocument(),
     );
 
     await user.click(screen.getByRole('button', { name: /menu/i }));
-    await user.click(screen.getByRole('link', { name: /profile/i }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('link', { name: /profile/i }));
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /profile/i })).toBeInTheDocument(),
     );

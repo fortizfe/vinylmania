@@ -8,6 +8,22 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.11.0] - 2026-07-07
+
+### Added
+
+- Three navigation destinations (Profile, My wishlist, My library) now
+  render as separate, individually clickable flat outline icons on the
+  right side of the header at viewport widths of 768px and above (feature
+  020).
+
+### Changed
+
+- The hamburger menu is now shown only below the 768px breakpoint; at
+  768px and above it is replaced by the new header nav icons (feature
+  020). The menu's own destinations, links, and open/close behavior are
+  unchanged below that breakpoint.
+
 ## [0.10.0] - 2026-07-07
 
 ### Changed

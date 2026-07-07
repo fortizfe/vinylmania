@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { NAV_LINKS } from './headerNavLinks';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
 
@@ -12,12 +13,6 @@ function HamburgerIcon() {
   );
 }
 
-const NAV_LINKS = [
-  { label: 'My library', to: '/app/library' },
-  { label: 'My wishlist', to: '/app/wishlist' },
-  { label: 'Profile', to: '/app/profile' },
-];
-
 export function HamburgerMenu() {
   const [open, setOpen] = useState(false);
 
@@ -28,6 +23,7 @@ export function HamburgerMenu() {
         variant="secondary"
         onClick={() => setOpen(true)}
         aria-label="Menu"
+        className="md:hidden"
       >
         <HamburgerIcon />
       </Button>
