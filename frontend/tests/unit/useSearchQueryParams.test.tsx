@@ -35,6 +35,24 @@ describe('useSearchQueryParams', () => {
 
     expect(result.current).toEqual({ query: '', page: 1 });
   });
+
+  it('parses artist/genre/style/format filters from the URL (feature 021)', () => {
+    const { result } = renderHook(() => useSearchQueryParams(), {
+      wrapper: wrapper(['/app/search?q=nirvana&genre=Rock&format=Vinyl']),
+    });
+
+    expect(result.current).toEqual({ query: 'nirvana', page: 1, genre: 'Rock', format: 'Vinyl' });
+  });
+
+  it('omits a filter entirely when its URL param is absent or blank (feature 021)', () => {
+    const { result } = renderHook(() => useSearchQueryParams(), {
+      wrapper: wrapper(['/app/search?q=nirvana&genre=Rock&artist=%20%20&style=']),
+    });
+
+    expect(result.current).toEqual({ query: 'nirvana', page: 1, genre: 'Rock' });
+    expect(result.current.artist).toBeUndefined();
+    expect(result.current.style).toBeUndefined();
+  });
 });
 
 describe('buildSearchPath', () => {
@@ -48,5 +66,28 @@ describe('buildSearchPath', () => {
 
   it('omits the page number when it is 1', () => {
     expect(buildSearchPath('stockholm', 1)).toBe('/app/search?q=stockholm');
+  });
+
+  it('encodes non-empty filters and omits unset ones (feature 021)', () => {
+    expect(buildSearchPath('stockholm', 1, { genre: 'Rock', format: 'Vinyl' })).toBe(
+      '/app/search?q=stockholm&genre=Rock&format=Vinyl',
+    );
+  });
+
+  it('trims filter values and drops whitespace-only ones (feature 021)', () => {
+    expect(buildSearchPath('stockholm', 1, { genre: '  Rock  ', artist: '   ' })).toBe(
+      '/app/search?q=stockholm&genre=Rock',
+    );
+  });
+
+  it('round-trips filters through a built URL so a reload reproduces the identical filtered request (FR-007, Acceptance Scenario 3)', () => {
+    const filters = { artist: 'Nirvana', genre: 'Rock', style: 'Grunge', format: 'Vinyl' };
+    const path = buildSearchPath('nevermind', 3, filters);
+
+    const { result } = renderHook(() => useSearchQueryParams(), {
+      wrapper: wrapper([path]),
+    });
+
+    expect(result.current).toEqual({ query: 'nevermind', page: 3, ...filters });
   });
 });

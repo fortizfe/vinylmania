@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ReleasePreviewModal } from '../components/ReleasePreviewModal';
+import { SearchFiltersControl } from '../components/SearchFiltersControl';
 import { SearchResultCard } from '../components/SearchResultCard';
 import { SearchResultCardSkeleton } from '../components/SearchResultCardSkeleton';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { buildSearchPath, useSearchQueryParams } from '../hooks/useSearchQueryParams';
+import { buildSearchPath, type SearchFilters, useSearchQueryParams } from '../hooks/useSearchQueryParams';
 import { useCatalogRelease, useCatalogSearch } from '../queries/discogsQueries';
 import { useCreateLibraryEntry } from '../queries/libraryQueries';
 import { ApiError } from '../services/apiClient';
@@ -16,16 +17,29 @@ const PAGE_SIZE = 20;
 const resultsGridClasses =
   'grid list-none grid-cols-2 gap-4 p-0 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
+const FILTER_LABELS: Record<keyof SearchFilters, string> = {
+  artist: 'Artist',
+  genre: 'Genre',
+  style: 'Style',
+  format: 'Format',
+};
+
+function activeFilterLabels(filters: SearchFilters): string[] {
+  return (Object.keys(FILTER_LABELS) as (keyof SearchFilters)[])
+    .filter((name) => Boolean(filters[name]))
+    .map((name) => FILTER_LABELS[name]);
+}
+
 export function SearchResultsPage() {
   const navigate = useNavigate();
-  const { query, page } = useSearchQueryParams();
+  const { query, page, ...filters } = useSearchQueryParams();
   const [addingId, setAddingId] = useState<number | null>(null);
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
   const [addError, setAddError] = useState<string | null>(null);
   const [gateError, setGateError] = useState<'not-linked' | 'relink' | null>(null);
   const [previewDiscogsId, setPreviewDiscogsId] = useState<number | null>(null);
 
-  const searchQuery = useCatalogSearch(query, 'release', page, PAGE_SIZE);
+  const searchQuery = useCatalogSearch(query, 'release', page, PAGE_SIZE, filters);
   const previewQuery = useCatalogRelease(previewDiscogsId ?? undefined);
   const createEntry = useCreateLibraryEntry();
 
@@ -34,9 +48,18 @@ export function SearchResultsPage() {
   const results = searchQuery.data?.results ?? [];
   const totalPages = searchQuery.data?.pagination.pages ?? 0;
   const error = addError ?? (searchQuery.isError ? 'Something went wrong while searching. Please try again.' : null);
+  const activeFilters = activeFilterLabels(filters);
 
   function goToPage(nextPage: number) {
-    navigate(buildSearchPath(query, nextPage), { replace: true });
+    navigate(buildSearchPath(query, nextPage, filters), { replace: true });
+  }
+
+  function applyFilters(newFilters: SearchFilters) {
+    navigate(buildSearchPath(query, 1, newFilters), { replace: true });
+  }
+
+  function clearFilters() {
+    navigate(buildSearchPath(query, 1), { replace: true });
   }
 
   async function handleAdd(discogsId: number) {
@@ -62,6 +85,8 @@ export function SearchResultsPage() {
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6 sm:p-8">
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Search results</h1>
+
+      <SearchFiltersControl filters={filters} onApply={applyFilters} onClear={clearFilters} />
 
       {!searched && (
         <p className="text-gray-500 dark:text-gray-400">
@@ -92,7 +117,11 @@ export function SearchResultsPage() {
       )}
 
       {!loading && searched && results.length === 0 && (
-        <p className="text-gray-500 dark:text-gray-400">No results found. Try a different search.</p>
+        <p className="text-gray-500 dark:text-gray-400">
+          {activeFilters.length > 0
+            ? `No results found for the active filters (${activeFilters.join(', ')}). Try adjusting or clearing them.`
+            : 'No results found. Try a different search.'}
+        </p>
       )}
 
       {loading && (

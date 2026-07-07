@@ -1,3 +1,4 @@
+import type { SearchFilters } from '../hooks/useSearchQueryParams';
 import { authorizedFetch } from './apiClient';
 import type { Release } from './libraryApi';
 
@@ -28,10 +29,15 @@ export async function search(
   resultType: 'release' | 'artist',
   page?: number,
   perPage?: number,
+  filters?: SearchFilters,
 ): Promise<CatalogSearchResponse> {
   const params = new URLSearchParams({ q: query, type: resultType });
   if (page !== undefined) params.set('page', String(page));
   if (perPage !== undefined) params.set('perPage', String(perPage));
+  for (const [name, value] of Object.entries(filters ?? {})) {
+    const trimmed = value?.trim();
+    if (trimmed) params.set(name, trimmed);
+  }
   const res = await authorizedFetch(`/api/discogs/search?${params.toString()}`);
   return res.json();
 }

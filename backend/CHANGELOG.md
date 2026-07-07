@@ -8,6 +8,18 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.6.0] - 2026-07-07
+
+### Added
+
+- `GET /api/discogs/search` now accepts four optional filter query params —
+  `artist`, `genre`, `style`, `format` — forwarded, unchanged and trimmed, to
+  the underlying Discogs `GET /database/search` request as additional search
+  criteria (feature 021). Blank/whitespace-only values are treated as unset
+  and excluded from the outbound request. The Redis cache-aside key for
+  search results now includes the active filter values so filtered and
+  unfiltered searches for the same query never collide in the cache.
+
 ## [0.5.0] - 2026-07-06
 
 ### Added

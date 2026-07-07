@@ -17,22 +17,38 @@ function parsePageParams(req: Request): { page: number; perPage: number } {
   return { page, perPage };
 }
 
+const FILTER_PARAM_NAMES = ['artist', 'genre', 'style', 'format'] as const;
+
+/** Reads and trims the four filter query params (spec FR-010); blank/whitespace-only values are omitted. */
+function parseFilterParams(req: Request): Partial<Record<(typeof FILTER_PARAM_NAMES)[number], string>> {
+  const filters: Partial<Record<(typeof FILTER_PARAM_NAMES)[number], string>> = {};
+  for (const name of FILTER_PARAM_NAMES) {
+    const raw = req.query[name];
+    const trimmed = typeof raw === 'string' ? raw.trim() : '';
+    if (trimmed) {
+      filters[name] = trimmed;
+    }
+  }
+  return filters;
+}
+
 export const discogsRouter = Router();
 
 discogsRouter.get('/search', requireAuth, async (req: Request, res: Response) => {
   const query = typeof req.query.q === 'string' ? req.query.q : '';
   const resultType = req.query.type === 'artist' ? 'artist' : 'release';
   const { page, perPage } = parsePageParams(req);
+  const filters = parseFilterParams(req);
 
   try {
-    const result = await searchCatalog(query, { resultType, page, perPage });
+    const result = await searchCatalog(query, { resultType, page, perPage, ...filters });
     const releaseResults = result.results.filter((r) => r.resultType === 'release');
     const enrichedCount = releaseResults.filter((r) => r.communityRating !== undefined).length;
     logger.info({
       route: '/api/discogs/search',
       outcome: 'success',
       uid: req.auth?.uid,
-      meta: { releases: releaseResults.length, ratingEnriched: enrichedCount },
+      meta: { releases: releaseResults.length, ratingEnriched: enrichedCount, filters: Object.keys(filters) },
     });
     res.status(200).json(result);
   } catch (err) {

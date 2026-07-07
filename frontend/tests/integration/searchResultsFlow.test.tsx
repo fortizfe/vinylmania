@@ -64,7 +64,7 @@ describe('Search results flow (US2)', () => {
     renderPage(['/app/search?q=Stockholm']);
 
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
-    expect(mockSearch).toHaveBeenCalledWith('Stockholm', 'release', 1, 20);
+    expect(mockSearch).toHaveBeenCalledWith('Stockholm', 'release', 1, 20, {});
 
     const user = userEvent.setup();
     await act(async () => {
@@ -180,7 +180,7 @@ describe('Search results flow (US2)', () => {
     });
 
     await waitFor(() => expect(screen.getByText('Fresh Result')).toBeInTheDocument());
-    expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 20);
+    expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 20, {});
     expect(screen.queryByText('Stockholm')).not.toBeInTheDocument();
   });
 
@@ -227,7 +227,173 @@ describe('Search results flow (US2)', () => {
     });
 
     await waitFor(() => expect(screen.getByText('Page Two Result')).toBeInTheDocument());
-    expect(mockSearch).toHaveBeenLastCalledWith('love', 'release', 2, 20);
+    expect(mockSearch).toHaveBeenLastCalledWith('love', 'release', 2, 20, {});
     expect(screen.getByRole('button', { name: /^previous$/i })).not.toBeDisabled();
+  });
+
+  describe('search result filters (feature 021, US1)', () => {
+    it('applying a single filter re-runs the search with that filter and resets to page 1 (Acceptance Scenario 1, FR-003)', async () => {
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+        pagination: { page: 2, pages: 3, items: 47, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana&page=2']);
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 2, resultType: 'release', title: 'Nevermind', formats: ['Vinyl'] }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/^genre$/i), 'Rock');
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /apply filters/i }));
+      });
+
+      await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
+      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, { genre: 'Rock' });
+    });
+
+    it('shows a filters-aware empty state when a filtered search resolves to zero results (Acceptance Scenario 3, FR-008)', async () => {
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana']);
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+      mockSearch.mockResolvedValueOnce({
+        results: [],
+        pagination: { page: 1, pages: 0, items: 0, perPage: 20 },
+      });
+
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/^genre$/i), 'Rock');
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /apply filters/i }));
+      });
+
+      await waitFor(() => expect(screen.getByText(/no results/i)).toBeInTheDocument());
+      expect(screen.getByText(/no results found for the active filters \(genre\)/i)).toBeInTheDocument();
+    });
+
+    it('does not issue a request when a filter is entered with no search query (edge case)', async () => {
+      renderPage(['/app/search']);
+
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/^genre$/i), 'Rock');
+      await user.click(screen.getByRole('button', { name: /apply filters/i }));
+
+      expect(mockSearch).not.toHaveBeenCalled();
+      expect(screen.getByText(/use the search box/i)).toBeInTheDocument();
+    });
+
+    it('preserves an active filter when a new query is submitted from the header (edge case)', async () => {
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana&genre=Rock']);
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 2, resultType: 'release', title: 'Fresh Result' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      const user = userEvent.setup();
+      await user.clear(screen.getByRole('searchbox', { name: /search discogs/i }));
+      await user.type(screen.getByRole('searchbox', { name: /search discogs/i }), 'fresh');
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /^search$/i }));
+      });
+
+      await waitFor(() => expect(screen.getByText('Fresh Result')).toBeInTheDocument());
+      expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 20, { genre: 'Rock' });
+    });
+  });
+
+  describe('search result filters (feature 021, US2)', () => {
+    it('sends multiple filters together and both appear in the URL (Acceptance Scenario 1)', async () => {
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana']);
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 2, resultType: 'release', title: 'Nevermind' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/^genre$/i), 'Rock');
+      await user.type(screen.getByLabelText(/^format$/i), 'Vinyl');
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /apply filters/i }));
+      });
+
+      await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
+      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
+        genre: 'Rock',
+        format: 'Vinyl',
+      });
+    });
+
+    it('clearing one filter field and re-applying keeps the remaining filter active (Acceptance Scenario 2)', async () => {
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana&genre=Rock&format=Vinyl']);
+      await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
+
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      const user = userEvent.setup();
+      await user.clear(screen.getByLabelText(/^format$/i));
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /apply filters/i }));
+      });
+
+      await waitFor(() =>
+        expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, { genre: 'Rock' }),
+      );
+    });
+  });
+
+  describe('search result filters (feature 021, US3)', () => {
+    it('preserves active filters when navigating to the next page (FR-006, Acceptance Scenario 1)', async () => {
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+        pagination: { page: 1, pages: 3, items: 47, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana&genre=Rock']);
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 2, resultType: 'release', title: 'Page Two Result' }],
+        pagination: { page: 2, pages: 3, items: 47, perPage: 20 },
+      });
+
+      const user = userEvent.setup();
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /^next$/i }));
+      });
+
+      await waitFor(() => expect(screen.getByText('Page Two Result')).toBeInTheDocument());
+      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 2, 20, { genre: 'Rock' });
+    });
   });
 });
