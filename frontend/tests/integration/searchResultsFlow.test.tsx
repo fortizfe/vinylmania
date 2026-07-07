@@ -110,9 +110,11 @@ describe('Search results flow (US2)', () => {
     renderPage(['/app/search?q=Stockholm']);
 
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
-    // The enriched result shows its badge; the unrated result shows none.
+    // The enriched result shows its numeric badge; the unrated result shows
+    // the placeholder badge instead of no badge at all (feature 019).
     expect(screen.getByText('4.2')).toBeInTheDocument();
-    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getAllByRole('status')).toHaveLength(2);
+    expect(screen.getByRole('status', { name: 'Rating not available' })).toBeInTheDocument();
 
     const user = userEvent.setup();
     await act(async () => {

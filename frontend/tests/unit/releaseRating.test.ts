@@ -73,9 +73,23 @@ describe('releaseRating', () => {
     // absent-rating case above.
   });
 
-  describe('presentRating', () => {
-    it('returns null when the rating is not visible', () => {
-      expect(presentRating({ average: 4.5, count: 0 })).toBeNull();
+  describe('presentRating (feature 019: always returns a presentation, never null)', () => {
+    it('returns the unrated placeholder when the rating is absent', () => {
+      expect(presentRating(undefined)).toEqual({ displayValue: '-', band: 'unrated' });
+      expect(presentRating(null)).toEqual({ displayValue: '-', band: 'unrated' });
+    });
+
+    it('returns the unrated placeholder when the vote count is zero', () => {
+      expect(presentRating({ average: 4.5, count: 0 })).toEqual({ displayValue: '-', band: 'unrated' });
+    });
+
+    it('returns the unrated placeholder when the average is outside the 0-5 range', () => {
+      expect(presentRating({ average: 5.1, count: 10 })).toEqual({ displayValue: '-', band: 'unrated' });
+      expect(presentRating({ average: -0.1, count: 10 })).toEqual({ displayValue: '-', band: 'unrated' });
+    });
+
+    it('returns the unrated placeholder when the average is not a finite number', () => {
+      expect(presentRating({ average: Number.NaN, count: 10 })).toEqual({ displayValue: '-', band: 'unrated' });
     });
 
     it('returns a display value and band for a visible rating', () => {

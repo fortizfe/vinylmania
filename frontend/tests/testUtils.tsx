@@ -42,7 +42,7 @@ export function buildRatedSearchResult(
   };
 }
 
-/** A search result with no valid community rating (badge must be omitted). */
+/** A search result with no valid community rating (badge shows the unrated placeholder, feature 019). */
 export function buildUnratedSearchResult(
   overrides: Partial<CatalogSearchResult> = {},
 ): CatalogSearchResult {
@@ -79,7 +79,7 @@ export function buildRatedLibraryEntry(
   };
 }
 
-/** A library entry whose release has no valid community rating (badge must be omitted). */
+/** A library entry whose release has no valid community rating (badge shows the unrated placeholder, feature 019). */
 export function buildUnratedLibraryEntry(
   overrides: Partial<EnrichedLibraryEntry> = {},
 ): EnrichedLibraryEntry {

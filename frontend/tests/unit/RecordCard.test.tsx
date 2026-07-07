@@ -82,16 +82,18 @@ describe('RecordCard', () => {
       expect(screen.getByText('4.2')).toBeInTheDocument();
     });
 
-    it('omits the badge when the release has no community rating', () => {
+    it('shows the unrated placeholder badge when the release has no community rating (feature 019)', () => {
       renderCard(entryWithCommunity());
 
-      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.getByRole('status', { name: 'Rating not available' })).toBeInTheDocument();
+      expect(screen.getByText('-')).toBeInTheDocument();
     });
 
-    it('omits the badge when the community rating has no votes', () => {
+    it('shows the unrated placeholder badge when the community rating has no votes (feature 019)', () => {
       renderCard(entryWithCommunity({ have: 10, want: 5, rating: { average: 0, count: 0 } }));
 
-      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.getByRole('status', { name: 'Rating not available' })).toBeInTheDocument();
+      expect(screen.getByText('-')).toBeInTheDocument();
     });
 
     it('does not render a badge for an unavailable catalog entry', () => {
