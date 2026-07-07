@@ -303,7 +303,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   });
 
   describe('artist/genre/style/format filter params (feature 021)', () => {
-    it('forwards artist/genre/style/format filter params to the outbound Discogs search request', async () => {
+    it('forwards genre/style/format filter params to the outbound Discogs search request', async () => {
       const { idToken } = await getTestIdToken('search-filters-user');
 
       discogsScope()
@@ -313,7 +313,6 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
           type: 'release',
           page: '1',
           per_page: '50',
-          artist: 'Nirvana',
           genre: 'Rock',
           style: 'Grunge',
           format: 'Vinyl',
@@ -325,7 +324,6 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
         .query({
           q: 'FilterForwardTest',
           type: 'release',
-          artist: 'Nirvana',
           genre: 'Rock',
           style: 'Grunge',
           format: 'Vinyl',
@@ -382,6 +380,56 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
         .set('Authorization', `Bearer ${idToken}`);
 
       expect(res.status).toBe(200);
+    });
+  });
+
+  describe('multi-value format passthrough (feature 022, US1)', () => {
+    it('forwards a comma-joined format value verbatim, in a single outbound request (FR-011)', async () => {
+      const { idToken } = await getTestIdToken('search-filters-multiformat-user');
+
+      const scope = discogsScope()
+        .get('/database/search')
+        .query({
+          q: 'FilterMultiFormatTest',
+          type: 'release',
+          page: '1',
+          per_page: '50',
+          format: 'Vinyl,CD',
+        })
+        .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'FilterMultiFormatTest', type: 'release', format: 'Vinyl,CD' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(scope.isDone()).toBe(true);
+    });
+  });
+
+  describe('Artist filter removed (feature 022, US2)', () => {
+    it('does NOT forward artist to the outbound Discogs search request, even when present on the incoming request (FR-009)', async () => {
+      const { idToken } = await getTestIdToken('search-artist-removed-user');
+
+      const scope = discogsScope()
+        .get('/database/search')
+        .query({
+          q: 'ArtistRemovedTest',
+          type: 'release',
+          page: '1',
+          per_page: '50',
+          genre: 'Rock',
+        })
+        .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'ArtistRemovedTest', type: 'release', artist: 'Nirvana', genre: 'Rock' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(scope.isDone()).toBe(true);
     });
   });
 });

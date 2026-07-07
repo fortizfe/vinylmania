@@ -1,6 +1,20 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
+
+/** Opens the Format modal, checks the given option, and closes the modal (feature 022). */
+async function selectFormatOption(page: Page, option: string) {
+  await page.getByRole('button', { name: /^format/i }).click();
+  await page.getByRole('dialog').getByLabel(option, { exact: true }).check();
+  await page.keyboard.press('Escape');
+}
+
+/** Opens the Format modal, unchecks the given option, and closes the modal (feature 022). */
+async function deselectFormatOption(page: Page, option: string) {
+  await page.getByRole('button', { name: /^format/i }).click();
+  await page.getByRole('dialog').getByLabel(option, { exact: true }).uncheck();
+  await page.keyboard.press('Escape');
+}
 
 // Fakes the /api/discogs/search boundary at the browser network layer, same
 // rationale as the caching-navigation e2e suite: drives the real filter
@@ -114,7 +128,7 @@ test.describe('Search result filters (feature 021, US2)', () => {
     await expect(page.getByText('Jazz Result')).toBeVisible();
 
     await page.getByLabel(/^genre$/i).fill('Rock');
-    await page.getByLabel(/^format$/i).fill('Vinyl');
+    await selectFormatOption(page, 'Vinyl');
     await page.getByRole('button', { name: /apply filters/i }).click();
 
     await expect(page).toHaveURL(/genre=Rock/);
@@ -123,7 +137,7 @@ test.describe('Search result filters (feature 021, US2)', () => {
     await expect(page.getByText('CD Rock Only')).not.toBeVisible();
     await expect(page.getByText('Jazz Result')).not.toBeVisible();
 
-    await page.getByLabel(/^format$/i).fill('');
+    await deselectFormatOption(page, 'Vinyl');
     await page.getByRole('button', { name: /apply filters/i }).click();
 
     await expect(page).not.toHaveURL(/format=/);
@@ -200,5 +214,114 @@ test.describe('Search result filters (feature 021, US3)', () => {
     await expect(page).not.toHaveURL(/genre=/);
     await expect(page.getByText('Unfiltered Result')).toBeVisible();
     await expect(page.getByLabel(/^genre$/i)).toHaveValue('');
+  });
+});
+
+test.describe('Search result filters (feature 022, US1)', () => {
+  test('selecting multiple formats narrows results to releases matching all of them together (quickstart Scenario 1)', async ({
+    page,
+  }) => {
+    await page.route('**/api/discogs/search*', async (route) => {
+      const url = new URL(route.request().url());
+      const format = url.searchParams.get('format');
+
+      if (format === 'Vinyl,CD') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            // Verified against live Discogs (feature 022, T014): a comma-joined
+            // format value is AND-matched — only a release genuinely available
+            // in both formats simultaneously (e.g. a box set) qualifies.
+            results: [{ discogsId: 801, resultType: 'release', title: 'Vinyl+CD Box Set' }],
+            pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            { discogsId: 801, resultType: 'release', title: 'Vinyl+CD Box Set' },
+            { discogsId: 802, resultType: 'release', title: 'Vinyl Only' },
+            { discogsId: 803, resultType: 'release', title: 'Cassette Only' },
+          ],
+          pagination: { page: 1, pages: 1, items: 3, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('multiformat');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+    await expect(page.getByText('Cassette Only')).toBeVisible();
+
+    await page.getByRole('button', { name: /^format$/i }).click();
+    await page.getByRole('dialog').getByLabel('Vinyl', { exact: true }).check();
+    await page.getByRole('dialog').getByLabel('CD', { exact: true }).check();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: /apply filters/i }).click();
+
+    await expect(page).toHaveURL(/format=Vinyl%2CCD/);
+    await expect(page.getByText('Vinyl+CD Box Set')).toBeVisible();
+    await expect(page.getByText('Vinyl Only')).not.toBeVisible();
+    await expect(page.getByText('Cassette Only')).not.toBeVisible();
+  });
+});
+
+test.describe('Search result filters (feature 022, US2)', () => {
+  test('never renders an Artist field, and an obsolete artist link loads cleanly with the genre filter still active (quickstart Scenario 2)', async ({
+    page,
+  }) => {
+    await page.route('**/api/discogs/search*', async (route) => {
+      const url = new URL(route.request().url());
+      const genre = url.searchParams.get('genre');
+
+      if (genre === 'Rock') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: [{ discogsId: 901, resultType: 'release', title: 'Nevermind' }],
+            pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            { discogsId: 901, resultType: 'release', title: 'Nevermind' },
+            { discogsId: 902, resultType: 'release', title: 'Unrelated Result' },
+          ],
+          pagination: { page: 1, pages: 1, items: 2, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('nirvana');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+
+    await expect(page.getByLabel(/^artist$/i)).toHaveCount(0);
+
+    // Navigate directly to a link carrying an obsolete `artist` param, as if
+    // it were an old bookmark/share from before feature 022.
+    await page.goto('/app/search?q=nirvana&artist=Nirvana&genre=Rock');
+
+    await expect(page.getByText('Nevermind')).toBeVisible();
+    await expect(page.getByText('Unrelated Result')).not.toBeVisible();
+    await expect(page.getByLabel(/^genre$/i)).toHaveValue('Rock');
+    await expect(page.getByLabel(/^artist$/i)).toHaveCount(0);
   });
 });

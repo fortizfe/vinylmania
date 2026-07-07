@@ -17,7 +17,7 @@ function parsePageParams(req: Request): { page: number; perPage: number } {
   return { page, perPage };
 }
 
-const FILTER_PARAM_NAMES = ['artist', 'genre', 'style', 'format'] as const;
+const FILTER_PARAM_NAMES = ['genre', 'style', 'format'] as const;
 
 /** Reads and trims the four filter query params (spec FR-010); blank/whitespace-only values are omitted. */
 function parseFilterParams(req: Request): Partial<Record<(typeof FILTER_PARAM_NAMES)[number], string>> {

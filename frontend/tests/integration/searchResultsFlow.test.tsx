@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -30,6 +30,12 @@ function renderPage(initialEntries: string[] = ['/app/search']) {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+/** Opens the Format modal and toggles the given option's checkbox (feature 022). */
+async function toggleFormatOption(user: ReturnType<typeof userEvent.setup>, option: string) {
+  await user.click(screen.getByRole('button', { name: /^format/i }));
+  await user.click(within(screen.getByRole('dialog')).getByLabelText(option));
 }
 
 describe('Search results flow (US2)', () => {
@@ -334,7 +340,7 @@ describe('Search results flow (US2)', () => {
 
       const user = userEvent.setup();
       await user.type(screen.getByLabelText(/^genre$/i), 'Rock');
-      await user.type(screen.getByLabelText(/^format$/i), 'Vinyl');
+      await toggleFormatOption(user, 'Vinyl');
       await act(async () => {
         await user.click(screen.getByRole('button', { name: /apply filters/i }));
       });
@@ -342,7 +348,7 @@ describe('Search results flow (US2)', () => {
       await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
       expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
         genre: 'Rock',
-        format: 'Vinyl',
+        format: ['Vinyl'],
       });
     });
 
@@ -361,7 +367,7 @@ describe('Search results flow (US2)', () => {
       });
 
       const user = userEvent.setup();
-      await user.clear(screen.getByLabelText(/^format$/i));
+      await toggleFormatOption(user, 'Vinyl');
       await act(async () => {
         await user.click(screen.getByRole('button', { name: /apply filters/i }));
       });
@@ -369,6 +375,100 @@ describe('Search results flow (US2)', () => {
       await waitFor(() =>
         expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, { genre: 'Rock' }),
       );
+    });
+  });
+
+  describe('search result filters (feature 022, US1 - format multi-select)', () => {
+    it('selecting multiple format values re-runs the search with all selections combined (Acceptance Scenario 3)', async () => {
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana']);
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 2, resultType: 'release', title: 'Nevermind' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      const user = userEvent.setup();
+      await toggleFormatOption(user, 'Vinyl');
+      await toggleFormatOption(user, 'CD');
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /apply filters/i }));
+      });
+
+      await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
+      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
+        format: ['Vinyl', 'CD'],
+      });
+    });
+
+    it('loads a URL with one valid and one invalid format value, keeping only the valid one active (Edge Cases, FR-010)', async () => {
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana&format=Vinyl,NotARealFormat']);
+
+      await waitFor(() =>
+        expect(mockSearch).toHaveBeenCalledWith('nirvana', 'release', 1, 20, { format: ['Vinyl'] }),
+      );
+      expect(screen.getByRole('button', { name: /^format \(1\)$/i })).toBeInTheDocument();
+    });
+
+    it('deselecting all formats and applying removes format from both the request and the URL (Acceptance Scenario 4)', async () => {
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana&format=Vinyl']);
+      await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
+
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      const user = userEvent.setup();
+      await toggleFormatOption(user, 'Vinyl');
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /apply filters/i }));
+      });
+
+      await waitFor(() => expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {}));
+      expect(screen.queryByText(/format=/)).not.toBeInTheDocument();
+    });
+
+    it('shows the selected format values (not just the label) in the filters-aware empty state', async () => {
+      mockSearch.mockResolvedValue({
+        results: [],
+        pagination: { page: 1, pages: 0, items: 0, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana&format=Vinyl,CD']);
+
+      await waitFor(() => expect(screen.getByText(/no results/i)).toBeInTheDocument());
+      expect(screen.getByText(/no results found for the active filters \(Format: Vinyl, CD\)/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('search result filters (feature 022, US2 - Artist filter removed)', () => {
+    it('loads a URL carrying an obsolete artist param without error, omits it from the request, and does not show it as an active filter (Acceptance Scenario 2, FR-009)', async () => {
+      mockSearch.mockResolvedValueOnce({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=nirvana&artist=Nirvana&genre=Rock']);
+
+      await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
+      expect(mockSearch).toHaveBeenCalledWith('nirvana', 'release', 1, 20, { genre: 'Rock' });
+      expect(screen.queryByLabelText(/^artist$/i)).not.toBeInTheDocument();
     });
   });
 

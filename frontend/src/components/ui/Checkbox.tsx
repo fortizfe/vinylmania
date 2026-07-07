@@ -1,0 +1,26 @@
+import type { InputHTMLAttributes } from 'react';
+import clsx from 'clsx';
+
+interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  label: string;
+  id: string;
+}
+
+export function Checkbox({ label, id, className, ...props }: CheckboxProps) {
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        id={id}
+        type="checkbox"
+        {...props}
+        className={clsx(
+          'h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:border-gray-700 dark:bg-gray-900',
+          className,
+        )}
+      />
+      <label htmlFor={id} className="text-sm text-gray-700 dark:text-gray-300">
+        {label}
+      </label>
+    </div>
+  );
+}

@@ -17,17 +17,25 @@ const PAGE_SIZE = 20;
 const resultsGridClasses =
   'grid list-none grid-cols-2 gap-4 p-0 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
-const FILTER_LABELS: Record<keyof SearchFilters, string> = {
-  artist: 'Artist',
+const TEXT_FILTER_LABELS: Record<'genre' | 'style', string> = {
   genre: 'Genre',
   style: 'Style',
-  format: 'Format',
 };
 
+/**
+ * Genre/Style show as a bare label ("Genre"); Format shows its actual
+ * selected value(s) (e.g. "Format: Vinyl, CD") since it's a discrete,
+ * enumerable multi-select where naming the selection is more useful than a
+ * generic label (spec.md Edge Cases, feature 022).
+ */
 function activeFilterLabels(filters: SearchFilters): string[] {
-  return (Object.keys(FILTER_LABELS) as (keyof SearchFilters)[])
+  const labels = (Object.keys(TEXT_FILTER_LABELS) as (keyof typeof TEXT_FILTER_LABELS)[])
     .filter((name) => Boolean(filters[name]))
-    .map((name) => FILTER_LABELS[name]);
+    .map((name) => TEXT_FILTER_LABELS[name]);
+  if (filters.format && filters.format.length > 0) {
+    labels.push(`Format: ${filters.format.join(', ')}`);
+  }
+  return labels;
 }
 
 export function SearchResultsPage() {
