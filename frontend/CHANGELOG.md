@@ -8,6 +8,24 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.13.0] - 2026-07-07
+
+### Changed
+
+- The search filter control's Artist field has been removed entirely (feature
+  022); the main search query box is unaffected and continues to support
+  searching by artist name as free text. A results link created before this
+  change that still carries an `artist` value loads normally, with the value
+  silently ignored.
+- The Format filter is no longer free text: it is now a fixed, multi-select
+  checklist of ~33 standard Discogs format names (e.g. Vinyl, CD, Cassette),
+  opened from a compact trigger button. Selecting more than one format value
+  narrows results to releases available in all of the selected formats
+  simultaneously (verified against live Discogs data — this is AND matching,
+  not OR). A results link carrying a format value no longer in the fixed list
+  loads normally, with the unrecognized value silently dropped while other
+  valid values remain applied.
+
 ## [0.12.0] - 2026-07-07
 
 ### Added

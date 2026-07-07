@@ -8,6 +8,23 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.7.0] - 2026-07-07
+
+### Changed
+
+- `GET /api/discogs/search` no longer recognizes the `artist` filter query
+  param (feature 022): the classification is MINOR, not MAJOR, because
+  requests that still send `artist` are not rejected — the value is simply
+  ignored (no error), so no existing consumer's requests start failing. The
+  Redis cache-aside key for search results no longer includes an `artist`
+  segment.
+- The `format` filter query param now supports a comma-joined multi-value
+  string (e.g. `format=Vinyl,CD`) forwarded verbatim, unchanged, to the
+  underlying Discogs `GET /database/search` request in a single call (feature
+  022). Verified against the live Discogs API during implementation: this
+  produces AND-matching (releases available in all listed formats
+  simultaneously), not OR-matching — see `specs/022-search-filter-refinements/research.md`.
+
 ## [0.6.0] - 2026-07-07
 
 ### Added
