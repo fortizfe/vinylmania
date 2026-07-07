@@ -157,8 +157,11 @@ test.describe('Library ⇄ Discogs Collection Sync (feature 016)', () => {
         await expect(ratedCard.getByRole('status')).toBeVisible();
         await expect(ratedCard.getByText('4.5')).toBeVisible();
 
+        // feature-019: a release with no community rating shows the gray
+        // placeholder badge instead of no badge at all.
         const unratedCard = page.locator('li', { hasText: 'Stub Release 4002' });
-        await expect(unratedCard.getByRole('status')).not.toBeVisible();
+        await expect(unratedCard.getByRole('status', { name: 'Rating not available' })).toBeVisible();
+        await expect(unratedCard.getByText('-', { exact: true })).toBeVisible();
     });
 
     // --- US3: Add propagation ---

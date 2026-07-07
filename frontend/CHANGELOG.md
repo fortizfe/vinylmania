@@ -8,6 +8,16 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.10.0] - 2026-07-07
+
+### Changed
+
+- Search-result and library cards now always show a rating badge (feature
+  019). Releases with no community rating, an invalid rating, or a failed
+  rating lookup show a dash ("-") on a soft gray background instead of
+  leaving an empty gap where the badge would sit. Rated releases keep their
+  existing numeric value and color band unchanged.
+
 ## [0.9.0] - 2026-07-06
 
 ### Added

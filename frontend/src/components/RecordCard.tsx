@@ -38,11 +38,9 @@ export function RecordCard({ entry }: RecordCardProps) {
             ) : (
               <div className="aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-800" />
             )}
-            {rating && (
-              <div className="absolute top-2 right-2">
-                <ReleaseRatingBadge displayValue={rating.displayValue} band={rating.band} />
-              </div>
-            )}
+            <div className="absolute top-2 right-2">
+              <ReleaseRatingBadge displayValue={rating.displayValue} band={rating.band} />
+            </div>
           </div>
           <span className="truncate font-semibold text-gray-900 dark:text-gray-100">
             {release.title}

@@ -180,11 +180,16 @@ test.describe('Record rating badges on search-result cards (feature 017, US1)', 
     await expect(page.getByText('Highly Rated Release')).toBeVisible();
     await expect(page.getByText('Unrated Release')).toBeVisible();
 
-    // Exactly one badge renders, on the enriched result, with the correct value.
-    await expect(page.getByRole('status')).toHaveCount(1);
-    await expect(page.getByRole('status')).toHaveText('4.5');
+    // Every card shows a badge (feature 019): the enriched result shows its
+    // numeric value, the unrated result shows the gray placeholder.
+    await expect(page.getByRole('status')).toHaveCount(2);
 
     const ratedCard = page.locator('li', { hasText: 'Highly Rated Release' });
+    await expect(ratedCard.getByRole('status')).toHaveText('4.5');
+
+    const unratedCard = page.locator('li', { hasText: 'Unrated Release' });
+    await expect(unratedCard.getByRole('status', { name: 'Rating not available' })).toHaveText('-');
+
     await expect(ratedCard.getByRole('button', { name: /add to library/i })).toBeVisible();
     await ratedCard.getByRole('button', { name: /add to library/i }).click();
     await expect(ratedCard.getByRole('button', { name: /added to library/i })).toBeVisible();

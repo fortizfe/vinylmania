@@ -1,4 +1,4 @@
-export type RatingBand = 'low' | 'medium' | 'high';
+export type RatingBand = 'low' | 'medium' | 'high' | 'unrated';
 
 export interface RatingSource {
   average: number;
@@ -37,9 +37,13 @@ export function formatRatingValue(average: number): string {
   return average.toFixed(1);
 }
 
-/** Derives the badge's presentation, or null when the badge must be omitted. */
-export function presentRating(rating: RatingSource | null | undefined): RatingPresentation | null {
-  if (!isRatingVisible(rating)) return null;
+/**
+ * Always derives a badge presentation (spec FR-001/FR-002): a valid rating
+ * gets its numeric value and color band, otherwise the badge gets the
+ * "unrated" placeholder (dash on soft gray) instead of being omitted.
+ */
+export function presentRating(rating: RatingSource | null | undefined): RatingPresentation {
+  if (!isRatingVisible(rating)) return { displayValue: '-', band: 'unrated' };
   return {
     displayValue: formatRatingValue(rating.average),
     band: bandForRating(rating.average),
