@@ -102,6 +102,20 @@ export interface SearchCatalogOptions {
   resultType?: 'release' | 'artist';
   page?: number;
   perPage?: number;
+  /** Free-text filter on artist name (spec FR-002, feature 021). */
+  artist?: string;
+  /** Free-text filter on genre (spec FR-002, feature 021). */
+  genre?: string;
+  /** Free-text filter on style (spec FR-002, feature 021). */
+  style?: string;
+  /** Free-text filter on format (spec FR-002, feature 021). */
+  format?: string;
+}
+
+/** Trims a filter value; blank/whitespace-only values are treated as unset (spec FR-010). */
+function normalizeFilterValue(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed || undefined;
 }
 
 // Discogs catalog data changes rarely, so search results (which can shift
@@ -166,11 +180,26 @@ export async function searchCatalog(
   const resultType = options.resultType ?? '';
   const page = options.page ?? 1;
   const perPage = options.perPage ?? 50;
-  const cacheKey = `discogs:search:${resultType}:${query}:${page}:${perPage}`;
+  const artist = normalizeFilterValue(options.artist);
+  const genre = normalizeFilterValue(options.genre);
+  const style = normalizeFilterValue(options.style);
+  const format = normalizeFilterValue(options.format);
+  // Cache-aside key includes every filter segment (empty when unset) so
+  // filtered and unfiltered searches for the same query/page never collide.
+  const cacheKey = `discogs:search:${resultType}:${query}:${page}:${perPage}:${artist ?? ''}:${genre ?? ''}:${style ?? ''}:${format ?? ''}`;
 
   return withCache(cacheKey, SEARCH_CACHE_TTL_SECONDS, async () => {
     const response = await getDiscogsHttpClient().get('/database/search', {
-      params: { q: query, type: options.resultType, page, per_page: perPage },
+      params: {
+        q: query,
+        type: options.resultType,
+        page,
+        per_page: perPage,
+        ...(artist ? { artist } : {}),
+        ...(genre ? { genre } : {}),
+        ...(style ? { style } : {}),
+        ...(format ? { format } : {}),
+      },
     });
 
     const { pagination, results } = response.data as {

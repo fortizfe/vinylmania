@@ -40,7 +40,24 @@ describe('discogsQueries', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockSearch).toHaveBeenCalledWith('aphex twin', 'release', 1, 50);
+    expect(mockSearch).toHaveBeenCalledWith('aphex twin', 'release', 1, 50, undefined);
+  });
+
+  it('useCatalogSearch forwards filters to discogsApi.search and keys distinct filter combinations separately (feature 021)', async () => {
+    mockSearch.mockResolvedValue({ results: [], pagination: { page: 1, pages: 0, items: 0, perPage: 50 } });
+
+    const { useCatalogSearch, discogsKeys } = await import('../../../src/queries/discogsQueries');
+    const filters = { genre: 'Rock', format: 'Vinyl' };
+    const { result } = renderHook(() => useCatalogSearch('aphex twin', 'release', 1, 50, filters), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockSearch).toHaveBeenCalledWith('aphex twin', 'release', 1, 50, filters);
+    expect(discogsKeys.search('aphex twin', 'release', 1, 50, filters)).not.toEqual(
+      discogsKeys.search('aphex twin', 'release', 1, 50, undefined),
+    );
   });
 
   it('useCatalogRelease serves a second render from cache without refetching', async () => {

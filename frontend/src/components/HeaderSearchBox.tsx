@@ -20,7 +20,7 @@ export function HeaderSearchBox() {
   const location = useLocation();
   const navigate = useNavigate();
   const onResultsPage = location.pathname === SEARCH_RESULTS_PATH;
-  const { query: urlQuery } = useSearchQueryParams();
+  const { query: urlQuery, ...activeFilters } = useSearchQueryParams();
 
   const [value, setValue] = useState(() => (onResultsPage ? urlQuery : ''));
 
@@ -34,7 +34,12 @@ export function HeaderSearchBox() {
     if (trimmed.length === 0) {
       return;
     }
-    navigate(buildSearchPath(trimmed, 1), { replace: onResultsPage });
+    // Submitting a new query while already on the results screen preserves
+    // any active filters, re-applying them against the new query (edge
+    // case, spec 021-search-result-filters).
+    navigate(buildSearchPath(trimmed, 1, onResultsPage ? activeFilters : undefined), {
+      replace: onResultsPage,
+    });
   }
 
   return (

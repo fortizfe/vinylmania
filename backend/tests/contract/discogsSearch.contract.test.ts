@@ -301,4 +301,87 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       8_000,
     );
   });
+
+  describe('artist/genre/style/format filter params (feature 021)', () => {
+    it('forwards artist/genre/style/format filter params to the outbound Discogs search request', async () => {
+      const { idToken } = await getTestIdToken('search-filters-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query({
+          q: 'FilterForwardTest',
+          type: 'release',
+          page: '1',
+          per_page: '50',
+          artist: 'Nirvana',
+          genre: 'Rock',
+          style: 'Grunge',
+          format: 'Vinyl',
+        })
+        .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({
+          q: 'FilterForwardTest',
+          type: 'release',
+          artist: 'Nirvana',
+          genre: 'Rock',
+          style: 'Grunge',
+          format: 'Vinyl',
+        })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('trims filter values and omits blank/whitespace-only ones from the outbound Discogs request', async () => {
+      const { idToken } = await getTestIdToken('search-filters-blank-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query(
+          (query) =>
+            query.q === 'FilterBlankTest' &&
+            query.type === 'release' &&
+            query.genre === 'Rock' &&
+            query.artist === undefined &&
+            query.style === undefined &&
+            query.format === undefined,
+        )
+        .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'FilterBlankTest', type: 'release', genre: '  Rock  ', artist: '', style: '   ' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('multiple filters combined (feature 021, US2)', () => {
+    it('forwards several filter params together, unchanged, to the outbound Discogs search request', async () => {
+      const { idToken } = await getTestIdToken('search-filters-combo-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query({
+          q: 'FilterComboTest',
+          type: 'release',
+          page: '1',
+          per_page: '50',
+          genre: 'Rock',
+          format: 'Vinyl',
+        })
+        .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'FilterComboTest', type: 'release', genre: 'Rock', format: 'Vinyl' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+    });
+  });
 });

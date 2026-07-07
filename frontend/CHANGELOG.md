@@ -8,6 +8,19 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.12.0] - 2026-07-07
+
+### Added
+
+- The search results screen now has a filter control with four free-text
+  fields — Artist, Genre, Style, and Format — submitted via an explicit
+  "Apply filters" action (feature 021). Any combination of filters can be
+  active at once, filters persist across pagination and in the results URL
+  (so reloading or sharing a filtered URL reproduces the same results), and
+  a "Clear filters" action resets to the unfiltered view in one step. A
+  filtered search with no matches shows a message naming the active
+  filters instead of the generic no-results message.
+
 ## [0.11.0] - 2026-07-07
 
 ### Added
