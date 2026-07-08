@@ -1,11 +1,12 @@
 import type { FeedSourceConfig } from './types';
 
-// Metal Storm's feed-listing page (metalstorm.net/home/rss.php) returns a
-// Cloudflare managed-challenge (403, cf-mitigated: challenge) to server-side
-// requests, so its individual category feed URLs could not be enumerated
-// (research.md §3). Shipped disabled per the feature's Clarifications: the
-// MVP launches with Metal Injection only and Metal Storm is a fast-follow
-// once a viable fetch strategy exists.
+// Metal Storm's general feed-listing page (metalstorm.net/home/rss.php) was
+// Cloudflare-challenge-protected and unusable (research.md §3, feature 024).
+// These direct per-category RSS/XML endpoints are unaffected by that
+// restriction — verified reachable (200, application/rss+xml, valid XML,
+// no Cloudflare challenge) during feature 025's implementation (research.md
+// §4). "News" intentionally shares its category with `metal-injection`
+// below so their articles merge into one "News" category (spec 025 FR-004).
 export const FEED_SOURCES: FeedSourceConfig[] = [
   {
     id: 'metal-injection',
@@ -15,10 +16,38 @@ export const FEED_SOURCES: FeedSourceConfig[] = [
     enabled: true,
   },
   {
-    id: 'metal-storm',
+    id: 'metal-storm-news',
     name: 'Metal Storm',
-    feedUrl: 'https://metalstorm.net/home/rss.php',
+    feedUrl: 'https://metalstorm.net/rss/news.xml',
     category: 'News',
-    enabled: false,
+    enabled: true,
+  },
+  {
+    id: 'metal-storm-reviews',
+    name: 'Metal Storm',
+    feedUrl: 'https://metalstorm.net/rss/reviews.xml',
+    category: 'Reviews',
+    enabled: true,
+  },
+  {
+    id: 'metal-storm-interviews',
+    name: 'Metal Storm',
+    feedUrl: 'https://metalstorm.net/rss/interviews.xml',
+    category: 'Interviews',
+    enabled: true,
+  },
+  {
+    id: 'metal-storm-articles',
+    name: 'Metal Storm',
+    feedUrl: 'https://metalstorm.net/rss/articles.xml',
+    category: 'Articles',
+    enabled: true,
+  },
+  {
+    id: 'metal-storm-picks',
+    name: 'Metal Storm',
+    feedUrl: 'https://metalstorm.net/rss/picks.xml',
+    category: 'Staff Picks',
+    enabled: true,
   },
 ];

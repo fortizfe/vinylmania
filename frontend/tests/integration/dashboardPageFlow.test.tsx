@@ -207,6 +207,112 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     expect(screen.getByText('Review Article')).toBeInTheDocument();
   });
 
+  it('renders a category with more than 5 articles inside a horizontally-scrollable carousel with navigation arrows (feature 025 US1, FR-005/FR-008)', async () => {
+    const articles = Array.from({ length: 7 }).map((_, index) => ({
+      id: `news-${index}`,
+      title: `News Article ${index}`,
+      excerpt: 'x',
+      publishedAt: `2026-07-0${(index % 7) + 1}T00:00:00.000Z`,
+      link: `https://metalinjection.net/news-${index}`,
+      sourceId: 'metal-injection',
+      sourceName: 'Metal Injection',
+      category: 'News',
+    }));
+
+    mockGetDashboard.mockResolvedValue({
+      categories: [{ category: 'News', articles }],
+      sourceStatuses: [{ sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' }],
+      generatedAt: '2026-07-08T00:00:00.000Z',
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('News Article 0')).toBeInTheDocument());
+
+    // All 7 articles are present (no fixed grid cap), each keeping its usual card fields.
+    for (const article of articles) {
+      expect(screen.getByText(article.title)).toBeInTheDocument();
+    }
+    expect(screen.getAllByText(/Metal Injection/).length).toBeGreaterThan(0);
+    const firstLink = screen.getByRole('link', { name: /News Article 0/i });
+    expect(firstLink).toHaveAttribute('target', '_blank');
+
+    // Carousel navigation controls are present for this category.
+    expect(screen.getByRole('button', { name: /previous articles/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next articles/i })).toBeInTheDocument();
+  });
+
+  it('renders Reviews, Interviews, Articles, and Staff Picks as their own labeled carousel sections (feature 025 US2)', async () => {
+    function categoryFixture(category: string) {
+      return {
+        category,
+        articles: [
+          {
+            id: `${category}-1`,
+            title: `${category} Article`,
+            excerpt: 'x',
+            publishedAt: '2026-07-08T00:00:00.000Z',
+            link: `https://metalstorm.net/${category.toLowerCase()}/1`,
+            sourceId: `metal-storm-${category.toLowerCase()}`,
+            sourceName: 'Metal Storm',
+            category,
+          },
+        ],
+      };
+    }
+
+    mockGetDashboard.mockResolvedValue({
+      categories: [
+        categoryFixture('News'),
+        categoryFixture('Reviews'),
+        categoryFixture('Interviews'),
+        categoryFixture('Articles'),
+        categoryFixture('Staff Picks'),
+      ],
+      sourceStatuses: [{ sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' }],
+      generatedAt: '2026-07-08T00:00:00.000Z',
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('News Article')).toBeInTheDocument());
+
+    for (const category of ['News', 'Reviews', 'Interviews', 'Articles', 'Staff Picks']) {
+      expect(screen.getByRole('heading', { name: category })).toBeInTheDocument();
+      expect(screen.getByText(`${category} Article`)).toBeInTheDocument();
+    }
+  });
+
+  it('does not render a "Dashboard" page heading (feature 025 US3, FR-001)', async () => {
+    mockGetDashboard.mockResolvedValue({
+      categories: [
+        {
+          category: 'News',
+          articles: [
+            {
+              id: '1',
+              title: 'News Article',
+              excerpt: 'x',
+              publishedAt: '2026-07-07T00:00:00.000Z',
+              link: 'https://metalinjection.net/news',
+              sourceId: 'metal-injection',
+              sourceName: 'Metal Injection',
+              category: 'News',
+            },
+          ],
+        },
+      ],
+      sourceStatuses: [{ sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' }],
+      generatedAt: '2026-07-08T00:00:00.000Z',
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('News Article')).toBeInTheDocument());
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
+  });
+
   it('shows a graceful empty state when there are zero articles across all sources (FR-011)', async () => {
     mockGetDashboard.mockResolvedValue({
       categories: [],

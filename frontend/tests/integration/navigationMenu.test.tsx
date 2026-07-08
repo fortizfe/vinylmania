@@ -71,7 +71,7 @@ describe('Navigation menu (US2)', () => {
     const user = userEvent.setup();
 
     await waitFor(() =>
-      expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument(),
+      expect(screen.getByText(/check back soon/i)).toBeInTheDocument(),
     );
 
     await user.click(screen.getByRole('button', { name: /menu/i }));

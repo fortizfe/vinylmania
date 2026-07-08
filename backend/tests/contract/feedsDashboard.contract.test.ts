@@ -20,6 +20,32 @@ const CONTRACT_SOURCE_B: FeedSourceConfig = {
   enabled: true,
 };
 
+const mockMetalStormSources: FeedSourceConfig[] = [
+  { id: 'metal-storm-news', name: 'Metal Storm', feedUrl: 'https://contract-ms-news.test/rss', category: 'News', enabled: true },
+  {
+    id: 'metal-storm-reviews',
+    name: 'Metal Storm',
+    feedUrl: 'https://contract-ms-reviews.test/rss',
+    category: 'Reviews',
+    enabled: true,
+  },
+  {
+    id: 'metal-storm-interviews',
+    name: 'Metal Storm',
+    feedUrl: 'https://contract-ms-interviews.test/rss',
+    category: 'Interviews',
+    enabled: true,
+  },
+  {
+    id: 'metal-storm-articles',
+    name: 'Metal Storm',
+    feedUrl: 'https://contract-ms-articles.test/rss',
+    category: 'Articles',
+    enabled: true,
+  },
+  { id: 'metal-storm-picks', name: 'Metal Storm', feedUrl: 'https://contract-ms-picks.test/rss', category: 'Staff Picks', enabled: true },
+];
+
 jest.mock('../../src/feeds/feedSources', () => ({
   FEED_SOURCES: [
     {
@@ -36,6 +62,7 @@ jest.mock('../../src/feeds/feedSources', () => ({
       category: 'Reviews',
       enabled: true,
     },
+    ...mockMetalStormSources,
   ],
 }));
 
@@ -63,6 +90,7 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
   beforeEach(async () => {
     await invalidateCache(`feeds:${CONTRACT_SOURCE_A.id}`);
     await invalidateCache(`feeds:${CONTRACT_SOURCE_B.id}`);
+    await Promise.all(mockMetalStormSources.map((source) => invalidateCache(`feeds:${source.id}`)));
   });
 
   afterEach(async () => {
@@ -88,6 +116,17 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
         ]),
       );
 
+    for (const source of mockMetalStormSources) {
+      // Dated before contract-feed-a/-b's items so they never displace the
+      // pre-existing articles[0] assertions below when categories merge.
+      nock(new URL(source.feedUrl).origin)
+        .get(new URL(source.feedUrl).pathname)
+        .reply(
+          200,
+          rssXml([{ title: `${source.id} Item`, link: `${source.feedUrl}#1`, pubDate: 'Sun, 05 Jul 2026 00:00:00 GMT' }]),
+        );
+    }
+
     const res = await request(app).get('/api/feeds/dashboard').set('Authorization', `Bearer ${idToken}`);
 
     expect(res.status).toBe(200);
@@ -95,6 +134,7 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
       expect.arrayContaining([
         { sourceId: 'contract-source-a', sourceName: 'Contract Feed A', status: 'ok' },
         { sourceId: 'contract-source-b', sourceName: 'Contract Feed B', status: 'ok' },
+        ...mockMetalStormSources.map((source) => ({ sourceId: source.id, sourceName: source.name, status: 'ok' })),
       ]),
     );
 

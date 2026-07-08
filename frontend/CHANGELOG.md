@@ -8,6 +8,13 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.15.0] - 2026-07-08
+
+### Changed
+
+- The Dashboard no longer shows a "Dashboard" page heading — it opens straight into the category filter bar and content (feature 025).
+- Each Dashboard category's articles now render as a horizontally-scrollable carousel (up to the 10 most recent, newest first) with keyboard-operable previous/next arrow controls, replacing the previous fixed grid layout. Individual article cards keep their existing appearance unchanged.
+
 ## [0.14.0] - 2026-07-08
 
 ### Changed

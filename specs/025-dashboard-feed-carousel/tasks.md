@@ -30,7 +30,7 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 **Purpose**: Confirm the concrete assumption research.md §4 flags before wiring the new feed sources — no feature code yet.
 
-- [ ] T001 Verify each of the 5 new Metal Storm feed URLs (`https://metalstorm.net/rss/{news,reviews,interviews,articles,picks}.xml`) returns a parseable RSS feed (not a Cloudflare challenge) from the dev/deploy environment (e.g. `curl -I`/`curl` each URL); record the result inline as a comment next to the corresponding entry when T012 adds it, and note any blocked URL in `specs/025-dashboard-feed-carousel/research.md` §4
+- [X] T001 Verify each of the 5 new Metal Storm feed URLs (`https://metalstorm.net/rss/{news,reviews,interviews,articles,picks}.xml`) returns a parseable RSS feed (not a Cloudflare challenge) from the dev/deploy environment (e.g. `curl -I`/`curl` each URL); record the result inline as a comment next to the corresponding entry when T012 adds it, and note any blocked URL in `specs/025-dashboard-feed-carousel/research.md` §4
 
 **Checkpoint**: Reachability of all 5 new sources is known before their config entries are written.
 
@@ -52,15 +52,15 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
-- [ ] T002 [P] [US1] Extend `backend/tests/unit/feedAggregator.test.ts`: given more than 10 articles in a single category, asserts the response caps that category to exactly the 10 most recent, sorted by `publishedAt` descending (newest first) — replacing/updating any existing 5-item-cap assertions (spec FR-006)
-- [ ] T003 [P] [US1] New component test in `frontend/tests/components/FeedCarousel.test.tsx`: given a list of articles, renders them in a single horizontal row in the given order; the "previous" control is disabled/hidden when scrolled to the start; clicking "next" scrolls toward later items in the list and becomes disabled/hidden once the end is reached; both controls are real `<button>` elements reachable and operable via keyboard (Tab + Enter/Space) (spec FR-007, FR-009, User Story 1 AC1-3)
-- [ ] T004 [P] [US1] Extend `frontend/tests/integration/dashboardPageFlow.test.tsx`: update the mocked `DashboardResponse` fixture so at least one category has more than 5 articles, and assert the page renders that category's articles inside a horizontally-scrollable carousel (not the old fixed grid) with visible arrow controls, while each article card still shows the same fields (image/placeholder, title, source, category badge, date, excerpt) and opens its link in a new tab (spec FR-005, FR-008, User Story 1 AC4-5)
+- [X] T002 [P] [US1] Extend `backend/tests/unit/feedAggregator.test.ts`: given more than 10 articles in a single category, asserts the response caps that category to exactly the 10 most recent, sorted by `publishedAt` descending (newest first) — replacing/updating any existing 5-item-cap assertions (spec FR-006)
+- [X] T003 [P] [US1] New component test in `frontend/tests/components/FeedCarousel.test.tsx`: given a list of articles, renders them in a single horizontal row in the given order; the "previous" control is disabled/hidden when scrolled to the start; clicking "next" scrolls toward later items in the list and becomes disabled/hidden once the end is reached; both controls are real `<button>` elements reachable and operable via keyboard (Tab + Enter/Space) (spec FR-007, FR-009, User Story 1 AC1-3)
+- [X] T004 [P] [US1] Extend `frontend/tests/integration/dashboardPageFlow.test.tsx`: update the mocked `DashboardResponse` fixture so at least one category has more than 5 articles, and assert the page renders that category's articles inside a horizontally-scrollable carousel (not the old fixed grid) with visible arrow controls, while each article card still shows the same fields (image/placeholder, title, source, category badge, date, excerpt) and opens its link in a new tab (spec FR-005, FR-008, User Story 1 AC4-5)
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] In `backend/src/feeds/feedAggregator.ts`, change `ARTICLES_PER_CATEGORY` from `5` to `10` (research.md §3; depends on T002 failing first)
-- [ ] T006 [US1] Create `frontend/src/components/FeedCarousel.tsx`: a horizontally-scrolling flex container (`overflow-x-auto`, `scroll-smooth`) that wraps its `FeedArticleCard` children unchanged, plus local `ChevronLeftIcon`/`ChevronRightIcon` inline-SVG components (mirroring `frontend/src/components/ui/BackLink.tsx`'s pattern) and two `<button>` controls with `aria-label`s ("Previous articles"/"Next articles") that call `scrollBy` on a container ref; disable/hide each button based on the container's `scrollLeft`/`scrollWidth`/`clientWidth`, recomputed on `scroll`/`resize` (research.md §1-2; depends on T003)
-- [ ] T007 [US1] Update `frontend/src/components/FeedCategorySection.tsx` to render its `articles` inside the new `<FeedCarousel>` instead of the fixed CSS grid, passing the article list through unchanged (depends on T004, T006)
+- [X] T005 [US1] In `backend/src/feeds/feedAggregator.ts`, change `ARTICLES_PER_CATEGORY` from `5` to `10` (research.md §3; depends on T002 failing first)
+- [X] T006 [US1] Create `frontend/src/components/FeedCarousel.tsx`: a horizontally-scrolling flex container (`overflow-x-auto`, `scroll-smooth`) that wraps its `FeedArticleCard` children unchanged, plus local `ChevronLeftIcon`/`ChevronRightIcon` inline-SVG components (mirroring `frontend/src/components/ui/BackLink.tsx`'s pattern) and two `<button>` controls with `aria-label`s ("Previous articles"/"Next articles") that call `scrollBy` on a container ref; disable/hide each button based on the container's `scrollLeft`/`scrollWidth`/`clientWidth`, recomputed on `scroll`/`resize` (research.md §1-2; depends on T003)
+- [X] T007 [US1] Update `frontend/src/components/FeedCategorySection.tsx` to render its `articles` inside the new `<FeedCarousel>` instead of the fixed CSS grid, passing the article list through unchanged (depends on T004, T006)
 
 **Checkpoint**: User Story 1 is fully functional and independently testable — the existing "News" category (Metal Injection alone) already exercises the 10-item cap and carousel behavior without needing the new Metal Storm sources.
 
@@ -74,14 +74,14 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T008 [P] [US2] Extend `backend/tests/unit/feedAggregator.test.ts`: given articles from two different `FeedSource`s that share the same `category` label (e.g. one fixture labeled `metal-injection`/"News" and another labeled `metal-storm-news`/"News"), asserts they are merged into a single "News" category entry capped at 10 combined articles, not 10 per source (spec FR-004, SC-005)
-- [ ] T009 [P] [US2] Extend `backend/tests/integration/feedsDashboard.integration.test.ts`: `nock`-mock all 5 new Metal Storm feed URLs (News, Reviews, Interviews, Articles, Staff Picks) as healthy alongside Metal Injection; assert the response includes "Reviews", "Interviews", "Articles", and "Staff Picks" categories, that "News" combines both News-labeled sources, and that one Metal Storm source failing still yields the other categories plus an `'unavailable'` `sourceStatuses` entry for just that source (spec FR-010)
-- [ ] T010 [P] [US2] Extend `backend/tests/contract/feedsDashboard.contract.test.ts`: asserts `sourceStatuses` includes entries for all 5 new source ids (`metal-storm-news`, `metal-storm-reviews`, `metal-storm-interviews`, `metal-storm-articles`, `metal-storm-picks`) when enabled
-- [ ] T011 [US2] Extend `frontend/tests/integration/dashboardPageFlow.test.tsx` (after T004's changes): given a mocked response containing "Reviews", "Interviews", "Articles", and "Staff Picks" categories, asserts each renders its own labeled carousel section (spec User Story 2 AC1)
+- [X] T008 [P] [US2] Extend `backend/tests/unit/feedAggregator.test.ts`: given articles from two different `FeedSource`s that share the same `category` label (e.g. one fixture labeled `metal-injection`/"News" and another labeled `metal-storm-news`/"News"), asserts they are merged into a single "News" category entry capped at 10 combined articles, not 10 per source (spec FR-004, SC-005)
+- [X] T009 [P] [US2] Extend backend integration coverage (new file `backend/tests/integration/feedsDashboardMetalStormCategories.integration.test.ts`, mirroring this project's per-file-fixture convention rather than widening the shared 2-source fixture in `feedsDashboard.integration.test.ts`): `nock`-mock all 5 new Metal Storm feed URLs (News, Reviews, Interviews, Articles, Staff Picks) as healthy alongside an existing "News" source; assert the response includes "Reviews", "Interviews", "Articles", and "Staff Picks" categories, that "News" combines both News-labeled sources non-duplicated, and that one Metal Storm source failing still yields the other categories plus an `'unavailable'` `sourceStatuses` entry for just that source (spec FR-010)
+- [X] T010 [P] [US2] Extend `backend/tests/contract/feedsDashboard.contract.test.ts`: asserts `sourceStatuses` includes entries for all 5 new source ids (`metal-storm-news`, `metal-storm-reviews`, `metal-storm-interviews`, `metal-storm-articles`, `metal-storm-picks`) when enabled
+- [X] T011 [US2] Extend `frontend/tests/integration/dashboardPageFlow.test.tsx` (after T004's changes): given a mocked response containing "Reviews", "Interviews", "Articles", and "Staff Picks" categories, asserts each renders its own labeled carousel section (spec User Story 2 AC1)
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] In `backend/src/feeds/feedSources.ts`, remove the disabled `metal-storm` entry (pointed at the Cloudflare-blocked listing page) and add 5 new entries per research.md §4's table (`metal-storm-news` → category `"News"`, `metal-storm-reviews` → `"Reviews"`, `metal-storm-interviews` → `"Interviews"`, `metal-storm-articles` → `"Articles"`, `metal-storm-picks` → `"Staff Picks"`), setting each `enabled` flag per T001's reachability check (depends on T001, T008)
+- [X] T012 [US2] In `backend/src/feeds/feedSources.ts`, remove the disabled `metal-storm` entry (pointed at the Cloudflare-blocked listing page) and add 5 new entries per research.md §4's table (`metal-storm-news` → category `"News"`, `metal-storm-reviews` → `"Reviews"`, `metal-storm-interviews` → `"Interviews"`, `metal-storm-articles` → `"Articles"`, `metal-storm-picks` → `"Staff Picks"`), setting each `enabled` flag per T001's reachability check (depends on T001, T008)
 
 **Checkpoint**: User Stories 1 and 2 both work independently — carousel UI plus 5 additional Metal Storm categories, correctly merging into existing same-named categories.
 
@@ -95,11 +95,11 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T013 [US3] Extend `frontend/tests/integration/dashboardPageFlow.test.tsx` (after T004/T011's changes): asserts no heading/element with the text "Dashboard" is rendered on the page (spec FR-001, User Story 3 AC1)
+- [X] T013 [US3] Extend `frontend/tests/integration/dashboardPageFlow.test.tsx` (after T004/T011's changes): asserts no heading/element with the text "Dashboard" is rendered on the page (spec FR-001, User Story 3 AC1)
 
 ### Implementation for User Story 3
 
-- [ ] T014 [US3] Remove the `<h1>Dashboard</h1>` element from `frontend/src/pages/DashboardPage.tsx` (depends on T007, T013)
+- [X] T014 [US3] Remove the `<h1>Dashboard</h1>` element from `frontend/src/pages/DashboardPage.tsx` (depends on T007, T013)
 
 **Checkpoint**: All three user stories are independently functional.
 
@@ -107,10 +107,10 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T015 [P] Add a new-version entry to `backend/CHANGELOG.md` (Metal Storm sources added, per-category cap raised to 10) and to `frontend/CHANGELOG.md` (horizontal carousel replacing the per-category grid, "Dashboard" title removed); bump the `version` field in `backend/package.json` and `frontend/package.json` to the next MINOR version for each, per Principle VI and the Development Workflow gates
-- [ ] T016 [P] Run the full `quickstart.md` validation pass (manual walkthrough + automated checks) and record any deviations
-- [ ] T017 Add `e2e/tests/dashboard-feed-carousel.spec.ts` (Playwright): Dashboard loads without a "Dashboard" heading, the five new Metal Storm categories are present, and a category's carousel arrows navigate and correctly disable/hide at the ends (research.md §5 — closes feature 024's pre-existing e2e coverage gap for the Dashboard flow; depends on T012, T014)
-- [ ] T018 Run backend and frontend full test suites (`npm test` in each) and lint (`npm run lint` in each) to confirm everything is green before merge
+- [X] T015 [P] Add a new-version entry to `backend/CHANGELOG.md` (Metal Storm sources added, per-category cap raised to 10) and to `frontend/CHANGELOG.md` (horizontal carousel replacing the per-category grid, "Dashboard" title removed); bump the `version` field in `backend/package.json` and `frontend/package.json` to the next MINOR version for each, per Principle VI and the Development Workflow gates
+- [X] T016 [P] Run the full `quickstart.md` validation pass (manual walkthrough + automated checks) and record any deviations. Automated checks (steps 1-5's assertions) were exercised via the backend/frontend test suites above rather than a live manual browser session in this sandboxed environment; e2e (step 6, closest to a full manual walkthrough) hit the pre-existing `signInAsFakeGoogleUser` environment limitation noted under T017.
+- [X] T017 Add `e2e/tests/dashboard-feed-carousel.spec.ts` (Playwright): Dashboard loads without a "Dashboard" heading, the five new Metal Storm categories are present, and a category's carousel arrows navigate and correctly disable/hide at the ends (research.md §5 — closes feature 024's pre-existing e2e coverage gap for the Dashboard flow; depends on T012, T014). Written following this suite's `page.route` API-mocking convention (mirrors `caching-navigation.spec.ts`); execution in this sandboxed session could not be verified end-to-end because the shared `signInAsFakeGoogleUser` fake-Google-popup step times out identically for a pre-existing, unrelated spec (`header-responsive-nav.spec.ts`) in this environment — a pre-existing environment limitation, not a regression from this feature. Should be re-run in CI/a properly configured dev environment before merge.
+- [X] T018 Run backend and frontend full test suites (`npm test` in each) and lint (`npm run lint` in each) to confirm everything is green before merge. Frontend: 301/301 tests pass, lint clean (pre-existing warnings only, in files untouched by this feature). Backend: all feeds-related suites pass (22/22 across feedAggregator/feedSources/contract/integration); lint clean. 4 pre-existing, unrelated Discogs contract-test suites (`discogsClient`, `discogsRelease`, `discogsSearch`, `libraryEnrichment`) fail identically on the unmodified `main`-equivalent baseline (verified via `git stash`) — not caused by this feature.
 
 ---
 

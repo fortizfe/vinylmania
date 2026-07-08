@@ -51,7 +51,6 @@ export function DashboardPage() {
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6 sm:p-8">
-      <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Dashboard</h1>
       <FeedSourceStatusBanner sourceStatuses={sourceStatuses} />
       {renderContent()}
     </main>
