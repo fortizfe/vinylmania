@@ -1,7 +1,12 @@
 import { Router, type Request, type Response } from 'express';
 
 import { logger } from '../config/logger';
-import { getRelease, searchCatalog } from '../discogs/discogsClient';
+import {
+  getMasterRelease,
+  getMasterReleaseVersions,
+  getRelease,
+  searchCatalog,
+} from '../discogs/discogsClient';
 import {
   DiscogsNotFoundError,
   DiscogsRateLimitError,
@@ -43,12 +48,20 @@ discogsRouter.get('/search', requireAuth, async (req: Request, res: Response) =>
   try {
     const result = await searchCatalog(query, { resultType, page, perPage, ...filters });
     const releaseResults = result.results.filter((r) => r.resultType === 'release');
-    const enrichedCount = releaseResults.filter((r) => r.communityRating !== undefined).length;
+    const masterResults = result.results.filter((r) => r.resultType === 'master');
+    const enrichedCount = [...releaseResults, ...masterResults].filter(
+      (r) => r.communityRating !== undefined,
+    ).length;
     logger.info({
       route: '/api/discogs/search',
       outcome: 'success',
       uid: req.auth?.uid,
-      meta: { releases: releaseResults.length, ratingEnriched: enrichedCount, filters: Object.keys(filters) },
+      meta: {
+        releases: releaseResults.length,
+        masters: masterResults.length,
+        ratingEnriched: enrichedCount,
+        filters: Object.keys(filters),
+      },
     });
     res.status(200).json(result);
   } catch (err) {
@@ -126,3 +139,111 @@ discogsRouter.get('/releases/:discogsId', requireAuth, async (req: Request, res:
     });
   }
 });
+
+discogsRouter.get('/masters/:discogsId', requireAuth, async (req: Request, res: Response) => {
+  const discogsId = Number(req.params.discogsId);
+
+  try {
+    const master = await getMasterRelease(discogsId);
+    logger.info({ route: '/api/discogs/masters/:discogsId', outcome: 'success', uid: req.auth?.uid });
+    res.status(200).json(master);
+  } catch (err) {
+    if (err instanceof DiscogsNotFoundError) {
+      logger.warn({
+        route: '/api/discogs/masters/:discogsId',
+        outcome: 'not_found',
+        uid: req.auth?.uid,
+      });
+      res.status(404).json({
+        error: 'master_not_found',
+        message: 'No master release found for that ID.',
+      });
+      return;
+    }
+
+    if (err instanceof DiscogsRateLimitError || err instanceof DiscogsUnavailableError) {
+      logger.warn({
+        route: '/api/discogs/masters/:discogsId',
+        outcome: 'unavailable',
+        uid: req.auth?.uid,
+        message: err.message,
+      });
+      res.status(502).json({
+        error: 'catalog_unavailable',
+        message: 'The catalog service is temporarily unavailable. Please try again.',
+      });
+      return;
+    }
+
+    logger.error({
+      route: '/api/discogs/masters/:discogsId',
+      outcome: 'error',
+      uid: req.auth?.uid,
+      message: err instanceof Error ? err.message : 'unknown error',
+    });
+    res.status(500).json({
+      error: 'internal_error',
+      message: 'Something went wrong. Please try again.',
+    });
+  }
+});
+
+const DEFAULT_MASTER_VERSIONS_PER_PAGE = 10;
+
+discogsRouter.get(
+  '/masters/:discogsId/versions',
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const discogsId = Number(req.params.discogsId);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const perPage = Math.max(1, Number(req.query.perPage) || DEFAULT_MASTER_VERSIONS_PER_PAGE);
+
+    try {
+      const versions = await getMasterReleaseVersions(discogsId, page, perPage);
+      logger.info({
+        route: '/api/discogs/masters/:discogsId/versions',
+        outcome: 'success',
+        uid: req.auth?.uid,
+      });
+      res.status(200).json(versions);
+    } catch (err) {
+      if (err instanceof DiscogsNotFoundError) {
+        logger.warn({
+          route: '/api/discogs/masters/:discogsId/versions',
+          outcome: 'not_found',
+          uid: req.auth?.uid,
+        });
+        res.status(404).json({
+          error: 'master_not_found',
+          message: 'No master release found for that ID.',
+        });
+        return;
+      }
+
+      if (err instanceof DiscogsRateLimitError || err instanceof DiscogsUnavailableError) {
+        logger.warn({
+          route: '/api/discogs/masters/:discogsId/versions',
+          outcome: 'unavailable',
+          uid: req.auth?.uid,
+          message: err.message,
+        });
+        res.status(502).json({
+          error: 'catalog_unavailable',
+          message: 'The catalog service is temporarily unavailable. Please try again.',
+        });
+        return;
+      }
+
+      logger.error({
+        route: '/api/discogs/masters/:discogsId/versions',
+        outcome: 'error',
+        uid: req.auth?.uid,
+        message: err instanceof Error ? err.message : 'unknown error',
+      });
+      res.status(500).json({
+        error: 'internal_error',
+        message: 'Something went wrong. Please try again.',
+      });
+    }
+  },
+);

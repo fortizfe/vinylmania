@@ -22,7 +22,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
     discogsScope()
       .get('/database/search')
-      .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+      .query({ q: 'Stockholm', page: '1', per_page: '50' })
       .reply(200, {
         pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
         results: [
@@ -67,7 +67,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     // query would return that test's cached response instead of this one's.
     discogsScope()
       .get('/database/search')
-      .query({ q: 'Kind Of Blue', type: 'release', page: '1', per_page: '50' })
+      .query({ q: 'Kind Of Blue', page: '1', per_page: '50' })
       .reply(200, {
         pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
         results: [
@@ -102,7 +102,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
     discogsScope()
       .get('/database/search')
-      .query({ q: 'Untitled', type: 'release', page: '1', per_page: '50' })
+      .query({ q: 'Untitled', page: '1', per_page: '50' })
       .reply(200, {
         pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
         results: [
@@ -129,12 +129,94 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     });
   });
 
+  describe('master release grouping (feature 026, US1)', () => {
+    it('does not restrict the outbound Discogs type param, and includes master hits in the response', async () => {
+      const { idToken } = await getTestIdToken('search-master-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Linkin Park', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+          results: [
+            {
+              id: 12345,
+              type: 'master',
+              title: 'Linkin Park - Hybrid Theory',
+              year: '2000',
+              format: ['Vinyl'],
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/masters/12345',
+            },
+          ],
+        });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'Linkin Park', type: 'release' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.results[0]).toMatchObject({
+        discogsId: 12345,
+        resultType: 'master',
+        title: 'Hybrid Theory',
+        artist: 'Linkin Park',
+      });
+    });
+
+    it('drops label/other hits Discogs returns unfiltered instead of failing the whole response', async () => {
+      const { idToken } = await getTestIdToken('search-unfiltered-types-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Warner', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 3, per_page: 50 },
+          results: [
+            {
+              id: 1,
+              type: 'label',
+              title: 'Warner Bros. Records',
+              resource_url: 'https://api.discogs.com/labels/1',
+            },
+            {
+              id: 2,
+              type: 'release',
+              title: 'Some Artist - Some Release',
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/releases/2',
+            },
+            {
+              id: 3,
+              type: 'artist',
+              title: 'Some Artist',
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/artists/3',
+            },
+          ],
+        });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'Warner', type: 'release' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.results).toHaveLength(1);
+      expect(res.body.results[0]).toMatchObject({ discogsId: 2, resultType: 'release' });
+    });
+  });
+
   it('forwards page and perPage query params to the catalog search', async () => {
     const { idToken } = await getTestIdToken('search-pagination-user');
 
     discogsScope()
       .get('/database/search')
-      .query({ q: 'love', type: 'release', page: '2', per_page: '10' })
+      .query({ q: 'love', page: '2', per_page: '10' })
       .reply(200, {
         pagination: { page: 2, pages: 5, items: 47, per_page: 10 },
         results: [],
@@ -154,7 +236,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
     discogsScope()
       .get('/database/search')
-      .query({ q: 'love', type: 'release', page: '1', per_page: '50' })
+      .query({ q: 'love', page: '1', per_page: '50' })
       .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
 
     const res = await request(app)
@@ -212,7 +294,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
       discogsScope()
         .get('/database/search')
-        .query({ q: 'RatingEnrichmentValid', type: 'release', page: '1', per_page: '50' })
+        .query({ q: 'RatingEnrichmentValid', page: '1', per_page: '50' })
         .reply(200, {
           pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
           results: [rawSearchResultItem({ id: 10 })],
@@ -233,7 +315,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
       discogsScope()
         .get('/database/search')
-        .query({ q: 'RatingEnrichmentUnvoted', type: 'release', page: '1', per_page: '50' })
+        .query({ q: 'RatingEnrichmentUnvoted', page: '1', per_page: '50' })
         .reply(200, {
           pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
           results: [rawSearchResultItem({ id: 11 })],
@@ -254,7 +336,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
       discogsScope()
         .get('/database/search')
-        .query({ q: 'RatingEnrichmentFailure', type: 'release', page: '1', per_page: '50' })
+        .query({ q: 'RatingEnrichmentFailure', page: '1', per_page: '50' })
         .reply(200, {
           pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
           results: [rawSearchResultItem({ id: 12 })],
@@ -278,7 +360,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
         discogsScope()
           .get('/database/search')
-          .query({ q: 'RatingEnrichmentTimeout', type: 'release', page: '1', per_page: '50' })
+          .query({ q: 'RatingEnrichmentTimeout', page: '1', per_page: '50' })
           .reply(200, {
             pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
             results: [rawSearchResultItem({ id: 13 })],
@@ -310,7 +392,6 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
         .get('/database/search')
         .query({
           q: 'FilterForwardTest',
-          type: 'release',
           page: '1',
           per_page: '50',
           genre: 'Rock',
@@ -341,7 +422,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
         .query(
           (query) =>
             query.q === 'FilterBlankTest' &&
-            query.type === 'release' &&
+            query.type === undefined &&
             query.genre === 'Rock' &&
             query.artist === undefined &&
             query.style === undefined &&
@@ -366,7 +447,6 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
         .get('/database/search')
         .query({
           q: 'FilterComboTest',
-          type: 'release',
           page: '1',
           per_page: '50',
           genre: 'Rock',
@@ -391,7 +471,6 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
         .get('/database/search')
         .query({
           q: 'FilterMultiFormatTest',
-          type: 'release',
           page: '1',
           per_page: '50',
           format: 'Vinyl,CD',
@@ -416,7 +495,6 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
         .get('/database/search')
         .query({
           q: 'ArtistRemovedTest',
-          type: 'release',
           page: '1',
           per_page: '50',
           genre: 'Rock',

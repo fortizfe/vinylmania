@@ -1,4 +1,10 @@
-import { mapArtist, mapRelease, mapSearchResult } from '../../src/discogs/discogsMapper';
+import {
+  mapArtist,
+  mapMasterRelease,
+  mapMasterReleaseVersion,
+  mapRelease,
+  mapSearchResult,
+} from '../../src/discogs/discogsMapper';
 
 describe('mapSearchResult', () => {
   it('maps a full release search result', () => {
@@ -38,6 +44,47 @@ describe('mapSearchResult', () => {
       discogsId: 1,
       resultType: 'artist',
       title: 'The Persuader',
+    });
+  });
+
+  it('maps a master search result, splitting artist from title like a release (feature 026, US1)', () => {
+    const mapped = mapSearchResult({
+      id: 1660109,
+      type: 'master',
+      title: 'The Persuader - Stockholm',
+      year: '1999',
+      format: ['Vinyl'],
+      thumb: '',
+      cover_image: 'https://example.com/cover.jpg',
+      resource_url: 'https://api.discogs.com/masters/1660109',
+    });
+
+    expect(mapped).toEqual({
+      discogsId: 1660109,
+      resultType: 'master',
+      title: 'Stockholm',
+      artist: 'The Persuader',
+      year: 1999,
+      formats: ['Vinyl'],
+      thumbnailUrl: 'https://example.com/cover.jpg',
+    });
+  });
+
+  it('omits year/formats/thumbnail on a master result when Discogs provides none (feature 026, US1)', () => {
+    const mapped = mapSearchResult({
+      id: 1660109,
+      type: 'master',
+      title: 'The Persuader - Stockholm',
+      thumb: '',
+      cover_image: '',
+      resource_url: 'https://api.discogs.com/masters/1660109',
+    });
+
+    expect(mapped).toEqual({
+      discogsId: 1660109,
+      resultType: 'master',
+      title: 'Stockholm',
+      artist: 'The Persuader',
     });
   });
 });
@@ -128,6 +175,82 @@ describe('mapRelease', () => {
     expect(mapped.notes).toBeUndefined();
     expect(mapped.community).toBeUndefined();
     expect(mapped.identifiers).toEqual([]);
+  });
+});
+
+describe('mapMasterRelease (feature 026, US3)', () => {
+  const baseRawMaster = {
+    id: 1660109,
+    title: 'Hybrid Theory',
+    year: 2000,
+    artists: [{ id: 1, name: 'Linkin Park', anv: '', join: '', role: '' }],
+    genres: ['Rock'],
+    styles: ['Nu Metal'],
+    images: [{ type: 'primary', uri: 'https://example.com/cover.jpg', width: 600, height: 600 }],
+    tracklist: [{ position: '1', type_: 'track', title: 'Papercut', duration: '3:05' }],
+    main_release: 98765,
+    uri: 'https://www.discogs.com/master/1660109-Linkin-Park-Hybrid-Theory',
+  };
+
+  it('maps a full master release', () => {
+    expect(mapMasterRelease(baseRawMaster)).toEqual({
+      discogsId: 1660109,
+      title: 'Hybrid Theory',
+      year: 2000,
+      artists: [{ discogsArtistId: 1, name: 'Linkin Park' }],
+      genres: ['Rock'],
+      styles: ['Nu Metal'],
+      images: [{ url: 'https://example.com/cover.jpg', imageType: 'primary', width: 600, height: 600 }],
+      tracklist: [{ position: '1', title: 'Papercut', duration: '3:05' }],
+      mainReleaseId: 98765,
+      discogsUrl: 'https://www.discogs.com/master/1660109-Linkin-Park-Hybrid-Theory',
+    });
+  });
+
+  it('tolerates a missing year, genres, styles, images, and tracklist', () => {
+    const { year: _year, genres: _genres, styles: _styles, images: _images, tracklist: _tracklist, ...rawWithoutOptionals } = baseRawMaster;
+
+    const mapped = mapMasterRelease(rawWithoutOptionals);
+
+    expect(mapped.year).toBeUndefined();
+    expect(mapped.genres).toEqual([]);
+    expect(mapped.styles).toEqual([]);
+    expect(mapped.images).toEqual([]);
+    expect(mapped.tracklist).toEqual([]);
+  });
+});
+
+describe('mapMasterReleaseVersion (feature 026, US3)', () => {
+  it('maps a full version', () => {
+    const mapped = mapMasterReleaseVersion({
+      id: 98765,
+      title: 'Hybrid Theory',
+      format: 'Vinyl, LP, Album',
+      label: 'Warner Bros. Records',
+      catno: '9362-47755-1',
+      released: '2000',
+      country: 'US',
+      thumb: 'https://example.com/thumb.jpg',
+    });
+
+    expect(mapped).toEqual({
+      discogsId: 98765,
+      title: 'Hybrid Theory',
+      format: 'Vinyl, LP, Album',
+      label: 'Warner Bros. Records',
+      year: 2000,
+      country: 'US',
+      thumbnailUrl: 'https://example.com/thumb.jpg',
+    });
+  });
+
+  it('omits format, label, year, country, and thumbnailUrl when Discogs has none of them', () => {
+    const mapped = mapMasterReleaseVersion({ id: 1, title: 'Untitled Version' });
+
+    expect(mapped).toEqual({
+      discogsId: 1,
+      title: 'Untitled Version',
+    });
   });
 });
 

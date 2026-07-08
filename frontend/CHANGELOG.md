@@ -8,6 +8,21 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.16.0] - 2026-07-08
+
+### Added
+
+- Dedicated release and master release detail pages (`/app/releases/:discogsId`, `/app/masters/:discogsId`), reachable by clicking any search result (feature 026). The release detail page shows full catalog information plus an "Add to library" action; the master release detail page shows the same for the master plus a paginated (10-per-page) table of its release versions, each row linking to its own release detail page. Both pages provide a back action consistent with the rest of the app, returning to the exact prior search (query/filters/page) or master version-table page.
+- Search results that belong to the same master release group now render as a single grouped card with a stacked-covers visual, distinguishing it from a standalone release card.
+
+### Changed
+
+- Clicking a search result card now navigates to its detail page instead of opening a quick-look preview.
+
+### Removed
+
+- The quick-look preview modal (`ReleasePreviewModal`) and its "Preview details" card action have been removed; the new detail pages are now the only way to see a search result's full information.
+
 ## [0.15.0] - 2026-07-08
 
 ### Changed

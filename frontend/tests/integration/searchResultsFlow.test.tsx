@@ -1,10 +1,11 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { HeaderSearchBox } from '../../src/components/HeaderSearchBox';
+import { ReleaseDetailPage } from '../../src/pages/ReleaseDetailPage';
 import { SearchResultsPage } from '../../src/pages/SearchResultsPage';
 import { createTestQueryClient } from '../testUtils';
 
@@ -145,44 +146,92 @@ describe('Search results flow (US2)', () => {
     );
   });
 
-  it('previews a result in an overlay without adding it or losing the search results', async () => {
+  it('renders a mix of grouped (master) and standalone (release) results (feature 026, US1)', async () => {
     mockSearch.mockResolvedValue({
       results: [
+        {
+          discogsId: 12345,
+          resultType: 'master',
+          title: 'Hybrid Theory',
+          artist: 'Linkin Park',
+          year: 2000,
+          formats: ['Vinyl'],
+        },
         {
           discogsId: 1,
           resultType: 'release',
           title: 'Stockholm',
           artist: 'The Persuader',
+          year: 1999,
+          formats: ['Vinyl'],
         },
       ],
-      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
-    });
-    mockGetRelease.mockResolvedValue({
-      discogsId: 1,
-      title: 'Stockholm',
-      year: 1999,
-      artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
-      labels: [],
-      formats: [],
-      genres: [],
-      styles: [],
-      identifiers: [],
-      tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
-      images: [],
-      discogsUrl: 'https://www.discogs.com/release/1',
+      pagination: { page: 1, pages: 1, items: 2, perPage: 20 },
     });
 
-    renderPage(['/app/search?q=Stockholm']);
-    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+    renderPage(['/app/search?q=music']);
 
-    const user = userEvent.setup();
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: /preview details/i }));
+    await waitFor(() => expect(screen.getByText('Hybrid Theory')).toBeInTheDocument());
+    expect(screen.getByText('Stockholm')).toBeInTheDocument();
+    expect(screen.getByTestId('search-result-stacked-covers')).toBeInTheDocument();
+    // Only the standalone (release) card has an Add action; the grouped
+    // (master) card has none (spec Assumptions, feature 026).
+    expect(screen.getAllByRole('button', { name: /add to library/i })).toHaveLength(1);
+  });
+
+  describe('release detail navigation and back (feature 026, US2)', () => {
+    function renderWithDetailRoute(initialEntries: string[]) {
+      return render(
+        <QueryClientProvider client={createTestQueryClient()}>
+          <MemoryRouter initialEntries={initialEntries}>
+            <Routes>
+              <Route path="/app/search" element={<SearchResultsPage />} />
+              <Route path="/app/releases/:discogsId" element={<ReleaseDetailPage />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+    }
+
+    it('navigates to the release detail page on click, with no preview control on the card, and back restores the prior search state (FR-012, FR-013)', async () => {
+      mockSearch.mockResolvedValue({
+        results: [
+          { discogsId: 1, resultType: 'release', title: 'Stockholm', artist: 'The Persuader' },
+        ],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+      mockGetRelease.mockResolvedValue({
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        identifiers: [],
+        tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      });
+
+      renderWithDetailRoute(['/app/search?q=Stockholm&page=1']);
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+      expect(screen.queryByRole('button', { name: /preview details/i })).not.toBeInTheDocument();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('link'));
+
+      await waitFor(() => expect(screen.getByText(/Östermalm/)).toBeInTheDocument());
+      expect(mockGetRelease).toHaveBeenCalledWith(1);
+
+      mockSearch.mockClear();
+      await user.click(screen.getByRole('link', { name: /back/i }));
+
+      await waitFor(() =>
+        expect(mockSearch).toHaveBeenLastCalledWith('Stockholm', 'release', 1, 20, {}),
+      );
+      expect(screen.getByText('Stockholm')).toBeInTheDocument();
     });
-
-    await waitFor(() => expect(screen.getByText(/Östermalm/)).toBeInTheDocument());
-    expect(mockGetRelease).toHaveBeenCalledWith(1);
-    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it('updates the results in place when a new query is submitted from the header (FR-005)', async () => {

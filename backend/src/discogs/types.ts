@@ -5,7 +5,7 @@ export interface CommunityRating {
 
 export interface CatalogSearchResult {
   discogsId: number;
-  resultType: 'release' | 'artist';
+  resultType: 'release' | 'artist' | 'master';
   title: string;
   artist?: string;
   thumbnailUrl?: string;
@@ -90,6 +90,41 @@ export interface Release {
   images: CatalogImage[];
   masterId?: number;
   discogsUrl: string;
+}
+
+/** A Discogs master release group (feature 026, US3) — see data-model.md. */
+export interface MasterRelease {
+  discogsId: number;
+  title: string;
+  year?: number;
+  artists: ReleaseArtistCredit[];
+  genres: string[];
+  styles: string[];
+  images: CatalogImage[];
+  tracklist: Track[];
+  mainReleaseId: number;
+  discogsUrl: string;
+}
+
+/** One row of a master's paginated version list (feature 026, US3). */
+export interface MasterReleaseVersion {
+  discogsId: number;
+  title: string;
+  format?: string;
+  year?: number;
+  label?: string;
+  country?: string;
+  thumbnailUrl?: string;
+}
+
+export interface MasterReleaseVersionsPage {
+  results: MasterReleaseVersion[];
+  pagination: {
+    page: number;
+    pages: number;
+    items: number;
+    perPage: number;
+  };
 }
 
 export interface ArtistAliasRef {

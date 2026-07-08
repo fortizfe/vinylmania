@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it } from 'vitest';
 
 import { SearchResultCard } from '../../src/components/SearchResultCard';
 import type { CatalogSearchResult } from '../../src/services/discogsApi';
@@ -14,15 +15,17 @@ const baseResult: CatalogSearchResult = {
   formats: ['Vinyl'],
 };
 
-function renderCard(result: CatalogSearchResult) {
+function renderCard(result: CatalogSearchResult, searchPath = '/app/search?q=blue') {
   return render(
-    <SearchResultCard
-      result={result}
-      onAdd={() => {}}
-      onPreview={() => {}}
-      adding={false}
-      added={false}
-    />,
+    <MemoryRouter>
+      <SearchResultCard
+        result={result}
+        searchPath={searchPath}
+        onAdd={() => {}}
+        adding={false}
+        added={false}
+      />
+    </MemoryRouter>,
   );
 }
 
@@ -53,21 +56,68 @@ describe('SearchResultCard', () => {
     expect(screen.queryByText('Miles Davis')).not.toBeInTheDocument();
   });
 
-  it('delegates the add/preview actions to ResultCardActions', async () => {
-    const onAdd = vi.fn();
-    const onPreview = vi.fn();
-    render(
-      <SearchResultCard
-        result={baseResult}
-        onAdd={onAdd}
-        onPreview={onPreview}
-        adding={false}
-        added={false}
-      />,
-    );
+  it('delegates the add action to ResultCardActions', () => {
+    renderCard(baseResult);
 
     expect(screen.getByRole('button', { name: /add to library/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /preview details/i })).toBeInTheDocument();
+  });
+
+  describe('navigation (feature 026, US2)', () => {
+    it('links a standalone card to its release detail page, carrying the current search path as router state', () => {
+      renderCard(baseResult, '/app/search?q=blue&page=2');
+
+      const link = screen.getByRole('link');
+      expect(link).toHaveAttribute('href', '/app/releases/1');
+    });
+
+    it('the link wraps the title so clicking the card navigates', () => {
+      renderCard(baseResult);
+
+      expect(screen.getByRole('link')).toHaveTextContent('Kind Of Blue');
+    });
+  });
+
+  describe('grouped (master release) results (feature 026, US1)', () => {
+    const masterResult: CatalogSearchResult = {
+      ...baseResult,
+      discogsId: 12345,
+      resultType: 'master',
+      title: 'Hybrid Theory',
+      artist: 'Linkin Park',
+    };
+
+    it('renders the stacked-covers visual for a master result', () => {
+      renderCard(masterResult);
+
+      expect(screen.getByTestId('search-result-stacked-covers')).toBeInTheDocument();
+    });
+
+    it('does not render the stacked-covers visual for a standalone release result', () => {
+      renderCard(baseResult);
+
+      expect(screen.queryByTestId('search-result-stacked-covers')).not.toBeInTheDocument();
+    });
+
+    it('does not render an "Add to library" button for a master result', () => {
+      renderCard(masterResult);
+
+      expect(screen.queryByRole('button', { name: /add to library/i })).not.toBeInTheDocument();
+    });
+
+    it('still renders title, artist, year, and format for a master result', () => {
+      renderCard({ ...masterResult, year: 2000, formats: ['Vinyl'] });
+
+      expect(screen.getByText('Hybrid Theory')).toBeInTheDocument();
+      expect(screen.getByText('Linkin Park')).toBeInTheDocument();
+      expect(screen.getByText('2000')).toBeInTheDocument();
+      expect(screen.getByText('Vinyl')).toBeInTheDocument();
+    });
+
+    it('links a master result to its master detail page (feature 026, US3, FR-005)', () => {
+      renderCard(masterResult);
+
+      expect(screen.getByRole('link')).toHaveAttribute('href', '/app/masters/12345');
+    });
   });
 
   describe('rating badge (feature 017)', () => {

@@ -41,7 +41,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
 
     discogsScope()
       .get('/database/search')
-      .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+      .query({ q: 'Stockholm', page: '1', per_page: '50' })
       .reply(200, {
         pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
         results: [
@@ -112,7 +112,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
 
       discogsScope()
         .get('/database/search')
-        .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+        .query({ q: 'Stockholm', page: '1', per_page: '50' })
         .reply(200, {
           pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
           results: [rawSearchResultItem({ id: 950 })],
@@ -137,7 +137,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
 
         discogsScope()
           .get('/database/search')
-          .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+          .query({ q: 'Stockholm', page: '1', per_page: '50' })
           .reply(200, {
             pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
             results: [rawSearchResultItem({ id: 951 })],

@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 import { presentRating } from '../lib/releaseRating';
 import type { CatalogSearchResult } from '../services/discogsApi';
 import { Badge } from './ui/Badge';
@@ -7,35 +9,47 @@ import { ResultCardActions } from './ResultCardActions';
 
 interface SearchResultCardProps {
   result: CatalogSearchResult;
+  /** Current search results URL, carried as router state so the detail page's back action returns here (spec FR-012). */
+  searchPath: string;
   onAdd: () => void;
-  onPreview: () => void;
   adding: boolean;
   added: boolean;
 }
 
 export function SearchResultCard({
   result,
+  searchPath,
   onAdd,
-  onPreview,
   adding,
   added,
 }: SearchResultCardProps) {
   const format = result.formats?.[0];
   const rating = presentRating(result.communityRating);
+  const isGrouped = result.resultType === 'master';
 
-  return (
-    <Card padding="sm" className="flex flex-col gap-2">
+  const visual = (
+    <>
       <div className="relative">
+        {isGrouped && (
+          <div
+            data-testid="search-result-stacked-covers"
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+          >
+            <div className="absolute inset-0 translate-x-2 translate-y-2 rotate-3 rounded-md border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800" />
+            <div className="absolute inset-0 translate-x-1 translate-y-1 -rotate-2 rounded-md border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900" />
+          </div>
+        )}
         {result.thumbnailUrl ? (
           <img
             src={result.thumbnailUrl}
             alt={result.title}
-            className="aspect-square w-full rounded-md object-cover"
+            className="relative aspect-square w-full rounded-md object-cover"
           />
         ) : (
           <div
             data-testid="search-result-thumbnail-placeholder"
-            className="aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-800"
+            className="relative aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-800"
           />
         )}
         <div className="absolute top-2 right-2">
@@ -52,7 +66,19 @@ export function SearchResultCard({
         {result.year && <span>{result.year}</span>}
         {format && <Badge tone="muted">{format}</Badge>}
       </div>
-      <ResultCardActions onAdd={onAdd} onPreview={onPreview} adding={adding} added={added} />
+    </>
+  );
+
+  const detailPath = isGrouped
+    ? `/app/masters/${result.discogsId}`
+    : `/app/releases/${result.discogsId}`;
+
+  return (
+    <Card padding="sm" className="flex flex-col gap-2">
+      <Link to={detailPath} state={{ from: searchPath }} className="contents">
+        {visual}
+      </Link>
+      {!isGrouped && <ResultCardActions onAdd={onAdd} adding={adding} added={added} />}
     </Card>
   );
 }

@@ -9,6 +9,8 @@ import { LandingPage } from './pages/LandingPage';
 import { LibraryListPage } from './pages/LibraryListPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RecordDetailPage } from './pages/RecordDetailPage';
+import { MasterReleaseDetailPage } from './pages/MasterReleaseDetailPage';
+import { ReleaseDetailPage } from './pages/ReleaseDetailPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { WishlistPage } from './pages/WishlistPage';
 
@@ -64,6 +66,22 @@ function App() {
         element={
           <AuthenticatedLayout>
             <RecordDetailPage />
+          </AuthenticatedLayout>
+        }
+      />
+      <Route
+        path="/app/releases/:discogsId"
+        element={
+          <AuthenticatedLayout>
+            <ReleaseDetailPage />
+          </AuthenticatedLayout>
+        }
+      />
+      <Route
+        path="/app/masters/:discogsId"
+        element={
+          <AuthenticatedLayout>
+            <MasterReleaseDetailPage />
           </AuthenticatedLayout>
         }
       />

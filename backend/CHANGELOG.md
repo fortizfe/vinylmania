@@ -8,6 +8,16 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.9.0] - 2026-07-08
+
+### Added
+
+- `GET /api/discogs/masters/:discogsId` and `GET /api/discogs/masters/:discogsId/versions` (feature 026), returning a master release's detail and a paginated (10-per-page default) list of its release versions, following the same auth/error/caching conventions as the existing `/releases/:discogsId` endpoint.
+
+### Changed
+
+- `GET /api/discogs/search` no longer restricts a release-scoped search to Discogs `type=release`; the outbound `type` filter is now left unset (Discogs' `type` param only documents a single value, not a comma-list) and the response is filtered to `release`/`master` hits on our side, so releases that belong to a master release group are returned as a single `master`-type result instead of one `release`-type hit per version (feature 026). `CatalogSearchResult.resultType` gains a `'master'` value. A `master` result's `communityRating`, when present, reflects its main/key release's rating (Discogs has no master-level rating endpoint).
+
 ## [0.8.0] - 2026-07-08
 
 ### Added
