@@ -6,6 +6,8 @@ import type {
   CatalogSearchResult,
   CommunityRating,
   CommunityStats,
+  MasterRelease,
+  MasterReleaseVersion,
   Release,
   ReleaseIdentifier,
 } from './types';
@@ -20,7 +22,7 @@ function parseOrThrow<T>(schema: ZodType<T>, raw: unknown): T {
 
 const rawSearchResultSchema = z.object({
   id: z.number(),
-  type: z.enum(['release', 'artist']),
+  type: z.enum(['release', 'artist', 'master']),
   title: z.string(),
   thumb: z.string().optional(),
   cover_image: z.string().optional(),
@@ -51,8 +53,13 @@ export function mapSearchResult(raw: unknown): CatalogSearchResult {
   const thumbnailUrl = parsed.cover_image || parsed.thumb || undefined;
   const year = parsed.year === undefined ? undefined : Number(parsed.year);
   const formats = parsed.format && parsed.format.length > 0 ? parsed.format : undefined;
+  // Master hits share the release-style "Artist - Title" combined title
+  // format, so they get the same split (feature 026, US1 — grouped cards
+  // must show an `artist` field just like standalone release cards).
   const { title, artist } =
-    parsed.type === 'release' ? splitArtistFromTitle(parsed.title) : { title: parsed.title };
+    parsed.type === 'release' || parsed.type === 'master'
+      ? splitArtistFromTitle(parsed.title)
+      : { title: parsed.title };
 
   return {
     discogsId: parsed.id,
@@ -205,6 +212,77 @@ export function mapRelease(raw: unknown): Release {
     })),
     ...(parsed.master_id !== undefined ? { masterId: parsed.master_id } : {}),
     discogsUrl: parsed.uri,
+  };
+}
+
+const rawMasterSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  year: z.number().optional(),
+  artists: z.array(rawReleaseArtistSchema),
+  genres: z.array(z.string()).optional(),
+  styles: z.array(z.string()).optional(),
+  images: z.array(rawImageSchema).optional(),
+  tracklist: z.array(rawTrackSchema).optional(),
+  main_release: z.number(),
+  uri: z.string(),
+});
+
+/** Maps the raw `GET /masters/{id}` response (feature 026, US3). */
+export function mapMasterRelease(raw: unknown): MasterRelease {
+  const parsed = parseOrThrow(rawMasterSchema, raw);
+
+  return {
+    discogsId: parsed.id,
+    title: parsed.title,
+    ...(parsed.year !== undefined ? { year: parsed.year } : {}),
+    artists: parsed.artists.map((artist) => ({
+      discogsArtistId: artist.id,
+      name: artist.name,
+      ...(artist.anv ? { nameVariation: artist.anv } : {}),
+      ...(artist.join ? { joinPhrase: artist.join } : {}),
+    })),
+    genres: parsed.genres ?? [],
+    styles: parsed.styles ?? [],
+    images: (parsed.images ?? []).map((image) => ({
+      url: image.uri,
+      imageType: image.type,
+      ...(image.width !== undefined ? { width: image.width } : {}),
+      ...(image.height !== undefined ? { height: image.height } : {}),
+    })),
+    tracklist: (parsed.tracklist ?? []).map((track) => ({
+      position: track.position,
+      title: track.title,
+      ...(track.duration ? { duration: track.duration } : {}),
+    })),
+    mainReleaseId: parsed.main_release,
+    discogsUrl: parsed.uri,
+  };
+}
+
+const rawMasterVersionSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  format: z.string().optional(),
+  label: z.string().optional(),
+  released: z.string().optional(),
+  country: z.string().optional(),
+  thumb: z.string().optional(),
+});
+
+/** Maps one raw `GET /masters/{id}/versions` entry (feature 026, US3, FR-010). */
+export function mapMasterReleaseVersion(raw: unknown): MasterReleaseVersion {
+  const parsed = parseOrThrow(rawMasterVersionSchema, raw);
+  const year = parsed.released ? Number(parsed.released) : undefined;
+
+  return {
+    discogsId: parsed.id,
+    title: parsed.title,
+    ...(parsed.format ? { format: parsed.format } : {}),
+    ...(year !== undefined && !Number.isNaN(year) ? { year } : {}),
+    ...(parsed.label ? { label: parsed.label } : {}),
+    ...(parsed.country ? { country: parsed.country } : {}),
+    ...(parsed.thumb ? { thumbnailUrl: parsed.thumb } : {}),
   };
 }
 

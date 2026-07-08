@@ -25,7 +25,7 @@ describe('Discogs response caching (US2)', () => {
   it('serves a second identical searchCatalog call from cache without a second Discogs request', async () => {
     discogsScope()
       .get('/database/search')
-      .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+      .query({ q: 'Stockholm', page: '1', per_page: '50' })
       .reply(200, {
         pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
         results: [

@@ -11,7 +11,7 @@ describe('Discogs client contract: searchCatalog', () => {
   it('returns mapped release results for a release-scoped search', async () => {
     discogsScope()
       .get('/database/search')
-      .query({ q: 'Stockholm', type: 'release', page: '1', per_page: '50' })
+      .query({ q: 'Stockholm', page: '1', per_page: '50' })
       .reply(200, {
         pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
         results: [
@@ -95,6 +95,70 @@ describe('Discogs client contract: searchCatalog', () => {
     await expect(searchCatalog('anything', { resultType: 'release' })).rejects.toBeInstanceOf(
       DiscogsUnavailableError,
     );
+  });
+
+  describe('master result rating enrichment (feature 026, US1)', () => {
+    it("attaches the master's main/key release rating to a master-type hit", async () => {
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Hybrid Theory', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+          results: [
+            {
+              id: 12345,
+              type: 'master',
+              title: 'Linkin Park - Hybrid Theory',
+              year: '2000',
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/masters/12345',
+            },
+          ],
+        });
+      discogsScope().get('/masters/12345').reply(200, {
+        id: 12345,
+        title: 'Hybrid Theory',
+        artists: [{ id: 1, name: 'Linkin Park', anv: '', join: '', role: '' }],
+        main_release: 98765,
+        uri: 'https://www.discogs.com/master/12345',
+      });
+      discogsScope()
+        .get('/releases/98765/rating')
+        .reply(200, { release_id: 98765, rating: { average: 4.5, count: 812 } });
+
+      const result = await searchCatalog('Hybrid Theory', { resultType: 'release' });
+
+      expect(result.results[0]).toMatchObject({
+        resultType: 'master',
+        communityRating: { average: 4.5, count: 812 },
+      });
+    });
+
+    it('omits communityRating on a master hit when the master lookup fails, without rejecting the search', async () => {
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Hybrid Theory Failure', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+          results: [
+            {
+              id: 12346,
+              type: 'master',
+              title: 'Linkin Park - Hybrid Theory',
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/masters/12346',
+            },
+          ],
+        });
+      discogsScope().get('/masters/12346').reply(503, { message: 'unavailable' });
+
+      const result = await searchCatalog('Hybrid Theory Failure', { resultType: 'release' });
+
+      expect(result.results[0].communityRating).toBeUndefined();
+      expect(result.results[0].resultType).toBe('master');
+    });
   });
 });
 

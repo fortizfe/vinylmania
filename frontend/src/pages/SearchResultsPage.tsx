@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { ReleasePreviewModal } from '../components/ReleasePreviewModal';
 import { SearchFiltersControl } from '../components/SearchFiltersControl';
 import { SearchResultCard } from '../components/SearchResultCard';
 import { SearchResultCardSkeleton } from '../components/SearchResultCardSkeleton';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { buildSearchPath, type SearchFilters, useSearchQueryParams } from '../hooks/useSearchQueryParams';
-import { useCatalogRelease, useCatalogSearch } from '../queries/discogsQueries';
+import { useCatalogSearch } from '../queries/discogsQueries';
 import { useCreateLibraryEntry } from '../queries/libraryQueries';
 import { ApiError } from '../services/apiClient';
 
@@ -45,10 +44,8 @@ export function SearchResultsPage() {
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
   const [addError, setAddError] = useState<string | null>(null);
   const [gateError, setGateError] = useState<'not-linked' | 'relink' | null>(null);
-  const [previewDiscogsId, setPreviewDiscogsId] = useState<number | null>(null);
 
   const searchQuery = useCatalogSearch(query, 'release', page, PAGE_SIZE, filters);
-  const previewQuery = useCatalogRelease(previewDiscogsId ?? undefined);
   const createEntry = useCreateLibraryEntry();
 
   const searched = query.trim().length > 0;
@@ -57,6 +54,9 @@ export function SearchResultsPage() {
   const totalPages = searchQuery.data?.pagination.pages ?? 0;
   const error = addError ?? (searchQuery.isError ? 'Something went wrong while searching. Please try again.' : null);
   const activeFilters = activeFilterLabels(filters);
+  // Carried as router state into detail pages so their back action returns
+  // here with the exact query/filters/page preserved (spec FR-012).
+  const currentSearchPath = buildSearchPath(query, page, filters);
 
   function goToPage(nextPage: number) {
     navigate(buildSearchPath(query, nextPage, filters), { replace: true });
@@ -149,8 +149,8 @@ export function SearchResultsPage() {
               <li key={result.discogsId}>
                 <SearchResultCard
                   result={result}
+                  searchPath={currentSearchPath}
                   onAdd={() => handleAdd(result.discogsId)}
-                  onPreview={() => setPreviewDiscogsId(result.discogsId)}
                   adding={addingId === result.discogsId}
                   added={addedIds.has(result.discogsId)}
                 />
@@ -173,13 +173,6 @@ export function SearchResultsPage() {
           )}
         </>
       )}
-
-      <ReleasePreviewModal
-        open={previewDiscogsId !== null}
-        onClose={() => setPreviewDiscogsId(null)}
-        release={previewQuery.data ?? null}
-        loading={previewQuery.isLoading}
-      />
     </main>
   );
 }

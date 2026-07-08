@@ -7,8 +7,23 @@ import {
   DiscogsRateLimitError,
   DiscogsUnavailableError,
 } from './discogsErrors';
-import { mapArtist, mapRelease, mapReleaseRating, mapSearchResult } from './discogsMapper';
-import type { Artist, CatalogSearchResponse, CatalogSearchResult, CommunityRating, Release } from './types';
+import {
+  mapArtist,
+  mapMasterRelease,
+  mapMasterReleaseVersion,
+  mapRelease,
+  mapReleaseRating,
+  mapSearchResult,
+} from './discogsMapper';
+import type {
+  Artist,
+  CatalogSearchResponse,
+  CatalogSearchResult,
+  CommunityRating,
+  MasterRelease,
+  MasterReleaseVersionsPage,
+  Release,
+} from './types';
 
 export { DiscogsError } from './discogsErrors';
 
@@ -139,19 +154,68 @@ export async function getReleaseRating(discogsReleaseId: number): Promise<Commun
   });
 }
 
+const MASTER_CACHE_TTL_SECONDS = 6 * 60 * 60;
+const MASTER_VERSIONS_CACHE_TTL_SECONDS = 6 * 60 * 60;
+const DEFAULT_MASTER_VERSIONS_PER_PAGE = 10;
+
+/** Fetches (and caches) one master release's detail (feature 026, US3). */
+export async function getMasterRelease(masterId: number): Promise<MasterRelease> {
+  return withCache(`discogs:master:${masterId}`, MASTER_CACHE_TTL_SECONDS, async () => {
+    const response = await getDiscogsHttpClient().get(`/masters/${masterId}`);
+    return mapMasterRelease(response.data);
+  });
+}
+
 /**
- * Enriches one release-type search result with its community rating.
- * Any failure (not found, rate-limited, unavailable, or a lookup exceeding
- * the 2-second timeout) degrades to omitting `communityRating` rather than
- * failing the search response (spec FR-008/SC-006).
+ * Fetches (and caches) one page of a master's version list, 10 per page by
+ * default (spec FR-009, feature 026 US3).
+ */
+export async function getMasterReleaseVersions(
+  masterId: number,
+  page = 1,
+  perPage = DEFAULT_MASTER_VERSIONS_PER_PAGE,
+): Promise<MasterReleaseVersionsPage> {
+  const cacheKey = `discogs:master-versions:${masterId}:${page}:${perPage}`;
+  return withCache(cacheKey, MASTER_VERSIONS_CACHE_TTL_SECONDS, async () => {
+    const response = await getDiscogsHttpClient().get(`/masters/${masterId}/versions`, {
+      params: { page, per_page: perPage },
+    });
+    const { pagination, versions } = response.data as {
+      pagination: { page: number; pages: number; items: number; per_page: number };
+      versions: unknown[];
+    };
+
+    return {
+      results: versions.map(mapMasterReleaseVersion),
+      pagination: {
+        page: pagination.page,
+        pages: pagination.pages,
+        items: pagination.items,
+        perPage: pagination.per_page,
+      },
+    };
+  });
+}
+
+/**
+ * Enriches one release- or master-type search result with its community
+ * rating (a master's rating is that of its main/key release — Discogs has
+ * no master-level rating endpoint, spec Clarifications). Any failure (not
+ * found, rate-limited, unavailable, or a lookup exceeding the 2-second
+ * timeout) degrades to omitting `communityRating` rather than failing the
+ * search response (spec FR-008/SC-006, feature 026 FR-002).
  */
 async function enrichWithRating(result: CatalogSearchResult): Promise<CatalogSearchResult> {
-  if (result.resultType !== 'release') {
+  if (result.resultType !== 'release' && result.resultType !== 'master') {
     return result;
   }
 
   try {
-    const rating = await getReleaseRating(result.discogsId);
+    const releaseId =
+      result.resultType === 'master'
+        ? (await getMasterRelease(result.discogsId)).mainReleaseId
+        : result.discogsId;
+    const rating = await getReleaseRating(releaseId);
     if (rating.count <= 0) {
       return result;
     }
@@ -160,7 +224,7 @@ async function enrichWithRating(result: CatalogSearchResult): Promise<CatalogSea
     logger.warn({
       route: 'discogs:rating',
       outcome: 'omitted',
-      meta: { discogsReleaseId: result.discogsId },
+      meta: { discogsReleaseId: result.discogsId, resultType: result.resultType },
       message: err instanceof Error ? err.message : 'unknown error',
     });
     return result;
@@ -185,11 +249,22 @@ export async function searchCatalog(
   // filtered and unfiltered searches for the same query/page never collide.
   const cacheKey = `discogs:search:${resultType}:${query}:${page}:${perPage}:${genre ?? ''}:${style ?? ''}:${format ?? ''}`;
 
+  // A "release" search also wants Discogs' "master" hits (feature 026, US1):
+  // Discogs indexes each catalog work once, as a master hit when it has
+  // sibling versions or a release hit otherwise. Discogs' `type` filter only
+  // documents a single value (not a comma-list — confirmed against the live
+  // API, which otherwise returns unfiltered `label`/`artist` hits alongside
+  // release/master ones and fails mapping), so the `type` param is left
+  // unset for a release-scoped search and the two wanted types are kept by
+  // filtering the raw response ourselves instead (research.md Decision 1).
+  const discogsType = resultType === 'release' ? undefined : options.resultType;
+  const KEPT_RAW_TYPES_FOR_RELEASE_SEARCH = new Set(['release', 'master']);
+
   return withCache(cacheKey, SEARCH_CACHE_TTL_SECONDS, async () => {
     const response = await getDiscogsHttpClient().get('/database/search', {
       params: {
         q: query,
-        type: options.resultType,
+        type: discogsType,
         page,
         per_page: perPage,
         ...(genre ? { genre } : {}),
@@ -203,7 +278,20 @@ export async function searchCatalog(
       results: unknown[];
     };
 
-    const mappedResults = results.map(mapSearchResult);
+    // Defensive filter: only map the raw hit types this search actually
+    // wants, so an unexpected/unfiltered type from Discogs (e.g. `label`)
+    // degrades to "not included" rather than crashing the whole response.
+    const wantedResults =
+      resultType === 'release'
+        ? results.filter(
+            (r) =>
+              typeof r === 'object' &&
+              r !== null &&
+              KEPT_RAW_TYPES_FOR_RELEASE_SEARCH.has((r as { type?: unknown }).type as string),
+          )
+        : results;
+
+    const mappedResults = wantedResults.map(mapSearchResult);
     const enrichedResults = await Promise.all(mappedResults.map(enrichWithRating));
 
     return {
