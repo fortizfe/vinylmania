@@ -8,6 +8,15 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.14.0] - 2026-07-08
+
+### Changed
+
+- The search filter bar has been reorganized to make Format the primary filter (feature 023): it now renders first, ahead of Genre and Style, and its trigger label live-updates to show the currently selected value(s) as they're chosen — a single value's name, a comma-separated list when it fits, or a "first (+N)" abbreviated form when it doesn't — all before "Apply filters" is clicked.
+- Genre and Style now render at a more compact, fixed width, giving Format a larger share of the filter bar's horizontal space.
+- The "Apply filters" and "Clear filters" actions are now icon-only, with no visible text label; each keeps a distinct, screen-reader-identifiable accessible name via `aria-label`.
+- Internally, the filter bar's Format, Genre/Style, and Apply/Clear controls were split into independent, reusable components (`FormatFilter`, `TextFilterField`, `FilterActions`) under `src/components/filters/`, so future filters can be added without modifying existing ones.
+
 ## [0.13.0] - 2026-07-07
 
 ### Changed
