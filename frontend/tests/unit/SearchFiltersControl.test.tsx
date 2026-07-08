@@ -15,6 +15,35 @@ describe('SearchFiltersControl', () => {
     expect(screen.queryByLabelText(/^artist$/i)).not.toBeInTheDocument();
   });
 
+  it('renders the Format control before Genre and Style (feature 023, US1, FR-001)', () => {
+    render(<SearchFiltersControl filters={{}} onApply={vi.fn()} onClear={vi.fn()} />);
+
+    const formatTrigger = screen.getByRole('button', { name: /^format$/i });
+    const genreInput = screen.getByLabelText(/^genre$/i);
+    const styleInput = screen.getByLabelText(/^style$/i);
+
+    expect(
+      formatTrigger.compareDocumentPosition(genreInput) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      formatTrigger.compareDocumentPosition(styleInput) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('renders Genre/Style at a compact size and gives Format a larger flex share (feature 023, US2, FR-008/FR-009)', () => {
+    render(<SearchFiltersControl filters={{}} onApply={vi.fn()} onClear={vi.fn()} />);
+
+    const genreWrapper = screen.getByLabelText(/^genre$/i).closest('div')?.parentElement;
+    const styleWrapper = screen.getByLabelText(/^style$/i).closest('div')?.parentElement;
+    const formatWrapper = screen.getByRole('button', { name: /^format$/i }).parentElement;
+
+    expect(genreWrapper?.className).not.toMatch(/flex-1/);
+    expect(styleWrapper?.className).not.toMatch(/flex-1/);
+    expect(formatWrapper?.className).toMatch(/flex-1/);
+  });
+
   it('initializes text fields and the Format trigger label from currently active filters', () => {
     render(
       <SearchFiltersControl
@@ -25,7 +54,7 @@ describe('SearchFiltersControl', () => {
     );
 
     expect(screen.getByLabelText(/^genre$/i)).toHaveValue('Rock');
-    expect(screen.getByRole('button', { name: /^format \(2\)$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^vinyl, cd$/i })).toBeInTheDocument();
   });
 
   it('does not render an Artist field, even if legacy filters carrying an artist value are passed in (FR-001, feature 022, US2)', () => {
@@ -55,12 +84,12 @@ describe('SearchFiltersControl', () => {
     expect(onApply).toHaveBeenCalledWith({ genre: 'Rock' });
   });
 
-  it('calls onClear and resets all text fields and the format selection when "Clear filters" is selected (FR-005)', async () => {
+  it('calls onClear and resets all text fields and the format selection when "Clear filters" is selected (FR-005; feature 023 baseline, FR-014)', async () => {
     const onClear = vi.fn();
     const user = userEvent.setup();
     render(
       <SearchFiltersControl
-        filters={{ genre: 'Rock', format: ['Vinyl'] }}
+        filters={{ genre: 'Rock', style: 'Grunge', format: ['Vinyl'] }}
         onApply={vi.fn()}
         onClear={onClear}
       />,
@@ -70,6 +99,7 @@ describe('SearchFiltersControl', () => {
 
     expect(onClear).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText(/^genre$/i)).toHaveValue('');
+    expect(screen.getByLabelText(/^style$/i)).toHaveValue('');
     expect(screen.getByRole('button', { name: /^format$/i })).toBeInTheDocument();
   });
 
@@ -120,10 +150,14 @@ describe('SearchFiltersControl', () => {
       const onApply = vi.fn();
       const user = userEvent.setup();
       render(
-        <SearchFiltersControl filters={{ format: ['Vinyl'] }} onApply={onApply} onClear={vi.fn()} />,
+        <SearchFiltersControl
+          filters={{ format: ['Vinyl'] }}
+          onApply={onApply}
+          onClear={vi.fn()}
+        />,
       );
 
-      await user.click(screen.getByRole('button', { name: /^format \(1\)$/i }));
+      await user.click(screen.getByRole('button', { name: /^vinyl$/i }));
       const dialog = screen.getByRole('dialog');
       await user.click(within(dialog).getByLabelText('Vinyl'));
 
@@ -133,7 +167,7 @@ describe('SearchFiltersControl', () => {
     });
   });
 
-  it('omits empty text fields from onApply and supports any subset of filters, including a format selection (FR-004)', async () => {
+  it('omits empty text fields from onApply and supports any subset of filters, including a format selection (FR-004; feature 023 baseline, FR-014)', async () => {
     const onApply = vi.fn();
     const user = userEvent.setup();
     render(<SearchFiltersControl filters={{}} onApply={onApply} onClear={vi.fn()} />);

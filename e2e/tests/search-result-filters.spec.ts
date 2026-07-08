@@ -2,16 +2,22 @@ import { expect, type Page, test } from '@playwright/test';
 
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
-/** Opens the Format modal, checks the given option, and closes the modal (feature 022). */
+/**
+ * Opens the Format modal, checks the given option, and closes the modal
+ * (feature 022). Uses the trigger's stable id rather than its accessible
+ * name, since the trigger's label now shows the live selection (e.g.
+ * "Vinyl") rather than a fixed "Format" prefix once at least one value is
+ * selected (feature 023, US1).
+ */
 async function selectFormatOption(page: Page, option: string) {
-  await page.getByRole('button', { name: /^format/i }).click();
+  await page.locator('#filter-format-trigger').click();
   await page.getByRole('dialog').getByLabel(option, { exact: true }).check();
   await page.keyboard.press('Escape');
 }
 
 /** Opens the Format modal, unchecks the given option, and closes the modal (feature 022). */
 async function deselectFormatOption(page: Page, option: string) {
-  await page.getByRole('button', { name: /^format/i }).click();
+  await page.locator('#filter-format-trigger').click();
   await page.getByRole('dialog').getByLabel(option, { exact: true }).uncheck();
   await page.keyboard.press('Escape');
 }
@@ -72,7 +78,7 @@ test.describe('Search result filters (feature 021, US1)', () => {
 });
 
 test.describe('Search result filters (feature 021, US2)', () => {
-  test('combining two filters narrows further, and clearing one keeps the other applied (quickstart Scenario 2)', async ({
+  test('combining two filters narrows further, and clearing one keeps the other applied (quickstart Scenario 2; feature 023 baseline, FR-014)', async ({
     page,
   }) => {
     await page.route('**/api/discogs/search*', async (route) => {
@@ -323,5 +329,82 @@ test.describe('Search result filters (feature 022, US2)', () => {
     await expect(page.getByText('Unrelated Result')).not.toBeVisible();
     await expect(page.getByLabel(/^genre$/i)).toHaveValue('Rock');
     await expect(page.getByLabel(/^artist$/i)).toHaveCount(0);
+  });
+});
+
+test.describe('Search result filters (feature 023, US1)', () => {
+  test('Format leads the filter bar and its label updates live, before Apply is clicked', async ({ page }) => {
+    await page.route('**/api/discogs/search*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [{ discogsId: 901, resultType: 'release', title: 'Nevermind', artist: 'Nirvana', year: 1991 }],
+          pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('nirvana');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+
+    // Format is the first filter control, ahead of Genre and Style (FR-001).
+    const filterControls = page.locator('#filter-format-trigger, #filter-genre, #filter-style');
+    await expect(filterControls.first()).toHaveId('filter-format-trigger');
+
+    // The trigger label updates live as selections are made, without clicking Apply (FR-002, FR-005).
+    await selectFormatOption(page, 'Vinyl');
+    await expect(page.getByRole('button', { name: /^vinyl$/i })).toBeVisible();
+
+    await selectFormatOption(page, 'CD');
+    await expect(page.getByRole('button', { name: /^vinyl, cd$/i })).toBeVisible();
+  });
+});
+
+test.describe('Search result filters (feature 023, US3)', () => {
+  test('Apply and Clear are icon-only but remain operable by their accessible name', async ({ page }) => {
+    await page.route('**/api/discogs/search*', async (route) => {
+      const url = new URL(route.request().url());
+      const genre = url.searchParams.get('genre');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: genre === 'Rock'
+            ? [{ discogsId: 951, resultType: 'release', title: 'Nevermind' }]
+            : [
+                { discogsId: 951, resultType: 'release', title: 'Nevermind' },
+                { discogsId: 952, resultType: 'release', title: 'Other Result' },
+              ],
+          pagination: { page: 1, pages: 1, items: genre === 'Rock' ? 1 : 2, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('nirvana');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+    await expect(page.getByText('Other Result')).toBeVisible();
+
+    const applyButton = page.getByRole('button', { name: /^apply filters$/i });
+    const clearButton = page.getByRole('button', { name: /^clear filters$/i });
+    await expect(applyButton).toHaveText('');
+    await expect(clearButton).toHaveText('');
+
+    await page.getByLabel(/^genre$/i).fill('Rock');
+    await applyButton.click();
+    await expect(page).toHaveURL(/genre=Rock/);
+    await expect(page.getByText('Other Result')).not.toBeVisible();
+
+    await clearButton.click();
+    await expect(page).not.toHaveURL(/genre=/);
+    await expect(page.getByLabel(/^genre$/i)).toHaveValue('');
   });
 });
