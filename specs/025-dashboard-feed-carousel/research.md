@@ -42,6 +42,8 @@ The `metal-storm-news` entry intentionally shares the `News` category label with
 
 **Follow-up for implementation**: The first implementation task touching `feedSources.ts` should confirm each of the five URLs returns a parseable feed (not a Cloudflare challenge) from the deploy environment; if any one of them is unexpectedly blocked, it ships with `enabled: false` and a `feed_unavailable` status, consistent with the existing per-source graceful-degradation behavior (spec FR-010) — this does not block the other four.
 
+**Verified (2026-07-08, T001)**: All 5 URLs return `200 OK` with `content-type: application/rss+xml` and valid RSS 2.0 XML (confirmed via `curl` with the same `User-Agent` `feedClient.ts` sends) — no Cloudflare challenge encountered. All 5 ship `enabled: true`.
+
 ## 5. E2E coverage gap
 
 **Decision**: Add `e2e/tests/dashboard-feed-carousel.spec.ts`, covering: the Dashboard page loads without a "Dashboard" heading, categories for the five new Metal Storm feeds are present, and a category's carousel arrows navigate and disable at the ends.

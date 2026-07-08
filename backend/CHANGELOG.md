@@ -8,6 +8,16 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.8.0] - 2026-07-08
+
+### Added
+
+- Five new Metal Storm feed sources for the Dashboard (feature 025): News, Reviews, Interviews, Articles, and Staff Picks, each fetched from its own direct RSS/XML endpoint (`metalstorm.net/rss/*.xml`). These replace the previous single, disabled `metal-storm` config entry that pointed at Metal Storm's Cloudflare-protected feed-listing page.
+
+### Changed
+
+- Each Dashboard category now returns up to the 10 most recent articles (previously 3-5), sorted by publish date descending. When more than one feed source shares the same category label (e.g. Metal Injection's and Metal Storm's "News"), their articles are combined into a single category entry capped at 10 combined, not 10 per source.
+
 ## [0.7.0] - 2026-07-07
 
 ### Changed

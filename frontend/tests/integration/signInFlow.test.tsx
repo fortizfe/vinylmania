@@ -89,7 +89,7 @@ describe('Sign-in flow (US2)', () => {
     });
 
     await waitFor(() =>
-      expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument(),
+      expect(screen.getByText(/check back soon/i)).toBeInTheDocument(),
     );
   });
 });

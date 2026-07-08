@@ -91,18 +91,18 @@ describe('getDashboard', () => {
     expect(newsCategory?.articles[0].title).toBe('Healthy Article');
   });
 
-  describe('category grouping, sorting, and cap (spec FR-012, US2)', () => {
-    it('sorts each category by most-recent first and caps it to the top 5 articles', async () => {
-      const sevenItems: RawItem[] = Array.from({ length: 7 }).map((_, index) => ({
+  describe('category grouping, sorting, and cap (spec 024 FR-012, superseded by 025 FR-006)', () => {
+    it('sorts each category by most-recent first and caps it to the top 10 articles', async () => {
+      const twelveItems: RawItem[] = Array.from({ length: 12 }).map((_, index) => ({
         title: `Article ${index}`,
         link: `https://source-a.test/${index}`,
-        // index 0 is oldest, index 6 is newest
+        // index 0 is oldest, index 11 is newest
         pubDate: new Date(Date.UTC(2026, 0, index + 1)).toUTCString(),
       }));
 
       mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
         if (feedUrl === mockFeedSources[0].feedUrl) {
-          return feedOutput(sevenItems);
+          return feedOutput(twelveItems);
         }
         if (feedUrl === mockFeedSources[1].feedUrl) {
           return feedOutput([]);
@@ -113,13 +113,62 @@ describe('getDashboard', () => {
       const result = await getDashboard();
 
       const newsCategory = result.categories.find((c) => c.category === 'News');
-      expect(newsCategory?.articles).toHaveLength(5);
+      expect(newsCategory?.articles).toHaveLength(10);
       expect(newsCategory?.articles.map((a) => a.title)).toEqual([
+        'Article 11',
+        'Article 10',
+        'Article 9',
+        'Article 8',
+        'Article 7',
         'Article 6',
         'Article 5',
         'Article 4',
         'Article 3',
         'Article 2',
+      ]);
+    });
+
+    it('merges articles from two sources sharing the same category label, capped at 10 combined rather than 10 per source (feature 025 FR-004, SC-005)', async () => {
+      // Both mockFeedSources[0] and [1] are configured with category "News" —
+      // 7 items each (14 total) must collapse into one "News" entry capped
+      // at 10 combined, sorted by recency across both sources' items.
+      function itemsFor(prefix: string, count: number, startDay: number): RawItem[] {
+        return Array.from({ length: count }).map((_, index) => ({
+          title: `${prefix}-${index}`,
+          link: `https://${prefix}.test/${index}`,
+          pubDate: new Date(Date.UTC(2026, 0, startDay + index)).toUTCString(),
+        }));
+      }
+
+      mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
+        if (feedUrl === mockFeedSources[0].feedUrl) {
+          // Days 1-7
+          return feedOutput(itemsFor('source-a', 7, 1));
+        }
+        if (feedUrl === mockFeedSources[1].feedUrl) {
+          // Days 8-14 (all newer than Source A's items)
+          return feedOutput(itemsFor('source-b', 7, 8));
+        }
+        throw new Error(`unexpected feed url ${feedUrl}`);
+      });
+
+      const result = await getDashboard();
+
+      const newsCategories = result.categories.filter((c) => c.category === 'News');
+      expect(newsCategories).toHaveLength(1);
+      expect(newsCategories[0].articles).toHaveLength(10);
+      // The 10 most recent combined: all 7 from source-b (days 8-14) plus the 3 newest from source-a (days 7,6,5).
+      expect(newsCategories[0].articles.map((a) => a.title)).toEqual([
+        'source-b-6',
+        'source-b-5',
+        'source-b-4',
+        'source-b-3',
+        'source-b-2',
+        'source-b-1',
+        'source-b-0',
+        'source-a-6',
+        'source-a-5',
+        'source-a-4',
       ]);
     });
 

@@ -6,7 +6,7 @@ import { FEED_SOURCES } from './feedSources';
 import type { Article, CategoryGroup, DashboardResponse, FeedSourceConfig, SourceStatus } from './types';
 
 const CACHE_TTL_SECONDS = 20 * 60;
-const ARTICLES_PER_CATEGORY = 5;
+const ARTICLES_PER_CATEGORY = 10;
 
 async function fetchSourceArticles(source: FeedSourceConfig): Promise<Article[]> {
   return withCache(`feeds:${source.id}`, CACHE_TTL_SECONDS, async () => {

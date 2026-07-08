@@ -90,7 +90,7 @@ describe('Sign-out flow (US3)', () => {
     });
 
     await waitFor(() =>
-      expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument(),
+      expect(screen.getByText(/check back soon/i)).toBeInTheDocument(),
     );
 
     await act(async () => {
