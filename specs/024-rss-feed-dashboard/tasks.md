@@ -30,8 +30,8 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 **Purpose**: Add the one new dependency and extend shared logging vocabulary — no feature code yet.
 
-- [ ] T001 Add `rss-parser` to `backend/package.json` dependencies and run `npm install` in `backend/` (research.md §1)
-- [ ] T002 [P] Extend the `LogOutcome` union in `backend/src/config/logger.ts` with `'feed_fetch_failed'` and `'feed_unavailable'` (research.md §6)
+- [X] T001 Add `rss-parser` to `backend/package.json` dependencies and run `npm install` in `backend/` (research.md §1)
+- [X] T002 [P] Extend the `LogOutcome` union in `backend/src/config/logger.ts` with `'feed_fetch_failed'` and `'feed_unavailable'` (research.md §6)
 
 **Checkpoint**: Dependency installed, logging vocabulary ready.
 
@@ -43,9 +43,9 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 Create shared types `FeedSource`, `Article`, `SourceStatus`, `DashboardResponse` in `backend/src/feeds/types.ts` per data-model.md
-- [ ] T004 [P] Create static feed source config in `backend/src/feeds/feedSources.ts`: Metal Injection entry (`enabled: true`, category `"News"`) and Metal Storm entries (attempt to enumerate its sub-feeds per research.md §3's follow-up; ship with `enabled: false` stubs if `https://metalstorm.net/home/rss.php` is still Cloudflare-blocked at implementation time) — parallel with T005 once T003 is complete
-- [ ] T005 [P] Create `backend/src/routes/feeds.ts` exporting an Express `Router` mounted at `/api/feeds` in `backend/src/app.ts`, with `requireAuth` applied to its routes (matching `library.ts`'s pattern); leave the `GET /dashboard` handler body for Phase 3 (US1) to implement — parallel with T004 once T003 is complete
+- [X] T003 Create shared types `FeedSource`, `Article`, `SourceStatus`, `DashboardResponse` in `backend/src/feeds/types.ts` per data-model.md
+- [X] T004 [P] Create static feed source config in `backend/src/feeds/feedSources.ts`: Metal Injection entry (`enabled: true`, category `"News"`) and Metal Storm entries (attempt to enumerate its sub-feeds per research.md §3's follow-up; ship with `enabled: false` stubs if `https://metalstorm.net/home/rss.php` is still Cloudflare-blocked at implementation time) — parallel with T005 once T003 is complete
+- [X] T005 [P] Create `backend/src/routes/feeds.ts` exporting an Express `Router` mounted at `/api/feeds` in `backend/src/app.ts`, with `requireAuth` applied to its routes (matching `library.ts`'s pattern); leave the `GET /dashboard` handler body for Phase 3 (US1) to implement — parallel with T004 once T003 is complete
 
 **Checkpoint**: Foundation ready — user story implementation can now begin.
 
@@ -59,24 +59,24 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 ### Tests for User Story 1 ⚠️ (write first, confirm they fail)
 
-- [ ] T006 [P] [US1] Unit test in `backend/tests/unit/feedMapper.test.ts`: maps a raw RSS item to an `Article` (plain-text title/excerpt, ISO `publishedAt`, `link`, extracted `imageUrl` from `enclosure`/`media:content`/first `<img>`), drops items missing `title` or `link`, and — using a fixture item containing a `<script>` tag, an `onerror=` attribute, and a `javascript:` image URI — asserts the mapped `Article` contains no tags/executable markup in `title`/`excerpt` and never accepts an unsafe image URL scheme (FR-008)
-- [ ] T007 [P] [US1] Unit test in `backend/tests/unit/feedClient.test.ts`: fetches and parses a feed URL via `nock`-mocked HTTP within an 8s timeout, and rejects/times out cleanly on a slow or erroring response
-- [ ] T008 [P] [US1] Unit test in `backend/tests/unit/feedAggregator.test.ts`: fans out across multiple configured sources with `Promise.allSettled`, isolates one failing source into `sourceStatuses` (`status: 'unavailable'`) without discarding the others' articles
-- [ ] T009 [P] [US1] Contract test in `backend/tests/contract/feedsDashboard.contract.test.ts`: `GET /api/feeds/dashboard` returns 200 with the shape from contracts/feeds-dashboard.md (`categories[].articles[]` with `title`/`sourceName`/`publishedAt`/`link`, plus `sourceStatuses[]`), and 401 without a bearer token
-- [ ] T010 [P] [US1] Integration test in `backend/tests/integration/feedsDashboard.integration.test.ts`: (a) `nock`-mock Metal Injection as healthy and Metal Storm as returning Cloudflare's 403 challenge; assert the response is still 200, contains Metal Injection's articles, and marks Metal Storm `'unavailable'`; (b) `nock`-mock every configured source as failing and assert the response is still 200 with `categories: []` and every `sourceStatuses` entry `'unavailable'` (FR-011)
-- [ ] T011 [P] [US1] Integration test in `frontend/tests/integration/DashboardPage.test.tsx`: renders a loading state, then a populated article list (title/source/date, clickable link opening in a new tab), then a non-blocking banner when a source is marked unavailable in the mocked response, and a graceful empty state when the mocked response has zero categories and every source unavailable (FR-011)
+- [X] T006 [P] [US1] Unit test in `backend/tests/unit/feedMapper.test.ts`: maps a raw RSS item to an `Article` (plain-text title/excerpt, ISO `publishedAt`, `link`, extracted `imageUrl` from `enclosure`/`media:content`/first `<img>`), drops items missing `title` or `link`, and — using a fixture item containing a `<script>` tag, an `onerror=` attribute, and a `javascript:` image URI — asserts the mapped `Article` contains no tags/executable markup in `title`/`excerpt` and never accepts an unsafe image URL scheme (FR-008)
+- [X] T007 [P] [US1] Unit test in `backend/tests/unit/feedClient.test.ts`: fetches and parses a feed URL via `nock`-mocked HTTP within an 8s timeout, and rejects/times out cleanly on a slow or erroring response
+- [X] T008 [P] [US1] Unit test in `backend/tests/unit/feedAggregator.test.ts`: fans out across multiple configured sources with `Promise.allSettled`, isolates one failing source into `sourceStatuses` (`status: 'unavailable'`) without discarding the others' articles
+- [X] T009 [P] [US1] Contract test in `backend/tests/contract/feedsDashboard.contract.test.ts`: `GET /api/feeds/dashboard` returns 200 with the shape from contracts/feeds-dashboard.md (`categories[].articles[]` with `title`/`sourceName`/`publishedAt`/`link`, plus `sourceStatuses[]`), and 401 without a bearer token
+- [X] T010 [P] [US1] Integration test in `backend/tests/integration/feedsDashboard.integration.test.ts`: (a) `nock`-mock Metal Injection as healthy and Metal Storm as returning Cloudflare's 403 challenge; assert the response is still 200, contains Metal Injection's articles, and marks Metal Storm `'unavailable'`; (b) `nock`-mock every configured source as failing and assert the response is still 200 with `categories: []` and every `sourceStatuses` entry `'unavailable'` (FR-011)
+- [X] T011 [P] [US1] Integration test in `frontend/tests/integration/DashboardPage.test.tsx`: renders a loading state, then a populated article list (title/source/date, clickable link opening in a new tab), then a non-blocking banner when a source is marked unavailable in the mocked response, and a graceful empty state when the mocked response has zero categories and every source unavailable (FR-011)
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Implement `backend/src/feeds/feedClient.ts`: axios GET with an 8s timeout, parses the response body with `rss-parser` (depends on T003)
-- [ ] T013 [US1] Implement `backend/src/feeds/feedMapper.ts`: raw feed item → `Article`, stripping HTML to a plain-text excerpt (truncated) and extracting one `imageUrl`, dropping items without `title`/`link` (depends on T003)
-- [ ] T014 [US1] Implement `backend/src/feeds/feedAggregator.ts`: for each enabled `FeedSource`, cache-aside (`withCache`, 20 min TTL) the fetch+parse+map pipeline; fan out with `Promise.allSettled`; for US1 scope, return one flat, date-sorted `Article[]` plus `sourceStatuses[]` (category grouping/cap arrives in US2) (depends on T004, T012, T013)
-- [ ] T015 [US1] Implement the `GET /dashboard` handler in `backend/src/routes/feeds.ts` calling `feedAggregator`, logging `success`/`feed_unavailable`/`feed_fetch_failed` outcomes per source (depends on T005, T014)
-- [ ] T016 [P] [US1] Implement `frontend/src/services/feedsApi.ts`: `authorizedFetch`-based call to `GET /api/feeds/dashboard`
-- [ ] T017 [P] [US1] Implement `frontend/src/queries/feedsQueries.ts`: `useDashboardFeeds()` TanStack Query hook (depends on T016)
-- [ ] T018 [US1] Implement `frontend/src/components/FeedArticleCard.tsx` (title, source name, publish date, a small category label/badge per FR-002, and a link opening the original article in a new tab — `target="_blank" rel="noopener noreferrer"`) and `frontend/src/components/FeedArticleCardSkeleton.tsx` (loading placeholder matching the card's layout, per plan.md's Project Structure and this repo's existing `*Skeleton.tsx` convention)
-- [ ] T019 [US1] Implement `frontend/src/components/FeedSourceStatusBanner.tsx`: non-blocking notice listing any `sourceStatuses` entries marked `'unavailable'`
-- [ ] T020 [US1] Replace the placeholder in `frontend/src/pages/DashboardPage.tsx` with a loading state (rendering several `FeedArticleCardSkeleton` instances), the flattened article list using `FeedArticleCard`, an empty-state message when there are zero articles across all sources (FR-011), and `FeedSourceStatusBanner` (depends on T017, T018, T019)
+- [X] T012 [US1] Implement `backend/src/feeds/feedClient.ts`: axios GET with an 8s timeout, parses the response body with `rss-parser` (depends on T003)
+- [X] T013 [US1] Implement `backend/src/feeds/feedMapper.ts`: raw feed item → `Article`, stripping HTML to a plain-text excerpt (truncated) and extracting one `imageUrl`, dropping items without `title`/`link` (depends on T003)
+- [X] T014 [US1] Implement `backend/src/feeds/feedAggregator.ts`: for each enabled `FeedSource`, cache-aside (`withCache`, 20 min TTL) the fetch+parse+map pipeline; fan out with `Promise.allSettled`; for US1 scope, return one flat, date-sorted `Article[]` plus `sourceStatuses[]` (category grouping/cap arrives in US2) (depends on T004, T012, T013)
+- [X] T015 [US1] Implement the `GET /dashboard` handler in `backend/src/routes/feeds.ts` calling `feedAggregator`, logging `success`/`feed_unavailable`/`feed_fetch_failed` outcomes per source (depends on T005, T014)
+- [X] T016 [P] [US1] Implement `frontend/src/services/feedsApi.ts`: `authorizedFetch`-based call to `GET /api/feeds/dashboard`
+- [X] T017 [P] [US1] Implement `frontend/src/queries/feedsQueries.ts`: `useDashboardFeeds()` TanStack Query hook (depends on T016)
+- [X] T018 [US1] Implement `frontend/src/components/FeedArticleCard.tsx` (title, source name, publish date, a small category label/badge per FR-002, and a link opening the original article in a new tab — `target="_blank" rel="noopener noreferrer"`) and `frontend/src/components/FeedArticleCardSkeleton.tsx` (loading placeholder matching the card's layout, per plan.md's Project Structure and this repo's existing `*Skeleton.tsx` convention)
+- [X] T019 [US1] Implement `frontend/src/components/FeedSourceStatusBanner.tsx`: non-blocking notice listing any `sourceStatuses` entries marked `'unavailable'`
+- [X] T020 [US1] Replace the placeholder in `frontend/src/pages/DashboardPage.tsx` with a loading state (rendering several `FeedArticleCardSkeleton` instances), the flattened article list using `FeedArticleCard`, an empty-state message when there are zero articles across all sources (FR-011), and `FeedSourceStatusBanner` (depends on T017, T018, T019)
 
 **Checkpoint**: User Story 1 is fully functional and independently testable — an aggregated, click-through news list with graceful degradation.
 
@@ -90,15 +90,15 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T021 [P] [US2] Extend `backend/tests/unit/feedAggregator.test.ts`: groups articles by `category`, sorts each group by `publishedAt` desc, caps each group to the top 3-5, and omits any category with zero articles from the response
-- [ ] T022 [P] [US2] Component test in `frontend/tests/components/FeedArticleCard.test.tsx`: renders the provided `imageUrl` when present, and a consistent placeholder graphic when `imageUrl` is absent
+- [X] T021 [P] [US2] Extend `backend/tests/unit/feedAggregator.test.ts`: groups articles by `category`, sorts each group by `publishedAt` desc, caps each group to the top 3-5, and omits any category with zero articles from the response
+- [X] T022 [P] [US2] Component test in `frontend/tests/components/FeedArticleCard.test.tsx`: renders the provided `imageUrl` when present, and a consistent placeholder graphic when `imageUrl` is absent
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Extend `backend/src/feeds/feedAggregator.ts` to group the flat article list into `categories: { category, articles }[]`, capped and sorted per FR-012, omitting empty categories (depends on T014)
-- [ ] T024 [P] [US2] Extend `frontend/src/components/FeedArticleCard.tsx` to render a placeholder graphic when `imageUrl` is undefined
-- [ ] T025 [US2] Implement `frontend/src/components/FeedCategorySection.tsx`: a labeled section wrapping one category's `FeedArticleCard` list (depends on T018)
-- [ ] T026 [US2] Update `frontend/src/pages/DashboardPage.tsx` to render one `FeedCategorySection` per category from the response instead of a flat list (depends on T023, T025)
+- [X] T023 [US2] Extend `backend/src/feeds/feedAggregator.ts` to group the flat article list into `categories: { category, articles }[]`, capped and sorted per FR-012, omitting empty categories (depends on T014)
+- [X] T024 [P] [US2] Extend `frontend/src/components/FeedArticleCard.tsx` to render a placeholder graphic when `imageUrl` is undefined
+- [X] T025 [US2] Implement `frontend/src/components/FeedCategorySection.tsx`: a labeled section wrapping one category's `FeedArticleCard` list (depends on T018)
+- [X] T026 [US2] Update `frontend/src/pages/DashboardPage.tsx` to render one `FeedCategorySection` per category from the response instead of a flat list (depends on T023, T025)
 
 **Checkpoint**: User Stories 1 and 2 both work independently — categorized, image-rich magazine-style layout.
 
@@ -112,12 +112,12 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T027 [P] [US3] Component test in `frontend/tests/components/FeedCategoryFilterBar.test.tsx`: selecting a category emits/applies that filter; clearing it restores the "all categories" state
+- [X] T027 [P] [US3] Component test in `frontend/tests/components/FeedCategoryFilterBar.test.tsx`: selecting a category emits/applies that filter; clearing it restores the "all categories" state
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] Implement `frontend/src/components/FeedCategoryFilterBar.tsx`: client-side category selector (tabs or select) built from the categories present in the loaded response
-- [ ] T029 [US3] Wire filter state into `frontend/src/pages/DashboardPage.tsx` so only the selected category's `FeedCategorySection` renders (or all, when cleared) (depends on T026, T028)
+- [X] T028 [US3] Implement `frontend/src/components/FeedCategoryFilterBar.tsx`: client-side category selector (tabs or select) built from the categories present in the loaded response
+- [X] T029 [US3] Wire filter state into `frontend/src/pages/DashboardPage.tsx` so only the selected category's `FeedCategorySection` renders (or all, when cleared) (depends on T026, T028)
 
 **Checkpoint**: All three user stories are independently functional.
 
@@ -125,9 +125,9 @@ Web app split (existing repo structure): `backend/src/`, `backend/tests/`, `fron
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T030 [P] Run the full `quickstart.md` validation pass (backend curl checks + frontend manual walkthrough) and record any deviations
-- [ ] T031 [P] Review structured log output for the new `feed_fetch_failed`/`feed_unavailable` outcomes against Principle V's "actionable without a debugger" bar
-- [ ] T032 Run `backend` and `frontend` full test suites (`npm test` in each) and lint (`npm run lint` in each) to confirm everything is green before merge
+- [X] T030 [P] Run the full `quickstart.md` validation pass (backend curl checks + frontend manual walkthrough) and record any deviations
+- [X] T031 [P] Review structured log output for the new `feed_fetch_failed`/`feed_unavailable` outcomes against Principle V's "actionable without a debugger" bar
+- [X] T032 Run `backend` and `frontend` full test suites (`npm test` in each) and lint (`npm run lint` in each) to confirm everything is green before merge
 
 ---
 

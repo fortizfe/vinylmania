@@ -5,6 +5,7 @@ import { logger } from './config/logger';
 import { authRouter } from './routes/auth';
 import { discogsRouter } from './routes/discogs';
 import { discogsOauthRouter } from './routes/discogsOauth';
+import { feedsRouter } from './routes/feeds';
 import { libraryRouter } from './routes/library';
 
 export function createApp(): express.Express {
@@ -26,6 +27,7 @@ export function createApp(): express.Express {
   app.use('/api/discogs/oauth', discogsOauthRouter);
   app.use('/api/discogs', discogsRouter);
   app.use('/api/library', libraryRouter);
+  app.use('/api/feeds', feedsRouter);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
