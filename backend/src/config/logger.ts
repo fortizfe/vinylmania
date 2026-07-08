@@ -27,7 +27,10 @@ export type LogOutcome =
   | 'entry_removed'
   | 'migration_failed'
   // Search-result rating enrichment degradation (feature 017)
-  | 'omitted';
+  | 'omitted'
+  // RSS feed dashboard fetch lifecycle (feature 024)
+  | 'feed_fetch_failed'
+  | 'feed_unavailable';
 
 export interface LogEvent {
   route: string;
