@@ -138,6 +138,14 @@ hooks:
     prompt: Commit implementation changes?
     description: Auto-commit after implementation
     condition: null
+  - extension: git
+    command: speckit.git.pr
+    enabled: true
+    optional: true
+    priority: 20
+    prompt: Push this branch and create a pull request?
+    description: Create a GitHub pull request after implementation
+    condition: null
   after_checklist:
   - extension: git
     command: speckit.git.commit

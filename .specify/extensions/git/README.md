@@ -11,6 +11,7 @@ This extension provides Git operations as an optional, self-contained module. It
 - **Branch validation** to ensure branches follow naming conventions
 - **Git remote detection** for GitHub integration (e.g., issue creation)
 - **Auto-commit** after core commands (configurable per-command with custom messages)
+- **Pull request creation** after implementation via the GitHub CLI (`gh`)
 
 ## Commands
 
@@ -21,6 +22,7 @@ This extension provides Git operations as an optional, self-contained module. It
 | `speckit.git.validate` | Validate current branch follows feature branch naming conventions |
 | `speckit.git.remote` | Detect Git remote URL for GitHub integration |
 | `speckit.git.commit` | Auto-commit changes (configurable per-command enable/disable and messages) |
+| `speckit.git.pr` | Push the current branch and create a GitHub pull request via `gh` |
 
 ## Hooks
 
@@ -41,6 +43,7 @@ This extension provides Git operations as an optional, self-contained module. It
 | `after_plan` | `speckit.git.commit` | Yes | Auto-commit after planning |
 | `after_tasks` | `speckit.git.commit` | Yes | Auto-commit after task generation |
 | `after_implement` | `speckit.git.commit` | Yes | Auto-commit after implementation |
+| `after_implement` | `speckit.git.pr` | Yes | Push branch and create a pull request after implementation |
 | `after_checklist` | `speckit.git.commit` | Yes | Auto-commit after checklist |
 | `after_analyze` | `speckit.git.commit` | Yes | Auto-commit after analysis |
 | `after_taskstoissues` | `speckit.git.commit` | Yes | Auto-commit after issue sync |
@@ -63,7 +66,15 @@ auto_commit:
   after_specify:
     enabled: true
     message: "[Spec Kit] Add specification"
+
+# Pull request creation (speckit.git.pr), e.g. as the optional after_implement hook
+auto_pr:
+  draft: false
+  base: ""      # blank = repository default branch
+  title: ""     # blank = derived from spec.md heading / branch name
 ```
+
+Creating a pull request requires the [GitHub CLI](https://cli.github.com/) (`gh`) installed and authenticated (`gh auth login`). If `gh` is missing, unauthenticated, or there is no `origin` remote, `speckit.git.pr` skips with a warning instead of failing.
 
 ## Installation
 
@@ -96,5 +107,9 @@ The extension bundles cross-platform scripts:
 
 - `scripts/bash/create-new-feature-branch.sh` — Bash implementation (branch creation only)
 - `scripts/bash/git-common.sh` — Shared Git utilities (Bash)
+- `scripts/bash/auto-commit.sh` — Bash implementation of `speckit.git.commit`
+- `scripts/bash/create-pr.sh` — Bash implementation of `speckit.git.pr`
 - `scripts/powershell/create-new-feature-branch.ps1` — PowerShell implementation (branch creation only)
 - `scripts/powershell/git-common.ps1` — Shared Git utilities (PowerShell)
+- `scripts/powershell/auto-commit.ps1` — PowerShell implementation of `speckit.git.commit`
+- `scripts/powershell/create-pr.ps1` — PowerShell implementation of `speckit.git.pr`

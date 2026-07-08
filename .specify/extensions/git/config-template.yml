@@ -60,3 +60,10 @@ auto_commit:
   after_taskstoissues:
     enabled: false
     message: "[Spec Kit] Sync tasks to issues"
+
+# Pull request creation via `gh` (invoked by speckit.git.pr, e.g. as the
+# optional after_implement hook).
+auto_pr:
+  draft: false      # Open the PR as a draft
+  base: ""          # Target branch; blank = repository default branch
+  title: ""         # PR title; blank = derived from spec.md heading / branch name
