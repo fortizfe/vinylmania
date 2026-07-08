@@ -30,7 +30,10 @@ describe('ReleaseImageGallery', () => {
   });
 
   it('falls back to the first image when none is marked primary', () => {
-    const noPrimary = images.map((image) => ({ ...image, imageType: 'secondary' as const }));
+    const noPrimary = images.map((image) => ({
+      ...image,
+      imageType: 'secondary' as const,
+    }));
     render(<ReleaseImageGallery images={noPrimary} alt="Stockholm" />);
 
     expect(screen.getByRole('img', { name: 'Stockholm' })).toHaveAttribute(

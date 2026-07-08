@@ -9,7 +9,11 @@ export const feedsRouter = Router();
 feedsRouter.get('/dashboard', requireAuth, async (req: Request, res: Response) => {
   try {
     const dashboard = await getDashboard();
-    logger.info({ route: '/api/feeds/dashboard', outcome: 'success', uid: req.auth?.uid });
+    logger.info({
+      route: '/api/feeds/dashboard',
+      outcome: 'success',
+      uid: req.auth?.uid,
+    });
     res.status(200).json(dashboard);
   } catch (err) {
     logger.error({

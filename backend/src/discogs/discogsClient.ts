@@ -145,13 +145,22 @@ const RATING_CACHE_TTL_SECONDS = 30 * 60;
 const RATING_LOOKUP_TIMEOUT_MS = 2_000;
 
 /** Fetches (and caches) one release's community rating; rejects if the lookup fails or times out. */
-export async function getReleaseRating(discogsReleaseId: number): Promise<CommunityRating> {
-  return withCache(`discogs:rating:${discogsReleaseId}`, RATING_CACHE_TTL_SECONDS, async () => {
-    const response = await getDiscogsHttpClient().get(`/releases/${discogsReleaseId}/rating`, {
-      timeout: RATING_LOOKUP_TIMEOUT_MS,
-    });
-    return mapReleaseRating(response.data);
-  });
+export async function getReleaseRating(
+  discogsReleaseId: number,
+): Promise<CommunityRating> {
+  return withCache(
+    `discogs:rating:${discogsReleaseId}`,
+    RATING_CACHE_TTL_SECONDS,
+    async () => {
+      const response = await getDiscogsHttpClient().get(
+        `/releases/${discogsReleaseId}/rating`,
+        {
+          timeout: RATING_LOOKUP_TIMEOUT_MS,
+        },
+      );
+      return mapReleaseRating(response.data);
+    },
+  );
 }
 
 const MASTER_CACHE_TTL_SECONDS = 6 * 60 * 60;
@@ -205,7 +214,9 @@ export async function getMasterReleaseVersions(
  * timeout) degrades to omitting `communityRating` rather than failing the
  * search response (spec FR-008/SC-006, feature 026 FR-002).
  */
-async function enrichWithRating(result: CatalogSearchResult): Promise<CatalogSearchResult> {
+async function enrichWithRating(
+  result: CatalogSearchResult,
+): Promise<CatalogSearchResult> {
   if (result.resultType !== 'release' && result.resultType !== 'master') {
     return result;
   }
@@ -287,7 +298,9 @@ export async function searchCatalog(
             (r) =>
               typeof r === 'object' &&
               r !== null &&
-              KEPT_RAW_TYPES_FOR_RELEASE_SEARCH.has((r as { type?: unknown }).type as string),
+              KEPT_RAW_TYPES_FOR_RELEASE_SEARCH.has(
+                (r as { type?: unknown }).type as string,
+              ),
           )
         : results;
 
@@ -307,15 +320,23 @@ export async function searchCatalog(
 }
 
 export async function getRelease(discogsReleaseId: number): Promise<Release> {
-  return withCache(`discogs:release:${discogsReleaseId}`, RELEASE_CACHE_TTL_SECONDS, async () => {
-    const response = await getDiscogsHttpClient().get(`/releases/${discogsReleaseId}`);
-    return mapRelease(response.data);
-  });
+  return withCache(
+    `discogs:release:${discogsReleaseId}`,
+    RELEASE_CACHE_TTL_SECONDS,
+    async () => {
+      const response = await getDiscogsHttpClient().get(`/releases/${discogsReleaseId}`);
+      return mapRelease(response.data);
+    },
+  );
 }
 
 export async function getArtist(discogsArtistId: number): Promise<Artist> {
-  return withCache(`discogs:artist:${discogsArtistId}`, ARTIST_CACHE_TTL_SECONDS, async () => {
-    const response = await getDiscogsHttpClient().get(`/artists/${discogsArtistId}`);
-    return mapArtist(response.data);
-  });
+  return withCache(
+    `discogs:artist:${discogsArtistId}`,
+    ARTIST_CACHE_TTL_SECONDS,
+    async () => {
+      const response = await getDiscogsHttpClient().get(`/artists/${discogsArtistId}`);
+      return mapArtist(response.data);
+    },
+  );
 }

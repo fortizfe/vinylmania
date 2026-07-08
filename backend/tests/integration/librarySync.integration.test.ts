@@ -51,15 +51,18 @@ afterEach(async () => {
 
 async function linkDiscogs(uid: string): Promise<string> {
   const username = `collector-${uid}`;
-  await getFirestoreDb().collection('discogsConnections').doc(uid).set({
-    uid,
-    discogsUsername: username,
-    discogsUserId: 42,
-    accessToken: 'access-token',
-    accessTokenSecret: 'access-secret',
-    linkedAt: new Date('2026-07-01T00:00:00.000Z'),
-    initialLibrarySyncAt: new Date('2026-07-02T00:00:00.000Z'),
-  });
+  await getFirestoreDb()
+    .collection('discogsConnections')
+    .doc(uid)
+    .set({
+      uid,
+      discogsUsername: username,
+      discogsUserId: 42,
+      accessToken: 'access-token',
+      accessTokenSecret: 'access-secret',
+      linkedAt: new Date('2026-07-01T00:00:00.000Z'),
+      initialLibrarySyncAt: new Date('2026-07-02T00:00:00.000Z'),
+    });
   return username;
 }
 
@@ -72,7 +75,9 @@ describe('library sync-on-read throttle (FR-014)', () => {
     stubCollectionPage(username, [rawCollectionInstance(1, { instanceId: 11 })]);
     discogsScope().get('/releases/1').reply(200, rawRelease(1));
 
-    const first = await request(app).get('/api/library').set('Authorization', `Bearer ${idToken}`);
+    const first = await request(app)
+      .get('/api/library')
+      .set('Authorization', `Bearer ${idToken}`);
     expect(first.status).toBe(200);
     expect(first.body.totalItems).toBe(1);
 
@@ -80,7 +85,9 @@ describe('library sync-on-read throttle (FR-014)', () => {
     expect(marker).not.toBeNull();
 
     // No collection stubs remain: a second sync attempt would fail loudly.
-    const second = await request(app).get('/api/library').set('Authorization', `Bearer ${idToken}`);
+    const second = await request(app)
+      .get('/api/library')
+      .set('Authorization', `Bearer ${idToken}`);
     expect(second.status).toBe(200);
     expect(second.body.totalItems).toBe(1);
   });
@@ -93,7 +100,9 @@ describe('library sync-on-read throttle (FR-014)', () => {
     stubCollectionPage(username, [rawCollectionInstance(1, { instanceId: 11 })]);
     discogsScope().get('/releases/1').reply(200, rawRelease(1));
 
-    const first = await request(app).get('/api/library').set('Authorization', `Bearer ${idToken}`);
+    const first = await request(app)
+      .get('/api/library')
+      .set('Authorization', `Bearer ${idToken}`);
     expect(first.body.totalItems).toBe(1);
 
     // A record was added directly on discogs.com; the marker is still fresh.
@@ -119,7 +128,11 @@ describe('library sync-on-read throttle (FR-014)', () => {
   it('does not set the marker on a failed sync, so the next load retries', async () => {
     const { idToken, uid } = await getTestIdToken('retry-user');
     const username = await linkDiscogs(uid);
-    await createEntry(uid, { discogsReleaseId: 1, discogsInstanceId: 11, discogsFolderId: 1 });
+    await createEntry(uid, {
+      discogsReleaseId: 1,
+      discogsInstanceId: 11,
+      discogsFolderId: 1,
+    });
 
     stubCollectionFields(username);
     discogsScope()
@@ -127,7 +140,9 @@ describe('library sync-on-read throttle (FR-014)', () => {
       .query(true)
       .reply(500, { message: 'boom' });
 
-    const failed = await request(app).get('/api/library').set('Authorization', `Bearer ${idToken}`);
+    const failed = await request(app)
+      .get('/api/library')
+      .set('Authorization', `Bearer ${idToken}`);
     expect(failed.status).toBe(503);
     expect(await getRedisClient()!.get(`discogs:libsync:${uid}`)).toBeNull();
 

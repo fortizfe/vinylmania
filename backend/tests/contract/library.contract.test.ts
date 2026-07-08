@@ -58,7 +58,9 @@ async function linkDiscogs(
       accessToken: 'access-token',
       accessTokenSecret: 'access-secret',
       linkedAt: new Date('2026-07-01T00:00:00.000Z'),
-      ...(options.initialLibrarySyncAt ? { initialLibrarySyncAt: options.initialLibrarySyncAt } : {}),
+      ...(options.initialLibrarySyncAt
+        ? { initialLibrarySyncAt: options.initialLibrarySyncAt }
+        : {}),
     });
   return username;
 }
@@ -68,7 +70,11 @@ async function seedLegacyEntry(
   uid: string,
   data: { discogsReleaseId: number; condition?: string; notes?: string },
 ): Promise<string> {
-  const doc = getFirestoreDb().collection('users').doc(uid).collection('libraryEntries').doc();
+  const doc = getFirestoreDb()
+    .collection('users')
+    .doc(uid)
+    .collection('libraryEntries')
+    .doc();
   await doc.set({ ...data, addedAt: new Date('2026-06-01T00:00:00.000Z') });
   return doc.id;
 }
@@ -85,18 +91,29 @@ describe('Library API contract: unlinked users are gated (FR-003)', () => {
   it.each([
     ['GET list', () => request(app).get('/api/library')],
     ['GET detail', () => request(app).get('/api/library/some-id')],
-    ['POST create', () => request(app).post('/api/library').send({ discogsReleaseId: 1 })],
-    ['PATCH update', () => request(app).patch('/api/library/some-id').send({ rating: 3 })],
+    [
+      'POST create',
+      () => request(app).post('/api/library').send({ discogsReleaseId: 1 }),
+    ],
+    [
+      'PATCH update',
+      () => request(app).patch('/api/library/some-id').send({ rating: 3 }),
+    ],
     ['DELETE remove', () => request(app).delete('/api/library/some-id')],
-  ])('%s returns 409 discogs_not_linked without a connection', async (_name, makeRequest) => {
-    const { idToken } = await getTestIdToken(`unlinked-${Math.random().toString(36).slice(2)}`);
+  ])(
+    '%s returns 409 discogs_not_linked without a connection',
+    async (_name, makeRequest) => {
+      const { idToken } = await getTestIdToken(
+        `unlinked-${Math.random().toString(36).slice(2)}`,
+      );
 
-    const res = await makeRequest().set('Authorization', `Bearer ${idToken}`);
+      const res = await makeRequest().set('Authorization', `Bearer ${idToken}`);
 
-    expect(res.status).toBe(409);
-    expect(res.body.error).toBe('discogs_not_linked');
-    expect(res.body.message).toEqual(expect.any(String));
-  });
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBe('discogs_not_linked');
+      expect(res.body.message).toEqual(expect.any(String));
+    },
+  );
 
   it('still returns 401 when no Authorization header is sent', async () => {
     const res = await request(app).get('/api/library');
@@ -111,7 +128,10 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
 
     stubCollectionFields(username);
     stubCollectionPage(username, [
-      rawCollectionInstance(1, { instanceId: 11, dateAdded: '2026-02-03T00:00:00-08:00' }),
+      rawCollectionInstance(1, {
+        instanceId: 11,
+        dateAdded: '2026-02-03T00:00:00-08:00',
+      }),
     ]);
     discogsScope().get('/releases/1').reply(200, rawRelease);
 
@@ -178,7 +198,10 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
     expect(raw.data()!.discogsInstanceId).toBe(777);
 
     // The connection is marked so the next sync runs in mirror mode.
-    const connection = await getFirestoreDb().collection('discogsConnections').doc(uid).get();
+    const connection = await getFirestoreDb()
+      .collection('discogsConnections')
+      .doc(uid)
+      .get();
     expect(connection.data()!.initialLibrarySyncAt).toBeDefined();
   });
 
@@ -299,7 +322,9 @@ describe('Library API contract: GET /api/library/:id (per-copy data)', () => {
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
-    stubCollectionFields(username, { fields: [{ id: 3, name: 'Notes', type: 'textarea' }] });
+    stubCollectionFields(username, {
+      fields: [{ id: 3, name: 'Notes', type: 'textarea' }],
+    });
     discogsScope()
       .get(`/users/${username}/collection/releases/1`)
       .reply(200, {
@@ -456,7 +481,9 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
     const entry = await createSyncedEntry(uid, 1, 11);
 
     const ratingWrite = discogsScope()
-      .post(`/users/${username}/collection/folders/1/releases/1/instances/11`, { rating: 4 })
+      .post(`/users/${username}/collection/folders/1/releases/1/instances/11`, {
+        rating: 4,
+      })
       .reply(204);
     stubCollectionFields(username);
     discogsScope()
@@ -494,7 +521,9 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
       .get(`/users/${username}/collection/releases/1`)
       .reply(200, {
         pagination: { page: 1, pages: 1, per_page: 100, items: 1 },
-        releases: [rawCollectionInstance(1, { instanceId: 11, sleeveCondition: 'Generic' })],
+        releases: [
+          rawCollectionInstance(1, { instanceId: 11, sleeveCondition: 'Generic' }),
+        ],
       });
     discogsScope().get('/releases/1').reply(200, rawRelease);
 
@@ -555,7 +584,9 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
-    stubCollectionFields(username, { fields: [{ id: 3, name: 'Notes', type: 'textarea' }] });
+    stubCollectionFields(username, {
+      fields: [{ id: 3, name: 'Notes', type: 'textarea' }],
+    });
 
     const res = await request(app)
       .patch(`/api/library/${entry.id}`)
@@ -572,7 +603,9 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
     const entry = await createSyncedEntry(uid, 1, 11);
 
     discogsScope()
-      .post(`/users/${username}/collection/folders/1/releases/1/instances/11`, { rating: 2 })
+      .post(`/users/${username}/collection/folders/1/releases/1/instances/11`, {
+        rating: 2,
+      })
       .reply(401, { message: 'You must authenticate.' });
 
     const res = await request(app)

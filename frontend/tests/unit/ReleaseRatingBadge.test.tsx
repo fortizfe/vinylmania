@@ -8,7 +8,8 @@ import { ReleaseRatingBadge } from '../../src/components/ui/ReleaseRatingBadge';
 function relativeLuminance(hex: string): number {
   const clean = hex.replace('#', '');
   const [r, g, b] = [0, 2, 4].map((i) => parseInt(clean.slice(i, i + 2), 16) / 255);
-  const channel = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const channel = (c: number) =>
+    c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   const [rl, gl, bl] = [r, g, b].map(channel);
   return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
 }
@@ -24,7 +25,10 @@ function contrastRatio(hexA: string, hexB: string): number {
 // unrated) / data-model.md — kept in sync with the `--color-rating-*` theme
 // variables and gray utility classes used in
 // src/components/ui/ReleaseRatingBadge.tsx.
-const BAND_TOKENS: Record<'low' | 'medium' | 'high' | 'unrated', { background: string; text: string }> = {
+const BAND_TOKENS: Record<
+  'low' | 'medium' | 'high' | 'unrated',
+  { background: string; text: string }
+> = {
   low: { background: '#DC2626', text: '#FFFFFF' },
   medium: { background: '#FBBF24', text: '#111827' },
   high: { background: '#15803D', text: '#FFFFFF' },
@@ -84,7 +88,9 @@ describe('ReleaseRatingBadge', () => {
 
     it('exposes a "Rating not available" accessible label instead of the numeric label pattern', () => {
       render(<ReleaseRatingBadge displayValue="-" band="unrated" />);
-      expect(screen.getByRole('status', { name: 'Rating not available' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('status', { name: 'Rating not available' }),
+      ).toBeInTheDocument();
     });
   });
 

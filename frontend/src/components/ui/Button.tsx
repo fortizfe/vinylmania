@@ -45,7 +45,12 @@ export function Button({
       {...props}
       disabled={disabled || loading}
       aria-busy={loading}
-      className={clsx(baseClassName, sizeClasses[size], variantClasses[variant], className)}
+      className={clsx(
+        baseClassName,
+        sizeClasses[size],
+        variantClasses[variant],
+        className,
+      )}
     >
       {children}
     </button>

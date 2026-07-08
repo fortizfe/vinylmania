@@ -27,9 +27,17 @@ const completeBodySchema = z.object({
   oauthVerifier: z.string().min(1),
 });
 
-function handleFailure(res: Response, route: string, uid: string | undefined, err: unknown): void {
+function handleFailure(
+  res: Response,
+  route: string,
+  uid: string | undefined,
+  err: unknown,
+): void {
   if (err instanceof DiscogsOauthFlowError) {
-    const responses: Record<DiscogsOauthFlowError['code'], { status: number; message: string }> = {
+    const responses: Record<
+      DiscogsOauthFlowError['code'],
+      { status: number; message: string }
+    > = {
       already_connected: { status: 409, message: ALREADY_CONNECTED.message },
       expired_request: {
         status: 400,
@@ -48,7 +56,8 @@ function handleFailure(res: Response, route: string, uid: string | undefined, er
   if (err instanceof DiscogsError && err.code === 'rate_limited') {
     res.status(429).json({
       error: 'discogs_rate_limited',
-      message: 'Discogs is receiving too many requests right now. Please try again in a moment.',
+      message:
+        'Discogs is receiving too many requests right now. Please try again in a moment.',
     });
     return;
   }
@@ -104,7 +113,11 @@ discogsOauthRouter.post('/complete', async (req: Request, res: Response) => {
       res.status(409).json(ALREADY_CONNECTED);
       return;
     }
-    const status = await completeLink(uid, parsed.data.oauthToken, parsed.data.oauthVerifier);
+    const status = await completeLink(
+      uid,
+      parsed.data.oauthToken,
+      parsed.data.oauthVerifier,
+    );
     res.status(200).json(status);
   } catch (err) {
     handleFailure(res, '/api/discogs/oauth/complete', uid, err);

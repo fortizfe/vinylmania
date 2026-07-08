@@ -53,7 +53,8 @@ export function useSearchQueryParams(): SearchQueryParams {
     const params = new URLSearchParams(location.search);
     const query = params.get('q') ?? '';
     const parsedPage = Number(params.get('page'));
-    const page = Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+    const page =
+      Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
     const filters: SearchFilters = {};
     for (const name of TEXT_FILTER_PARAM_NAMES) {
@@ -71,7 +72,11 @@ export function useSearchQueryParams(): SearchQueryParams {
   }, [location.search]);
 }
 
-export function buildSearchPath(query: string, page = 1, filters?: SearchFilters): string {
+export function buildSearchPath(
+  query: string,
+  page = 1,
+  filters?: SearchFilters,
+): string {
   const params = new URLSearchParams();
   params.set('q', query.trim());
   if (page > 1) {

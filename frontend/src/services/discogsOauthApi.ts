@@ -1,8 +1,7 @@
 import { authorizedFetch } from './apiClient';
 
 export type DiscogsConnectionStatus =
-  | { connected: false }
-  | { connected: true; discogsUsername: string; linkedAt: string };
+  { connected: false } | { connected: true; discogsUsername: string; linkedAt: string };
 
 export async function getDiscogsStatus(): Promise<DiscogsConnectionStatus> {
   const response = await authorizedFetch('/api/discogs/oauth/status');
@@ -10,7 +9,9 @@ export async function getDiscogsStatus(): Promise<DiscogsConnectionStatus> {
 }
 
 export async function requestDiscogsLink(): Promise<{ authorizeUrl: string }> {
-  const response = await authorizedFetch('/api/discogs/oauth/request', { method: 'POST' });
+  const response = await authorizedFetch('/api/discogs/oauth/request', {
+    method: 'POST',
+  });
   return response.json();
 }
 

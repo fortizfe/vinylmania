@@ -15,7 +15,9 @@ export function getOauthApiBaseUrl(): string {
 }
 
 export function getAuthorizeBaseUrl(): string {
-  return process.env.DISCOGS_AUTHORIZE_BASE_URL || 'https://www.discogs.com/oauth/authorize';
+  return (
+    process.env.DISCOGS_AUTHORIZE_BASE_URL || 'https://www.discogs.com/oauth/authorize'
+  );
 }
 
 export function createOauthHttpClient(): AxiosInstance {
@@ -37,7 +39,11 @@ export function createOauthHttpClient(): AxiosInstance {
         const { status } = error.response;
 
         if (status === 429) {
-          logger.warn({ route: endpoint, outcome: 'rate_limited', message: 'Discogs OAuth 429' });
+          logger.warn({
+            route: endpoint,
+            outcome: 'rate_limited',
+            message: 'Discogs OAuth 429',
+          });
           return Promise.reject(new DiscogsRateLimitError(error));
         }
 

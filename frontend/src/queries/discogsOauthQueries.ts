@@ -21,7 +21,11 @@ export function useDiscogsStatus(): UseQueryResult<DiscogsConnectionStatus> {
   });
 }
 
-export function useRequestDiscogsLink(): UseMutationResult<{ authorizeUrl: string }, unknown, void> {
+export function useRequestDiscogsLink(): UseMutationResult<
+  { authorizeUrl: string },
+  unknown,
+  void
+> {
   return useMutation({
     mutationFn: discogsOauthApi.requestDiscogsLink,
     onSuccess: ({ authorizeUrl }) => {

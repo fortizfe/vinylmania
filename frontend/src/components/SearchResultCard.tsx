@@ -60,7 +60,9 @@ export function SearchResultCard({
         {result.title}
       </span>
       {result.artist && (
-        <span className="truncate text-sm text-gray-500 dark:text-gray-400">{result.artist}</span>
+        <span className="truncate text-sm text-gray-500 dark:text-gray-400">
+          {result.artist}
+        </span>
       )}
       <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         {result.year && <span>{result.year}</span>}

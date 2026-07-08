@@ -6,13 +6,17 @@ interface MasterReleaseDetailsSectionProps {
 }
 
 /** Master-only fields, in the same compact layout style as `ReleaseDetailsSection` (spec FR-008, research Decision 5). */
-export function MasterReleaseDetailsSection({ master }: MasterReleaseDetailsSectionProps) {
+export function MasterReleaseDetailsSection({
+  master,
+}: MasterReleaseDetailsSectionProps) {
   const hasMetaRow = master.year || master.genres.length > 0 || master.styles.length > 0;
 
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{master.title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {master.title}
+        </h3>
         {master.artists.map((artist) => (
           <p key={artist.discogsArtistId} className="text-gray-500 dark:text-gray-400">
             {artist.name}

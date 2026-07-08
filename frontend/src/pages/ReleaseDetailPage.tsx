@@ -71,7 +71,10 @@ export function ReleaseDetailPage() {
     <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8">
       <BackLink to={backTo} />
       <Card>
-        <div data-testid="release-detail-content" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div
+          data-testid="release-detail-content"
+          className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+        >
           <div data-testid="release-detail-gallery" className="lg:col-span-2">
             <ReleaseImageGallery images={release.images} alt={release.title} />
           </div>
@@ -80,7 +83,11 @@ export function ReleaseDetailPage() {
             <div data-testid="release-detail-details" className="flex flex-col gap-4">
               <ReleaseDetailsSection release={release} />
               <div className="flex flex-col gap-2">
-                <Button onClick={handleAdd} loading={createEntry.isPending} disabled={added}>
+                <Button
+                  onClick={handleAdd}
+                  loading={createEntry.isPending}
+                  disabled={added}
+                >
                   {added ? 'Added to library' : 'Add to library'}
                 </Button>
                 {gateError && (

@@ -26,7 +26,13 @@ const centerSizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
 
 function CloseIcon() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="h-4 w-4"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 5l10 10M15 5L5 15" />
     </svg>
   );
@@ -74,10 +80,14 @@ export function Modal({
           hideScrollbar && 'scrollbar-hidden',
         )}
       >
-        <Card className={clsx('h-full overflow-y-auto', hideScrollbar && 'scrollbar-hidden')}>
+        <Card
+          className={clsx('h-full overflow-y-auto', hideScrollbar && 'scrollbar-hidden')}
+        >
           <div className="mb-4 flex items-center justify-between gap-4">
             {title && (
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {title}
+              </h2>
             )}
             <Button
               size="icon"

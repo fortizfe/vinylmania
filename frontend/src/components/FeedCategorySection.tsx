@@ -10,7 +10,9 @@ interface FeedCategorySectionProps {
 export function FeedCategorySection({ category, articles }: FeedCategorySectionProps) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{category}</h2>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        {category}
+      </h2>
       <FeedCarousel>
         {articles.map((article) => (
           <FeedArticleCard key={article.id} article={article} />

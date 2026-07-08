@@ -3,7 +3,10 @@ import { renderHook } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
-import { buildSearchPath, useSearchQueryParams } from '../../src/hooks/useSearchQueryParams';
+import {
+  buildSearchPath,
+  useSearchQueryParams,
+} from '../../src/hooks/useSearchQueryParams';
 
 function wrapper(initialEntries: string[]) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -41,7 +44,12 @@ describe('useSearchQueryParams', () => {
       wrapper: wrapper(['/app/search?q=nirvana&genre=Rock&style=Grunge']),
     });
 
-    expect(result.current).toEqual({ query: 'nirvana', page: 1, genre: 'Rock', style: 'Grunge' });
+    expect(result.current).toEqual({
+      query: 'nirvana',
+      page: 1,
+      genre: 'Rock',
+      style: 'Grunge',
+    });
   });
 
   it('omits a filter entirely when its URL param is absent or blank (feature 021)', () => {
@@ -151,6 +159,10 @@ describe('buildSearchPath', () => {
       wrapper: wrapper([path]),
     });
 
-    expect(result.current).toEqual({ query: 'nevermind', page: 3, format: ['Vinyl', 'CD'] });
+    expect(result.current).toEqual({
+      query: 'nevermind',
+      page: 3,
+      format: ['Vinyl', 'CD'],
+    });
   });
 });

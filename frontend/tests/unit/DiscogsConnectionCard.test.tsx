@@ -22,7 +22,11 @@ beforeEach(() => {
 
 describe('DiscogsConnectionCard', () => {
   it('renders a skeleton while the status is loading', () => {
-    mocks.useDiscogsStatus.mockReturnValue({ data: undefined, isPending: true, isError: false });
+    mocks.useDiscogsStatus.mockReturnValue({
+      data: undefined,
+      isPending: true,
+      isError: false,
+    });
 
     render(<DiscogsConnectionCard />);
 
@@ -38,7 +42,10 @@ describe('DiscogsConnectionCard', () => {
       isPending: false,
       isError: false,
     });
-    mocks.useRequestDiscogsLink.mockReturnValue({ mutate: requestMutate, isPending: false });
+    mocks.useRequestDiscogsLink.mockReturnValue({
+      mutate: requestMutate,
+      isPending: false,
+    });
 
     render(<DiscogsConnectionCard />);
 
@@ -83,7 +90,10 @@ describe('DiscogsConnectionCard', () => {
       const user = userEvent.setup();
       const disconnectMutate = vi.fn();
       mocks.useDiscogsStatus.mockReturnValue(connected);
-      mocks.useDisconnectDiscogs.mockReturnValue({ mutate: disconnectMutate, isPending: false });
+      mocks.useDisconnectDiscogs.mockReturnValue({
+        mutate: disconnectMutate,
+        isPending: false,
+      });
 
       render(<DiscogsConnectionCard />);
 
@@ -98,7 +108,10 @@ describe('DiscogsConnectionCard', () => {
       const user = userEvent.setup();
       const disconnectMutate = vi.fn();
       mocks.useDiscogsStatus.mockReturnValue(connected);
-      mocks.useDisconnectDiscogs.mockReturnValue({ mutate: disconnectMutate, isPending: false });
+      mocks.useDisconnectDiscogs.mockReturnValue({
+        mutate: disconnectMutate,
+        isPending: false,
+      });
 
       render(<DiscogsConnectionCard />);
 

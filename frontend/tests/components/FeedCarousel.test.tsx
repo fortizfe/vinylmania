@@ -10,10 +10,17 @@ interface StubDimensions {
   scrollLeft: number;
 }
 
-function stubTrackDimensions(track: HTMLElement, { scrollWidth, clientWidth, scrollLeft }: StubDimensions) {
+function stubTrackDimensions(
+  track: HTMLElement,
+  { scrollWidth, clientWidth, scrollLeft }: StubDimensions,
+) {
   Object.defineProperty(track, 'scrollWidth', { value: scrollWidth, configurable: true });
   Object.defineProperty(track, 'clientWidth', { value: clientWidth, configurable: true });
-  Object.defineProperty(track, 'scrollLeft', { value: scrollLeft, configurable: true, writable: true });
+  Object.defineProperty(track, 'scrollLeft', {
+    value: scrollLeft,
+    configurable: true,
+    writable: true,
+  });
 }
 
 function renderCarousel(itemCount = 3) {

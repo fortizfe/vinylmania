@@ -70,7 +70,9 @@ export async function startLink(uid: string): Promise<{ authorizeUrl: string }> 
   });
 
   logger.info({ route: 'discogs-oauth', outcome: 'link_started', uid });
-  return { authorizeUrl: `${getAuthorizeBaseUrl()}?oauth_token=${encodeURIComponent(token)}` };
+  return {
+    authorizeUrl: `${getAuthorizeBaseUrl()}?oauth_token=${encodeURIComponent(token)}`,
+  };
 }
 
 export async function completeLink(
@@ -90,7 +92,10 @@ export async function completeLink(
   if (pending.uid !== uid) {
     // Retain the doc: its rightful owner may still complete the flow.
     logFailure(uid, 'pending link attempt belongs to a different user');
-    throw new DiscogsOauthFlowError('invalid_request', 'Link attempt belongs to another session.');
+    throw new DiscogsOauthFlowError(
+      'invalid_request',
+      'Link attempt belongs to another session.',
+    );
   }
 
   if (pending.expiresAt.toDate().getTime() < Date.now()) {
@@ -118,10 +123,18 @@ export async function completeLink(
       String(exchangeResponse.data),
     ));
   } catch (err) {
-    if (isAxiosError(err) && err.response && err.response.status >= 400 && err.response.status < 500) {
+    if (
+      isAxiosError(err) &&
+      err.response &&
+      err.response.status >= 400 &&
+      err.response.status < 500
+    ) {
       // Discogs answers 400 for expired/invalid verifiers — the attempt is dead.
       await pendingDoc(oauthToken).delete();
-      logFailure(uid, `Discogs rejected the token exchange (status ${err.response.status})`);
+      logFailure(
+        uid,
+        `Discogs rejected the token exchange (status ${err.response.status})`,
+      );
       throw new DiscogsOauthFlowError('expired_request', 'Link attempt expired.');
     }
     logFailure(uid, err instanceof Error ? err.message : 'token exchange failed');

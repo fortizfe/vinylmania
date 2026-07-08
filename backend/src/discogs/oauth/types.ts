@@ -35,5 +35,4 @@ export interface PendingOAuthRequest {
  * Token fields are structurally absent.
  */
 export type ConnectionStatus =
-  | { connected: false }
-  | { connected: true; discogsUsername: string; linkedAt: string };
+  { connected: false } | { connected: true; discogsUsername: string; linkedAt: string };

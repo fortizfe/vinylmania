@@ -2,7 +2,11 @@ import request from 'supertest';
 
 import { createApp } from '../../src/app';
 import { getFirestoreDb } from '../../src/config/firebase-admin';
-import { clearEmulatorFirestore, clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import {
+  clearEmulatorFirestore,
+  clearEmulatorUsers,
+  getTestIdToken,
+} from '../helpers/authEmulator';
 import { discogsScope } from '../helpers/nock';
 
 const app = createApp();
@@ -14,21 +18,25 @@ const IDENTITY_BODY = { id: 99, username: 'discogs-jane' };
 const URLENCODED = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
 async function seedConnection(uid: string): Promise<void> {
-  await getFirestoreDb().collection('discogsConnections').doc(uid).set({
-    uid,
-    discogsUsername: 'existing-user',
-    discogsUserId: 1,
-    accessToken: 'stored-token',
-    accessTokenSecret: 'stored-secret',
-    linkedAt: new Date('2026-07-01T10:00:00Z'),
-  });
+  await getFirestoreDb()
+    .collection('discogsConnections')
+    .doc(uid)
+    .set({
+      uid,
+      discogsUsername: 'existing-user',
+      discogsUserId: 1,
+      accessToken: 'stored-token',
+      accessTokenSecret: 'stored-secret',
+      linkedAt: new Date('2026-07-01T10:00:00Z'),
+    });
 }
 
 describe('Discogs OAuth API contract', () => {
   beforeAll(() => {
     process.env.DISCOGS_CONSUMER_KEY = 'contract-test-key';
     process.env.DISCOGS_CONSUMER_SECRET = 'contract-test-secret';
-    process.env.DISCOGS_OAUTH_CALLBACK_URL = 'http://localhost:5173/app/profile/discogs/callback';
+    process.env.DISCOGS_OAUTH_CALLBACK_URL =
+      'http://localhost:5173/app/profile/discogs/callback';
   });
 
   afterEach(async () => {
@@ -39,7 +47,9 @@ describe('Discogs OAuth API contract', () => {
   describe('POST /api/discogs/oauth/request', () => {
     it('returns 200 with an authorizeUrl containing the request token', async () => {
       const { idToken } = await getTestIdToken('oauth-request-ok');
-      discogsScope().get('/oauth/request_token').reply(200, REQUEST_TOKEN_BODY, URLENCODED);
+      discogsScope()
+        .get('/oauth/request_token')
+        .reply(200, REQUEST_TOKEN_BODY, URLENCODED);
 
       const res = await request(app)
         .post('/api/discogs/oauth/request')
@@ -73,8 +83,12 @@ describe('Discogs OAuth API contract', () => {
   describe('POST /api/discogs/oauth/complete', () => {
     it('returns 200 with the ConnectionStatus DTO on the happy path', async () => {
       const { idToken } = await getTestIdToken('oauth-complete-ok');
-      discogsScope().get('/oauth/request_token').reply(200, REQUEST_TOKEN_BODY, URLENCODED);
-      discogsScope().post('/oauth/access_token').reply(200, ACCESS_TOKEN_BODY, URLENCODED);
+      discogsScope()
+        .get('/oauth/request_token')
+        .reply(200, REQUEST_TOKEN_BODY, URLENCODED);
+      discogsScope()
+        .post('/oauth/access_token')
+        .reply(200, ACCESS_TOKEN_BODY, URLENCODED);
       discogsScope().get('/oauth/identity').reply(200, IDENTITY_BODY);
 
       await request(app)
@@ -87,7 +101,11 @@ describe('Discogs OAuth API contract', () => {
         .send({ oauthToken: 'req-tok', oauthVerifier: 'the-verifier' });
 
       expect(res.status).toBe(200);
-      expect(Object.keys(res.body).sort()).toEqual(['connected', 'discogsUsername', 'linkedAt']);
+      expect(Object.keys(res.body).sort()).toEqual([
+        'connected',
+        'discogsUsername',
+        'linkedAt',
+      ]);
       expect(res.body.connected).toBe(true);
       expect(res.body.discogsUsername).toBe('discogs-jane');
       expect(new Date(res.body.linkedAt).getTime()).not.toBeNaN();
@@ -167,12 +185,15 @@ describe('Discogs OAuth API contract', () => {
 
     it('answers 400 expired_request when the pending attempt is past its window on /complete', async () => {
       const { idToken, uid } = await getTestIdToken('oauth-complete-expired');
-      await getFirestoreDb().collection('discogsOAuthRequests').doc('old-tok').set({
-        uid,
-        requestTokenSecret: 'req-sec',
-        createdAt: new Date(Date.now() - 20 * 60 * 1000),
-        expiresAt: new Date(Date.now() - 5 * 60 * 1000),
-      });
+      await getFirestoreDb()
+        .collection('discogsOAuthRequests')
+        .doc('old-tok')
+        .set({
+          uid,
+          requestTokenSecret: 'req-sec',
+          createdAt: new Date(Date.now() - 20 * 60 * 1000),
+          expiresAt: new Date(Date.now() - 5 * 60 * 1000),
+        });
 
       const res = await request(app)
         .post('/api/discogs/oauth/complete')
@@ -194,7 +215,10 @@ describe('Discogs OAuth API contract', () => {
         .set('Authorization', `Bearer ${idToken}`);
 
       expect(res.status).toBe(204);
-      const snapshot = await getFirestoreDb().collection('discogsConnections').doc(uid).get();
+      const snapshot = await getFirestoreDb()
+        .collection('discogsConnections')
+        .doc(uid)
+        .get();
       expect(snapshot.exists).toBe(false);
     });
 
@@ -237,8 +261,15 @@ describe('Discogs OAuth API contract', () => {
         .set('Authorization', `Bearer ${idToken}`);
 
       expect(res.status).toBe(200);
-      expect(Object.keys(res.body).sort()).toEqual(['connected', 'discogsUsername', 'linkedAt']);
-      expect(res.body).toMatchObject({ connected: true, discogsUsername: 'existing-user' });
+      expect(Object.keys(res.body).sort()).toEqual([
+        'connected',
+        'discogsUsername',
+        'linkedAt',
+      ]);
+      expect(res.body).toMatchObject({
+        connected: true,
+        discogsUsername: 'existing-user',
+      });
       expect(JSON.stringify(res.body)).not.toContain('stored-token');
       expect(JSON.stringify(res.body)).not.toContain('stored-secret');
     });

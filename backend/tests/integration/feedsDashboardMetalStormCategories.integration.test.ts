@@ -101,43 +101,109 @@ describe('Feeds dashboard: additional Metal Storm categories (feature 025, US2)'
       .get('/rss')
       .reply(
         200,
-        rssXml([{ title: 'Existing News Item', link: 'https://ms-existing-news.test/1', pubDate: 'Mon, 06 Jul 2026 00:00:00 GMT' }]),
+        rssXml([
+          {
+            title: 'Existing News Item',
+            link: 'https://ms-existing-news.test/1',
+            pubDate: 'Mon, 06 Jul 2026 00:00:00 GMT',
+          },
+        ]),
       );
     nock('https://ms-news.test')
       .get('/rss')
       .reply(
         200,
-        rssXml([{ title: 'Metal Storm News Item', link: 'https://ms-news.test/1', pubDate: 'Tue, 07 Jul 2026 00:00:00 GMT' }]),
+        rssXml([
+          {
+            title: 'Metal Storm News Item',
+            link: 'https://ms-news.test/1',
+            pubDate: 'Tue, 07 Jul 2026 00:00:00 GMT',
+          },
+        ]),
       );
     nock('https://ms-reviews.test')
       .get('/rss')
-      .reply(200, rssXml([{ title: 'Review Item', link: 'https://ms-reviews.test/1', pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT' }]));
+      .reply(
+        200,
+        rssXml([
+          {
+            title: 'Review Item',
+            link: 'https://ms-reviews.test/1',
+            pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT',
+          },
+        ]),
+      );
     nock('https://ms-interviews.test')
       .get('/rss')
-      .reply(200, rssXml([{ title: 'Interview Item', link: 'https://ms-interviews.test/1', pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT' }]));
+      .reply(
+        200,
+        rssXml([
+          {
+            title: 'Interview Item',
+            link: 'https://ms-interviews.test/1',
+            pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT',
+          },
+        ]),
+      );
     nock('https://ms-articles.test')
       .get('/rss')
-      .reply(200, rssXml([{ title: 'Article Item', link: 'https://ms-articles.test/1', pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT' }]));
+      .reply(
+        200,
+        rssXml([
+          {
+            title: 'Article Item',
+            link: 'https://ms-articles.test/1',
+            pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT',
+          },
+        ]),
+      );
     nock('https://ms-picks.test')
       .get('/rss')
-      .reply(200, rssXml([{ title: 'Staff Pick Item', link: 'https://ms-picks.test/1', pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT' }]));
+      .reply(
+        200,
+        rssXml([
+          {
+            title: 'Staff Pick Item',
+            link: 'https://ms-picks.test/1',
+            pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT',
+          },
+        ]),
+      );
 
-    const res = await request(app).get('/api/feeds/dashboard').set('Authorization', `Bearer ${idToken}`);
+    const res = await request(app)
+      .get('/api/feeds/dashboard')
+      .set('Authorization', `Bearer ${idToken}`);
 
     expect(res.status).toBe(200);
 
-    const categoryNames = res.body.categories.map((c: { category: string }) => c.category);
-    expect(categoryNames).toEqual(expect.arrayContaining(['News', 'Reviews', 'Interviews', 'Articles', 'Staff Picks']));
-
-    // "News" must appear exactly once, combining both News-labeled sources — not duplicated.
-    const newsCategories = res.body.categories.filter((c: { category: string }) => c.category === 'News');
-    expect(newsCategories).toHaveLength(1);
-    expect(newsCategories[0].articles.map((a: { title: string }) => a.title).sort()).toEqual(
-      ['Existing News Item', 'Metal Storm News Item'].sort(),
+    const categoryNames = res.body.categories.map(
+      (c: { category: string }) => c.category,
+    );
+    expect(categoryNames).toEqual(
+      expect.arrayContaining([
+        'News',
+        'Reviews',
+        'Interviews',
+        'Articles',
+        'Staff Picks',
+      ]),
     );
 
+    // "News" must appear exactly once, combining both News-labeled sources — not duplicated.
+    const newsCategories = res.body.categories.filter(
+      (c: { category: string }) => c.category === 'News',
+    );
+    expect(newsCategories).toHaveLength(1);
+    expect(
+      newsCategories[0].articles.map((a: { title: string }) => a.title).sort(),
+    ).toEqual(['Existing News Item', 'Metal Storm News Item'].sort());
+
     expect(res.body.sourceStatuses).toEqual(
-      expect.arrayContaining(ALL_SOURCE_IDS.map((sourceId) => expect.objectContaining({ sourceId, status: 'ok' }))),
+      expect.arrayContaining(
+        ALL_SOURCE_IDS.map((sourceId) =>
+          expect.objectContaining({ sourceId, status: 'ok' }),
+        ),
+      ),
     );
   });
 
@@ -146,34 +212,93 @@ describe('Feeds dashboard: additional Metal Storm categories (feature 025, US2)'
 
     nock('https://ms-existing-news.test')
       .get('/rss')
-      .reply(200, rssXml([{ title: 'Existing News Item', link: 'https://ms-existing-news.test/1', pubDate: 'Mon, 06 Jul 2026 00:00:00 GMT' }]));
+      .reply(
+        200,
+        rssXml([
+          {
+            title: 'Existing News Item',
+            link: 'https://ms-existing-news.test/1',
+            pubDate: 'Mon, 06 Jul 2026 00:00:00 GMT',
+          },
+        ]),
+      );
     nock('https://ms-news.test')
       .get('/rss')
-      .reply(200, rssXml([{ title: 'Metal Storm News Item', link: 'https://ms-news.test/1', pubDate: 'Tue, 07 Jul 2026 00:00:00 GMT' }]));
+      .reply(
+        200,
+        rssXml([
+          {
+            title: 'Metal Storm News Item',
+            link: 'https://ms-news.test/1',
+            pubDate: 'Tue, 07 Jul 2026 00:00:00 GMT',
+          },
+        ]),
+      );
     // Reviews is the sole source for its category and fails outright.
     nock('https://ms-reviews.test').get('/rss').reply(500);
     nock('https://ms-interviews.test')
       .get('/rss')
-      .reply(200, rssXml([{ title: 'Interview Item', link: 'https://ms-interviews.test/1', pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT' }]));
+      .reply(
+        200,
+        rssXml([
+          {
+            title: 'Interview Item',
+            link: 'https://ms-interviews.test/1',
+            pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT',
+          },
+        ]),
+      );
     nock('https://ms-articles.test')
       .get('/rss')
-      .reply(200, rssXml([{ title: 'Article Item', link: 'https://ms-articles.test/1', pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT' }]));
+      .reply(
+        200,
+        rssXml([
+          {
+            title: 'Article Item',
+            link: 'https://ms-articles.test/1',
+            pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT',
+          },
+        ]),
+      );
     nock('https://ms-picks.test')
       .get('/rss')
-      .reply(200, rssXml([{ title: 'Staff Pick Item', link: 'https://ms-picks.test/1', pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT' }]));
+      .reply(
+        200,
+        rssXml([
+          {
+            title: 'Staff Pick Item',
+            link: 'https://ms-picks.test/1',
+            pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT',
+          },
+        ]),
+      );
 
-    const res = await request(app).get('/api/feeds/dashboard').set('Authorization', `Bearer ${idToken}`);
+    const res = await request(app)
+      .get('/api/feeds/dashboard')
+      .set('Authorization', `Bearer ${idToken}`);
 
     expect(res.status).toBe(200);
 
-    const categoryNames = res.body.categories.map((c: { category: string }) => c.category);
-    expect(categoryNames).toEqual(expect.arrayContaining(['News', 'Interviews', 'Articles', 'Staff Picks']));
+    const categoryNames = res.body.categories.map(
+      (c: { category: string }) => c.category,
+    );
+    expect(categoryNames).toEqual(
+      expect.arrayContaining(['News', 'Interviews', 'Articles', 'Staff Picks']),
+    );
     expect(categoryNames).not.toContain('Reviews');
 
     expect(res.body.sourceStatuses).toEqual(
       expect.arrayContaining([
-        { sourceId: 'metal-storm-reviews', sourceName: 'Metal Storm', status: 'unavailable' },
-        { sourceId: 'ms-existing-news', sourceName: 'Existing News Source', status: 'ok' },
+        {
+          sourceId: 'metal-storm-reviews',
+          sourceName: 'Metal Storm',
+          status: 'unavailable',
+        },
+        {
+          sourceId: 'ms-existing-news',
+          sourceName: 'Existing News Source',
+          status: 'ok',
+        },
         { sourceId: 'metal-storm-news', sourceName: 'Metal Storm', status: 'ok' },
         { sourceId: 'metal-storm-interviews', sourceName: 'Metal Storm', status: 'ok' },
         { sourceId: 'metal-storm-articles', sourceName: 'Metal Storm', status: 'ok' },

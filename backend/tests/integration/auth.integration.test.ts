@@ -1,6 +1,10 @@
 import { getFirestoreDb } from '../../src/config/firebase-admin';
 import { getOrCreateUser } from '../../src/services/userService';
-import { clearEmulatorFirestore, clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import {
+  clearEmulatorFirestore,
+  clearEmulatorUsers,
+  getTestIdToken,
+} from '../helpers/authEmulator';
 
 describe('User get-or-create (Firestore emulator)', () => {
   afterEach(async () => {

@@ -38,7 +38,9 @@ export function useCatalogSearch(
   });
 }
 
-export function useCatalogRelease(discogsId: number | undefined): UseQueryResult<Release> {
+export function useCatalogRelease(
+  discogsId: number | undefined,
+): UseQueryResult<Release> {
   return useQuery({
     queryKey: discogsKeys.release(discogsId ?? -1),
     queryFn: () => discogsApi.getRelease(discogsId ?? -1),
@@ -50,7 +52,9 @@ export function useCatalogRelease(discogsId: number | undefined): UseQueryResult
   });
 }
 
-export function useCatalogMaster(discogsId: number | undefined): UseQueryResult<MasterRelease> {
+export function useCatalogMaster(
+  discogsId: number | undefined,
+): UseQueryResult<MasterRelease> {
   return useQuery({
     queryKey: discogsKeys.master(discogsId ?? -1),
     queryFn: () => discogsApi.getMasterRelease(discogsId ?? -1),

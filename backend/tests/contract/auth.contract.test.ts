@@ -1,7 +1,11 @@
 import request from 'supertest';
 
 import { createApp } from '../../src/app';
-import { clearEmulatorFirestore, clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import {
+  clearEmulatorFirestore,
+  clearEmulatorUsers,
+  getTestIdToken,
+} from '../helpers/authEmulator';
 
 const app = createApp();
 
@@ -50,9 +54,13 @@ describe('Auth API contract', () => {
   describe('GET /api/auth/me', () => {
     it('returns 200 with the existing profile after a session has been established', async () => {
       const { idToken } = await getTestIdToken('me-valid', { displayName: 'Jane Doe' });
-      await request(app).post('/api/auth/session').set('Authorization', `Bearer ${idToken}`);
+      await request(app)
+        .post('/api/auth/session')
+        .set('Authorization', `Bearer ${idToken}`);
 
-      const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${idToken}`);
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${idToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.displayName).toBe('Jane Doe');
@@ -61,7 +69,9 @@ describe('Auth API contract', () => {
     it('returns 401 when no profile exists yet for the token', async () => {
       const { idToken } = await getTestIdToken('me-no-profile');
 
-      const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${idToken}`);
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${idToken}`);
 
       expect(res.status).toBe(401);
     });

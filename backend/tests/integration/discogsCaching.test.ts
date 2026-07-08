@@ -53,20 +53,18 @@ describe('Discogs response caching (US2)', () => {
   });
 
   it('serves a second identical getRelease call from cache without a second Discogs request', async () => {
-    discogsScope()
-      .get('/releases/501')
-      .reply(200, {
-        id: 501,
-        title: 'Cached Release',
-        artists: [],
-        labels: [],
-        formats: [],
-        genres: [],
-        styles: [],
-        tracklist: [],
-        images: [],
-        uri: 'https://www.discogs.com/release/501',
-      });
+    discogsScope().get('/releases/501').reply(200, {
+      id: 501,
+      title: 'Cached Release',
+      artists: [],
+      labels: [],
+      formats: [],
+      genres: [],
+      styles: [],
+      tracklist: [],
+      images: [],
+      uri: 'https://www.discogs.com/release/501',
+    });
 
     const first = await getRelease(501);
     const second = await getRelease(501);
@@ -75,20 +73,18 @@ describe('Discogs response caching (US2)', () => {
   });
 
   it('enriching two library entries that share a discogsReleaseId triggers only one outbound Discogs call', async () => {
-    discogsScope()
-      .get('/releases/777')
-      .reply(200, {
-        id: 777,
-        title: 'Shared Release',
-        artists: [],
-        labels: [],
-        formats: [],
-        genres: [],
-        styles: [],
-        tracklist: [],
-        images: [],
-        uri: 'https://www.discogs.com/release/777',
-      });
+    discogsScope().get('/releases/777').reply(200, {
+      id: 777,
+      title: 'Shared Release',
+      artists: [],
+      labels: [],
+      formats: [],
+      genres: [],
+      styles: [],
+      tracklist: [],
+      images: [],
+      uri: 'https://www.discogs.com/release/777',
+    });
 
     const entries: LibraryEntry[] = [
       { id: 'a', discogsReleaseId: 777, addedAt: '2026-07-04T00:00:00.000Z' },

@@ -69,13 +69,19 @@ describe('MasterReleaseDetailPage', () => {
     expect(screen.getByText('Linkin Park')).toBeInTheDocument();
     expect(screen.getByText('Rock')).toBeInTheDocument();
     expect(screen.getByText(/Papercut/)).toBeInTheDocument();
-    await waitFor(() => expect(mockGetMasterReleaseVersions).toHaveBeenCalledWith(1660109, 1));
-    expect(screen.queryByRole('button', { name: /add to library/i })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(mockGetMasterReleaseVersions).toHaveBeenCalledWith(1660109, 1),
+    );
+    expect(
+      screen.queryByRole('button', { name: /add to library/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows a not-found message when the master lookup fails', async () => {
     const { ApiError } = await import('../../src/services/apiClient');
-    mockGetMasterRelease.mockRejectedValue(new ApiError('not found', 404, 'master_not_found'));
+    mockGetMasterRelease.mockRejectedValue(
+      new ApiError('not found', 404, 'master_not_found'),
+    );
     mockGetMasterReleaseVersions.mockResolvedValue(versionsPage);
 
     renderPage();

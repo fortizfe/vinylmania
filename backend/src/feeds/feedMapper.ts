@@ -67,7 +67,10 @@ function resolvePublishedAt(item: Parser.Item): string {
 }
 
 /** Maps one raw parsed feed item to an Article, or drops it (returns undefined) when unusable. */
-export function mapFeedItem(item: Parser.Item, source: FeedSourceConfig): Article | undefined {
+export function mapFeedItem(
+  item: Parser.Item,
+  source: FeedSourceConfig,
+): Article | undefined {
   const title = cleanText(item.title);
   const link = item.link?.trim();
 

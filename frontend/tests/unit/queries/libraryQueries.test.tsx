@@ -42,7 +42,12 @@ describe('libraryQueries', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockList).toHaveBeenCalledWith(1, 20);
-    expect(result.current.data).toEqual({ items: [], page: 1, pageSize: 20, totalItems: 0 });
+    expect(result.current.data).toEqual({
+      items: [],
+      page: 1,
+      pageSize: 20,
+      totalItems: 0,
+    });
   });
 
   it('useLibraryEntry stays disabled and issues no request when entryId is undefined', async () => {
@@ -68,7 +73,9 @@ describe('libraryQueries', () => {
     const first = renderHook(() => useLibraryEntry('entry-1'), { wrapper: localWrapper });
     await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
 
-    const second = renderHook(() => useLibraryEntry('entry-1'), { wrapper: localWrapper });
+    const second = renderHook(() => useLibraryEntry('entry-1'), {
+      wrapper: localWrapper,
+    });
     await waitFor(() => expect(second.result.current.isSuccess).toBe(true));
 
     expect(mockGetOne).toHaveBeenCalledTimes(1);
@@ -83,8 +90,11 @@ describe('libraryQueries', () => {
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
 
-    const { useUpdateLibraryEntry, libraryKeys } = await import('../../../src/queries/libraryQueries');
-    const { result } = renderHook(() => useUpdateLibraryEntry('entry-1'), { wrapper: localWrapper });
+    const { useUpdateLibraryEntry, libraryKeys } =
+      await import('../../../src/queries/libraryQueries');
+    const { result } = renderHook(() => useUpdateLibraryEntry('entry-1'), {
+      wrapper: localWrapper,
+    });
 
     await result.current.mutateAsync({ rating: 4 });
 
@@ -100,8 +110,11 @@ describe('libraryQueries', () => {
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
 
-    const { useRemoveLibraryEntry, libraryKeys } = await import('../../../src/queries/libraryQueries');
-    const { result } = renderHook(() => useRemoveLibraryEntry(), { wrapper: localWrapper });
+    const { useRemoveLibraryEntry, libraryKeys } =
+      await import('../../../src/queries/libraryQueries');
+    const { result } = renderHook(() => useRemoveLibraryEntry(), {
+      wrapper: localWrapper,
+    });
 
     await result.current.mutateAsync('entry-1');
 
@@ -117,8 +130,11 @@ describe('libraryQueries', () => {
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
 
-    const { useCreateLibraryEntry, libraryKeys } = await import('../../../src/queries/libraryQueries');
-    const { result } = renderHook(() => useCreateLibraryEntry(), { wrapper: localWrapper });
+    const { useCreateLibraryEntry, libraryKeys } =
+      await import('../../../src/queries/libraryQueries');
+    const { result } = renderHook(() => useCreateLibraryEntry(), {
+      wrapper: localWrapper,
+    });
 
     await result.current.mutateAsync({ discogsReleaseId: 2 });
 

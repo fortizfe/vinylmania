@@ -1,6 +1,9 @@
 import { getFirestoreDb } from '../../src/config/firebase-admin';
 import { logger } from '../../src/config/logger';
-import { DiscogsRateLimitError, DiscogsUnavailableError } from '../../src/discogs/discogsErrors';
+import {
+  DiscogsRateLimitError,
+  DiscogsUnavailableError,
+} from '../../src/discogs/discogsErrors';
 import {
   completeLink,
   DiscogsOauthFlowError,
@@ -31,7 +34,8 @@ describe('discogsOauthService', () => {
   beforeAll(() => {
     process.env.DISCOGS_CONSUMER_KEY = 'service-test-key';
     process.env.DISCOGS_CONSUMER_SECRET = 'service-test-secret';
-    process.env.DISCOGS_OAUTH_CALLBACK_URL = 'http://localhost:5173/app/profile/discogs/callback';
+    process.env.DISCOGS_OAUTH_CALLBACK_URL =
+      'http://localhost:5173/app/profile/discogs/callback';
   });
 
   afterEach(async () => {
@@ -40,12 +44,16 @@ describe('discogsOauthService', () => {
 
   describe('startLink', () => {
     it('stores a pending request keyed by the request token, expiring in ~15 minutes', async () => {
-      discogsScope().get('/oauth/request_token').reply(200, REQUEST_TOKEN_BODY, URLENCODED);
+      discogsScope()
+        .get('/oauth/request_token')
+        .reply(200, REQUEST_TOKEN_BODY, URLENCODED);
       const before = Date.now();
 
       const { authorizeUrl } = await startLink('user-a');
 
-      expect(authorizeUrl).toBe('https://www.discogs.com/oauth/authorize?oauth_token=req-tok');
+      expect(authorizeUrl).toBe(
+        'https://www.discogs.com/oauth/authorize?oauth_token=req-tok',
+      );
 
       const snapshot = await pendingDoc('req-tok').get();
       expect(snapshot.exists).toBe(true);
@@ -60,13 +68,17 @@ describe('discogsOauthService', () => {
 
   describe('completeLink', () => {
     async function seedPending(uid: string): Promise<void> {
-      discogsScope().get('/oauth/request_token').reply(200, REQUEST_TOKEN_BODY, URLENCODED);
+      discogsScope()
+        .get('/oauth/request_token')
+        .reply(200, REQUEST_TOKEN_BODY, URLENCODED);
       await startLink(uid);
     }
 
     it('exchanges the token, verifies identity, persists the connection, and deletes the pending doc', async () => {
       await seedPending('user-a');
-      discogsScope().post('/oauth/access_token').reply(200, ACCESS_TOKEN_BODY, URLENCODED);
+      discogsScope()
+        .post('/oauth/access_token')
+        .reply(200, ACCESS_TOKEN_BODY, URLENCODED);
       discogsScope().get('/oauth/identity').reply(200, IDENTITY_BODY);
 
       const status = await completeLink('user-a', 'req-tok', 'the-verifier');
@@ -141,7 +153,11 @@ describe('discogsOauthService', () => {
     it('maps a Discogs 500 during the token exchange to DiscogsUnavailableError, writing nothing', async () => {
       discogsScope()
         .get('/oauth/request_token')
-        .reply(200, 'oauth_token=req-tok&oauth_token_secret=req-sec&oauth_callback_confirmed=true', URLENCODED);
+        .reply(
+          200,
+          'oauth_token=req-tok&oauth_token_secret=req-sec&oauth_callback_confirmed=true',
+          URLENCODED,
+        );
       await startLink('user-a');
       discogsScope().post('/oauth/access_token').reply(500, 'boom');
 
@@ -154,7 +170,11 @@ describe('discogsOauthService', () => {
     it('treats a Discogs 400 on the exchange as an expired attempt and deletes the pending doc', async () => {
       discogsScope()
         .get('/oauth/request_token')
-        .reply(200, 'oauth_token=req-tok&oauth_token_secret=req-sec&oauth_callback_confirmed=true', URLENCODED);
+        .reply(
+          200,
+          'oauth_token=req-tok&oauth_token_secret=req-sec&oauth_callback_confirmed=true',
+          URLENCODED,
+        );
       await startLink('user-a');
       discogsScope().post('/oauth/access_token').reply(400, 'expired verifier');
 

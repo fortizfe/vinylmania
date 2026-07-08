@@ -39,7 +39,10 @@ describe('fetchFeed', () => {
   });
 
   it('rejects when the response exceeds the given timeout', async () => {
-    nock(FEED_ORIGIN).get('/rss-slow').delay(200).reply(200, '<rss version="2.0"><channel></channel></rss>');
+    nock(FEED_ORIGIN)
+      .get('/rss-slow')
+      .delay(200)
+      .reply(200, '<rss version="2.0"><channel></channel></rss>');
 
     await expect(fetchFeed(`${FEED_ORIGIN}/rss-slow`, 50)).rejects.toThrow();
   });

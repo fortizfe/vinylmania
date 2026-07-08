@@ -237,7 +237,10 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     discogsScope()
       .get('/database/search')
       .query({ q: 'love', page: '1', per_page: '50' })
-      .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+      .reply(200, {
+        pagination: { page: 1, pages: 1, items: 0, per_page: 50 },
+        results: [],
+      });
 
     const res = await request(app)
       .get('/api/discogs/search')
@@ -249,7 +252,9 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   });
 
   it('returns 401 when no Authorization header is sent', async () => {
-    const res = await request(app).get('/api/discogs/search').query({ q: 'x', type: 'release' });
+    const res = await request(app)
+      .get('/api/discogs/search')
+      .query({ q: 'x', type: 'release' });
 
     expect(res.status).toBe(401);
   });
@@ -257,7 +262,10 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   it('returns 502 catalog_unavailable when Discogs is rate-limited', async () => {
     const { idToken } = await getTestIdToken('search-ratelimit-user');
 
-    discogsScope().get('/database/search').query(true).reply(429, { message: 'too many requests' });
+    discogsScope()
+      .get('/database/search')
+      .query(true)
+      .reply(429, { message: 'too many requests' });
 
     const res = await request(app)
       .get('/api/discogs/search')
@@ -353,35 +361,31 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       expect(res.body.results[0].title).toBe('Stockholm');
     });
 
-    it(
-      'omits communityRating when a rating lookup exceeds the 2-second timeout (SC-006), without delaying the response',
-      async () => {
-        const { idToken } = await getTestIdToken('search-rating-timeout-user');
+    it('omits communityRating when a rating lookup exceeds the 2-second timeout (SC-006), without delaying the response', async () => {
+      const { idToken } = await getTestIdToken('search-rating-timeout-user');
 
-        discogsScope()
-          .get('/database/search')
-          .query({ q: 'RatingEnrichmentTimeout', page: '1', per_page: '50' })
-          .reply(200, {
-            pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
-            results: [rawSearchResultItem({ id: 13 })],
-          });
-        stubReleaseRatingNeverResolves(13);
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'RatingEnrichmentTimeout', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 1, per_page: 50 },
+          results: [rawSearchResultItem({ id: 13 })],
+        });
+      stubReleaseRatingNeverResolves(13);
 
-        const startedAt = Date.now();
-        const res = await request(app)
-          .get('/api/discogs/search')
-          .query({ q: 'RatingEnrichmentTimeout', type: 'release' })
-          .set('Authorization', `Bearer ${idToken}`);
-        const elapsedMs = Date.now() - startedAt;
+      const startedAt = Date.now();
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'RatingEnrichmentTimeout', type: 'release' })
+        .set('Authorization', `Bearer ${idToken}`);
+      const elapsedMs = Date.now() - startedAt;
 
-        expect(res.status).toBe(200);
-        expect(res.body.results[0].communityRating).toBeUndefined();
-        // The lookup timeout (2s) bounds the wait; the stub's artificial 2.5s
-        // delay must not be allowed to stretch the overall response past it.
-        expect(elapsedMs).toBeLessThan(2_400);
-      },
-      8_000,
-    );
+      expect(res.status).toBe(200);
+      expect(res.body.results[0].communityRating).toBeUndefined();
+      // The lookup timeout (2s) bounds the wait; the stub's artificial 2.5s
+      // delay must not be allowed to stretch the overall response past it.
+      expect(elapsedMs).toBeLessThan(2_400);
+    }, 8_000);
   });
 
   describe('artist/genre/style/format filter params (feature 021)', () => {
@@ -398,7 +402,10 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
           style: 'Grunge',
           format: 'Vinyl',
         })
-        .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 0, per_page: 50 },
+          results: [],
+        });
 
       const res = await request(app)
         .get('/api/discogs/search')
@@ -428,11 +435,20 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
             query.style === undefined &&
             query.format === undefined,
         )
-        .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 0, per_page: 50 },
+          results: [],
+        });
 
       const res = await request(app)
         .get('/api/discogs/search')
-        .query({ q: 'FilterBlankTest', type: 'release', genre: '  Rock  ', artist: '', style: '   ' })
+        .query({
+          q: 'FilterBlankTest',
+          type: 'release',
+          genre: '  Rock  ',
+          artist: '',
+          style: '   ',
+        })
         .set('Authorization', `Bearer ${idToken}`);
 
       expect(res.status).toBe(200);
@@ -452,7 +468,10 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
           genre: 'Rock',
           format: 'Vinyl',
         })
-        .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 0, per_page: 50 },
+          results: [],
+        });
 
       const res = await request(app)
         .get('/api/discogs/search')
@@ -475,7 +494,10 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
           per_page: '50',
           format: 'Vinyl,CD',
         })
-        .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 0, per_page: 50 },
+          results: [],
+        });
 
       const res = await request(app)
         .get('/api/discogs/search')
@@ -499,11 +521,19 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
           per_page: '50',
           genre: 'Rock',
         })
-        .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 0, per_page: 50 },
+          results: [],
+        });
 
       const res = await request(app)
         .get('/api/discogs/search')
-        .query({ q: 'ArtistRemovedTest', type: 'release', artist: 'Nirvana', genre: 'Rock' })
+        .query({
+          q: 'ArtistRemovedTest',
+          type: 'release',
+          artist: 'Nirvana',
+          genre: 'Rock',
+        })
         .set('Authorization', `Bearer ${idToken}`);
 
       expect(res.status).toBe(200);

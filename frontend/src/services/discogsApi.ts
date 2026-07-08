@@ -94,6 +94,8 @@ export async function getMasterReleaseVersions(
   if (page !== undefined) params.set('page', String(page));
   const query = params.toString();
   const suffix = query ? `?${query}` : '';
-  const res = await authorizedFetch(`/api/discogs/masters/${discogsId}/versions${suffix}`);
+  const res = await authorizedFetch(
+    `/api/discogs/masters/${discogsId}/versions${suffix}`,
+  );
   return res.json();
 }

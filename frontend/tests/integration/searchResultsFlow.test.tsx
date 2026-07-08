@@ -196,7 +196,12 @@ describe('Search results flow (US2)', () => {
     it('navigates to the release detail page on click, with no preview control on the card, and back restores the prior search state (FR-012, FR-013)', async () => {
       mockSearch.mockResolvedValue({
         results: [
-          { discogsId: 1, resultType: 'release', title: 'Stockholm', artist: 'The Persuader' },
+          {
+            discogsId: 1,
+            resultType: 'release',
+            title: 'Stockholm',
+            artist: 'The Persuader',
+          },
         ],
         pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
@@ -216,7 +221,9 @@ describe('Search results flow (US2)', () => {
 
       renderWithDetailRoute(['/app/search?q=Stockholm&page=1']);
       await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
-      expect(screen.queryByRole('button', { name: /preview details/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /preview details/i }),
+      ).not.toBeInTheDocument();
 
       const user = userEvent.setup();
       await user.click(screen.getByRole('link'));

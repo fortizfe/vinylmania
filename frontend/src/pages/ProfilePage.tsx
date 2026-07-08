@@ -4,7 +4,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { DiscogsConnectionCard } from '../components/DiscogsConnectionCard';
 import type { DiscogsOutcome } from './DiscogsCallbackPage';
 
-const OUTCOME_MESSAGES: Record<DiscogsOutcome, { text: string; tone: 'success' | 'warning' }> = {
+const OUTCOME_MESSAGES: Record<
+  DiscogsOutcome,
+  { text: string; tone: 'success' | 'warning' }
+> = {
   linked: { text: 'Discogs account linked.', tone: 'success' },
   denied: {
     text: 'The Discogs connection was not completed. You can try again whenever you like.',
@@ -68,7 +71,9 @@ export function ProfilePage() {
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8">
       <header>
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Profile</h1>
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          Profile
+        </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Manage your account and connected services.
         </p>

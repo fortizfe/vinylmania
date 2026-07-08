@@ -54,7 +54,9 @@ describe('ReleaseDetailsSection', () => {
       />,
     );
 
-    expect(screen.queryByText('Recorded at Stockholm Sound Studio.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Recorded at Stockholm Sound Studio.'),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/Barcode/)).not.toBeInTheDocument();
     expect(screen.queryByText(/214/)).not.toBeInTheDocument();
   });

@@ -16,12 +16,16 @@ import type {
 export const libraryKeys = {
   all: ['library'] as const,
   lists: () => [...libraryKeys.all, 'list'] as const,
-  list: (page: number, pageSize: number) => [...libraryKeys.lists(), page, pageSize] as const,
+  list: (page: number, pageSize: number) =>
+    [...libraryKeys.lists(), page, pageSize] as const,
   details: () => [...libraryKeys.all, 'detail'] as const,
   detail: (entryId: string) => [...libraryKeys.details(), entryId] as const,
 };
 
-export function useLibraryList(page: number, pageSize: number): UseQueryResult<PaginatedLibraryEntries> {
+export function useLibraryList(
+  page: number,
+  pageSize: number,
+): UseQueryResult<PaginatedLibraryEntries> {
   return useQuery({
     queryKey: libraryKeys.list(page, pageSize),
     queryFn: () => libraryApi.list(page, pageSize),
@@ -44,7 +48,9 @@ export function useRefreshLibrary(
   });
 }
 
-export function useLibraryEntry(entryId: string | undefined): UseQueryResult<EnrichedLibraryEntry> {
+export function useLibraryEntry(
+  entryId: string | undefined,
+): UseQueryResult<EnrichedLibraryEntry> {
   return useQuery({
     queryKey: libraryKeys.detail(entryId ?? ''),
     queryFn: () => libraryApi.getOne(entryId ?? ''),

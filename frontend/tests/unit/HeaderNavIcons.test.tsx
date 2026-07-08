@@ -59,6 +59,8 @@ describe('HeaderNavIcons', () => {
 
     await user.keyboard('{Enter}');
 
-    expect(await screen.findByRole('heading', { name: /wishlist page/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /wishlist page/i }),
+    ).toBeInTheDocument();
   });
 });

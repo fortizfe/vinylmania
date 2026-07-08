@@ -17,7 +17,12 @@ const rawRelease = {
 };
 
 function entry(overrides: Partial<LibraryEntry>): LibraryEntry {
-  return { id: 'e1', discogsReleaseId: 1, addedAt: '2026-07-03T00:00:00.000Z', ...overrides };
+  return {
+    id: 'e1',
+    discogsReleaseId: 1,
+    addedAt: '2026-07-03T00:00:00.000Z',
+    ...overrides,
+  };
 }
 
 describe('enrichEntry', () => {

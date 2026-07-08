@@ -9,7 +9,13 @@ const SEARCH_RESULTS_PATH = '/app/search';
 
 function SearchIcon() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="h-4 w-4"
+    >
       <circle cx="9" cy="9" r="6" strokeLinecap="round" strokeLinejoin="round" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M17 17l-4-4" />
     </svg>
@@ -43,7 +49,11 @@ export function HeaderSearchBox() {
   }
 
   return (
-    <form onSubmit={handleSubmit} role="search" className="flex w-40 gap-2 sm:w-64 md:w-80">
+    <form
+      onSubmit={handleSubmit}
+      role="search"
+      className="flex w-40 gap-2 sm:w-64 md:w-80"
+    >
       <div className="flex-1">
         <Input
           id="header-search"

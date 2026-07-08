@@ -70,24 +70,28 @@ describe('Navigation menu (US2)', () => {
     renderAuthenticatedApp('/app');
     const user = userEvent.setup();
 
-    await waitFor(() =>
-      expect(screen.getByText(/check back soon/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/check back soon/i)).toBeInTheDocument());
 
     await user.click(screen.getByRole('button', { name: /menu/i }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('link', { name: /my library/i }));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('link', { name: /my library/i }),
+    );
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /your library/i })).toBeInTheDocument(),
     );
 
     await user.click(screen.getByRole('button', { name: /menu/i }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('link', { name: /my wishlist/i }));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('link', { name: /my wishlist/i }),
+    );
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /wishlist/i })).toBeInTheDocument(),
     );
 
     await user.click(screen.getByRole('button', { name: /menu/i }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('link', { name: /profile/i }));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('link', { name: /profile/i }),
+    );
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /profile/i })).toBeInTheDocument(),
     );

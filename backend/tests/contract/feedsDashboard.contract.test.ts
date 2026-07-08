@@ -21,7 +21,13 @@ const CONTRACT_SOURCE_B: FeedSourceConfig = {
 };
 
 const mockMetalStormSources: FeedSourceConfig[] = [
-  { id: 'metal-storm-news', name: 'Metal Storm', feedUrl: 'https://contract-ms-news.test/rss', category: 'News', enabled: true },
+  {
+    id: 'metal-storm-news',
+    name: 'Metal Storm',
+    feedUrl: 'https://contract-ms-news.test/rss',
+    category: 'News',
+    enabled: true,
+  },
   {
     id: 'metal-storm-reviews',
     name: 'Metal Storm',
@@ -43,7 +49,13 @@ const mockMetalStormSources: FeedSourceConfig[] = [
     category: 'Articles',
     enabled: true,
   },
-  { id: 'metal-storm-picks', name: 'Metal Storm', feedUrl: 'https://contract-ms-picks.test/rss', category: 'Staff Picks', enabled: true },
+  {
+    id: 'metal-storm-picks',
+    name: 'Metal Storm',
+    feedUrl: 'https://contract-ms-picks.test/rss',
+    category: 'Staff Picks',
+    enabled: true,
+  },
 ];
 
 jest.mock('../../src/feeds/feedSources', () => ({
@@ -90,7 +102,9 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
   beforeEach(async () => {
     await invalidateCache(`feeds:${CONTRACT_SOURCE_A.id}`);
     await invalidateCache(`feeds:${CONTRACT_SOURCE_B.id}`);
-    await Promise.all(mockMetalStormSources.map((source) => invalidateCache(`feeds:${source.id}`)));
+    await Promise.all(
+      mockMetalStormSources.map((source) => invalidateCache(`feeds:${source.id}`)),
+    );
   });
 
   afterEach(async () => {
@@ -105,14 +119,24 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
       .get('/rss')
       .reply(
         200,
-        rssXml([{ title: 'News Item', link: 'https://contract-feed-a.test/1', pubDate: 'Tue, 07 Jul 2026 00:00:00 GMT' }]),
+        rssXml([
+          {
+            title: 'News Item',
+            link: 'https://contract-feed-a.test/1',
+            pubDate: 'Tue, 07 Jul 2026 00:00:00 GMT',
+          },
+        ]),
       );
     nock('https://contract-feed-b.test')
       .get('/rss')
       .reply(
         200,
         rssXml([
-          { title: 'Review Item', link: 'https://contract-feed-b.test/1', pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT' },
+          {
+            title: 'Review Item',
+            link: 'https://contract-feed-b.test/1',
+            pubDate: 'Wed, 08 Jul 2026 00:00:00 GMT',
+          },
         ]),
       );
 
@@ -123,29 +147,45 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
         .get(new URL(source.feedUrl).pathname)
         .reply(
           200,
-          rssXml([{ title: `${source.id} Item`, link: `${source.feedUrl}#1`, pubDate: 'Sun, 05 Jul 2026 00:00:00 GMT' }]),
+          rssXml([
+            {
+              title: `${source.id} Item`,
+              link: `${source.feedUrl}#1`,
+              pubDate: 'Sun, 05 Jul 2026 00:00:00 GMT',
+            },
+          ]),
         );
     }
 
-    const res = await request(app).get('/api/feeds/dashboard').set('Authorization', `Bearer ${idToken}`);
+    const res = await request(app)
+      .get('/api/feeds/dashboard')
+      .set('Authorization', `Bearer ${idToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.sourceStatuses).toEqual(
       expect.arrayContaining([
         { sourceId: 'contract-source-a', sourceName: 'Contract Feed A', status: 'ok' },
         { sourceId: 'contract-source-b', sourceName: 'Contract Feed B', status: 'ok' },
-        ...mockMetalStormSources.map((source) => ({ sourceId: source.id, sourceName: source.name, status: 'ok' })),
+        ...mockMetalStormSources.map((source) => ({
+          sourceId: source.id,
+          sourceName: source.name,
+          status: 'ok',
+        })),
       ]),
     );
 
-    const newsCategory = res.body.categories.find((c: { category: string }) => c.category === 'News');
+    const newsCategory = res.body.categories.find(
+      (c: { category: string }) => c.category === 'News',
+    );
     expect(newsCategory.articles[0]).toMatchObject({
       title: 'News Item',
       sourceName: 'Contract Feed A',
       link: 'https://contract-feed-a.test/1',
     });
 
-    const reviewsCategory = res.body.categories.find((c: { category: string }) => c.category === 'Reviews');
+    const reviewsCategory = res.body.categories.find(
+      (c: { category: string }) => c.category === 'Reviews',
+    );
     expect(reviewsCategory.articles[0]).toMatchObject({
       title: 'Review Item',
       sourceName: 'Contract Feed B',

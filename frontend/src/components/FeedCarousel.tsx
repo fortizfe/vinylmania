@@ -5,7 +5,13 @@ const END_EPSILON_PX = 1;
 
 function ChevronLeftIcon() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="h-4 w-4"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l-6 6 6 6" />
     </svg>
   );
@@ -13,7 +19,13 @@ function ChevronLeftIcon() {
 
 function ChevronRightIcon() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="h-4 w-4"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 4l6 6-6 6" />
     </svg>
   );
@@ -37,7 +49,9 @@ export function FeedCarousel({ children }: FeedCarouselProps) {
       return;
     }
     setCanScrollPrev(track.scrollLeft > 0);
-    setCanScrollNext(track.scrollLeft + track.clientWidth < track.scrollWidth - END_EPSILON_PX);
+    setCanScrollNext(
+      track.scrollLeft + track.clientWidth < track.scrollWidth - END_EPSILON_PX,
+    );
   }
 
   useLayoutEffect(() => {
@@ -51,7 +65,10 @@ export function FeedCarousel({ children }: FeedCarouselProps) {
     if (!track) {
       return;
     }
-    track.scrollBy({ left: direction * track.clientWidth * SCROLL_STEP_RATIO, behavior: 'smooth' });
+    track.scrollBy({
+      left: direction * track.clientWidth * SCROLL_STEP_RATIO,
+      behavior: 'smooth',
+    });
   }
 
   return (

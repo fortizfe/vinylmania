@@ -6,7 +6,9 @@ import { Input } from '../../../src/components/ui/Input';
 
 describe('Input', () => {
   it('associates the label with the control via id/htmlFor', () => {
-    render(<Input id="record-search" label="Search Discogs" value="" onChange={() => {}} />);
+    render(
+      <Input id="record-search" label="Search Discogs" value="" onChange={() => {}} />,
+    );
 
     const input = screen.getByLabelText('Search Discogs');
     expect(input).toHaveAttribute('id', 'record-search');

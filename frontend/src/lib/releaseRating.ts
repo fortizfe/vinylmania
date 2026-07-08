@@ -42,7 +42,9 @@ export function formatRatingValue(average: number): string {
  * gets its numeric value and color band, otherwise the badge gets the
  * "unrated" placeholder (dash on soft gray) instead of being omitted.
  */
-export function presentRating(rating: RatingSource | null | undefined): RatingPresentation {
+export function presentRating(
+  rating: RatingSource | null | undefined,
+): RatingPresentation {
   if (!isRatingVisible(rating)) return { displayValue: '-', band: 'unrated' };
   return {
     displayValue: formatRatingValue(rating.average),

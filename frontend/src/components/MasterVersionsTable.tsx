@@ -11,7 +11,11 @@ interface MasterVersionsTableProps {
 }
 
 /** Paginated (10/page) table of a master's releases, each row linking to its own detail page (spec FR-009/FR-010/FR-011). */
-export function MasterVersionsTable({ discogsId, page, onPageChange }: MasterVersionsTableProps) {
+export function MasterVersionsTable({
+  discogsId,
+  page,
+  onPageChange,
+}: MasterVersionsTableProps) {
   const { data, isLoading } = useCatalogMasterVersions(discogsId, page);
 
   if (isLoading || !data) {
@@ -36,7 +40,10 @@ export function MasterVersionsTable({ discogsId, page, onPageChange }: MasterVer
           </thead>
           <tbody>
             {results.map((version) => (
-              <tr key={version.discogsId} className="border-t border-gray-200 dark:border-gray-800">
+              <tr
+                key={version.discogsId}
+                className="border-t border-gray-200 dark:border-gray-800"
+              >
                 <td className="py-2 pr-4">
                   <Link
                     to={`/app/releases/${version.discogsId}`}
@@ -46,10 +53,18 @@ export function MasterVersionsTable({ discogsId, page, onPageChange }: MasterVer
                     {version.title}
                   </Link>
                 </td>
-                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{version.format ?? '—'}</td>
-                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{version.year ?? '—'}</td>
-                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{version.label ?? '—'}</td>
-                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{version.country ?? '—'}</td>
+                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">
+                  {version.format ?? '—'}
+                </td>
+                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">
+                  {version.year ?? '—'}
+                </td>
+                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">
+                  {version.label ?? '—'}
+                </td>
+                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">
+                  {version.country ?? '—'}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -57,7 +72,11 @@ export function MasterVersionsTable({ discogsId, page, onPageChange }: MasterVer
       </div>
       {pagination.pages > 1 && (
         <div className="flex gap-3">
-          <Button variant="secondary" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          <Button
+            variant="secondary"
+            disabled={page <= 1}
+            onClick={() => onPageChange(page - 1)}
+          >
             Previous
           </Button>
           <Button

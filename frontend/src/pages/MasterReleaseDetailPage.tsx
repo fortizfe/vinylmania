@@ -20,7 +20,8 @@ export function MasterReleaseDetailPage() {
 
   const parsedId = Number(discogsId);
   const parsedPage = Number(searchParams.get('page'));
-  const versionsPage = Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+  const versionsPage =
+    Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
   const { data: master, isLoading, isError: notFound } = useCatalogMaster(parsedId);
 

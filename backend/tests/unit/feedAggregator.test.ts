@@ -1,8 +1,20 @@
 import type { FeedSourceConfig } from '../../src/feeds/types';
 
 const mockFeedSources: FeedSourceConfig[] = [
-  { id: 'agg-test-a', name: 'Source A', feedUrl: 'https://source-a.test/rss', category: 'News', enabled: true },
-  { id: 'agg-test-b', name: 'Source B', feedUrl: 'https://source-b.test/rss', category: 'News', enabled: true },
+  {
+    id: 'agg-test-a',
+    name: 'Source A',
+    feedUrl: 'https://source-a.test/rss',
+    category: 'News',
+    enabled: true,
+  },
+  {
+    id: 'agg-test-b',
+    name: 'Source B',
+    feedUrl: 'https://source-b.test/rss',
+    category: 'News',
+    enabled: true,
+  },
   {
     id: 'agg-test-disabled',
     name: 'Disabled Source',
@@ -42,10 +54,22 @@ describe('getDashboard', () => {
   it('fans out across every enabled source, merging their articles and marking each ok', async () => {
     mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
       if (feedUrl === mockFeedSources[0].feedUrl) {
-        return feedOutput([{ title: 'A1', link: 'https://source-a.test/1', pubDate: 'Mon, 01 Jan 2026 00:00:00 GMT' }]);
+        return feedOutput([
+          {
+            title: 'A1',
+            link: 'https://source-a.test/1',
+            pubDate: 'Mon, 01 Jan 2026 00:00:00 GMT',
+          },
+        ]);
       }
       if (feedUrl === mockFeedSources[1].feedUrl) {
-        return feedOutput([{ title: 'B1', link: 'https://source-b.test/1', pubDate: 'Tue, 02 Jan 2026 00:00:00 GMT' }]);
+        return feedOutput([
+          {
+            title: 'B1',
+            link: 'https://source-b.test/1',
+            pubDate: 'Tue, 02 Jan 2026 00:00:00 GMT',
+          },
+        ]);
       }
       throw new Error(`unexpected feed url ${feedUrl}`);
     });
@@ -59,7 +83,9 @@ describe('getDashboard', () => {
       ]),
     );
     // The disabled source is never fetched and never appears in the response.
-    expect(result.sourceStatuses.find((s) => s.sourceId === 'agg-test-disabled')).toBeUndefined();
+    expect(
+      result.sourceStatuses.find((s) => s.sourceId === 'agg-test-disabled'),
+    ).toBeUndefined();
     expect(mockedFetchFeed).toHaveBeenCalledTimes(2);
 
     const newsCategory = result.categories.find((c) => c.category === 'News');
@@ -69,7 +95,9 @@ describe('getDashboard', () => {
   it("isolates one failing source into sourceStatuses without discarding the healthy source's articles", async () => {
     mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
       if (feedUrl === mockFeedSources[0].feedUrl) {
-        return feedOutput([{ title: 'Healthy Article', link: 'https://source-a.test/2' }]);
+        return feedOutput([
+          { title: 'Healthy Article', link: 'https://source-a.test/2' },
+        ]);
       }
       if (feedUrl === mockFeedSources[1].feedUrl) {
         throw new Error('simulated Cloudflare 403 challenge');
@@ -175,7 +203,9 @@ describe('getDashboard', () => {
     it('omits a category from the response when it ends up with zero articles', async () => {
       mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
         if (feedUrl === mockFeedSources[0].feedUrl) {
-          return feedOutput([{ title: 'Only Article', link: 'https://source-a.test/only' }]);
+          return feedOutput([
+            { title: 'Only Article', link: 'https://source-a.test/only' },
+          ]);
         }
         if (feedUrl === mockFeedSources[1].feedUrl) {
           return feedOutput([]);

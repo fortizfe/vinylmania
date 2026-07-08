@@ -46,8 +46,17 @@ describe('FeedCategoryFilterBar', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: 'News' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Reviews' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'News' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Reviews' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 });

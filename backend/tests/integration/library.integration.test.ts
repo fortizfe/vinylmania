@@ -1,6 +1,10 @@
 import { getFirestoreDb } from '../../src/config/firebase-admin';
 import { createEntry } from '../../src/library/libraryService';
-import { clearEmulatorFirestore, clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import {
+  clearEmulatorFirestore,
+  clearEmulatorUsers,
+  getTestIdToken,
+} from '../helpers/authEmulator';
 
 // Exercises the real Discogs API (release ID 1, permanent and stable — see
 // specs/002-discogs-api-client/research.md §8) against the Firestore

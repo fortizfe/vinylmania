@@ -4,7 +4,10 @@ import { Skeleton } from './ui/Skeleton';
 export function RecordDetailSkeleton() {
   return (
     <Card>
-      <div data-testid="record-detail-skeleton" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div
+        data-testid="record-detail-skeleton"
+        className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+      >
         <Skeleton className="aspect-square w-full lg:col-span-2" />
 
         <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2">

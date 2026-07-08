@@ -3,7 +3,11 @@ import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 
 function formatPublishedAt(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 interface FeedArticleCardProps {
@@ -37,7 +41,9 @@ export function FeedArticleCard({ article }: FeedArticleCardProps) {
             {article.sourceName} · {formatPublishedAt(article.publishedAt)}
           </span>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{article.title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {article.title}
+        </h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">{article.excerpt}</p>
       </a>
     </Card>

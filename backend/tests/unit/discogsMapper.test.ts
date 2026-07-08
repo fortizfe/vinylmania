@@ -108,7 +108,9 @@ describe('mapRelease', () => {
     ],
     community: { have: 214, want: 58, rating: { average: 4.3, count: 37 } },
     tracklist: [{ position: 'A', type_: 'track', title: 'Östermalm', duration: '4:45' }],
-    images: [{ type: 'primary', uri: 'https://example.com/cover.jpg', width: 600, height: 600 }],
+    images: [
+      { type: 'primary', uri: 'https://example.com/cover.jpg', width: 600, height: 600 },
+    ],
     master_id: 1660109,
     uri: 'https://www.discogs.com/release/1-The-Persuader-Stockholm',
   };
@@ -132,7 +134,14 @@ describe('mapRelease', () => {
       ],
       community: { have: 214, want: 58, rating: { average: 4.3, count: 37 } },
       tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
-      images: [{ url: 'https://example.com/cover.jpg', imageType: 'primary', width: 600, height: 600 }],
+      images: [
+        {
+          url: 'https://example.com/cover.jpg',
+          imageType: 'primary',
+          width: 600,
+          height: 600,
+        },
+      ],
       masterId: 1660109,
       discogsUrl: 'https://www.discogs.com/release/1-The-Persuader-Stockholm',
     });
@@ -150,7 +159,12 @@ describe('mapRelease', () => {
     const mapped = mapRelease(raw);
 
     expect(mapped.artists).toEqual([
-      { discogsArtistId: 1, name: 'The Persuader', nameVariation: 'Persuader', joinPhrase: '&' },
+      {
+        discogsArtistId: 1,
+        name: 'The Persuader',
+        nameVariation: 'Persuader',
+        joinPhrase: '&',
+      },
       { discogsArtistId: 239, name: 'Jesper Dahlbäck' },
     ]);
   });
@@ -167,7 +181,13 @@ describe('mapRelease', () => {
   });
 
   it('omits releaseDate, notes, and community, and defaults identifiers to [], when Discogs has none of them', () => {
-    const { released: _released, notes: _notes, identifiers: _identifiers, community: _community, ...rawWithoutNewFields } = baseRawRelease;
+    const {
+      released: _released,
+      notes: _notes,
+      identifiers: _identifiers,
+      community: _community,
+      ...rawWithoutNewFields
+    } = baseRawRelease;
 
     const mapped = mapRelease(rawWithoutNewFields);
 
@@ -186,7 +206,9 @@ describe('mapMasterRelease (feature 026, US3)', () => {
     artists: [{ id: 1, name: 'Linkin Park', anv: '', join: '', role: '' }],
     genres: ['Rock'],
     styles: ['Nu Metal'],
-    images: [{ type: 'primary', uri: 'https://example.com/cover.jpg', width: 600, height: 600 }],
+    images: [
+      { type: 'primary', uri: 'https://example.com/cover.jpg', width: 600, height: 600 },
+    ],
     tracklist: [{ position: '1', type_: 'track', title: 'Papercut', duration: '3:05' }],
     main_release: 98765,
     uri: 'https://www.discogs.com/master/1660109-Linkin-Park-Hybrid-Theory',
@@ -200,7 +222,14 @@ describe('mapMasterRelease (feature 026, US3)', () => {
       artists: [{ discogsArtistId: 1, name: 'Linkin Park' }],
       genres: ['Rock'],
       styles: ['Nu Metal'],
-      images: [{ url: 'https://example.com/cover.jpg', imageType: 'primary', width: 600, height: 600 }],
+      images: [
+        {
+          url: 'https://example.com/cover.jpg',
+          imageType: 'primary',
+          width: 600,
+          height: 600,
+        },
+      ],
       tracklist: [{ position: '1', title: 'Papercut', duration: '3:05' }],
       mainReleaseId: 98765,
       discogsUrl: 'https://www.discogs.com/master/1660109-Linkin-Park-Hybrid-Theory',
@@ -208,7 +237,14 @@ describe('mapMasterRelease (feature 026, US3)', () => {
   });
 
   it('tolerates a missing year, genres, styles, images, and tracklist', () => {
-    const { year: _year, genres: _genres, styles: _styles, images: _images, tracklist: _tracklist, ...rawWithoutOptionals } = baseRawMaster;
+    const {
+      year: _year,
+      genres: _genres,
+      styles: _styles,
+      images: _images,
+      tracklist: _tracklist,
+      ...rawWithoutOptionals
+    } = baseRawMaster;
 
     const mapped = mapMasterRelease(rawWithoutOptionals);
 
@@ -262,8 +298,21 @@ describe('mapArtist', () => {
       realname: 'Jesper Dahlbäck',
       profile: 'Electronic artist working out of Stockholm, active since 1994.',
       namevariations: ['Persuader', 'The Presuader'],
-      aliases: [{ id: 239, name: 'Jesper Dahlbäck', resource_url: 'https://api.discogs.com/artists/239' }],
-      images: [{ type: 'primary', uri: 'https://example.com/artist.jpg', width: 600, height: 771 }],
+      aliases: [
+        {
+          id: 239,
+          name: 'Jesper Dahlbäck',
+          resource_url: 'https://api.discogs.com/artists/239',
+        },
+      ],
+      images: [
+        {
+          type: 'primary',
+          uri: 'https://example.com/artist.jpg',
+          width: 600,
+          height: 771,
+        },
+      ],
       uri: 'https://www.discogs.com/artist/1-The-Persuader',
     });
 
@@ -274,7 +323,14 @@ describe('mapArtist', () => {
       profile: 'Electronic artist working out of Stockholm, active since 1994.',
       nameVariations: ['Persuader', 'The Presuader'],
       aliases: [{ discogsArtistId: 239, name: 'Jesper Dahlbäck' }],
-      images: [{ url: 'https://example.com/artist.jpg', imageType: 'primary', width: 600, height: 771 }],
+      images: [
+        {
+          url: 'https://example.com/artist.jpg',
+          imageType: 'primary',
+          width: 600,
+          height: 771,
+        },
+      ],
       discogsUrl: 'https://www.discogs.com/artist/1-The-Persuader',
     });
   });

@@ -37,7 +37,9 @@ describe('ProfilePage', () => {
     renderProfile();
 
     expect(screen.getByRole('heading', { name: 'Discogs' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /connect discogs account/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /connect discogs account/i }),
+    ).toBeInTheDocument();
   });
 
   it('shows a dismissible success message when arriving with a linked outcome', async () => {
@@ -62,7 +64,9 @@ describe('ProfilePage', () => {
       renderProfile({ discogsOutcome: 'denied' });
 
       expect(screen.getByText(/was not completed/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /connect discogs account/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /connect discogs account/i }),
+      ).toBeInTheDocument();
     });
 
     it('shows a distinct message for an expired attempt', () => {

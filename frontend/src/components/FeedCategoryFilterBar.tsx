@@ -23,7 +23,10 @@ export function FeedCategoryFilterBar({
         type="button"
         aria-pressed={selectedCategory === null}
         onClick={() => onSelectCategory(null)}
-        className={clsx(baseButtonClassName, selectedCategory === null ? activeClassName : inactiveClassName)}
+        className={clsx(
+          baseButtonClassName,
+          selectedCategory === null ? activeClassName : inactiveClassName,
+        )}
       >
         All
       </button>
@@ -33,7 +36,10 @@ export function FeedCategoryFilterBar({
           type="button"
           aria-pressed={selectedCategory === category}
           onClick={() => onSelectCategory(category)}
-          className={clsx(baseButtonClassName, selectedCategory === category ? activeClassName : inactiveClassName)}
+          className={clsx(
+            baseButtonClassName,
+            selectedCategory === category ? activeClassName : inactiveClassName,
+          )}
         >
           {category}
         </button>

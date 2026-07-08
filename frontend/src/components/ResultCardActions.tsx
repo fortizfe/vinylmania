@@ -8,7 +8,13 @@ interface ResultCardActionsProps {
 
 function PlusIcon() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="h-4 w-4"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M10 4v12M4 10h12" />
     </svg>
   );
@@ -16,7 +22,13 @@ function PlusIcon() {
 
 function CheckIcon() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="h-4 w-4"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 10l4 4 8-8" />
     </svg>
   );

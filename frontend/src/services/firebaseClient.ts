@@ -1,5 +1,10 @@
 import { type FirebaseApp, getApps, initializeApp } from 'firebase/app';
-import { type Auth, GoogleAuthProvider, connectAuthEmulator, getAuth } from 'firebase/auth';
+import {
+  type Auth,
+  GoogleAuthProvider,
+  connectAuthEmulator,
+  getAuth,
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -10,8 +15,7 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-export const firebaseApp: FirebaseApp =
-  getApps()[0] ?? initializeApp(firebaseConfig);
+export const firebaseApp: FirebaseApp = getApps()[0] ?? initializeApp(firebaseConfig);
 
 export const firebaseAuth: Auth = getAuth(firebaseApp);
 

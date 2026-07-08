@@ -9,7 +9,10 @@ import { Skeleton } from './ui/Skeleton';
 export function DiscogsConnectionCardSkeleton() {
   return (
     <Card>
-      <div data-testid="discogs-connection-skeleton" className="flex min-h-36 flex-col gap-4">
+      <div
+        data-testid="discogs-connection-skeleton"
+        className="flex min-h-36 flex-col gap-4"
+      >
         <div className="flex items-center gap-3">
           <Skeleton className="h-10 w-10" rounded="full" />
           <div className="flex flex-col gap-2">

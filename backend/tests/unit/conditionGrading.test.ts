@@ -25,7 +25,12 @@ describe('grading sets', () => {
       expect(isSleeveCondition(value)).toBe(true);
       expect(isMediaCondition(value)).toBe(false);
     }
-    expect(SLEEVE_CONDITIONS).toEqual([...MEDIA_CONDITIONS, 'Generic', 'Not Graded', 'No Cover']);
+    expect(SLEEVE_CONDITIONS).toEqual([
+      ...MEDIA_CONDITIONS,
+      'Generic',
+      'Not Graded',
+      'No Cover',
+    ]);
   });
 
   it('accepts every media grading value for both media and sleeve', () => {

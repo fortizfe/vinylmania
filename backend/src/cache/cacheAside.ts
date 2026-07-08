@@ -28,7 +28,11 @@ export async function invalidateCache(key: string): Promise<void> {
 // Cache-aside (lazy-loading) wrapper: serve from Redis when possible, fall
 // back to fetcher() untouched whenever Redis is unconfigured or unavailable
 // so a cache outage never fails the underlying request.
-export function withCache<T>(key: string, ttlSeconds: number, fetcher: () => Promise<T>): Promise<T> {
+export function withCache<T>(
+  key: string,
+  ttlSeconds: number,
+  fetcher: () => Promise<T>,
+): Promise<T> {
   const existing = inFlight.get(key);
   if (existing !== undefined) {
     return existing as Promise<T>;

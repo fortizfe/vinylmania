@@ -12,7 +12,10 @@ export function Input({ label, id, hideLabel = false, className, ...props }: Inp
     <div className="flex flex-col gap-1">
       <label
         htmlFor={id}
-        className={clsx('text-sm font-medium text-gray-700 dark:text-gray-300', hideLabel && 'sr-only')}
+        className={clsx(
+          'text-sm font-medium text-gray-700 dark:text-gray-300',
+          hideLabel && 'sr-only',
+        )}
       >
         {label}
       </label>

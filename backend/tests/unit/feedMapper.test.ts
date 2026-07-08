@@ -19,7 +19,8 @@ describe('mapFeedItem', () => {
         pubDate: 'Tue, 07 Jul 2026 21:17:03 +0000',
         isoDate: '2026-07-07T21:17:03.000Z',
         contentSnippet: 'Off their new album of the same name, out this Friday.',
-        content: '<img src="https://cdn.example.com/cover.jpg" /><p>Off their new album.</p>',
+        content:
+          '<img src="https://cdn.example.com/cover.jpg" /><p>Off their new album.</p>',
       },
       source,
     );
@@ -46,7 +47,10 @@ describe('mapFeedItem', () => {
   });
 
   it('falls back to the link as id when guid is absent', () => {
-    const mapped = mapFeedItem({ title: 'T', link: 'https://example.com/y', contentSnippet: 'x' }, source);
+    const mapped = mapFeedItem(
+      { title: 'T', link: 'https://example.com/y', contentSnippet: 'x' },
+      source,
+    );
     expect(mapped?.id).toBe('https://example.com/y');
   });
 
@@ -76,7 +80,8 @@ describe('mapFeedItem', () => {
       {
         title: 'T',
         link: 'https://example.com/inline-only',
-        content: '<p>intro</p><img src="https://cdn.example.com/inline.jpg" /><img src="https://cdn.example.com/second.jpg" />',
+        content:
+          '<p>intro</p><img src="https://cdn.example.com/inline.jpg" /><img src="https://cdn.example.com/second.jpg" />',
       },
       source,
     );

@@ -62,7 +62,11 @@ describe('Feeds dashboard graceful degradation (spec FR-007, FR-011)', () => {
       .reply(
         200,
         rssXml([
-          { title: 'Still Working', link: 'https://integration-feed-a.test/1', pubDate: 'Tue, 07 Jul 2026 00:00:00 GMT' },
+          {
+            title: 'Still Working',
+            link: 'https://integration-feed-a.test/1',
+            pubDate: 'Tue, 07 Jul 2026 00:00:00 GMT',
+          },
         ]),
       );
     nock('https://integration-feed-b.test')
@@ -76,12 +80,22 @@ describe('Feeds dashboard graceful degradation (spec FR-007, FR-011)', () => {
     expect(res.status).toBe(200);
     expect(res.body.sourceStatuses).toEqual(
       expect.arrayContaining([
-        { sourceId: 'integration-source-a', sourceName: 'Integration Feed A', status: 'ok' },
-        { sourceId: 'integration-source-b', sourceName: 'Integration Feed B', status: 'unavailable' },
+        {
+          sourceId: 'integration-source-a',
+          sourceName: 'Integration Feed A',
+          status: 'ok',
+        },
+        {
+          sourceId: 'integration-source-b',
+          sourceName: 'Integration Feed B',
+          status: 'unavailable',
+        },
       ]),
     );
 
-    const newsCategory = res.body.categories.find((c: { category: string }) => c.category === 'News');
+    const newsCategory = res.body.categories.find(
+      (c: { category: string }) => c.category === 'News',
+    );
     expect(newsCategory.articles).toHaveLength(1);
     expect(newsCategory.articles[0].title).toBe('Still Working');
   });
@@ -90,9 +104,11 @@ describe('Feeds dashboard graceful degradation (spec FR-007, FR-011)', () => {
     const { idToken } = await getTestIdToken('feeds-integration-alldown-user');
 
     nock('https://integration-feed-a.test').get('/rss').reply(500);
-    nock('https://integration-feed-b.test').get('/rss').reply(403, 'Cloudflare managed challenge', {
-      'cf-mitigated': 'challenge',
-    });
+    nock('https://integration-feed-b.test')
+      .get('/rss')
+      .reply(403, 'Cloudflare managed challenge', {
+        'cf-mitigated': 'challenge',
+      });
 
     const res = await request(app)
       .get('/api/feeds/dashboard')
@@ -102,8 +118,16 @@ describe('Feeds dashboard graceful degradation (spec FR-007, FR-011)', () => {
     expect(res.body.categories).toEqual([]);
     expect(res.body.sourceStatuses).toEqual(
       expect.arrayContaining([
-        { sourceId: 'integration-source-a', sourceName: 'Integration Feed A', status: 'unavailable' },
-        { sourceId: 'integration-source-b', sourceName: 'Integration Feed B', status: 'unavailable' },
+        {
+          sourceId: 'integration-source-a',
+          sourceName: 'Integration Feed A',
+          status: 'unavailable',
+        },
+        {
+          sourceId: 'integration-source-b',
+          sourceName: 'Integration Feed B',
+          status: 'unavailable',
+        },
       ]),
     );
   });

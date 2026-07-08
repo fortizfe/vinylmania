@@ -6,7 +6,11 @@ import { SearchResultCard } from '../components/SearchResultCard';
 import { SearchResultCardSkeleton } from '../components/SearchResultCardSkeleton';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { buildSearchPath, type SearchFilters, useSearchQueryParams } from '../hooks/useSearchQueryParams';
+import {
+  buildSearchPath,
+  type SearchFilters,
+  useSearchQueryParams,
+} from '../hooks/useSearchQueryParams';
 import { useCatalogSearch } from '../queries/discogsQueries';
 import { useCreateLibraryEntry } from '../queries/libraryQueries';
 import { ApiError } from '../services/apiClient';
@@ -52,7 +56,11 @@ export function SearchResultsPage() {
   const loading = searchQuery.isLoading;
   const results = searchQuery.data?.results ?? [];
   const totalPages = searchQuery.data?.pagination.pages ?? 0;
-  const error = addError ?? (searchQuery.isError ? 'Something went wrong while searching. Please try again.' : null);
+  const error =
+    addError ??
+    (searchQuery.isError
+      ? 'Something went wrong while searching. Please try again.'
+      : null);
   const activeFilters = activeFilterLabels(filters);
   // Carried as router state into detail pages so their back action returns
   // here with the exact query/filters/page preserved (spec FR-012).
@@ -92,9 +100,15 @@ export function SearchResultsPage() {
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6 sm:p-8">
-      <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Search results</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+        Search results
+      </h1>
 
-      <SearchFiltersControl filters={filters} onApply={applyFilters} onClear={clearFilters} />
+      <SearchFiltersControl
+        filters={filters}
+        onApply={applyFilters}
+        onClear={clearFilters}
+      />
 
       {!searched && (
         <p className="text-gray-500 dark:text-gray-400">
@@ -159,7 +173,11 @@ export function SearchResultsPage() {
           </ul>
           {totalPages > 1 && (
             <div className="flex gap-3">
-              <Button variant="secondary" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+              <Button
+                variant="secondary"
+                disabled={page <= 1}
+                onClick={() => goToPage(page - 1)}
+              >
                 Previous
               </Button>
               <Button

@@ -6,7 +6,9 @@ beforeAll(() => {
   // Block all real network except localhost, so supertest can still reach
   // the in-process Express app under test while Discogs calls stay mocked.
   nock.disableNetConnect();
-  nock.enableNetConnect((host) => host.includes('127.0.0.1') || host.includes('localhost'));
+  nock.enableNetConnect(
+    (host) => host.includes('127.0.0.1') || host.includes('localhost'),
+  );
 });
 
 afterEach(() => {
@@ -38,10 +40,17 @@ export interface RawInstanceOverrides {
 }
 
 /** Builds an instance payload as returned by Discogs' collection listings. */
-export function rawCollectionInstance(releaseId: number, overrides: RawInstanceOverrides = {}) {
+export function rawCollectionInstance(
+  releaseId: number,
+  overrides: RawInstanceOverrides = {},
+) {
   const noteValues = [
-    ...(overrides.mediaCondition ? [{ field_id: 1, value: overrides.mediaCondition }] : []),
-    ...(overrides.sleeveCondition ? [{ field_id: 2, value: overrides.sleeveCondition }] : []),
+    ...(overrides.mediaCondition
+      ? [{ field_id: 1, value: overrides.mediaCondition }]
+      : []),
+    ...(overrides.sleeveCondition
+      ? [{ field_id: 2, value: overrides.sleeveCondition }]
+      : []),
     ...(overrides.notes ? [{ field_id: 3, value: overrides.notes }] : []),
   ];
   return {
@@ -135,5 +144,7 @@ export function stubReleaseRatingNeverResolves(releaseId: number): nock.Scope {
 
 /** Stubs a rating lookup that fails outright (service error). */
 export function stubReleaseRatingUnavailable(releaseId: number): nock.Scope {
-  return discogsScope().get(`/releases/${releaseId}/rating`).reply(503, { message: 'unavailable' });
+  return discogsScope()
+    .get(`/releases/${releaseId}/rating`)
+    .reply(503, { message: 'unavailable' });
 }

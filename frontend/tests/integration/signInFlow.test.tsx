@@ -23,7 +23,12 @@ vi.mock('../../src/services/firebaseClient', () => ({
 }));
 
 vi.mock('../../src/services/feedsApi', () => ({
-  getDashboard: () => Promise.resolve({ categories: [], sourceStatuses: [], generatedAt: '2026-07-08T00:00:00.000Z' }),
+  getDashboard: () =>
+    Promise.resolve({
+      categories: [],
+      sourceStatuses: [],
+      generatedAt: '2026-07-08T00:00:00.000Z',
+    }),
 }));
 
 const originalFetch = global.fetch;
@@ -88,8 +93,6 @@ describe('Sign-in flow (US2)', () => {
       await user.click(screen.getByRole('button', { name: /sign in with google/i }));
     });
 
-    await waitFor(() =>
-      expect(screen.getByText(/check back soon/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/check back soon/i)).toBeInTheDocument());
   });
 });

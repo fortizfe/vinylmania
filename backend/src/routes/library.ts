@@ -35,7 +35,10 @@ const MAX_PAGE_SIZE = 50;
 
 function parsePageParams(req: Request): { page: number; pageSize: number } {
   const page = Math.max(1, Number(req.query.page) || 1);
-  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(req.query.pageSize) || DEFAULT_PAGE_SIZE));
+  const pageSize = Math.min(
+    MAX_PAGE_SIZE,
+    Math.max(1, Number(req.query.pageSize) || DEFAULT_PAGE_SIZE),
+  );
   return { page, pageSize };
 }
 
@@ -45,7 +48,11 @@ function serializeEntry(
   catalog: { catalogStatus: 'ok' | 'unavailable'; release: unknown },
   discogs: EntryDiscogsData | null,
 ) {
-  const { legacyCondition: _legacyCondition, legacyNotes: _legacyNotes, ...publicEntry } = entry;
+  const {
+    legacyCondition: _legacyCondition,
+    legacyNotes: _legacyNotes,
+    ...publicEntry
+  } = entry;
   return { ...publicEntry, ...catalog, discogs };
 }
 
@@ -53,7 +60,12 @@ function serializeEntry(
  * Maps feature-016 gate/collection failures per contracts/library-sync-api.md.
  * Returns false when the error is not one of them (caller falls through).
  */
-function respondCollectionError(res: Response, route: string, uid: string, err: unknown): boolean {
+function respondCollectionError(
+  res: Response,
+  route: string,
+  uid: string,
+  err: unknown,
+): boolean {
   if (err instanceof DiscogsNotLinkedError) {
     logger.warn({ route, outcome: 'unauthorized', uid, message: 'discogs_not_linked' });
     res.status(409).json({
@@ -66,7 +78,8 @@ function respondCollectionError(res: Response, route: string, uid: string, err: 
     logger.warn({ route, outcome: 'auth_failed', uid });
     res.status(401).json({
       error: 'discogs_link_invalid',
-      message: 'Your Discogs link is no longer valid. Please re-link your account from your profile.',
+      message:
+        'Your Discogs link is no longer valid. Please re-link your account from your profile.',
     });
     return true;
   }
@@ -78,7 +91,8 @@ function respondCollectionError(res: Response, route: string, uid: string, err: 
     logger.warn({ route, outcome: 'rate_limited', uid });
     res.status(429).json({
       error: 'discogs_rate_limited',
-      message: 'Discogs is receiving too many requests right now. Please try again in a moment.',
+      message:
+        'Discogs is receiving too many requests right now. Please try again in a moment.',
     });
     return true;
   }
@@ -93,7 +107,12 @@ function respondCollectionError(res: Response, route: string, uid: string, err: 
   return false;
 }
 
-function respondInternalError(res: Response, route: string, uid: string, err: unknown): void {
+function respondInternalError(
+  res: Response,
+  route: string,
+  uid: string,
+  err: unknown,
+): void {
   logger.error({
     route,
     outcome: 'error',
@@ -144,8 +163,16 @@ libraryRouter.post('/', requireAuth, async (req: Request, res: Response) => {
         });
         return;
       }
-      if (err instanceof DiscogsRateLimitError || err instanceof DiscogsUnavailableError) {
-        logger.warn({ route: '/api/library', outcome: 'unavailable', uid, message: err.message });
+      if (
+        err instanceof DiscogsRateLimitError ||
+        err instanceof DiscogsUnavailableError
+      ) {
+        logger.warn({
+          route: '/api/library',
+          outcome: 'unavailable',
+          uid,
+          message: err.message,
+        });
         res.status(502).json({
           error: 'catalog_unavailable',
           message: 'The catalog service is temporarily unavailable. Please try again.',
@@ -172,7 +199,9 @@ libraryRouter.post('/', requireAuth, async (req: Request, res: Response) => {
     };
 
     logger.info({ route: '/api/library', outcome: 'success', uid });
-    res.status(201).json(serializeEntry(entry, { catalogStatus: 'ok', release }, discogs));
+    res
+      .status(201)
+      .json(serializeEntry(entry, { catalogStatus: 'ok', release }, discogs));
   } catch (err) {
     if (respondCollectionError(res, '/api/library', uid, err)) {
       return;
@@ -205,7 +234,13 @@ libraryRouter.get('/:id', requireAuth, async (req: Request, res: Response) => {
     logger.info({ route: '/api/library/:id', outcome: 'success', uid });
     res
       .status(200)
-      .json(serializeEntry(entry, { catalogStatus: enriched.catalogStatus, release: enriched.release }, discogs));
+      .json(
+        serializeEntry(
+          entry,
+          { catalogStatus: enriched.catalogStatus, release: enriched.release },
+          discogs,
+        ),
+      );
   } catch (err) {
     if (respondCollectionError(res, '/api/library/:id', uid, err)) {
       return;
@@ -224,7 +259,11 @@ libraryRouter.get('/', requireAuth, async (req: Request, res: Response) => {
     const { items, totalItems } = await libraryService.listEntries(uid, page, pageSize);
     const enriched = await enrichEntries(items);
     const serialized = enriched.map((item) =>
-      serializeEntry(item, { catalogStatus: item.catalogStatus, release: item.release }, null),
+      serializeEntry(
+        item,
+        { catalogStatus: item.catalogStatus, release: item.release },
+        null,
+      ),
     );
 
     logger.info({ route: '/api/library', outcome: 'success', uid });
@@ -245,7 +284,9 @@ const patchBodySchema = z
     notes: z.string().optional(),
   })
   .strict()
-  .refine((body) => Object.keys(body).length > 0, { message: 'At least one field is required.' });
+  .refine((body) => Object.keys(body).length > 0, {
+    message: 'At least one field is required.',
+  });
 
 libraryRouter.patch('/:id', requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
@@ -283,7 +324,13 @@ libraryRouter.patch('/:id', requireAuth, async (req: Request, res: Response) => 
     logger.info({ route: '/api/library/:id', outcome: 'success', uid });
     res
       .status(200)
-      .json(serializeEntry(entry, { catalogStatus: enriched.catalogStatus, release: enriched.release }, discogs));
+      .json(
+        serializeEntry(
+          entry,
+          { catalogStatus: enriched.catalogStatus, release: enriched.release },
+          discogs,
+        ),
+      );
   } catch (err) {
     if (respondCollectionError(res, '/api/library/:id', uid, err)) {
       return;

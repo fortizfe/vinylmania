@@ -126,7 +126,9 @@ describe('Record detail flow (US3)', () => {
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByText(/couldn't find that record/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/couldn't find that record/i)).toBeInTheDocument(),
+    );
   });
 
   it('shows an explanatory message plus an editable my-copy section when catalog details are unavailable (US4)', async () => {
@@ -291,7 +293,10 @@ describe('Record detail flow (US3)', () => {
       },
     };
     mockGetOne.mockResolvedValue(baseEntry);
-    mockUpdate.mockResolvedValue({ ...baseEntry, discogs: { ...baseDiscogs, mediaCondition: 'Mint (M)' } });
+    mockUpdate.mockResolvedValue({
+      ...baseEntry,
+      discogs: { ...baseDiscogs, mediaCondition: 'Mint (M)' },
+    });
 
     renderPage();
 
@@ -487,7 +492,9 @@ describe('Record detail flow (US3)', () => {
 
     const main = screen.getByText('Stockholm').closest('main');
     const text = main?.textContent ?? '';
-    expect(text.indexOf('No cover image available')).toBeLessThan(text.indexOf('Stockholm'));
+    expect(text.indexOf('No cover image available')).toBeLessThan(
+      text.indexOf('Stockholm'),
+    );
     expect(text.indexOf('Stockholm')).toBeLessThan(text.indexOf('Your copy'));
     expect(text.indexOf('Your copy')).toBeLessThan(text.indexOf('Östermalm'));
     expect(text.indexOf('Östermalm')).toBeLessThan(

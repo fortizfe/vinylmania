@@ -16,7 +16,11 @@ function renderTable(page = 1, onPageChange = vi.fn()) {
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
       <MemoryRouter>
-        <MasterVersionsTable discogsId={1660109} page={page} onPageChange={onPageChange} />
+        <MasterVersionsTable
+          discogsId={1660109}
+          page={page}
+          onPageChange={onPageChange}
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -72,7 +76,9 @@ describe('MasterVersionsTable', () => {
     const onPageChange = vi.fn();
     renderTable(1, onPageChange);
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /^next$/i })).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^next$/i })).toBeEnabled(),
+    );
     screen.getByRole('button', { name: /^next$/i }).click();
 
     expect(onPageChange).toHaveBeenCalledWith(2);

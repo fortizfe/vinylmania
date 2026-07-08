@@ -13,7 +13,11 @@ export async function requireAuth(
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith(BEARER_PREFIX)) {
-    logger.warn({ route: req.path, outcome: 'unauthorized', message: 'missing bearer token' });
+    logger.warn({
+      route: req.path,
+      outcome: 'unauthorized',
+      message: 'missing bearer token',
+    });
     res.status(401).json({
       error: 'unauthorized',
       message: 'Sign-in required or session expired.',

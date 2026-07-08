@@ -66,7 +66,9 @@ describe('AuthContext', () => {
       </AuthProvider>,
     );
 
-    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
+    await waitFor(() =>
+      expect(screen.getByTestId('user')).toHaveTextContent('anonymous'),
+    );
   });
 
   it('signs the user in via Google popup and calls the session endpoint', async () => {
@@ -148,6 +150,8 @@ describe('AuthContext', () => {
     });
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
+    await waitFor(() =>
+      expect(screen.getByTestId('user')).toHaveTextContent('anonymous'),
+    );
   });
 });

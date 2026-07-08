@@ -9,7 +9,8 @@ import { useLibraryList, useRefreshLibrary } from '../queries/libraryQueries';
 import { ApiError } from '../services/apiClient';
 
 const SKELETON_COUNT = 8;
-const gridClasses = 'grid list-none grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-4 p-0';
+const gridClasses =
+  'grid list-none grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-4 p-0';
 
 function gateVariant(error: unknown): 'not-linked' | 'relink' | null {
   if (error instanceof ApiError && error.code === 'discogs_not_linked') {
@@ -37,7 +38,9 @@ export function LibraryListPage() {
   if (gate) {
     return (
       <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Your library</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          Your library
+        </h1>
         <LibraryLinkRequired variant={gate} />
       </main>
     );
@@ -46,8 +49,14 @@ export function LibraryListPage() {
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Your library</h1>
-        <Button variant="secondary" loading={refresh.isPending} onClick={() => refresh.mutate()}>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          Your library
+        </h1>
+        <Button
+          variant="secondary"
+          loading={refresh.isPending}
+          onClick={() => refresh.mutate()}
+        >
           {refresh.isPending ? 'Refreshing…' : 'Refresh'}
         </Button>
       </div>

@@ -32,8 +32,8 @@ export function ReleaseAdditionalInfoSection({
 
       {community && (
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          {community.have} have / {community.want} want · rating {community.rating.average} (
-          {community.rating.count})
+          {community.have} have / {community.want} want · rating{' '}
+          {community.rating.average} ({community.rating.count})
         </p>
       )}
     </div>

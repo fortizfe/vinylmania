@@ -15,8 +15,6 @@ describe('LandingHero', () => {
   it('renders a short supporting statement of what the app does', () => {
     render(<LandingHero />);
 
-    expect(
-      screen.getByText(/organi[sz]e|manage|collection/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/organi[sz]e|manage|collection/i)).toBeInTheDocument();
   });
 });

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { bandForRating, formatRatingValue, isRatingVisible, presentRating } from '../../src/lib/releaseRating';
+import {
+  bandForRating,
+  formatRatingValue,
+  isRatingVisible,
+  presentRating,
+} from '../../src/lib/releaseRating';
 
 describe('releaseRating', () => {
   describe('bandForRating (FR-005/FR-006/FR-007, inclusive thresholds)', () => {
@@ -80,16 +85,28 @@ describe('releaseRating', () => {
     });
 
     it('returns the unrated placeholder when the vote count is zero', () => {
-      expect(presentRating({ average: 4.5, count: 0 })).toEqual({ displayValue: '-', band: 'unrated' });
+      expect(presentRating({ average: 4.5, count: 0 })).toEqual({
+        displayValue: '-',
+        band: 'unrated',
+      });
     });
 
     it('returns the unrated placeholder when the average is outside the 0-5 range', () => {
-      expect(presentRating({ average: 5.1, count: 10 })).toEqual({ displayValue: '-', band: 'unrated' });
-      expect(presentRating({ average: -0.1, count: 10 })).toEqual({ displayValue: '-', band: 'unrated' });
+      expect(presentRating({ average: 5.1, count: 10 })).toEqual({
+        displayValue: '-',
+        band: 'unrated',
+      });
+      expect(presentRating({ average: -0.1, count: 10 })).toEqual({
+        displayValue: '-',
+        band: 'unrated',
+      });
     });
 
     it('returns the unrated placeholder when the average is not a finite number', () => {
-      expect(presentRating({ average: Number.NaN, count: 10 })).toEqual({ displayValue: '-', band: 'unrated' });
+      expect(presentRating({ average: Number.NaN, count: 10 })).toEqual({
+        displayValue: '-',
+        band: 'unrated',
+      });
     });
 
     it('returns a display value and band for a visible rating', () => {

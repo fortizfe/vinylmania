@@ -2,7 +2,10 @@ import { useRef } from 'react';
 
 import type { EntryDiscogsData } from '../services/libraryApi';
 import { Button } from './ui/Button';
-import { InlineEditableField, type InlineEditableFieldHandle } from './ui/InlineEditableField';
+import {
+  InlineEditableField,
+  type InlineEditableFieldHandle,
+} from './ui/InlineEditableField';
 import { StarRating } from './ui/StarRating';
 
 /** Discogs grading vocabulary (R6). Must match backend conditionGrading.ts exactly. */
@@ -47,7 +50,11 @@ export function MyCopySection({
 }: MyCopySectionProps) {
   const notesFieldRef = useRef<InlineEditableFieldHandle>(null);
 
-  const editable = discogs?.editable ?? { mediaCondition: false, sleeveCondition: false, notes: false };
+  const editable = discogs?.editable ?? {
+    mediaCondition: false,
+    sleeveCondition: false,
+    notes: false,
+  };
 
   async function handleConditionChange(
     event: React.ChangeEvent<HTMLSelectElement>,
@@ -59,7 +66,9 @@ export function MyCopySection({
 
   return (
     <div>
-      <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">Your copy</h2>
+      <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
+        Your copy
+      </h2>
       <div className="flex flex-col gap-4">
         {/* Rating */}
         <div className="flex flex-col gap-1">
@@ -100,7 +109,8 @@ export function MyCopySection({
           <span className={labelClasses}>Sleeve Condition</span>
           {!editable.sleeveCondition && discogs !== null && (
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              The &ldquo;Sleeve Condition&rdquo; field is not available on this collection.
+              The &ldquo;Sleeve Condition&rdquo; field is not available on this
+              collection.
             </p>
           )}
           <select
@@ -157,4 +167,3 @@ export function MyCopySection({
     </div>
   );
 }
-

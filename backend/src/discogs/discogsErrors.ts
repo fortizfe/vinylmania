@@ -1,5 +1,6 @@
 export abstract class DiscogsError extends Error {
-  abstract readonly code: 'not_found' | 'rate_limited' | 'unavailable' | 'validation_error' | 'auth_failed';
+  abstract readonly code:
+    'not_found' | 'rate_limited' | 'unavailable' | 'validation_error' | 'auth_failed';
 
   constructor(
     message: string,

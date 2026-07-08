@@ -21,6 +21,8 @@ export async function enrichEntry(entry: LibraryEntry): Promise<EnrichedLibraryE
   }
 }
 
-export async function enrichEntries(entries: LibraryEntry[]): Promise<EnrichedLibraryEntry[]> {
+export async function enrichEntries(
+  entries: LibraryEntry[],
+): Promise<EnrichedLibraryEntry[]> {
   return mapWithConcurrency(entries, ENRICHMENT_CONCURRENCY, enrichEntry);
 }

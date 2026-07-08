@@ -13,7 +13,10 @@ export function RecordCard({ entry }: RecordCardProps) {
   if (entry.catalogStatus === 'unavailable' || !entry.release) {
     return (
       <li>
-        <Card padding="sm" className="flex flex-col gap-1 text-gray-500 italic dark:text-gray-400">
+        <Card
+          padding="sm"
+          className="flex flex-col gap-1 text-gray-500 italic dark:text-gray-400"
+        >
           <p>Couldn&apos;t load catalog details for this record right now.</p>
           <Link to={`/app/library/records/${entry.id}`} className="text-sm underline">
             Open record
@@ -34,7 +37,11 @@ export function RecordCard({ entry }: RecordCardProps) {
         <Link to={`/app/library/records/${entry.id}`} className="flex flex-col gap-2">
           <div className="relative">
             {cover ? (
-              <img src={cover} alt="" className="aspect-square w-full rounded-md object-cover" />
+              <img
+                src={cover}
+                alt=""
+                className="aspect-square w-full rounded-md object-cover"
+              />
             ) : (
               <div className="aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-800" />
             )}

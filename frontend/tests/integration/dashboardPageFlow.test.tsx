@@ -55,17 +55,24 @@ describe('Dashboard page flow (feature 024, US1)', () => {
           ],
         },
       ],
-      sourceStatuses: [{ sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' }],
+      sourceStatuses: [
+        { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' },
+      ],
       generatedAt: '2026-07-08T00:00:00.000Z',
     });
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByText('DEVILDRIVER Unleash New Video')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('DEVILDRIVER Unleash New Video')).toBeInTheDocument(),
+    );
     expect(screen.getByText(/Metal Injection/)).toBeInTheDocument();
 
     const link = screen.getByRole('link', { name: /DEVILDRIVER Unleash New Video/i });
-    expect(link).toHaveAttribute('href', 'https://metalinjection.net/new-music/devildriver');
+    expect(link).toHaveAttribute(
+      'href',
+      'https://metalinjection.net/new-music/devildriver',
+    );
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
   });
@@ -98,7 +105,9 @@ describe('Dashboard page flow (feature 024, US1)', () => {
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByText('Still Working Article')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('Still Working Article')).toBeInTheDocument(),
+    );
     expect(screen.getByRole('status')).toHaveTextContent(/Metal Storm/);
   });
 
@@ -221,7 +230,9 @@ describe('Dashboard page flow (feature 024, US1)', () => {
 
     mockGetDashboard.mockResolvedValue({
       categories: [{ category: 'News', articles }],
-      sourceStatuses: [{ sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' }],
+      sourceStatuses: [
+        { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' },
+      ],
       generatedAt: '2026-07-08T00:00:00.000Z',
     });
 
@@ -238,7 +249,9 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     expect(firstLink).toHaveAttribute('target', '_blank');
 
     // Carousel navigation controls are present for this category.
-    expect(screen.getByRole('button', { name: /previous articles/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /previous articles/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /next articles/i })).toBeInTheDocument();
   });
 
@@ -269,7 +282,9 @@ describe('Dashboard page flow (feature 024, US1)', () => {
         categoryFixture('Articles'),
         categoryFixture('Staff Picks'),
       ],
-      sourceStatuses: [{ sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' }],
+      sourceStatuses: [
+        { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' },
+      ],
       generatedAt: '2026-07-08T00:00:00.000Z',
     });
 
@@ -302,7 +317,9 @@ describe('Dashboard page flow (feature 024, US1)', () => {
           ],
         },
       ],
-      sourceStatuses: [{ sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' }],
+      sourceStatuses: [
+        { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' },
+      ],
       generatedAt: '2026-07-08T00:00:00.000Z',
     });
 
@@ -317,7 +334,11 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     mockGetDashboard.mockResolvedValue({
       categories: [],
       sourceStatuses: [
-        { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'unavailable' },
+        {
+          sourceId: 'metal-injection',
+          sourceName: 'Metal Injection',
+          status: 'unavailable',
+        },
         { sourceId: 'metal-storm', sourceName: 'Metal Storm', status: 'unavailable' },
       ],
       generatedAt: '2026-07-08T00:00:00.000Z',

@@ -14,7 +14,11 @@ import {
   type ConsumerCredentials,
 } from '../oauth/oauthSignature';
 import type { DiscogsConnection } from '../oauth/types';
-import type { CollectionFieldMap, CollectionInstance, InstanceRef } from './collectionTypes';
+import type {
+  CollectionFieldMap,
+  CollectionInstance,
+  InstanceRef,
+} from './collectionTypes';
 
 /**
  * OAuth-signed client for the authenticated Discogs User Collection
@@ -78,14 +82,22 @@ function createClient(connection: DiscogsConnection): AxiosInstance {
         const { status } = error.response;
 
         if (status === 401 || status === 403) {
-          logger.warn({ route: endpoint, outcome: 'auth_failed', message: `Discogs collection ${status}` });
+          logger.warn({
+            route: endpoint,
+            outcome: 'auth_failed',
+            message: `Discogs collection ${status}`,
+          });
           return Promise.reject(new DiscogsAuthError(error));
         }
         if (status === 404) {
           return Promise.reject(new DiscogsNotFoundError(error));
         }
         if (status === 429) {
-          logger.warn({ route: endpoint, outcome: 'rate_limited', message: 'Discogs collection 429' });
+          logger.warn({
+            route: endpoint,
+            outcome: 'rate_limited',
+            message: 'Discogs collection 429',
+          });
           return Promise.reject(new DiscogsRateLimitError(error));
         }
 
@@ -149,12 +161,15 @@ function mapInstance(raw: RawInstance, fieldMap: CollectionFieldMap): Collection
   };
 }
 
-export async function getFieldMap(connection: DiscogsConnection): Promise<CollectionFieldMap> {
+export async function getFieldMap(
+  connection: DiscogsConnection,
+): Promise<CollectionFieldMap> {
   return withCache(fieldsCacheKey(connection.uid), FIELDS_CACHE_TTL_SECONDS, async () => {
     const response = await createClient(connection).get(
       `/users/${encodeURIComponent(connection.discogsUsername)}/collection/fields`,
     );
-    const fields = (response.data as { fields?: Array<{ id: number; name: string }> }).fields ?? [];
+    const fields =
+      (response.data as { fields?: Array<{ id: number; name: string }> }).fields ?? [];
 
     const byName = (name: string): number | null =>
       fields.find((field) => field.name === name)?.id ?? null;
@@ -172,7 +187,7 @@ export async function listAllInstances(
   connection: DiscogsConnection,
   prefetchedFieldMap?: CollectionFieldMap,
 ): Promise<CollectionInstance[]> {
-  const fieldMap = prefetchedFieldMap ?? await getFieldMap(connection);
+  const fieldMap = prefetchedFieldMap ?? (await getFieldMap(connection));
   const client = createClient(connection);
   const username = encodeURIComponent(connection.discogsUsername);
 
@@ -180,9 +195,12 @@ export async function listAllInstances(
   let page = 1;
   let pages = 1;
   do {
-    const response = await client.get(`/users/${username}/collection/folders/0/releases`, {
-      params: { page, per_page: COLLECTION_PAGE_SIZE },
-    });
+    const response = await client.get(
+      `/users/${username}/collection/folders/0/releases`,
+      {
+        params: { page, per_page: COLLECTION_PAGE_SIZE },
+      },
+    );
     const body = response.data as RawCollectionPage;
     instances.push(...body.releases.map((raw) => mapInstance(raw, fieldMap)));
     pages = body.pagination.pages;
@@ -198,7 +216,7 @@ export async function getInstancesForRelease(
   releaseId: number,
   prefetchedFieldMap?: CollectionFieldMap,
 ): Promise<CollectionInstance[]> {
-  const fieldMap = prefetchedFieldMap ?? await getFieldMap(connection);
+  const fieldMap = prefetchedFieldMap ?? (await getFieldMap(connection));
   const response = await createClient(connection).get(
     `/users/${encodeURIComponent(connection.discogsUsername)}/collection/releases/${releaseId}`,
   );
@@ -245,5 +263,8 @@ export async function setFieldValue(
   fieldId: number,
   value: string,
 ): Promise<void> {
-  await createClient(connection).post(`${instancePath(connection, ref)}/fields/${fieldId}`, { value });
+  await createClient(connection).post(
+    `${instancePath(connection, ref)}/fields/${fieldId}`,
+    { value },
+  );
 }

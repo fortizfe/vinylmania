@@ -30,7 +30,11 @@ export function DashboardPage() {
     }
 
     if (categories.length === 0) {
-      return <p className="text-gray-500 dark:text-gray-400">No news right now — check back soon.</p>;
+      return (
+        <p className="text-gray-500 dark:text-gray-400">
+          No news right now — check back soon.
+        </p>
+      );
     }
 
     return (
@@ -42,7 +46,11 @@ export function DashboardPage() {
         />
         <div className="flex flex-col gap-8">
           {visibleCategories.map((group) => (
-            <FeedCategorySection key={group.category} category={group.category} articles={group.articles} />
+            <FeedCategorySection
+              key={group.category}
+              category={group.category}
+              articles={group.articles}
+            />
           ))}
         </div>
       </>

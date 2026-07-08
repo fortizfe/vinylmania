@@ -64,7 +64,13 @@ describe('MyCopySection', () => {
   });
 
   it('disables media condition select with a hint when editable is false', () => {
-    render(<MyCopySection {...makeProps({ editable: { mediaCondition: false, sleeveCondition: true, notes: true } })} />);
+    render(
+      <MyCopySection
+        {...makeProps({
+          editable: { mediaCondition: false, sleeveCondition: true, notes: true },
+        })}
+      />,
+    );
 
     const select = screen.getByLabelText('Media Condition');
     expect(select).toBeDisabled();

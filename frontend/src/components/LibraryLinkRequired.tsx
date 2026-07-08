@@ -27,7 +27,9 @@ export function LibraryLinkRequired({ variant }: LibraryLinkRequiredProps) {
 
   return (
     <Card className="flex min-h-48 flex-col items-start justify-center gap-3">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{copy.title}</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        {copy.title}
+      </h2>
       <p className="text-gray-500 dark:text-gray-400">{copy.body}</p>
       <Link
         to="/app/profile"

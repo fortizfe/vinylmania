@@ -7,7 +7,11 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+} from 'firebase/auth';
 
 import { firebaseAuth, googleAuthProvider } from '../services/firebaseClient';
 

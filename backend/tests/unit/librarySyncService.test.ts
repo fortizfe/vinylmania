@@ -31,7 +31,10 @@ function connection(overrides: Partial<DiscogsConnection> = {}): DiscogsConnecti
   };
 }
 
-function instance(releaseId: number, overrides: Partial<CollectionInstance> = {}): CollectionInstance {
+function instance(
+  releaseId: number,
+  overrides: Partial<CollectionInstance> = {},
+): CollectionInstance {
   return {
     releaseId,
     instanceId: releaseId * 10,
@@ -45,7 +48,11 @@ function instance(releaseId: number, overrides: Partial<CollectionInstance> = {}
   };
 }
 
-function entry(id: string, releaseId: number, overrides: Partial<LibraryEntry> = {}): LibraryEntry {
+function entry(
+  id: string,
+  releaseId: number,
+  overrides: Partial<LibraryEntry> = {},
+): LibraryEntry {
   return {
     id,
     discogsReleaseId: releaseId,
@@ -63,7 +70,10 @@ beforeEach(() => {
     sleeveConditionFieldId: 2,
     notesFieldId: 3,
   });
-  mockedCollection.addReleaseToCollection.mockResolvedValue({ instanceId: 900, folderId: 1 });
+  mockedCollection.addReleaseToCollection.mockResolvedValue({
+    instanceId: 900,
+    folderId: 1,
+  });
   mockedCollection.setFieldValue.mockResolvedValue(undefined);
   mockedLibrary.listAllEntries.mockResolvedValue([]);
   mockedLibrary.createEntry.mockImplementation(async (_uid, input) =>
@@ -139,12 +149,17 @@ describe('syncLibrary: first-sync mode (no initialLibrarySyncAt)', () => {
 
   it('preserves an unmappable condition verbatim inside the migrated notes', async () => {
     mockedLibrary.listAllEntries.mockResolvedValue([
-      entry('e1', 55, { legacyCondition: 'Sleeve torn but plays fine', legacyNotes: 'My note' }),
+      entry('e1', 55, {
+        legacyCondition: 'Sleeve torn but plays fine',
+        legacyNotes: 'My note',
+      }),
     ]);
 
     await syncLibrary(UID);
 
-    const notesWrites = mockedCollection.setFieldValue.mock.calls.filter(([, , fieldId]) => fieldId === 3);
+    const notesWrites = mockedCollection.setFieldValue.mock.calls.filter(
+      ([, , fieldId]) => fieldId === 3,
+    );
     expect(notesWrites).toHaveLength(1);
     expect(notesWrites[0][3]).toContain('My note');
     expect(notesWrites[0][3]).toContain('Condition: Sleeve torn but plays fine');
@@ -156,7 +171,9 @@ describe('syncLibrary: first-sync mode (no initialLibrarySyncAt)', () => {
   });
 
   it('migrates legacy data onto an existing matching instance without re-adding it', async () => {
-    mockedCollection.listAllInstances.mockResolvedValue([instance(55, { instanceId: 12, folderId: 4 })]);
+    mockedCollection.listAllInstances.mockResolvedValue([
+      instance(55, { instanceId: 12, folderId: 4 }),
+    ]);
     mockedLibrary.listAllEntries.mockResolvedValue([
       entry('e1', 55, { legacyNotes: 'Keep me' }),
     ]);
@@ -198,8 +215,12 @@ describe('syncLibrary: first-sync mode (no initialLibrarySyncAt)', () => {
   });
 
   it('does not clear legacy fields when the migration write itself fails', async () => {
-    mockedCollection.listAllInstances.mockResolvedValue([instance(55, { instanceId: 12 })]);
-    mockedLibrary.listAllEntries.mockResolvedValue([entry('e1', 55, { legacyNotes: 'precious' })]);
+    mockedCollection.listAllInstances.mockResolvedValue([
+      instance(55, { instanceId: 12 }),
+    ]);
+    mockedLibrary.listAllEntries.mockResolvedValue([
+      entry('e1', 55, { legacyNotes: 'precious' }),
+    ]);
     mockedCollection.setFieldValue.mockRejectedValue(new DiscogsUnavailableError());
 
     const result = await syncLibrary(UID);
@@ -248,7 +269,9 @@ describe('syncLibrary: mirror mode (initialLibrarySyncAt set)', () => {
       instance(55, { instanceId: 300, folderId: 2 }),
       instance(55, { instanceId: 12, folderId: 4 }),
     ]);
-    mockedLibrary.listAllEntries.mockResolvedValue([entry('e1', 55, { discogsInstanceId: 300 })]);
+    mockedLibrary.listAllEntries.mockResolvedValue([
+      entry('e1', 55, { discogsInstanceId: 300 }),
+    ]);
 
     await syncLibrary(UID);
 
@@ -260,7 +283,9 @@ describe('syncLibrary: mirror mode (initialLibrarySyncAt set)', () => {
   });
 
   it('leaves an in-sync mirror untouched and never re-marks the first sync', async () => {
-    mockedCollection.listAllInstances.mockResolvedValue([instance(55, { instanceId: 550 })]);
+    mockedCollection.listAllInstances.mockResolvedValue([
+      instance(55, { instanceId: 550 }),
+    ]);
     mockedLibrary.listAllEntries.mockResolvedValue([
       entry('e1', 55, { discogsInstanceId: 550, discogsFolderId: 1 }),
     ]);

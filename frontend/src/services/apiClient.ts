@@ -14,7 +14,10 @@ export class ApiError extends Error {
   }
 }
 
-export async function authorizedFetch(path: string, options: RequestInit = {}): Promise<Response> {
+export async function authorizedFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
   const user = firebaseAuth.currentUser;
   const idToken = await user?.getIdToken();
 
@@ -29,8 +32,14 @@ export async function authorizedFetch(path: string, options: RequestInit = {}): 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 
   if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'unknown', message: 'Request failed' }));
-    throw new ApiError(body.message ?? 'Request failed', response.status, body.error ?? 'unknown');
+    const body = await response
+      .json()
+      .catch(() => ({ error: 'unknown', message: 'Request failed' }));
+    throw new ApiError(
+      body.message ?? 'Request failed',
+      response.status,
+      body.error ?? 'unknown',
+    );
   }
 
   return response;

@@ -17,7 +17,10 @@ function formatHeader(params: Record<string, string>): string {
   return `OAuth ${parts.join(', ')}`;
 }
 
-function baseParams(credentials: ConsumerCredentials, tokenSecret: string): Record<string, string> {
+function baseParams(
+  credentials: ConsumerCredentials,
+  tokenSecret: string,
+): Record<string, string> {
   return {
     oauth_consumer_key: credentials.consumerKey,
     oauth_nonce: randomBytes(16).toString('hex'),

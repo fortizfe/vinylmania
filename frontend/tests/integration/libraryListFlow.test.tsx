@@ -106,7 +106,11 @@ describe('Library list flow (US2)', () => {
 
   it('shows the link-required gate with a profile CTA when the accounts are not linked (FR-003)', async () => {
     mockList.mockRejectedValue(
-      new ApiError('Link your Discogs account to use your library.', 409, 'discogs_not_linked'),
+      new ApiError(
+        'Link your Discogs account to use your library.',
+        409,
+        'discogs_not_linked',
+      ),
     );
 
     renderPage();
@@ -128,9 +132,7 @@ describe('Library list flow (US2)', () => {
 
     renderPage();
 
-    await waitFor(() =>
-      expect(screen.getByText(/no longer valid/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/no longer valid/i)).toBeInTheDocument());
     expect(screen.getByRole('link', { name: /go to your profile/i })).toHaveAttribute(
       'href',
       '/app/profile',

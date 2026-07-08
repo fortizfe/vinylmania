@@ -13,7 +13,9 @@ const rawMaster = {
   artists: [{ id: 1, name: 'Linkin Park', anv: '', join: '', role: '' }],
   genres: ['Rock'],
   styles: ['Nu Metal'],
-  images: [{ type: 'primary', uri: 'https://example.com/cover.jpg', width: 600, height: 600 }],
+  images: [
+    { type: 'primary', uri: 'https://example.com/cover.jpg', width: 600, height: 600 },
+  ],
   tracklist: [{ position: '1', type_: 'track', title: 'Papercut', duration: '3:05' }],
   main_release: 98765,
   uri: 'https://www.discogs.com/master/1660109-Linkin-Park-Hybrid-Theory',
@@ -41,7 +43,14 @@ describe('Discogs master API contract: GET /api/discogs/masters/:discogsId', () 
       artists: [{ discogsArtistId: 1, name: 'Linkin Park' }],
       genres: ['Rock'],
       styles: ['Nu Metal'],
-      images: [{ url: 'https://example.com/cover.jpg', imageType: 'primary', width: 600, height: 600 }],
+      images: [
+        {
+          url: 'https://example.com/cover.jpg',
+          imageType: 'primary',
+          width: 600,
+          height: 600,
+        },
+      ],
       tracklist: [{ position: '1', title: 'Papercut', duration: '3:05' }],
       mainReleaseId: 98765,
       discogsUrl: 'https://www.discogs.com/master/1660109-Linkin-Park-Hybrid-Theory',
@@ -135,7 +144,10 @@ describe('Discogs master versions API contract: GET /api/discogs/masters/:discog
     discogsScope()
       .get('/masters/1660109/versions')
       .query({ page: '2', per_page: '10' })
-      .reply(200, { pagination: { page: 2, pages: 3, items: 27, per_page: 10 }, versions: [] });
+      .reply(200, {
+        pagination: { page: 2, pages: 3, items: 27, per_page: 10 },
+        versions: [],
+      });
 
     const res = await request(app)
       .get('/api/discogs/masters/1660109/versions')

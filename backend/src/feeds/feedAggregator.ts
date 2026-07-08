@@ -3,7 +3,13 @@ import { logger } from '../config/logger';
 import { fetchFeed } from './feedClient';
 import { mapFeedItem } from './feedMapper';
 import { FEED_SOURCES } from './feedSources';
-import type { Article, CategoryGroup, DashboardResponse, FeedSourceConfig, SourceStatus } from './types';
+import type {
+  Article,
+  CategoryGroup,
+  DashboardResponse,
+  FeedSourceConfig,
+  SourceStatus,
+} from './types';
 
 const CACHE_TTL_SECONDS = 20 * 60;
 const ARTICLES_PER_CATEGORY = 10;
@@ -40,7 +46,9 @@ function groupByCategory(articles: Article[]): CategoryGroup[] {
   return Array.from(byCategory.entries()).map(([category, categoryArticles]) => ({
     category,
     articles: [...categoryArticles]
-      .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+      .sort(
+        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+      )
       .slice(0, ARTICLES_PER_CATEGORY),
   }));
 }
@@ -49,7 +57,9 @@ function groupByCategory(articles: Article[]): CategoryGroup[] {
 export async function getDashboard(): Promise<DashboardResponse> {
   const enabledSources = FEED_SOURCES.filter((source) => source.enabled);
 
-  const settled = await Promise.allSettled(enabledSources.map((source) => fetchSourceArticles(source)));
+  const settled = await Promise.allSettled(
+    enabledSources.map((source) => fetchSourceArticles(source)),
+  );
 
   const sourceStatuses: SourceStatus[] = [];
   const allArticles: Article[] = [];
@@ -60,7 +70,11 @@ export async function getDashboard(): Promise<DashboardResponse> {
       sourceStatuses.push({ sourceId: source.id, sourceName: source.name, status: 'ok' });
       allArticles.push(...result.value);
     } else {
-      sourceStatuses.push({ sourceId: source.id, sourceName: source.name, status: 'unavailable' });
+      sourceStatuses.push({
+        sourceId: source.id,
+        sourceName: source.name,
+        status: 'unavailable',
+      });
       logger.warn({
         route: 'feeds:aggregator',
         outcome: 'feed_unavailable',

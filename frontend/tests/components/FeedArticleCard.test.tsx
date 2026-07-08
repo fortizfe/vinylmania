@@ -17,11 +17,17 @@ const baseArticle: Article = {
 
 describe('FeedArticleCard', () => {
   it('renders the provided image when present', () => {
-    render(<FeedArticleCard article={{ ...baseArticle, imageUrl: 'https://cdn.example.com/cover.jpg' }} />);
+    render(
+      <FeedArticleCard
+        article={{ ...baseArticle, imageUrl: 'https://cdn.example.com/cover.jpg' }}
+      />,
+    );
 
     const image = screen.getByRole('img', { name: baseArticle.title });
     expect(image).toHaveAttribute('src', 'https://cdn.example.com/cover.jpg');
-    expect(screen.queryByTestId('feed-article-thumbnail-placeholder')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('feed-article-thumbnail-placeholder'),
+    ).not.toBeInTheDocument();
   });
 
   it('renders a consistent placeholder graphic when no image is available', () => {

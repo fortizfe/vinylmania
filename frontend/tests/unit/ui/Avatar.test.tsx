@@ -13,7 +13,9 @@ describe('Avatar', () => {
   });
 
   it('renders a same-sized placeholder when src is absent', () => {
-    const { container: withSrc } = render(<Avatar src="https://example.com/cover.jpg" alt="a" size="lg" />);
+    const { container: withSrc } = render(
+      <Avatar src="https://example.com/cover.jpg" alt="a" size="lg" />,
+    );
     const { container: withoutSrc } = render(<Avatar alt="a" size="lg" />);
 
     const sizedEl = (c: HTMLElement) => c.querySelector('[class*="w-"]') as HTMLElement;

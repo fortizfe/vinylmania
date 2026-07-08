@@ -52,7 +52,11 @@ describe('RecordCard', () => {
   });
 
   describe('rating badge (feature 017)', () => {
-    function entryWithCommunity(community?: { have: number; want: number; rating: { average: number; count: number } }) {
+    function entryWithCommunity(community?: {
+      have: number;
+      want: number;
+      rating: { average: number; count: number };
+    }) {
       return {
         id: 'entry-3',
         discogsReleaseId: 3,
@@ -77,7 +81,9 @@ describe('RecordCard', () => {
     }
 
     it('renders the rating badge when the release has a valid community rating', () => {
-      renderCard(entryWithCommunity({ have: 10, want: 5, rating: { average: 4.19, count: 47 } }));
+      renderCard(
+        entryWithCommunity({ have: 10, want: 5, rating: { average: 4.19, count: 47 } }),
+      );
 
       expect(screen.getByText('4.2')).toBeInTheDocument();
     });
@@ -85,14 +91,20 @@ describe('RecordCard', () => {
     it('shows the unrated placeholder badge when the release has no community rating (feature 019)', () => {
       renderCard(entryWithCommunity());
 
-      expect(screen.getByRole('status', { name: 'Rating not available' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('status', { name: 'Rating not available' }),
+      ).toBeInTheDocument();
       expect(screen.getByText('-')).toBeInTheDocument();
     });
 
     it('shows the unrated placeholder badge when the community rating has no votes (feature 019)', () => {
-      renderCard(entryWithCommunity({ have: 10, want: 5, rating: { average: 0, count: 0 } }));
+      renderCard(
+        entryWithCommunity({ have: 10, want: 5, rating: { average: 0, count: 0 } }),
+      );
 
-      expect(screen.getByRole('status', { name: 'Rating not available' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('status', { name: 'Rating not available' }),
+      ).toBeInTheDocument();
       expect(screen.getByText('-')).toBeInTheDocument();
     });
 

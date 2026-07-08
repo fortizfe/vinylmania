@@ -127,7 +127,9 @@ describe('InlineEditableField', () => {
       screen.getByLabelText('Condition').blur();
     });
 
-    await waitFor(() => expect(screen.queryByLabelText('Condition')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByLabelText('Condition')).not.toBeInTheDocument(),
+    );
     expect(onSave).not.toHaveBeenCalled();
   });
 

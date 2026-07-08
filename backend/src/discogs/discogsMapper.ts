@@ -155,11 +155,13 @@ const rawReleaseSchema = z.object({
 export function mapRelease(raw: unknown): Release {
   const parsed = parseOrThrow(rawReleaseSchema, raw);
 
-  const identifiers: ReleaseIdentifier[] = (parsed.identifiers ?? []).map((identifier) => ({
-    type: identifier.type,
-    value: identifier.value,
-    ...(identifier.description ? { description: identifier.description } : {}),
-  }));
+  const identifiers: ReleaseIdentifier[] = (parsed.identifiers ?? []).map(
+    (identifier) => ({
+      type: identifier.type,
+      value: identifier.value,
+      ...(identifier.description ? { description: identifier.description } : {}),
+    }),
+  );
 
   const community: CommunityStats | undefined = parsed.community
     ? {

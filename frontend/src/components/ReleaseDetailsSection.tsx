@@ -27,7 +27,9 @@ export function ReleaseDetailsSection({ release }: ReleaseDetailsSectionProps) {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{release.title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {release.title}
+        </h3>
         {release.artists.map((artist) => (
           <p key={artist.discogsArtistId} className="text-gray-500 dark:text-gray-400">
             {artist.name}

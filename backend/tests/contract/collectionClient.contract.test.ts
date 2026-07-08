@@ -58,10 +58,14 @@ describe('collectionClient: listAllInstances', () => {
           }),
         ],
       });
-    stubCollectionPage('testuser', [rawCollectionInstance(202, { instanceId: 22, folderId: 3 })], {
-      page: 2,
-      pages: 2,
-    });
+    stubCollectionPage(
+      'testuser',
+      [rawCollectionInstance(202, { instanceId: 22, folderId: 3 })],
+      {
+        page: 2,
+        pages: 2,
+      },
+    );
 
     const instances = await listAllInstances(connection);
 
@@ -104,7 +108,9 @@ describe('collectionClient: listAllInstances', () => {
       .query(true)
       .reply(429, { message: 'Too many requests' });
 
-    await expect(listAllInstances(connection)).rejects.toBeInstanceOf(DiscogsRateLimitError);
+    await expect(listAllInstances(connection)).rejects.toBeInstanceOf(
+      DiscogsRateLimitError,
+    );
   });
 
   it('maps a 5xx to DiscogsUnavailableError', async () => {
@@ -114,7 +120,9 @@ describe('collectionClient: listAllInstances', () => {
       .query(true)
       .reply(500, { message: 'boom' });
 
-    await expect(listAllInstances(connection)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+    await expect(listAllInstances(connection)).rejects.toBeInstanceOf(
+      DiscogsUnavailableError,
+    );
   });
 
   it('maps a network failure to DiscogsUnavailableError', async () => {
@@ -124,7 +132,9 @@ describe('collectionClient: listAllInstances', () => {
       .query(true)
       .replyWithError('socket hang up');
 
-    await expect(listAllInstances(connection)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+    await expect(listAllInstances(connection)).rejects.toBeInstanceOf(
+      DiscogsUnavailableError,
+    );
   });
 });
 
@@ -159,7 +169,9 @@ describe('collectionClient: getFieldMap', () => {
   });
 
   it('maps a 403 to DiscogsAuthError', async () => {
-    discogsScope().get('/users/testuser/collection/fields').reply(403, { message: 'forbidden' });
+    discogsScope()
+      .get('/users/testuser/collection/fields')
+      .reply(403, { message: 'forbidden' });
 
     await expect(getFieldMap(connection)).rejects.toBeInstanceOf(DiscogsAuthError);
   });
@@ -226,12 +238,16 @@ describe('collectionClient: instance writes', () => {
       .delete('/users/testuser/collection/folders/3/releases/101/instances/11')
       .reply(404, { message: 'Instance not found.' });
 
-    await expect(deleteInstance(connection, ref)).rejects.toBeInstanceOf(DiscogsNotFoundError);
+    await expect(deleteInstance(connection, ref)).rejects.toBeInstanceOf(
+      DiscogsNotFoundError,
+    );
   });
 
   it('sets the rating via the instance endpoint', async () => {
     discogsScope()
-      .post('/users/testuser/collection/folders/3/releases/101/instances/11', { rating: 4 })
+      .post('/users/testuser/collection/folders/3/releases/101/instances/11', {
+        rating: 4,
+      })
       .matchHeader('authorization', OAUTH_TOKEN_HEADER)
       .reply(204);
 
@@ -251,7 +267,9 @@ describe('collectionClient: instance writes', () => {
 
   it('maps a 401 on a write to DiscogsAuthError', async () => {
     discogsScope()
-      .post('/users/testuser/collection/folders/3/releases/101/instances/11', { rating: 2 })
+      .post('/users/testuser/collection/folders/3/releases/101/instances/11', {
+        rating: 2,
+      })
       .reply(401, { message: 'You must authenticate.' });
 
     await expect(setRating(connection, ref, 2)).rejects.toBeInstanceOf(DiscogsAuthError);

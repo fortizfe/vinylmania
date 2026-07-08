@@ -52,7 +52,9 @@ describe('withCache', () => {
     const { withCache } = await import('../../../src/cache/cacheAside');
     const { getRedisClient } = await import('../../../src/cache/redisClient');
 
-    jest.spyOn(getRedisClient()!, 'get').mockRejectedValueOnce(new Error('connection reset'));
+    jest
+      .spyOn(getRedisClient()!, 'get')
+      .mockRejectedValueOnce(new Error('connection reset'));
 
     const fetcher = jest.fn().mockResolvedValue({ value: 'fresh' });
     const result = await withCache('key:3', 60, fetcher);
@@ -65,7 +67,9 @@ describe('withCache', () => {
     const { withCache } = await import('../../../src/cache/cacheAside');
     const { getRedisClient } = await import('../../../src/cache/redisClient');
 
-    jest.spyOn(getRedisClient()!, 'set').mockRejectedValueOnce(new Error('connection reset'));
+    jest
+      .spyOn(getRedisClient()!, 'set')
+      .mockRejectedValueOnce(new Error('connection reset'));
 
     const fetcher = jest.fn().mockResolvedValue({ value: 'fresh' });
     const result = await withCache('key:4', 60, fetcher);
@@ -124,7 +128,9 @@ describe('invalidateCache', () => {
     const { invalidateCache } = await import('../../../src/cache/cacheAside');
     const { getRedisClient } = await import('../../../src/cache/redisClient');
 
-    jest.spyOn(getRedisClient()!, 'del').mockRejectedValueOnce(new Error('connection reset'));
+    jest
+      .spyOn(getRedisClient()!, 'del')
+      .mockRejectedValueOnce(new Error('connection reset'));
 
     await expect(invalidateCache('key:inv-err')).resolves.toBeUndefined();
   });

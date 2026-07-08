@@ -74,27 +74,33 @@ describe('Discogs client contract: searchCatalog', () => {
   });
 
   it('rejects with DiscogsRateLimitError on a 429 response', async () => {
-    discogsScope().get('/database/search').query(true).reply(429, { message: 'too many requests' });
+    discogsScope()
+      .get('/database/search')
+      .query(true)
+      .reply(429, { message: 'too many requests' });
 
-    await expect(searchCatalog('anything', { resultType: 'release' })).rejects.toBeInstanceOf(
-      DiscogsRateLimitError,
-    );
+    await expect(
+      searchCatalog('anything', { resultType: 'release' }),
+    ).rejects.toBeInstanceOf(DiscogsRateLimitError);
   });
 
   it('rejects with DiscogsUnavailableError on a 500 response', async () => {
-    discogsScope().get('/database/search').query(true).reply(500, { message: 'server error' });
+    discogsScope()
+      .get('/database/search')
+      .query(true)
+      .reply(500, { message: 'server error' });
 
-    await expect(searchCatalog('anything', { resultType: 'release' })).rejects.toBeInstanceOf(
-      DiscogsUnavailableError,
-    );
+    await expect(
+      searchCatalog('anything', { resultType: 'release' }),
+    ).rejects.toBeInstanceOf(DiscogsUnavailableError);
   });
 
   it('rejects with DiscogsUnavailableError on a network error', async () => {
     discogsScope().get('/database/search').query(true).replyWithError('connection reset');
 
-    await expect(searchCatalog('anything', { resultType: 'release' })).rejects.toBeInstanceOf(
-      DiscogsUnavailableError,
-    );
+    await expect(
+      searchCatalog('anything', { resultType: 'release' }),
+    ).rejects.toBeInstanceOf(DiscogsUnavailableError);
   });
 
   describe('master result rating enrichment (feature 026, US1)', () => {
@@ -116,13 +122,15 @@ describe('Discogs client contract: searchCatalog', () => {
             },
           ],
         });
-      discogsScope().get('/masters/12345').reply(200, {
-        id: 12345,
-        title: 'Hybrid Theory',
-        artists: [{ id: 1, name: 'Linkin Park', anv: '', join: '', role: '' }],
-        main_release: 98765,
-        uri: 'https://www.discogs.com/master/12345',
-      });
+      discogsScope()
+        .get('/masters/12345')
+        .reply(200, {
+          id: 12345,
+          title: 'Hybrid Theory',
+          artists: [{ id: 1, name: 'Linkin Park', anv: '', join: '', role: '' }],
+          main_release: 98765,
+          uri: 'https://www.discogs.com/master/12345',
+        });
       discogsScope()
         .get('/releases/98765/rating')
         .reply(200, { release_id: 98765, rating: { average: 4.5, count: 812 } });
@@ -154,7 +162,9 @@ describe('Discogs client contract: searchCatalog', () => {
         });
       discogsScope().get('/masters/12346').reply(503, { message: 'unavailable' });
 
-      const result = await searchCatalog('Hybrid Theory Failure', { resultType: 'release' });
+      const result = await searchCatalog('Hybrid Theory Failure', {
+        resultType: 'release',
+      });
 
       expect(result.results[0].communityRating).toBeUndefined();
       expect(result.results[0].resultType).toBe('master');
@@ -180,7 +190,14 @@ describe('Discogs client contract: getRelease', () => {
           { position: 'A', type_: 'track', title: 'Östermalm', duration: '4:45' },
           { position: 'B1', type_: 'track', title: 'Vasastaden', duration: '6:11' },
         ],
-        images: [{ type: 'primary', uri: 'https://example.com/cover.jpg', width: 600, height: 600 }],
+        images: [
+          {
+            type: 'primary',
+            uri: 'https://example.com/cover.jpg',
+            width: 600,
+            height: 600,
+          },
+        ],
         master_id: 1660109,
         uri: 'https://www.discogs.com/release/1-The-Persuader-Stockholm',
       });
@@ -201,14 +218,23 @@ describe('Discogs client contract: getRelease', () => {
         { position: 'A', title: 'Östermalm', duration: '4:45' },
         { position: 'B1', title: 'Vasastaden', duration: '6:11' },
       ],
-      images: [{ url: 'https://example.com/cover.jpg', imageType: 'primary', width: 600, height: 600 }],
+      images: [
+        {
+          url: 'https://example.com/cover.jpg',
+          imageType: 'primary',
+          width: 600,
+          height: 600,
+        },
+      ],
       masterId: 1660109,
       discogsUrl: 'https://www.discogs.com/release/1-The-Persuader-Stockholm',
     });
   });
 
   it('rejects with DiscogsNotFoundError on a 404 response', async () => {
-    discogsScope().get('/releases/999999999').reply(404, { message: 'Release not found' });
+    discogsScope()
+      .get('/releases/999999999')
+      .reply(404, { message: 'Release not found' });
 
     await expect(getRelease(999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
   });
@@ -238,8 +264,21 @@ describe('Discogs client contract: getArtist', () => {
         realname: 'Jesper Dahlbäck',
         profile: 'Electronic artist working out of Stockholm, active since 1994.',
         namevariations: ['Persuader', 'The Presuader'],
-        aliases: [{ id: 239, name: 'Jesper Dahlbäck', resource_url: 'https://api.discogs.com/artists/239' }],
-        images: [{ type: 'primary', uri: 'https://example.com/artist.jpg', width: 600, height: 771 }],
+        aliases: [
+          {
+            id: 239,
+            name: 'Jesper Dahlbäck',
+            resource_url: 'https://api.discogs.com/artists/239',
+          },
+        ],
+        images: [
+          {
+            type: 'primary',
+            uri: 'https://example.com/artist.jpg',
+            width: 600,
+            height: 771,
+          },
+        ],
         uri: 'https://www.discogs.com/artist/1-The-Persuader',
       });
 
@@ -252,7 +291,14 @@ describe('Discogs client contract: getArtist', () => {
       profile: 'Electronic artist working out of Stockholm, active since 1994.',
       nameVariations: ['Persuader', 'The Presuader'],
       aliases: [{ discogsArtistId: 239, name: 'Jesper Dahlbäck' }],
-      images: [{ url: 'https://example.com/artist.jpg', imageType: 'primary', width: 600, height: 771 }],
+      images: [
+        {
+          url: 'https://example.com/artist.jpg',
+          imageType: 'primary',
+          width: 600,
+          height: 771,
+        },
+      ],
       discogsUrl: 'https://www.discogs.com/artist/1-The-Persuader',
     });
   });

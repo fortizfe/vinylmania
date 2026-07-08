@@ -33,14 +33,19 @@ describe('HeaderSearchBox', () => {
   it('renders a search textbox', () => {
     renderBox();
 
-    expect(screen.getByRole('searchbox', { name: /search discogs/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('searchbox', { name: /search discogs/i }),
+    ).toBeInTheDocument();
   });
 
   it('navigates to the search results page with the trimmed query on submit', async () => {
     const user = userEvent.setup();
     renderBox(['/app']);
 
-    await user.type(screen.getByRole('searchbox', { name: /search discogs/i }), '  stockholm  ');
+    await user.type(
+      screen.getByRole('searchbox', { name: /search discogs/i }),
+      '  stockholm  ',
+    );
     await user.click(screen.getByRole('button', { name: /search/i }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/app/search?q=stockholm');
@@ -60,7 +65,9 @@ describe('HeaderSearchBox', () => {
   it('initializes the input from the q param when mounted on the results page', () => {
     renderBox(['/app/search?q=miles+davis']);
 
-    expect(screen.getByRole('searchbox', { name: /search discogs/i })).toHaveValue('miles davis');
+    expect(screen.getByRole('searchbox', { name: /search discogs/i })).toHaveValue(
+      'miles davis',
+    );
   });
 
   it('resets to empty when navigating away from the results page', async () => {

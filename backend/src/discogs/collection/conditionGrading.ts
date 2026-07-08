@@ -14,7 +14,12 @@ export const MEDIA_CONDITIONS = [
   'Poor (P)',
 ] as const;
 
-export const SLEEVE_CONDITIONS = [...MEDIA_CONDITIONS, 'Generic', 'Not Graded', 'No Cover'] as const;
+export const SLEEVE_CONDITIONS = [
+  ...MEDIA_CONDITIONS,
+  'Generic',
+  'Not Graded',
+  'No Cover',
+] as const;
 
 export type MediaCondition = (typeof MEDIA_CONDITIONS)[number];
 export type SleeveCondition = (typeof SLEEVE_CONDITIONS)[number];

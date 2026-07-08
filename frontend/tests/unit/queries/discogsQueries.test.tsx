@@ -33,10 +33,16 @@ describe('discogsQueries', () => {
   });
 
   it('useCatalogSearch fetches results for a non-empty query', async () => {
-    mockSearch.mockResolvedValue({ results: [], pagination: { page: 1, pages: 0, items: 0, perPage: 50 } });
+    mockSearch.mockResolvedValue({
+      results: [],
+      pagination: { page: 1, pages: 0, items: 0, perPage: 50 },
+    });
 
     const { useCatalogSearch } = await import('../../../src/queries/discogsQueries');
-    const { result } = renderHook(() => useCatalogSearch('aphex twin', 'release', 1, 50), { wrapper });
+    const { result } = renderHook(
+      () => useCatalogSearch('aphex twin', 'release', 1, 50),
+      { wrapper },
+    );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -44,13 +50,20 @@ describe('discogsQueries', () => {
   });
 
   it('useCatalogSearch forwards filters to discogsApi.search and keys distinct filter combinations separately (feature 021)', async () => {
-    mockSearch.mockResolvedValue({ results: [], pagination: { page: 1, pages: 0, items: 0, perPage: 50 } });
-
-    const { useCatalogSearch, discogsKeys } = await import('../../../src/queries/discogsQueries');
-    const filters = { genre: 'Rock', format: 'Vinyl' };
-    const { result } = renderHook(() => useCatalogSearch('aphex twin', 'release', 1, 50, filters), {
-      wrapper,
+    mockSearch.mockResolvedValue({
+      results: [],
+      pagination: { page: 1, pages: 0, items: 0, perPage: 50 },
     });
+
+    const { useCatalogSearch, discogsKeys } =
+      await import('../../../src/queries/discogsQueries');
+    const filters = { genre: 'Rock', format: 'Vinyl' };
+    const { result } = renderHook(
+      () => useCatalogSearch('aphex twin', 'release', 1, 50, filters),
+      {
+        wrapper,
+      },
+    );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 

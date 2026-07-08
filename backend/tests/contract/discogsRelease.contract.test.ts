@@ -45,7 +45,9 @@ describe('Discogs release preview API contract: GET /api/discogs/releases/:disco
       releaseDate: '1999-05-01',
       notes: 'Recorded at Stockholm Sound Studio.',
       artists: [expect.objectContaining({ discogsArtistId: 1, name: 'The Persuader' })],
-      identifiers: [expect.objectContaining({ type: 'Barcode', value: '7 39051 23421 6' })],
+      identifiers: [
+        expect.objectContaining({ type: 'Barcode', value: '7 39051 23421 6' }),
+      ],
       community: { have: 214, want: 58, rating: { average: 4.3, count: 37 } },
       tracklist: [expect.objectContaining({ position: 'A', title: 'Östermalm' })],
     });

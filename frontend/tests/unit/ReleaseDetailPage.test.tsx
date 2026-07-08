@@ -96,7 +96,9 @@ describe('ReleaseDetailPage', () => {
 
     expect(mockCreate).toHaveBeenCalledWith(1);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /added to library/i })).toBeInTheDocument(),
+      expect(
+        screen.getByRole('button', { name: /added to library/i }),
+      ).toBeInTheDocument(),
     );
   });
 

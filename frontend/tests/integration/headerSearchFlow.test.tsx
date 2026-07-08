@@ -21,7 +21,9 @@ describe('Header search (US1)', () => {
     renderHeader();
 
     expect(screen.getByRole('link', { name: /vinylmania/i })).toBeInTheDocument();
-    expect(screen.getByRole('searchbox', { name: /search discogs/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('searchbox', { name: /search discogs/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /menu/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
   });
@@ -29,6 +31,8 @@ describe('Header search (US1)', () => {
   it('renders the same search box regardless of which authenticated page the header is mounted on', () => {
     renderHeader(['/app/library']);
 
-    expect(screen.getByRole('searchbox', { name: /search discogs/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('searchbox', { name: /search discogs/i }),
+    ).toBeInTheDocument();
   });
 });

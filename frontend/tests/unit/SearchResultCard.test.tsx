@@ -95,13 +95,17 @@ describe('SearchResultCard', () => {
     it('does not render the stacked-covers visual for a standalone release result', () => {
       renderCard(baseResult);
 
-      expect(screen.queryByTestId('search-result-stacked-covers')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('search-result-stacked-covers'),
+      ).not.toBeInTheDocument();
     });
 
     it('does not render an "Add to library" button for a master result', () => {
       renderCard(masterResult);
 
-      expect(screen.queryByRole('button', { name: /add to library/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /add to library/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('still renders title, artist, year, and format for a master result', () => {
@@ -130,14 +134,18 @@ describe('SearchResultCard', () => {
     it('shows the unrated placeholder badge when there is no community rating (feature 019)', () => {
       renderCard(baseResult);
 
-      expect(screen.getByRole('status', { name: 'Rating not available' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('status', { name: 'Rating not available' }),
+      ).toBeInTheDocument();
       expect(screen.getByText('-')).toBeInTheDocument();
     });
 
     it('shows the unrated placeholder badge when the community rating has no votes (feature 019)', () => {
       renderCard({ ...baseResult, communityRating: { average: 0, count: 0 } });
 
-      expect(screen.getByRole('status', { name: 'Rating not available' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('status', { name: 'Rating not available' }),
+      ).toBeInTheDocument();
       expect(screen.getByText('-')).toBeInTheDocument();
     });
 

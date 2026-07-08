@@ -16,7 +16,10 @@ import type {
 } from '../discogs/collection/collectionTypes';
 import { mapLegacyCondition } from '../discogs/collection/conditionGrading';
 import { DiscogsNotFoundError } from '../discogs/discogsErrors';
-import { getConnection, markInitialLibrarySync } from '../discogs/oauth/discogsOauthService';
+import {
+  getConnection,
+  markInitialLibrarySync,
+} from '../discogs/oauth/discogsOauthService';
 import type { DiscogsConnection } from '../discogs/oauth/types';
 import * as libraryService from './libraryService';
 import type { EntryDiscogsData, LibraryEntry } from './types';
@@ -73,14 +76,21 @@ async function setMarker(uid: string): Promise<void> {
     return;
   }
   try {
-    await client.set(syncMarkerKey(uid), new Date().toISOString(), 'EX', SYNC_MARKER_TTL_SECONDS);
+    await client.set(
+      syncMarkerKey(uid),
+      new Date().toISOString(),
+      'EX',
+      SYNC_MARKER_TTL_SECONDS,
+    );
   } catch {
     // Fail-soft: the next load simply syncs again.
   }
 }
 
 /** Picks the instance Vinylmania manages for a release: the oldest one (R8). */
-function pickManagedInstances(instances: CollectionInstance[]): Map<number, CollectionInstance> {
+function pickManagedInstances(
+  instances: CollectionInstance[],
+): Map<number, CollectionInstance> {
   const managed = new Map<number, CollectionInstance>();
   for (const instance of instances) {
     const current = managed.get(instance.releaseId);
@@ -105,11 +115,14 @@ async function migrateLegacyFields(
   entry: LibraryEntry,
   fieldMap: CollectionFieldMap,
 ): Promise<void> {
-
   const mapped = entry.legacyCondition ? mapLegacyCondition(entry.legacyCondition) : null;
   let conditionForNotes: string | null = null;
 
-  if (mapped !== null && fieldMap.mediaConditionFieldId !== null && existing.mediaCondition === null) {
+  if (
+    mapped !== null &&
+    fieldMap.mediaConditionFieldId !== null &&
+    existing.mediaCondition === null
+  ) {
     await setFieldValue(connection, ref, fieldMap.mediaConditionFieldId, mapped);
   } else if (entry.legacyCondition) {
     // A condition that cannot be written (unmappable, field missing, or the
@@ -167,14 +180,28 @@ export async function syncLibrary(
   const managedByRelease = pickManagedInstances(instances);
   const firstSync = !connection.initialLibrarySyncAt;
   const seenReleases = new Set<number>();
-  const result: SyncResult = { skipped: false, added: 0, removed: 0, migrated: 0, failures: 0 };
+  const result: SyncResult = {
+    skipped: false,
+    added: 0,
+    removed: 0,
+    migrated: 0,
+    failures: 0,
+  };
 
   for (const entry of entries) {
     const managed = managedByRelease.get(entry.discogsReleaseId);
 
     if (managed && !seenReleases.has(entry.discogsReleaseId)) {
       seenReleases.add(entry.discogsReleaseId);
-      await reconcileMatchedEntry(connection, uid, entry, managed, firstSync, result, fieldMap);
+      await reconcileMatchedEntry(
+        connection,
+        uid,
+        entry,
+        managed,
+        firstSync,
+        result,
+        fieldMap,
+      );
     } else if (firstSync && !seenReleases.has(entry.discogsReleaseId)) {
       seenReleases.add(entry.discogsReleaseId);
       await pushEntryToDiscogs(connection, uid, entry, result, fieldMap);
@@ -183,7 +210,12 @@ export async function syncLibrary(
       // duplicate entry for a release already reconciled) — remove it.
       await libraryService.deleteEntry(uid, entry.id);
       result.removed += 1;
-      logger.info({ route: ROUTE, outcome: 'entry_removed', uid, meta: { entryId: entry.id } });
+      logger.info({
+        route: ROUTE,
+        outcome: 'entry_removed',
+        uid,
+        meta: { entryId: entry.id },
+      });
     }
   }
 
@@ -198,12 +230,22 @@ export async function syncLibrary(
       addedAt: new Date(managed.dateAdded),
     });
     result.added += 1;
-    logger.info({ route: ROUTE, outcome: 'entry_added', uid, meta: { entryId: created.id, releaseId } });
+    logger.info({
+      route: ROUTE,
+      outcome: 'entry_added',
+      uid,
+      meta: { entryId: created.id, releaseId },
+    });
   }
 
   if (firstSync && result.failures === 0) {
     await markInitialLibrarySync(uid);
-    logger.info({ route: ROUTE, outcome: 'first_sync_migrated', uid, meta: { migrated: result.migrated } });
+    logger.info({
+      route: ROUTE,
+      outcome: 'first_sync_migrated',
+      uid,
+      meta: { migrated: result.migrated },
+    });
   }
   if (result.failures === 0) {
     await setMarker(uid);
@@ -279,8 +321,18 @@ async function pushEntryToDiscogs(
     });
 
     if (entry.legacyCondition || entry.legacyNotes) {
-      const ref: InstanceRef = { folderId, releaseId: entry.discogsReleaseId, instanceId };
-      await migrateLegacyFields(connection, ref, { mediaCondition: null, notes: null }, entry, fieldMap);
+      const ref: InstanceRef = {
+        folderId,
+        releaseId: entry.discogsReleaseId,
+        instanceId,
+      };
+      await migrateLegacyFields(
+        connection,
+        ref,
+        { mediaCondition: null, notes: null },
+        entry,
+        fieldMap,
+      );
       await libraryService.clearLegacyFields(uid, entry.id);
       result.migrated += 1;
     }
@@ -290,7 +342,11 @@ async function pushEntryToDiscogs(
       route: ROUTE,
       outcome: 'entry_added',
       uid,
-      meta: { entryId: entry.id, releaseId: entry.discogsReleaseId, pushedToDiscogs: true },
+      meta: {
+        entryId: entry.id,
+        releaseId: entry.discogsReleaseId,
+        pushedToDiscogs: true,
+      },
     });
   } catch (err) {
     result.failures += 1;
@@ -313,7 +369,11 @@ async function resolveManagedRef(
   entry: LibraryEntry,
   fieldMap: CollectionFieldMap,
 ): Promise<{ ref: InstanceRef; instance: CollectionInstance | null }> {
-  const instances = await getInstancesForRelease(connection, entry.discogsReleaseId, fieldMap);
+  const instances = await getInstancesForRelease(
+    connection,
+    entry.discogsReleaseId,
+    fieldMap,
+  );
   const managed =
     instances.find((instance) => instance.instanceId === entry.discogsInstanceId) ??
     [...instances].sort((a, b) => a.instanceId - b.instanceId)[0] ??
@@ -323,7 +383,11 @@ async function resolveManagedRef(
     throw new DiscogsNotFoundError();
   }
   return {
-    ref: { folderId: managed.folderId, releaseId: managed.releaseId, instanceId: managed.instanceId },
+    ref: {
+      folderId: managed.folderId,
+      releaseId: managed.releaseId,
+      instanceId: managed.instanceId,
+    },
     instance: managed,
   };
 }
@@ -397,17 +461,37 @@ export async function updateCopyData(
     await setRating(connection, ref, patch.rating);
   }
 
-  const fieldEdits: Array<{ label: string; fieldId: number | null; value: string | null | undefined }> = [];
-  if (patch.mediaCondition !== undefined || patch.sleeveCondition !== undefined || patch.notes !== undefined) {
+  const fieldEdits: Array<{
+    label: string;
+    fieldId: number | null;
+    value: string | null | undefined;
+  }> = [];
+  if (
+    patch.mediaCondition !== undefined ||
+    patch.sleeveCondition !== undefined ||
+    patch.notes !== undefined
+  ) {
     const fieldMap = await getFieldMap(connection);
     if (patch.mediaCondition !== undefined) {
-      fieldEdits.push({ label: 'Media Condition', fieldId: fieldMap.mediaConditionFieldId, value: patch.mediaCondition });
+      fieldEdits.push({
+        label: 'Media Condition',
+        fieldId: fieldMap.mediaConditionFieldId,
+        value: patch.mediaCondition,
+      });
     }
     if (patch.sleeveCondition !== undefined) {
-      fieldEdits.push({ label: 'Sleeve Condition', fieldId: fieldMap.sleeveConditionFieldId, value: patch.sleeveCondition });
+      fieldEdits.push({
+        label: 'Sleeve Condition',
+        fieldId: fieldMap.sleeveConditionFieldId,
+        value: patch.sleeveCondition,
+      });
     }
     if (patch.notes !== undefined) {
-      fieldEdits.push({ label: 'Notes', fieldId: fieldMap.notesFieldId, value: patch.notes });
+      fieldEdits.push({
+        label: 'Notes',
+        fieldId: fieldMap.notesFieldId,
+        value: patch.notes,
+      });
     }
   }
 
@@ -425,7 +509,10 @@ export async function addToLibrary(
   uid: string,
   discogsReleaseId: number,
 ): Promise<LibraryEntry> {
-  const { instanceId, folderId } = await addReleaseToCollection(connection, discogsReleaseId);
+  const { instanceId, folderId } = await addReleaseToCollection(
+    connection,
+    discogsReleaseId,
+  );
   const entry = await libraryService.createEntry(uid, {
     discogsReleaseId,
     discogsInstanceId: instanceId,
@@ -461,5 +548,10 @@ export async function removeFromLibrary(
     }
   }
   await libraryService.deleteEntry(uid, entry.id);
-  logger.info({ route: ROUTE, outcome: 'entry_removed', uid, meta: { entryId: entry.id } });
+  logger.info({
+    route: ROUTE,
+    outcome: 'entry_removed',
+    uid,
+    meta: { entryId: entry.id },
+  });
 }

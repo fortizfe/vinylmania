@@ -16,8 +16,12 @@ function toLibraryEntry(id: string, data: FirebaseFirestore.DocumentData): Libra
     id,
     discogsReleaseId: data.discogsReleaseId,
     addedAt: data.addedAt?.toDate?.().toISOString() ?? new Date().toISOString(),
-    ...(data.discogsInstanceId !== undefined ? { discogsInstanceId: data.discogsInstanceId } : {}),
-    ...(data.discogsFolderId !== undefined ? { discogsFolderId: data.discogsFolderId } : {}),
+    ...(data.discogsInstanceId !== undefined
+      ? { discogsInstanceId: data.discogsInstanceId }
+      : {}),
+    ...(data.discogsFolderId !== undefined
+      ? { discogsFolderId: data.discogsFolderId }
+      : {}),
     // Pre-016 per-copy fields, kept only until their first-sync migration.
     ...(data.condition ? { legacyCondition: data.condition } : {}),
     ...(data.notes ? { legacyNotes: data.notes } : {}),
@@ -40,7 +44,10 @@ export async function createEntry(
   return toLibraryEntry(snapshot.id, snapshot.data()!);
 }
 
-export async function getEntry(uid: string, entryId: string): Promise<LibraryEntry | null> {
+export async function getEntry(
+  uid: string,
+  entryId: string,
+): Promise<LibraryEntry | null> {
   const snapshot = await entriesCollection(uid).doc(entryId).get();
   if (!snapshot.exists) {
     return null;
