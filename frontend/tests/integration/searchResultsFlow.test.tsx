@@ -22,6 +22,31 @@ vi.mock('../../src/services/libraryApi', () => ({
   create: (...args: unknown[]) => mockCreate(...args),
 }));
 
+// Minimal IntersectionObserver stub (jsdom has none) that lets tests fire
+// the "sentinel entered/left the viewport" callback manually to simulate
+// scrolling near the bottom of the results (feature 027, US2).
+let intersectionCallback: IntersectionObserverCallback | null = null;
+
+class FakeIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | Document | null = null;
+  readonly rootMargin = '';
+  readonly thresholds: ReadonlyArray<number> = [];
+  constructor(callback: IntersectionObserverCallback) {
+    intersectionCallback = callback;
+  }
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  takeRecords = (): IntersectionObserverEntry[] => [];
+}
+
+function triggerScrolledToSentinel(isIntersecting = true) {
+  intersectionCallback?.(
+    [{ isIntersecting } as IntersectionObserverEntry],
+    new FakeIntersectionObserver(() => {}),
+  );
+}
+
 function renderPage(initialEntries: string[] = ['/app/search']) {
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
@@ -52,6 +77,8 @@ describe('Search results flow (US2)', () => {
     mockSearch.mockReset();
     mockCreate.mockReset();
     mockGetRelease.mockReset();
+    intersectionCallback = null;
+    vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver);
   });
 
   it('renders matching result cards with a working add action from a query already in the URL', async () => {
@@ -295,7 +322,7 @@ describe('Search results flow (US2)', () => {
     );
   });
 
-  it('paginates without a full reload by updating the page URL param', async () => {
+  it('renders no pagination controls and loads no more results than the first batch until the user scrolls (FR-004, FR-011)', async () => {
     mockSearch.mockResolvedValueOnce({
       results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
       pagination: { page: 1, pages: 3, items: 47, perPage: 20 },
@@ -304,21 +331,116 @@ describe('Search results flow (US2)', () => {
     renderPage(['/app/search?q=love']);
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
 
-    expect(screen.getByRole('button', { name: /^previous$/i })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /^previous$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^next$/i })).not.toBeInTheDocument();
+    expect(mockSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it('automatically loads and appends the next batch when the user scrolls near the bottom (FR-005), with a loading indicator meanwhile (FR-007)', async () => {
+    mockSearch.mockResolvedValueOnce({
+      results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+      pagination: { page: 1, pages: 3, items: 47, perPage: 20 },
+    });
+
+    renderPage(['/app/search?q=love']);
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    let resolveNextPage!: (value: unknown) => void;
+    mockSearch.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveNextPage = resolve;
+      }),
+    );
+
+    act(() => {
+      triggerScrolledToSentinel(true);
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('search-results-loading-more')).toBeInTheDocument(),
+    );
+
+    await act(async () => {
+      resolveNextPage({
+        results: [{ discogsId: 2, resultType: 'release', title: 'Page Two Result' }],
+        pagination: { page: 2, pages: 3, items: 47, perPage: 20 },
+      });
+    });
+
+    await waitFor(() => expect(screen.getByText('Page Two Result')).toBeInTheDocument());
+    expect(screen.getByText('Stockholm')).toBeInTheDocument();
+    expect(mockSearch).toHaveBeenLastCalledWith('love', 'release', 2, 20, {});
+    expect(screen.queryByTestId('search-results-loading-more')).not.toBeInTheDocument();
+  });
+
+  it('does not trigger a duplicate fetch while a batch is already loading (FR-006)', async () => {
+    mockSearch.mockResolvedValueOnce({
+      results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+      pagination: { page: 1, pages: 3, items: 47, perPage: 20 },
+    });
+
+    renderPage(['/app/search?q=love']);
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    mockSearch.mockReturnValueOnce(new Promise(() => {})); // never resolves during this test
+
+    act(() => {
+      triggerScrolledToSentinel(true);
+    });
+    await waitFor(() => expect(mockSearch).toHaveBeenCalledTimes(2));
+
+    // Sentinel re-entering the viewport while the first fetch is still in
+    // flight must not issue a second request.
+    act(() => {
+      triggerScrolledToSentinel(true);
+    });
+
+    expect(mockSearch).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows an end-of-results indicator once every page has been loaded (FR-008)', async () => {
+    mockSearch.mockResolvedValueOnce({
+      results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+    });
+
+    renderPage(['/app/search?q=love']);
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    expect(screen.getByText(/no more results/i)).toBeInTheDocument();
+  });
+
+  it('shows a retry option on a failed next-batch fetch without discarding already-loaded results (FR-010)', async () => {
+    mockSearch.mockResolvedValueOnce({
+      results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+      pagination: { page: 1, pages: 2, items: 21, perPage: 20 },
+    });
+
+    renderPage(['/app/search?q=love']);
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    mockSearch.mockRejectedValueOnce(new Error('network error'));
+
+    act(() => {
+      triggerScrolledToSentinel(true);
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument(),
+    );
+    expect(screen.getByText('Stockholm')).toBeInTheDocument();
 
     mockSearch.mockResolvedValueOnce({
       results: [{ discogsId: 2, resultType: 'release', title: 'Page Two Result' }],
-      pagination: { page: 2, pages: 3, items: 47, perPage: 20 },
+      pagination: { page: 2, pages: 2, items: 21, perPage: 20 },
     });
 
     const user = userEvent.setup();
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: /^next$/i }));
+      await user.click(screen.getByRole('button', { name: /retry/i }));
     });
 
     await waitFor(() => expect(screen.getByText('Page Two Result')).toBeInTheDocument());
-    expect(mockSearch).toHaveBeenLastCalledWith('love', 'release', 2, 20, {});
-    expect(screen.getByRole('button', { name: /^previous$/i })).not.toBeDisabled();
   });
 
   describe('search result filters (feature 021, US1)', () => {
@@ -580,7 +702,7 @@ describe('Search results flow (US2)', () => {
   });
 
   describe('search result filters (feature 021, US3)', () => {
-    it('preserves active filters when navigating to the next page (FR-006, Acceptance Scenario 1)', async () => {
+    it('preserves active filters when scrolling to load more results (FR-006, Acceptance Scenario 1)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
         pagination: { page: 1, pages: 3, items: 47, perPage: 20 },
@@ -594,9 +716,8 @@ describe('Search results flow (US2)', () => {
         pagination: { page: 2, pages: 3, items: 47, perPage: 20 },
       });
 
-      const user = userEvent.setup();
-      await act(async () => {
-        await user.click(screen.getByRole('button', { name: /^next$/i }));
+      act(() => {
+        triggerScrolledToSentinel(true);
       });
 
       await waitFor(() =>

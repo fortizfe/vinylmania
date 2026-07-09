@@ -1,4 +1,10 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useQuery,
+  type UseInfiniteQueryResult,
+  type InfiniteData,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 
 import type { SearchFilters } from '../hooks/useSearchQueryParams';
 import * as discogsApi from '../services/discogsApi';
@@ -18,22 +24,41 @@ export const discogsKeys = {
     perPage?: number,
     filters?: SearchFilters,
   ) => [...discogsKeys.all, 'search', type, query, page, perPage, filters] as const,
+  // Excludes `page` from the key (unlike `search` above) so every page fetched
+  // for the same query/filters accumulates in one cache entry, as
+  // useInfiniteQuery expects (feature 027, US2).
+  searchInfinite: (
+    query: string,
+    type: 'release' | 'artist',
+    perPage?: number,
+    filters?: SearchFilters,
+  ) => [...discogsKeys.all, 'search-infinite', type, query, perPage, filters] as const,
   release: (discogsId: number) => [...discogsKeys.all, 'release', discogsId] as const,
   master: (discogsId: number) => [...discogsKeys.all, 'master', discogsId] as const,
   masterVersions: (discogsId: number, page?: number) =>
     [...discogsKeys.all, 'master-versions', discogsId, page] as const,
 };
 
-export function useCatalogSearch(
+/**
+ * Infinite-scroll variant of catalog search (feature 027, US2): accumulates
+ * pages of `perPage` results as `fetchNextPage` is called, replacing the
+ * previous discrete-page `useCatalogSearch`/Previous-Next pagination.
+ */
+export function useCatalogSearchInfinite(
   query: string,
   type: 'release' | 'artist',
-  page?: number,
   perPage?: number,
   filters?: SearchFilters,
-): UseQueryResult<CatalogSearchResponse> {
-  return useQuery({
-    queryKey: discogsKeys.search(query, type, page, perPage, filters),
-    queryFn: () => discogsApi.search(query, type, page, perPage, filters),
+): UseInfiniteQueryResult<InfiniteData<CatalogSearchResponse>> {
+  return useInfiniteQuery({
+    queryKey: discogsKeys.searchInfinite(query, type, perPage, filters),
+    queryFn: ({ pageParam }) =>
+      discogsApi.search(query, type, pageParam, perPage, filters),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.pages
+        ? lastPage.pagination.page + 1
+        : undefined,
     enabled: query.trim().length > 0,
   });
 }

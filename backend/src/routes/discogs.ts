@@ -65,7 +65,14 @@ discogsRouter.get('/search', requireAuth, async (req: Request, res: Response) =>
         filters: Object.keys(filters),
       },
     });
-    res.status(200).json(result);
+    // Masters surface ahead of every other result within this page/batch
+    // (spec FR-012, feature 027) — best-effort, per-page only; no extra
+    // Discogs requests are made to enforce ordering across pages (see
+    // contracts/search-api.md). Partitioned against "not master" (rather
+    // than reusing `releaseResults` above) so a `type=artist` search's
+    // artist-type hits aren't silently dropped from the response.
+    const nonMasterResults = result.results.filter((r) => r.resultType !== 'master');
+    res.status(200).json({ ...result, results: [...masterResults, ...nonMasterResults] });
   } catch (err) {
     if (err instanceof DiscogsRateLimitError || err instanceof DiscogsUnavailableError) {
       logger.warn({

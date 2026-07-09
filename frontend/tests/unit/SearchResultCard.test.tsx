@@ -108,12 +108,18 @@ describe('SearchResultCard', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('still renders title, artist, year, and format for a master result', () => {
+    it('still renders title, artist, and year for a master result, but omits the format badge (feature 027, FR-014)', () => {
       renderCard({ ...masterResult, year: 2000, formats: ['Vinyl'] });
 
       expect(screen.getByText('Hybrid Theory')).toBeInTheDocument();
       expect(screen.getByText('Linkin Park')).toBeInTheDocument();
       expect(screen.getByText('2000')).toBeInTheDocument();
+      expect(screen.queryByText('Vinyl')).not.toBeInTheDocument();
+    });
+
+    it('still renders the format badge for a standalone release result (feature 027, FR-015)', () => {
+      renderCard(baseResult);
+
       expect(screen.getByText('Vinyl')).toBeInTheDocument();
     });
 
