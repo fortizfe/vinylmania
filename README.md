@@ -56,3 +56,16 @@ cd e2e && npm test        # Playwright — real browser, real Google sign-in bri
 Backend and frontend deploy as two independent Vercel projects — see
 [docs/deployment-vercel.md](docs/deployment-vercel.md) for the full step-by-step
 guide (project creation, environment variables, and verification).
+
+## License
+
+Vinylmania is source-available under the [GNU Affero General Public License
+v3.0](https://www.gnu.org/licenses/agpl-3.0.html), modified by the [Commons
+Clause](https://commonsclause.com/) License Condition v1.0 — see
+[LICENSE](LICENSE) for the full text.
+
+In short: free to use, modify, and redistribute for non-commercial,
+non-business purposes, provided any project incorporating this code remains
+open source under the same license. Commercial or for-profit use, resale, or
+offering it (or a derivative service) as a paid product is not permitted
+without a separate commercial license from the copyright holder.
