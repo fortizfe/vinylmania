@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { SearchFiltersControl } from '../components/SearchFiltersControl';
@@ -11,7 +11,7 @@ import {
   type SearchFilters,
   useSearchQueryParams,
 } from '../hooks/useSearchQueryParams';
-import { useCatalogSearch } from '../queries/discogsQueries';
+import { useCatalogSearchInfinite } from '../queries/discogsQueries';
 import { useCreateLibraryEntry } from '../queries/libraryQueries';
 import { ApiError } from '../services/apiClient';
 
@@ -43,32 +43,53 @@ function activeFilterLabels(filters: SearchFilters): string[] {
 
 export function SearchResultsPage() {
   const navigate = useNavigate();
-  const { query, page, ...filters } = useSearchQueryParams();
+  // `page` from useSearchQueryParams is intentionally not read here: infinite
+  // scroll paginates internally via useCatalogSearchInfinite, so only the
+  // filter fields are forwarded as `filters` (spec FR-004/FR-005).
+  const { query, genre, style, format } = useSearchQueryParams();
+  const filters: SearchFilters = { genre, style, format };
   const [addingId, setAddingId] = useState<number | null>(null);
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
   const [addError, setAddError] = useState<string | null>(null);
   const [gateError, setGateError] = useState<'not-linked' | 'relink' | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const searchQuery = useCatalogSearch(query, 'release', page, PAGE_SIZE, filters);
+  const searchQuery = useCatalogSearchInfinite(query, 'release', PAGE_SIZE, filters);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage, data, isLoading, isError } =
+    searchQuery;
   const createEntry = useCreateLibraryEntry();
 
   const searched = query.trim().length > 0;
-  const loading = searchQuery.isLoading;
-  const results = searchQuery.data?.results ?? [];
-  const totalPages = searchQuery.data?.pagination.pages ?? 0;
+  const loading = isLoading;
+  const results = data?.pages.flatMap((page) => page.results) ?? [];
+  // The first page's request is what can fail before any results exist;
+  // once at least one page has loaded, a later fetchNextPage failure is
+  // surfaced separately below (next-batch retry) instead of replacing
+  // already-loaded results with a full-page error (FR-010).
+  const initialLoadError = !data && isError;
+  const nextPageError = Boolean(data) && isError;
   const error =
     addError ??
-    (searchQuery.isError
-      ? 'Something went wrong while searching. Please try again.'
-      : null);
+    (initialLoadError ? 'Something went wrong while searching. Please try again.' : null);
   const activeFilters = activeFilterLabels(filters);
   // Carried as router state into detail pages so their back action returns
-  // here with the exact query/filters/page preserved (spec FR-012).
-  const currentSearchPath = buildSearchPath(query, page, filters);
+  // here with the same query/filters (spec FR-012); infinite scroll has no
+  // single "current page" to preserve, so this always targets page 1.
+  const currentSearchPath = buildSearchPath(query, 1, filters);
 
-  function goToPage(nextPage: number) {
-    navigate(buildSearchPath(query, nextPage, filters), { replace: true });
-  }
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage && !nextPageError) {
+        fetchNextPage().catch(() => {
+          // Errors are surfaced reactively via `isError`/`nextPageError` above.
+        });
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, nextPageError, fetchNextPage]);
 
   function applyFilters(newFilters: SearchFilters) {
     navigate(buildSearchPath(query, 1, newFilters), { replace: true });
@@ -171,24 +192,34 @@ export function SearchResultsPage() {
               </li>
             ))}
           </ul>
-          {totalPages > 1 && (
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                disabled={page <= 1}
-                onClick={() => goToPage(page - 1)}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={page >= totalPages}
-                onClick={() => goToPage(page + 1)}
-              >
-                Next
+          {isFetchingNextPage && (
+            <ul className={resultsGridClasses} data-testid="search-results-loading-more">
+              {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+                <li key={index}>
+                  <SearchResultCardSkeleton />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {nextPageError && (
+            <div className="flex flex-col items-center gap-2">
+              <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+                Something went wrong while loading more results. Please try again.
+              </p>
+              <Button variant="secondary" onClick={() => fetchNextPage()}>
+                Retry
               </Button>
             </div>
           )}
+
+          {!hasNextPage && !nextPageError && !isFetchingNextPage && (
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+              No more results.
+            </p>
+          )}
+
+          <div ref={sentinelRef} aria-hidden="true" />
         </>
       )}
     </main>

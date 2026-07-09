@@ -34,4 +34,14 @@ describe('AppHeader', () => {
 
     expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
   });
+
+  it('stays fixed at the top of the viewport while scrolling (FR-001, FR-002, FR-003)', () => {
+    renderHeader();
+
+    const header = screen.getByRole('banner');
+    expect(header).toHaveClass('sticky');
+    expect(header).toHaveClass('top-0');
+    expect(header).toHaveClass('bg-white');
+    expect(header).toHaveClass('dark:bg-gray-950');
+  });
 });

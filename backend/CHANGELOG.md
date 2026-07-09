@@ -8,6 +8,12 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.10.0] - 2026-07-08
+
+### Changed
+
+- `GET /api/discogs/search` now orders each page's response so `master`-type results precede all other results, best-effort and per-page only — no additional Discogs requests are made to enforce ordering across pages (feature 027). Relative order within the masters group and within the rest of the results is unchanged; a page with no masters is unaffected.
+
 ## [0.9.0] - 2026-07-08
 
 ### Added

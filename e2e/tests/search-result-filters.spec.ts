@@ -154,7 +154,7 @@ test.describe('Search result filters (feature 021, US2)', () => {
 });
 
 test.describe('Search result filters (feature 021, US3)', () => {
-  test('preserves filters across pagination and reload, and clears them in one action (quickstart Scenario 3)', async ({
+  test('preserves filters while scrolling to load more results and across reload, and clears them in one action (quickstart Scenario 3; adapted to infinite scroll, feature 027)', async ({
     page,
   }) => {
     await page.route('**/api/discogs/search*', async (route) => {
@@ -206,20 +206,161 @@ test.describe('Search result filters (feature 021, US3)', () => {
     await page.getByLabel(/^genre$/i).fill('Rock');
     await page.getByRole('button', { name: /apply filters/i }).click();
     await expect(page.getByText('Page One Filtered Result')).toBeVisible();
-
-    await page.getByRole('button', { name: /^next$/i }).click();
     await expect(page).toHaveURL(/genre=Rock/);
-    await expect(page).toHaveURL(/page=2/);
+
+    // Infinite scroll replaced Previous/Next pagination (feature 027, US2):
+    // scrolling to the bottom loads the next batch instead of a button click.
+    await page.mouse.wheel(0, 20_000);
     await expect(page.getByText('Page Two Filtered Result')).toBeVisible();
+    // The genre filter stays active throughout, unaffected by loading more.
+    await expect(page).toHaveURL(/genre=Rock/);
 
     await page.reload();
-    await expect(page.getByText('Page Two Filtered Result')).toBeVisible();
+    await expect(page.getByText('Page One Filtered Result')).toBeVisible();
     await expect(page.getByLabel(/^genre$/i)).toHaveValue('Rock');
 
     await page.getByRole('button', { name: /clear filters/i }).click();
     await expect(page).not.toHaveURL(/genre=/);
     await expect(page.getByText('Unfiltered Result')).toBeVisible();
     await expect(page.getByLabel(/^genre$/i)).toHaveValue('');
+  });
+});
+
+test.describe('Search results organization (feature 027)', () => {
+  test('the header stays pinned to the top of the viewport while scrolling through results (US1)', async ({
+    page,
+  }) => {
+    const manyResults = Array.from({ length: 30 }, (_, i) => ({
+      discogsId: 1000 + i,
+      resultType: 'release',
+      title: `Sticky Header Result ${i}`,
+    }));
+    await page.route('**/api/discogs/search*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: manyResults,
+          pagination: { page: 1, pages: 1, items: manyResults.length, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('sticky');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page.getByText('Sticky Header Result 0')).toBeVisible();
+
+    const header = page.locator('header');
+    const beforeScroll = await header.boundingBox();
+
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await expect(page.evaluate(() => window.scrollY)).resolves.toBeGreaterThan(0);
+
+    const afterScroll = await header.boundingBox();
+    await expect(header).toBeVisible();
+    expect(afterScroll?.y).toBe(beforeScroll?.y);
+  });
+
+  test('scrolling near the bottom loads more results automatically with no pagination controls (US2)', async ({
+    page,
+  }) => {
+    const firstBatch = Array.from({ length: 20 }, (_, i) => ({
+      discogsId: 2000 + i,
+      resultType: 'release',
+      title: `Infinite Scroll Result ${i}`,
+    }));
+    await page.route('**/api/discogs/search*', async (route) => {
+      const url = new URL(route.request().url());
+      const pageParam = url.searchParams.get('page') ?? '1';
+
+      if (pageParam === '2') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: [{ discogsId: 2999, resultType: 'release', title: 'Next Batch Result' }],
+            pagination: { page: 2, pages: 2, items: 21, perPage: 20 },
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: firstBatch,
+          pagination: { page: 1, pages: 2, items: 21, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('infinite');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page.getByText('Infinite Scroll Result 0')).toBeVisible();
+
+    await expect(page.getByRole('button', { name: /^previous$/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^next$/i })).toHaveCount(0);
+
+    await page.mouse.wheel(0, 20_000);
+    await expect(page.getByText('Next Batch Result')).toBeVisible();
+  });
+
+  test('renders masters ahead of releases as delivered by the API, omitting the format badge on master cards while releases keep theirs (US3)', async ({
+    page,
+  }) => {
+    // Masters-first ordering is applied server-side (backend contract test,
+    // feature 027 T008/T010); this mock reflects that already-ordered
+    // response shape so this e2e test can focus on what the frontend alone
+    // is responsible for: rendering the given order faithfully, and the
+    // format-badge visibility rule per card type.
+    await page.route('**/api/discogs/search*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            {
+              discogsId: 3002,
+              resultType: 'master',
+              title: 'A Master Grouping',
+              formats: ['Vinyl'],
+            },
+            {
+              discogsId: 3001,
+              resultType: 'release',
+              title: 'A Standalone Release',
+              formats: ['Vinyl'],
+            },
+          ],
+          pagination: { page: 1, pages: 1, items: 2, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('ordering');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page.getByText('A Master Grouping')).toBeVisible();
+    await expect(page.getByText('A Standalone Release')).toBeVisible();
+
+    const titles = await page.locator('li').allTextContents();
+    const masterIndex = titles.findIndex((t) => t.includes('A Master Grouping'));
+    const releaseIndex = titles.findIndex((t) => t.includes('A Standalone Release'));
+    expect(masterIndex).toBeGreaterThanOrEqual(0);
+    expect(masterIndex).toBeLessThan(releaseIndex);
+
+    const masterCard = page.locator('li', { hasText: 'A Master Grouping' });
+    const releaseCard = page.locator('li', { hasText: 'A Standalone Release' });
+    await expect(masterCard.getByText('Vinyl')).toHaveCount(0);
+    await expect(releaseCard.getByText('Vinyl')).toBeVisible();
   });
 });
 

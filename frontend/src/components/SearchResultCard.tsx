@@ -66,7 +66,7 @@ export function SearchResultCard({
       )}
       <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         {result.year && <span>{result.year}</span>}
-        {format && <Badge tone="muted">{format}</Badge>}
+        {!isGrouped && format && <Badge tone="muted">{format}</Badge>}
       </div>
     </>
   );

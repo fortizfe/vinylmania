@@ -211,6 +211,108 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     });
   });
 
+  describe('masters-first ordering (feature 027, US3)', () => {
+    it('orders master results ahead of release results within the same page, preserving relative order within each group', async () => {
+      const { idToken } = await getTestIdToken('search-masters-first-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'MastersFirstOrderingTest', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 4, per_page: 50 },
+          results: [
+            {
+              id: 1,
+              type: 'release',
+              title: 'Artist A - Release One',
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/releases/1',
+            },
+            {
+              id: 100,
+              type: 'master',
+              title: 'Artist B - Master One',
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/masters/100',
+            },
+            {
+              id: 2,
+              type: 'release',
+              title: 'Artist C - Release Two',
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/releases/2',
+            },
+            {
+              id: 200,
+              type: 'master',
+              title: 'Artist D - Master Two',
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/masters/200',
+            },
+          ],
+        });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'MastersFirstOrderingTest', type: 'release' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.results.map((r: { discogsId: number }) => r.discogsId)).toEqual([
+        100, 200, 1, 2,
+      ]);
+      expect(res.body.results.map((r: { resultType: string }) => r.resultType)).toEqual([
+        'master',
+        'master',
+        'release',
+        'release',
+      ]);
+    });
+
+    it('leaves an all-release response order unchanged (no masters present)', async () => {
+      const { idToken } = await getTestIdToken('search-masters-first-none-user');
+
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'AllReleasesOrderingTest', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 2, per_page: 50 },
+          results: [
+            {
+              id: 1,
+              type: 'release',
+              title: 'Artist A - Release One',
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/releases/1',
+            },
+            {
+              id: 2,
+              type: 'release',
+              title: 'Artist B - Release Two',
+              thumb: '',
+              cover_image: '',
+              resource_url: 'https://api.discogs.com/releases/2',
+            },
+          ],
+        });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'AllReleasesOrderingTest', type: 'release' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.results.map((r: { discogsId: number }) => r.discogsId)).toEqual([
+        1, 2,
+      ]);
+    });
+  });
+
   it('forwards page and perPage query params to the catalog search', async () => {
     const { idToken } = await getTestIdToken('search-pagination-user');
 

@@ -8,6 +8,17 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.17.0] - 2026-07-08
+
+### Added
+
+- Search results now load via infinite scroll instead of Previous/Next pagination (feature 027): an initial batch of 20 results loads on search, and scrolling near the bottom automatically fetches and appends the next batch, with a loading indicator while fetching, a clear "no more results" message once exhausted, and an error message with a retry action if a batch fails to load. Changing the search query or a filter resets the list and restarts from the first batch.
+
+### Changed
+
+- The app header is now fixed (sticky) to the top of the viewport on every page, remaining visible and interactive at all scroll positions instead of scrolling away with page content (feature 027).
+- Search result cards for master releases no longer show a format badge; standalone release cards are unaffected (feature 027).
+
 ## [0.16.0] - 2026-07-08
 
 ### Added
