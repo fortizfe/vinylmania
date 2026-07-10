@@ -93,7 +93,7 @@ describe('Search results flow (US2)', () => {
           formats: ['Vinyl'],
         },
       ],
-      pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
     });
     mockCreate.mockResolvedValue({
       id: 'entry-1',
@@ -106,7 +106,7 @@ describe('Search results flow (US2)', () => {
     renderPage(['/app/search?q=Stockholm']);
 
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
-    expect(mockSearch).toHaveBeenCalledWith('Stockholm', 'release', 1, 40, {});
+    expect(mockSearch).toHaveBeenCalledWith('Stockholm', 'release', 1, 20, {});
 
     const user = userEvent.setup();
     await act(async () => {
@@ -141,7 +141,7 @@ describe('Search results flow (US2)', () => {
           year: 2001,
         },
       ],
-      pagination: { page: 1, pages: 1, items: 2, perPage: 40 },
+      pagination: { page: 1, pages: 1, items: 2, perPage: 20 },
     });
     mockCreate.mockResolvedValue({
       id: 'entry-1',
@@ -193,7 +193,7 @@ describe('Search results flow (US2)', () => {
           formats: ['Vinyl'],
         },
       ],
-      pagination: { page: 1, pages: 1, items: 2, perPage: 40 },
+      pagination: { page: 1, pages: 1, items: 2, perPage: 20 },
     });
 
     renderPage(['/app/search?q=music']);
@@ -230,7 +230,7 @@ describe('Search results flow (US2)', () => {
             artist: 'The Persuader',
           },
         ],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
       mockGetRelease.mockResolvedValue({
         discogsId: 1,
@@ -262,7 +262,7 @@ describe('Search results flow (US2)', () => {
       await user.click(screen.getByRole('link', { name: /back/i }));
 
       await waitFor(() =>
-        expect(mockSearch).toHaveBeenLastCalledWith('Stockholm', 'release', 1, 40, {}),
+        expect(mockSearch).toHaveBeenLastCalledWith('Stockholm', 'release', 1, 20, {}),
       );
       expect(screen.getByText('Stockholm')).toBeInTheDocument();
     });
@@ -278,7 +278,7 @@ describe('Search results flow (US2)', () => {
           artist: 'The Persuader',
         },
       ],
-      pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
     });
 
     renderPage(['/app/search?q=Stockholm']);
@@ -286,7 +286,7 @@ describe('Search results flow (US2)', () => {
 
     mockSearch.mockResolvedValueOnce({
       results: [{ discogsId: 2, resultType: 'release', title: 'Fresh Result' }],
-      pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
     });
 
     const user = userEvent.setup();
@@ -297,14 +297,14 @@ describe('Search results flow (US2)', () => {
     });
 
     await waitFor(() => expect(screen.getByText('Fresh Result')).toBeInTheDocument());
-    expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 40, {});
+    expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 20, {});
     expect(screen.queryByText('Stockholm')).not.toBeInTheDocument();
   });
 
   it('shows a clear empty state when the search has no matches', async () => {
     mockSearch.mockResolvedValue({
       results: [],
-      pagination: { page: 1, pages: 0, items: 0, perPage: 40 },
+      pagination: { page: 1, pages: 0, items: 0, perPage: 20 },
     });
 
     renderPage(['/app/search?q=zzzznomatch']);
@@ -325,7 +325,7 @@ describe('Search results flow (US2)', () => {
   it('renders no pagination controls and loads no more results than the first batch until the user scrolls (FR-004, FR-011)', async () => {
     mockSearch.mockResolvedValueOnce({
       results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-      pagination: { page: 1, pages: 3, items: 100, perPage: 40 },
+      pagination: { page: 1, pages: 3, items: 100, perPage: 20 },
     });
 
     renderPage(['/app/search?q=love']);
@@ -339,7 +339,7 @@ describe('Search results flow (US2)', () => {
   it('automatically loads and appends the next batch when the user scrolls near the bottom (FR-005), with a loading indicator meanwhile (FR-007)', async () => {
     mockSearch.mockResolvedValueOnce({
       results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-      pagination: { page: 1, pages: 3, items: 100, perPage: 40 },
+      pagination: { page: 1, pages: 3, items: 100, perPage: 20 },
     });
 
     renderPage(['/app/search?q=love']);
@@ -363,20 +363,20 @@ describe('Search results flow (US2)', () => {
     await act(async () => {
       resolveNextPage({
         results: [{ discogsId: 2, resultType: 'release', title: 'Page Two Result' }],
-        pagination: { page: 2, pages: 3, items: 100, perPage: 40 },
+        pagination: { page: 2, pages: 3, items: 100, perPage: 20 },
       });
     });
 
     await waitFor(() => expect(screen.getByText('Page Two Result')).toBeInTheDocument());
     expect(screen.getByText('Stockholm')).toBeInTheDocument();
-    expect(mockSearch).toHaveBeenLastCalledWith('love', 'release', 2, 40, {});
+    expect(mockSearch).toHaveBeenLastCalledWith('love', 'release', 2, 20, {});
     expect(screen.queryByTestId('search-results-loading-more')).not.toBeInTheDocument();
   });
 
   it('does not trigger a duplicate fetch while a batch is already loading (FR-006)', async () => {
     mockSearch.mockResolvedValueOnce({
       results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-      pagination: { page: 1, pages: 3, items: 100, perPage: 40 },
+      pagination: { page: 1, pages: 3, items: 100, perPage: 20 },
     });
 
     renderPage(['/app/search?q=love']);
@@ -401,7 +401,7 @@ describe('Search results flow (US2)', () => {
   it('shows an end-of-results indicator once every page has been loaded (FR-008)', async () => {
     mockSearch.mockResolvedValueOnce({
       results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-      pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
     });
 
     renderPage(['/app/search?q=love']);
@@ -413,7 +413,7 @@ describe('Search results flow (US2)', () => {
   it('shows a retry option on a failed next-batch fetch without discarding already-loaded results (FR-010)', async () => {
     mockSearch.mockResolvedValueOnce({
       results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-      pagination: { page: 1, pages: 2, items: 45, perPage: 40 },
+      pagination: { page: 1, pages: 2, items: 45, perPage: 20 },
     });
 
     renderPage(['/app/search?q=love']);
@@ -432,7 +432,7 @@ describe('Search results flow (US2)', () => {
 
     mockSearch.mockResolvedValueOnce({
       results: [{ discogsId: 2, resultType: 'release', title: 'Page Two Result' }],
-      pagination: { page: 2, pages: 2, items: 45, perPage: 40 },
+      pagination: { page: 2, pages: 2, items: 45, perPage: 20 },
     });
 
     const user = userEvent.setup();
@@ -447,7 +447,7 @@ describe('Search results flow (US2)', () => {
     it('applying a single filter re-runs the search with that filter and resets to page 1 (Acceptance Scenario 1, FR-003)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-        pagination: { page: 2, pages: 3, items: 100, perPage: 40 },
+        pagination: { page: 2, pages: 3, items: 100, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana&page=2']);
@@ -457,7 +457,7 @@ describe('Search results flow (US2)', () => {
         results: [
           { discogsId: 2, resultType: 'release', title: 'Nevermind', formats: ['Vinyl'] },
         ],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       const user = userEvent.setup();
@@ -467,7 +467,7 @@ describe('Search results flow (US2)', () => {
       });
 
       await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
-      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 40, {
+      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
         genre: 'Rock',
       });
     });
@@ -475,7 +475,7 @@ describe('Search results flow (US2)', () => {
     it('shows a filters-aware empty state when a filtered search resolves to zero results (Acceptance Scenario 3, FR-008)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana']);
@@ -483,7 +483,7 @@ describe('Search results flow (US2)', () => {
 
       mockSearch.mockResolvedValueOnce({
         results: [],
-        pagination: { page: 1, pages: 0, items: 0, perPage: 40 },
+        pagination: { page: 1, pages: 0, items: 0, perPage: 20 },
       });
 
       const user = userEvent.setup();
@@ -512,7 +512,7 @@ describe('Search results flow (US2)', () => {
     it('preserves an active filter when a new query is submitted from the header (edge case)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana&genre=Rock']);
@@ -520,7 +520,7 @@ describe('Search results flow (US2)', () => {
 
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 2, resultType: 'release', title: 'Fresh Result' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       const user = userEvent.setup();
@@ -534,7 +534,7 @@ describe('Search results flow (US2)', () => {
       });
 
       await waitFor(() => expect(screen.getByText('Fresh Result')).toBeInTheDocument());
-      expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 40, {
+      expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 20, {
         genre: 'Rock',
       });
     });
@@ -544,7 +544,7 @@ describe('Search results flow (US2)', () => {
     it('sends multiple filters together and both appear in the URL (Acceptance Scenario 1)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana']);
@@ -552,7 +552,7 @@ describe('Search results flow (US2)', () => {
 
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 2, resultType: 'release', title: 'Nevermind' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       const user = userEvent.setup();
@@ -563,7 +563,7 @@ describe('Search results flow (US2)', () => {
       });
 
       await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
-      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 40, {
+      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
         genre: 'Rock',
         format: ['Vinyl'],
       });
@@ -572,7 +572,7 @@ describe('Search results flow (US2)', () => {
     it('clearing one filter field and re-applying keeps the remaining filter active (Acceptance Scenario 2)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana&genre=Rock&format=Vinyl']);
@@ -580,7 +580,7 @@ describe('Search results flow (US2)', () => {
 
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       const user = userEvent.setup();
@@ -590,7 +590,7 @@ describe('Search results flow (US2)', () => {
       });
 
       await waitFor(() =>
-        expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 40, {
+        expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
           genre: 'Rock',
         }),
       );
@@ -601,7 +601,7 @@ describe('Search results flow (US2)', () => {
     it('selecting multiple format values re-runs the search with all selections combined (Acceptance Scenario 3)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana']);
@@ -609,7 +609,7 @@ describe('Search results flow (US2)', () => {
 
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 2, resultType: 'release', title: 'Nevermind' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       const user = userEvent.setup();
@@ -620,7 +620,7 @@ describe('Search results flow (US2)', () => {
       });
 
       await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
-      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 40, {
+      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
         format: ['Vinyl', 'CD'],
       });
     });
@@ -628,13 +628,13 @@ describe('Search results flow (US2)', () => {
     it('loads a URL with one valid and one invalid format value, keeping only the valid one active (Edge Cases, FR-010)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana&format=Vinyl,NotARealFormat']);
 
       await waitFor(() =>
-        expect(mockSearch).toHaveBeenCalledWith('nirvana', 'release', 1, 40, {
+        expect(mockSearch).toHaveBeenCalledWith('nirvana', 'release', 1, 20, {
           format: ['Vinyl'],
         }),
       );
@@ -644,7 +644,7 @@ describe('Search results flow (US2)', () => {
     it('deselecting all formats and applying removes format from both the request and the URL (Acceptance Scenario 4)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana&format=Vinyl']);
@@ -652,7 +652,7 @@ describe('Search results flow (US2)', () => {
 
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       const user = userEvent.setup();
@@ -662,7 +662,7 @@ describe('Search results flow (US2)', () => {
       });
 
       await waitFor(() =>
-        expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 40, {}),
+        expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {}),
       );
       expect(screen.queryByText(/format=/)).not.toBeInTheDocument();
     });
@@ -670,7 +670,7 @@ describe('Search results flow (US2)', () => {
     it('shows the selected format values (not just the label) in the filters-aware empty state', async () => {
       mockSearch.mockResolvedValue({
         results: [],
-        pagination: { page: 1, pages: 0, items: 0, perPage: 40 },
+        pagination: { page: 1, pages: 0, items: 0, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana&format=Vinyl,CD']);
@@ -688,13 +688,13 @@ describe('Search results flow (US2)', () => {
     it('loads a URL carrying an obsolete artist param without error, omits it from the request, and does not show it as an active filter (Acceptance Scenario 2, FR-009)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Nevermind' }],
-        pagination: { page: 1, pages: 1, items: 1, perPage: 40 },
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana&artist=Nirvana&genre=Rock']);
 
       await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
-      expect(mockSearch).toHaveBeenCalledWith('nirvana', 'release', 1, 40, {
+      expect(mockSearch).toHaveBeenCalledWith('nirvana', 'release', 1, 20, {
         genre: 'Rock',
       });
       expect(screen.queryByLabelText(/^artist$/i)).not.toBeInTheDocument();
@@ -705,7 +705,7 @@ describe('Search results flow (US2)', () => {
     it('preserves active filters when scrolling to load more results (FR-006, Acceptance Scenario 1)', async () => {
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
-        pagination: { page: 1, pages: 3, items: 100, perPage: 40 },
+        pagination: { page: 1, pages: 3, items: 100, perPage: 20 },
       });
 
       renderPage(['/app/search?q=nirvana&genre=Rock']);
@@ -713,7 +713,7 @@ describe('Search results flow (US2)', () => {
 
       mockSearch.mockResolvedValueOnce({
         results: [{ discogsId: 2, resultType: 'release', title: 'Page Two Result' }],
-        pagination: { page: 2, pages: 3, items: 100, perPage: 40 },
+        pagination: { page: 2, pages: 3, items: 100, perPage: 20 },
       });
 
       act(() => {
@@ -723,7 +723,7 @@ describe('Search results flow (US2)', () => {
       await waitFor(() =>
         expect(screen.getByText('Page Two Result')).toBeInTheDocument(),
       );
-      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 2, 40, {
+      expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 2, 20, {
         genre: 'Rock',
       });
     });
