@@ -16,7 +16,7 @@ import { useCreateLibraryEntry } from '../queries/libraryQueries';
 import { ApiError } from '../services/apiClient';
 
 const SKELETON_COUNT = 8;
-const PAGE_SIZE = 40;
+const PAGE_SIZE = 20;
 const resultsGridClasses =
   'grid list-none grid-cols-2 gap-4 p-0 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
