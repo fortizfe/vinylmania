@@ -1,21 +1,24 @@
 <!--
 Sync Impact Report
-Version change: 1.8.1 → 2.0.0
-Modified principles:
-  - II. Library-First & Modularity → II. Discogs Integration-First & Modularity
-Added sections: none
+Version change: 2.0.0 → 2.1.0
+Modified principles: none (existing principles I-VI unchanged)
+Added sections:
+  - VII. Curated Ratings & Music News (Rock/Metal Focus) — new Core Principle
+    covering personal ratings and RSS/news aggregation as first-class,
+    Discogs-adjacent product pillars, with rock/metal as the default curation
+    lens.
+  - Technology Stack: "News/RSS Data Source" bullet describing external feed
+    sourcing, attribution, and graceful degradation requirements.
 Changed sections:
-  - Reframed project scope as a Discogs-powered integration app and strengthened
-    Discogs optimization requirements (source-of-truth use, efficient retrieval,
-    graceful rate-limit handling).
-  - Updated Development Workflow quality gates: e2e coverage remains mandatory,
-    but mandatory execution moved from each development task to deployment
-    pipeline validation.
+  - Mission statement (opening paragraph) expanded to describe Vinylmania as a
+    modern Discogs integration combined with music ratings and related news,
+    with a rock/metal editorial focus, rather than catalog/library management
+    alone.
 Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (Constitution Check remains generic; no conflicting e2e-per-development rule)
-  ✅ .specify/templates/spec-template.md (no mandatory per-development e2e clause; no change needed)
-  ✅ .specify/templates/tasks-template.md (test tasks remain optional unless requested; no conflicting gate)
+  ✅ .specify/templates/plan-template.md (Constitution Check remains generic; no principle-specific references to update)
+  ✅ .specify/templates/spec-template.md (no principle-specific references; no change needed)
+  ✅ .specify/templates/tasks-template.md (no principle-specific references; no change needed)
   ✅ .specify/templates/checklist-template.md (generic checklist template; no conflicting gate)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
 Follow-up TODOs: none
@@ -23,9 +26,12 @@ Follow-up TODOs: none
 
 # Vinylmania Constitution
 
-Vinylmania is a Discogs-powered web integration for vinyl record collectors, focused
-on exploiting Discogs metadata efficiently while managing each user's personal
-library state.
+Vinylmania is a modern web integration for vinyl record collectors built around three
+pillars: (1) Discogs-sourced catalog metadata as the source of truth for releases,
+(2) collector-facing music ratings on those releases, and (3) related music news
+aggregated from external sources. The product's editorial and curation lens is rock
+and metal — default news sources, genre filters, and content emphasis favor rock/metal
+— without technically restricting the catalog, search, or ratings to those genres.
 
 ## Core Principles
 
@@ -88,6 +94,27 @@ called out explicitly in the change description before merge.
 app; uncommunicated breaking changes to schemas or contracts risk data loss or
 corruption.
 
+### VII. Curated Ratings & Music News (Rock/Metal Focus)
+Every release accessible in Vinylmania MUST support a collector-facing rating (a
+numeric score with a clearly defined scale and color-banded severity, e.g. low/medium/
+high) that is treated as user-specific state under Principle II's Firebase constraints,
+not as Discogs catalog data. The application MUST also surface related music news
+aggregated from external RSS/news sources; each aggregated item MUST preserve
+attribution (source name, publish date, link to the original article) and MUST open
+the original source rather than reproducing full article content. News/ratings
+features MUST degrade gracefully per-source: if one external feed or rating lookup
+fails or times out, the rest of the page MUST still render with the available data
+rather than failing as a whole. Rock and metal MUST be the default editorial focus for
+curated news sources and content emphasis; this is a curation default, not a technical
+restriction — the catalog, search, and rating features MUST NOT hard-exclude other
+genres.
+**Rationale**: Ratings and news are core to Vinylmania's value proposition alongside
+Discogs metadata, not optional add-ons; treating them as first-class principles keeps
+their data boundaries (user-state vs. external content vs. Discogs catalog) and
+resilience expectations explicit as the app adds more feeds and rating surfaces. A
+rock/metal default reflects the project's actual focus (see existing news sources like
+Metal Injection and Metal Storm) while keeping the door open to other genres.
+
 ## Additional Constraints (Web Application Standards)
 
 - The application MUST be delivered as a web application; any API MUST be documented
@@ -124,6 +151,13 @@ corruption.
   minimize redundant requests via cache reuse and normalized metadata handling.
   Discogs API rate limits and outages MUST be handled gracefully (Principle V,
   Observability) rather than silently failing.
+- **News/RSS Data Source**: Related music news MUST be aggregated from external
+  RSS/news feeds (e.g., Metal Injection, Metal Storm) rather than hand-authored or
+  hosted as original editorial content. Each feed source is independent and MUST be
+  handled per Principle VII (Curated Ratings & Music News): an unreachable or
+  malformed feed MUST be skipped with a subtle notice rather than failing the whole
+  news surface. New feed sources SHOULD favor rock/metal publications consistent
+  with the project's default editorial focus, but MAY include other genres.
 - **Source control**: The canonical code repository MUST be hosted on GitHub. All
   branches, pull requests, and code review MUST go through GitHub.
 - **Deployment**: Vercel is the required deployment platform for the application.
@@ -270,4 +304,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 2.0.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-06
+**Version**: 2.1.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-10
