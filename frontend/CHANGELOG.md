@@ -8,6 +8,15 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.17.1] - 2026-07-09
+
+### Changed
+
+- Search results now load in batches of 40 instead of 20, so infinite scroll feels smoother with fewer loading pauses (feature 028).
+- Search result cards (both master and release) now render at a consistent fixed height across the entire results grid; master cards show a "Multiple editions" label in place of the format badge and add-to-library action they omit, so the two card types match in footprint (feature 028).
+- The stacked-covers visual effect on master (grouped) result cards is more pronounced — larger offsets and added shadow depth — so grouped results are clearly distinguishable from standalone releases at a glance (feature 028).
+- Dashboard RSS feed article cards now render at a consistent fixed height within each carousel; titles and excerpts are clamped to 2 lines each instead of varying the card's height with content length (feature 028).
+
 ## [0.17.0] - 2026-07-08
 
 ### Added

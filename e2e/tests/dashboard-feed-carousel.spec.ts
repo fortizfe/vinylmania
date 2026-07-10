@@ -76,3 +76,58 @@ test.describe('Dashboard feed carousels & Metal Storm categories (feature 025)',
     await expect(prevButton).toBeEnabled();
   });
 });
+
+test.describe('Dashboard RSS card sizing (feature 028, US4)', () => {
+  test('renders every RSS card in a carousel at the same height, truncating a long title/excerpt instead of growing the card (FR-007, FR-008, SC-004)', async ({
+    page,
+  }) => {
+    const shortArticle = buildArticle('News', 0, 0);
+    const longArticle = {
+      ...buildArticle('News', 1, 1),
+      title:
+        'A Very Long Article Title That Would Otherwise Wrap Across Several Lines And Grow The Card Well Beyond Its Neighbors',
+      excerpt:
+        'A very long excerpt describing the article in far more detail than a short summary would, which would otherwise grow the card height well beyond its neighbors if it were not truncated consistently.',
+    };
+
+    await page.route('**/api/feeds/dashboard', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          categories: [{ category: 'News', articles: [shortArticle, longArticle] }],
+          sourceStatuses: [
+            { sourceId: 'metal-storm-news', sourceName: 'Metal Storm', status: 'ok' },
+          ],
+          generatedAt: '2026-07-08T00:00:00.000Z',
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    const newsSection = page.locator('section', {
+      has: page.getByRole('heading', { name: 'News', exact: true }),
+    });
+    await expect(newsSection.getByText('News Article 0')).toBeVisible();
+
+    const cards = newsSection.locator('[data-testid="feed-carousel-track"] > div');
+    const heights = await cards.evaluateAll((elements) =>
+      elements.map((el) => el.getBoundingClientRect().height),
+    );
+    expect(heights).toHaveLength(2);
+    expect(heights[0]).toBeCloseTo(heights[1], 0);
+
+    // The long title's full text is still in the DOM (readable via
+    // getByText) but is visually clamped: its scrollHeight (full content)
+    // exceeds its clientHeight (clamped visible box), confirming truncation
+    // rather than the card growing to fit it.
+    const longTitle = newsSection.getByText(longArticle.title, { exact: true });
+    const [scrollHeight, clientHeight] = await longTitle.evaluate((el) => [
+      el.scrollHeight,
+      el.clientHeight,
+    ]);
+    expect(scrollHeight).toBeGreaterThan(clientHeight);
+  });
+});

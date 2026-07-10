@@ -506,6 +506,165 @@ test.describe('Search result filters (feature 023, US1)', () => {
   });
 });
 
+test.describe('Search results UI polish (feature 028)', () => {
+  test('loads 40 results per batch instead of 20, appending the next 40-item batch on scroll (US1, FR-001)', async ({
+    page,
+  }) => {
+    const firstBatch = Array.from({ length: 40 }, (_, i) => ({
+      discogsId: 4000 + i,
+      resultType: 'release',
+      title: `Batch Result ${i}`,
+    }));
+    const secondBatch = Array.from({ length: 5 }, (_, i) => ({
+      discogsId: 4100 + i,
+      resultType: 'release',
+      title: `Second Batch Result ${i}`,
+    }));
+    await page.route('**/api/discogs/search*', async (route) => {
+      const url = new URL(route.request().url());
+      const pageParam = url.searchParams.get('page') ?? '1';
+      if (pageParam === '2') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: secondBatch,
+            pagination: { page: 2, pages: 2, items: 45, perPage: 40 },
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: firstBatch,
+          pagination: { page: 1, pages: 2, items: 45, perPage: 40 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('batch');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page.getByText('Batch Result 0')).toBeVisible();
+
+    await expect(page.locator('li', { hasText: 'Batch Result' })).toHaveCount(40);
+    await expect(page.getByText('Second Batch Result 0')).not.toBeVisible();
+
+    await page.mouse.wheel(0, 20_000);
+    await expect(page.getByText('Second Batch Result 0')).toBeVisible();
+  });
+
+  test('renders every search result card at the same fixed height across the whole grid, at mobile, tablet, and desktop viewport sizes (US2, FR-002, FR-003, SC-002)', async ({
+    page,
+  }) => {
+    const mixedResults = [
+      { discogsId: 5001, resultType: 'master', title: 'A Master Grouping' },
+      {
+        discogsId: 5002,
+        resultType: 'release',
+        title: 'A Standalone Release',
+        artist: 'Someone',
+        formats: ['Vinyl'],
+      },
+      { discogsId: 5003, resultType: 'release', title: 'Another Release' },
+      { discogsId: 5004, resultType: 'master', title: 'Another Master' },
+    ];
+    await page.route('**/api/discogs/search*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: mixedResults,
+          pagination: { page: 1, pages: 1, items: mixedResults.length, perPage: 40 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('mixed');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page.getByText('A Master Grouping')).toBeVisible();
+
+    const viewports = [
+      { width: 375, height: 812 }, // mobile
+      { width: 834, height: 1194 }, // tablet
+      { width: 1440, height: 900 }, // desktop
+    ];
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      const cards = page.locator('li', {
+        hasText: /A Master Grouping|A Standalone Release|Another Release|Another Master/,
+      });
+      const heights = await cards.evaluateAll((elements) =>
+        elements.map((el) => el.getBoundingClientRect().height),
+      );
+      expect(heights).toHaveLength(4);
+      const [first, ...rest] = heights;
+      for (const height of rest) {
+        expect(height).toBeCloseTo(first, 0);
+      }
+    }
+  });
+
+  test('the stacked-covers effect is visually present only on master cards, extending beyond the thumbnail bounds without being clipped (US3, FR-004, FR-005, FR-006)', async ({
+    page,
+  }) => {
+    await page.route('**/api/discogs/search*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            { discogsId: 6001, resultType: 'master', title: 'Stacked Master' },
+            { discogsId: 6002, resultType: 'release', title: 'Flat Release' },
+          ],
+          pagination: { page: 1, pages: 1, items: 2, perPage: 40 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('stacked');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page.getByText('Stacked Master')).toBeVisible();
+
+    const masterCard = page.locator('li', { hasText: 'Stacked Master' });
+    const releaseCard = page.locator('li', { hasText: 'Flat Release' });
+
+    await expect(masterCard.getByTestId('search-result-stacked-covers')).toBeVisible();
+    await expect(releaseCard.getByTestId('search-result-stacked-covers')).toHaveCount(0);
+
+    const thumbnailBox = await masterCard
+      .locator('[data-testid="search-result-thumbnail-placeholder"], img')
+      .first()
+      .boundingBox();
+    // The outer ghost layer (largest translate offset) is the one that must
+    // visibly extend past the thumbnail's edge without being clipped.
+    const outerGhostLayerBox = await masterCard
+      .locator('[data-testid="search-result-stacked-covers"] > div')
+      .first()
+      .boundingBox();
+
+    expect(thumbnailBox).not.toBeNull();
+    expect(outerGhostLayerBox).not.toBeNull();
+    expect(outerGhostLayerBox!.x + outerGhostLayerBox!.width).toBeGreaterThan(
+      thumbnailBox!.x + thumbnailBox!.width,
+    );
+    expect(outerGhostLayerBox!.y + outerGhostLayerBox!.height).toBeGreaterThan(
+      thumbnailBox!.y + thumbnailBox!.height,
+    );
+  });
+});
+
 test.describe('Search result filters (feature 023, US3)', () => {
   test('Apply and Clear are icon-only but remain operable by their accessible name', async ({ page }) => {
     await page.route('**/api/discogs/search*', async (route) => {

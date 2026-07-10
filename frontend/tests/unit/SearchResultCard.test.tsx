@@ -92,6 +92,27 @@ describe('SearchResultCard', () => {
       expect(screen.getByTestId('search-result-stacked-covers')).toBeInTheDocument();
     });
 
+    it('renders the stacked-covers ghost layers with enhanced offset/shadow classes for visibility (feature 028, US3, FR-004)', () => {
+      renderCard(masterResult);
+
+      const [outerLayer, innerLayer] = screen.getByTestId(
+        'search-result-stacked-covers',
+      ).children;
+
+      expect(outerLayer).toHaveClass(
+        'translate-x-3',
+        'translate-y-3',
+        'rotate-6',
+        'shadow-md',
+      );
+      expect(innerLayer).toHaveClass(
+        'translate-x-1.5',
+        'translate-y-1.5',
+        '-rotate-3',
+        'shadow-sm',
+      );
+    });
+
     it('does not render the stacked-covers visual for a standalone release result', () => {
       renderCard(baseResult);
 
@@ -127,6 +148,36 @@ describe('SearchResultCard', () => {
       renderCard(masterResult);
 
       expect(screen.getByRole('link')).toHaveAttribute('href', '/app/masters/12345');
+    });
+
+    it('renders a "Multiple editions" label for a master result instead of the format badge/actions (feature 028, US2, FR-002a)', () => {
+      renderCard(masterResult);
+
+      expect(screen.getByText('Multiple editions')).toBeInTheDocument();
+    });
+
+    it('does not render a "Multiple editions" label for a standalone release result (feature 028, US2, FR-002a)', () => {
+      renderCard(baseResult);
+
+      expect(screen.queryByText('Multiple editions')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('fixed-height cards (feature 028, US2, FR-002)', () => {
+    it('applies the same fixed-height class to a standalone release card', () => {
+      const { container } = renderCard(baseResult);
+
+      expect(container.firstChild).toHaveClass('h-96');
+    });
+
+    it('applies the same fixed-height class to a master (grouped) card', () => {
+      const { container } = renderCard({
+        ...baseResult,
+        resultType: 'master',
+        discogsId: 12345,
+      });
+
+      expect(container.firstChild).toHaveClass('h-96');
     });
   });
 
