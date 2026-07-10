@@ -8,6 +8,14 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.11.0] - 2026-07-10
+
+### Added
+
+- The shared Discogs catalog HTTP client (`searchCatalog`, `getRelease`, `getMasterRelease`, `getMasterReleaseVersions`, `getArtist`) now automatically retries a transient failure (rate-limited/429 or unavailable/5xx/network) up to 2 times with increasing backoff before giving up, so a momentary Discogs hiccup no longer surfaces as a "catalog service busy" error during search or master release browsing — including the background library-enrichment path, which benefits transitively (feature 029). Non-transient failures (not found, invalid request, rejected credentials) are never retried. A new in-memory circuit breaker temporarily fails fast, app-wide, when failures spike broadly, so retries don't amplify load during a genuine outage. Community-rating enrichment keeps its existing fail-soft/short-timeout behavior untouched.
+- 401/403 responses from the Discogs catalog client now map to `DiscogsAuthError` (previously indistinguishable from a generic unavailable failure), mirroring the existing collection-client classification.
+- Structured logs now record how many attempts a catalog request took (`meta.attempts`) and a new `circuit_open` outcome, so recovered-after-retry and failed-after-exhaustion requests are distinguishable from operational logs.
+
 ## [0.10.0] - 2026-07-08
 
 ### Changed

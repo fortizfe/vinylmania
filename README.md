@@ -10,6 +10,7 @@ personal vinyl library.
 - **Auth & data**: Firebase Authentication (Google sign-in) + Firestore
 - **Vinyl catalog data**: [Discogs API](https://www.discogs.com/developers/) client — [backend/src/discogs/](backend/src/discogs/), setup guide at [specs/002-discogs-api-client/quickstart.md](specs/002-discogs-api-client/quickstart.md)
 - **Caching**: [TanStack Query](https://tanstack.com/query) for frontend state caching and Redis (via ioredis) for backend Discogs response caching — see [specs/011-tanstack-redis-caching/quickstart.md](specs/011-tanstack-redis-caching/quickstart.md)
+- **Resilience**: automatic retry-with-backoff and a circuit breaker on the backend's Discogs catalog client, absorbing transient rate-limit/outage hiccups — see [specs/029-discogs-retry-resilience/quickstart.md](specs/029-discogs-retry-resilience/quickstart.md)
 - **Deployment**: Vercel
 
 See [.specify/memory/constitution.md](.specify/memory/constitution.md) for the

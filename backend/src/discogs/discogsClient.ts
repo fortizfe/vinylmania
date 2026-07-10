@@ -1,8 +1,19 @@
-import axios, { type AxiosInstance, type AxiosResponse, isAxiosError } from 'axios';
+import axios, {
+  type AxiosInstance,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+  isAxiosError,
+} from 'axios';
 
 import { withCache } from '../cache/cacheAside';
 import { logger } from '../config/logger';
 import {
+  recordExhaustedFailure,
+  recordSuccess,
+  shouldShortCircuit,
+} from './discogsCircuitBreaker';
+import {
+  DiscogsAuthError,
   DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
@@ -15,6 +26,12 @@ import {
   mapReleaseRating,
   mapSearchResult,
 } from './discogsMapper';
+import {
+  backoffDelayMs,
+  classifyForRetry,
+  MAX_ATTEMPTS,
+  PER_ATTEMPT_TIMEOUT_MS,
+} from './discogsRetry';
 import type {
   Artist,
   CatalogSearchResponse,
@@ -38,51 +55,131 @@ function buildAuthorizationHeader(): string | undefined {
   return token ? `Discogs token=${token}` : undefined;
 }
 
+/**
+ * Extra, non-axios properties carried on a request config across a retry
+ * sequence (feature 029). `__attempt` tracks which attempt this is (1 = the
+ * original request); `__skipResilience` opts a specific call (the rating
+ * lookup) out of retry and circuit-breaker handling entirely, preserving
+ * its pre-existing fail-soft/short-timeout behavior unchanged.
+ */
+interface ResilienceRequestState {
+  __attempt?: number;
+  __skipResilience?: boolean;
+}
+
+type ResilienceConfig = InternalAxiosRequestConfig & ResilienceRequestState;
+
+/** Signals a request that never left this process — the breaker was open. */
+class CircuitOpenError extends Error {
+  constructor(public readonly endpoint: string) {
+    super('Discogs circuit breaker is open');
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export function createDiscogsHttpClient(): AxiosInstance {
   const authorization = buildAuthorizationHeader();
 
   const instance = axios.create({
     baseURL: getDiscogsBaseUrl(),
-    timeout: 10_000,
+    timeout: PER_ATTEMPT_TIMEOUT_MS,
     headers: {
       'User-Agent': process.env.DISCOGS_USER_AGENT || 'Vinylmania/0.1',
       ...(authorization ? { Authorization: authorization } : {}),
     },
   });
 
+  instance.interceptors.request.use((config: ResilienceConfig) => {
+    if (config.__skipResilience) {
+      return config;
+    }
+    if (shouldShortCircuit()) {
+      return Promise.reject(new CircuitOpenError(config.url ?? 'unknown'));
+    }
+    return config;
+  });
+
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
-      logRateLimit(response.config.url ?? 'unknown', 'success', response);
+      const config = response.config as ResilienceConfig;
+      const attempts = config.__attempt ?? 1;
+      if (!config.__skipResilience) {
+        recordSuccess();
+      }
+      logRateLimit(config.url ?? 'unknown', 'success', response, attempts);
       return response;
     },
-    (error: unknown) => {
-      const endpoint = isAxiosError(error) ? (error.config?.url ?? 'unknown') : 'unknown';
+    async (error: unknown) => {
+      if (error instanceof CircuitOpenError) {
+        logger.warn({ route: error.endpoint, outcome: 'circuit_open' });
+        return Promise.reject(new DiscogsUnavailableError(error));
+      }
 
-      if (isAxiosError(error) && error.response) {
+      if (!isAxiosError(error)) {
+        logger.error({
+          route: 'unknown',
+          outcome: 'unavailable',
+          message: 'Unknown network error',
+          meta: { attempts: 1 },
+        });
+        return Promise.reject(new DiscogsUnavailableError(error));
+      }
+
+      const config = error.config as ResilienceConfig | undefined;
+      const endpoint = config?.url ?? 'unknown';
+      const skipResilience = Boolean(config?.__skipResilience);
+      const attempt = config?.__attempt ?? 1;
+
+      if (error.response) {
         const { status } = error.response;
 
         if (status === 404) {
-          logRateLimit(endpoint, 'not_found', error.response);
+          logRateLimit(endpoint, 'not_found', error.response, attempt);
           return Promise.reject(new DiscogsNotFoundError(error));
         }
 
-        if (status === 429) {
-          logRateLimit(endpoint, 'rate_limited', error.response);
-          return Promise.reject(new DiscogsRateLimitError(error));
+        if (status === 401 || status === 403) {
+          logger.warn({
+            route: endpoint,
+            outcome: 'auth_failed',
+            message: `Discogs responded with status ${status}`,
+            meta: { attempts: attempt },
+          });
+          return Promise.reject(new DiscogsAuthError(error));
         }
+      }
 
-        logger.error({
-          route: endpoint,
-          outcome: 'unavailable',
-          message: `Discogs responded with status ${status}`,
-        });
-        return Promise.reject(new DiscogsUnavailableError(error));
+      const classification = classifyForRetry(error);
+      const eligibleForRetry =
+        classification !== null && !skipResilience && config !== undefined && attempt < MAX_ATTEMPTS;
+
+      if (eligibleForRetry && config) {
+        config.__attempt = attempt + 1;
+        await delay(backoffDelayMs(attempt + 1));
+        return instance.request(config);
+      }
+
+      if (classification && !skipResilience) {
+        recordExhaustedFailure();
+      }
+
+      if (classification === 'rate_limited' && error.response) {
+        logRateLimit(endpoint, 'rate_limited', error.response, attempt);
+        return Promise.reject(new DiscogsRateLimitError(error));
       }
 
       logger.error({
         route: endpoint,
         outcome: 'unavailable',
-        message: isAxiosError(error) ? error.message : 'Unknown network error',
+        message: error.response
+          ? `Discogs responded with status ${error.response.status}`
+          : error.message,
+        meta: { attempts: attempt },
       });
       return Promise.reject(new DiscogsUnavailableError(error));
     },
@@ -95,6 +192,7 @@ function logRateLimit(
   endpoint: string,
   outcome: 'success' | 'not_found' | 'rate_limited',
   response: AxiosResponse,
+  attempts: number,
 ): void {
   logger.info({
     route: endpoint,
@@ -102,6 +200,7 @@ function logRateLimit(
     meta: {
       rateLimitRemaining: response.headers['x-discogs-ratelimit-remaining'],
       rateLimit: response.headers['x-discogs-ratelimit'],
+      attempts,
     },
   });
 }
@@ -156,7 +255,12 @@ export async function getReleaseRating(
         `/releases/${discogsReleaseId}/rating`,
         {
           timeout: RATING_LOOKUP_TIMEOUT_MS,
-        },
+          // Rating enrichment keeps its own fail-soft/short-timeout
+          // behavior untouched by the retry/circuit-breaker policy
+          // (research.md §8) — a failed or slow lookup must degrade
+          // immediately, not spend the retry budget.
+          __skipResilience: true,
+        } as Parameters<AxiosInstance['get']>[1],
       );
       return mapReleaseRating(response.data);
     },
