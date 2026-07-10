@@ -66,6 +66,21 @@ async function authHeader(uidHint: string): Promise<[string, string]> {
   return ['Authorization', `Bearer ${idToken}`];
 }
 
+// getRedisClient() memoizes its result on first call. Set REDIS_URL here,
+// before any test in this file makes its first withCache() call, so that
+// first call doesn't permanently memoize "no client" for the rest of the
+// file — which would silently defeat caching for the later describe blocks
+// below that rely on it (e.g. the master cache-hit test).
+const originalRedisUrl = process.env.REDIS_URL;
+
+beforeAll(() => {
+  process.env.REDIS_URL = 'redis://localhost:6379/0';
+});
+
+afterAll(() => {
+  process.env.REDIS_URL = originalRedisUrl;
+});
+
 describe('Discogs retry resilience — background library enrichment scope (FR-009)', () => {
   it('recovers to catalogStatus "ok" when the underlying getRelease call fails once then succeeds', async () => {
     discogsScope().get('/releases/6001').reply(429, { message: 'too many requests' });
@@ -109,16 +124,6 @@ describe('Discogs retry resilience — single retry per coalesced in-flight requ
 });
 
 describe('Discogs retry resilience — master detail/versions routes (US1)', () => {
-  const originalRedisUrl = process.env.REDIS_URL;
-
-  beforeAll(() => {
-    process.env.REDIS_URL = 'redis://localhost:6379/0';
-  });
-
-  afterAll(() => {
-    process.env.REDIS_URL = originalRedisUrl;
-  });
-
   afterEach(async () => {
     await clearEmulatorUsers();
   });
@@ -206,16 +211,6 @@ describe('Discogs retry resilience — master detail/versions routes (US1)', () 
 });
 
 describe('Discogs retry resilience — search route (US2)', () => {
-  const originalRedisUrl = process.env.REDIS_URL;
-
-  beforeAll(() => {
-    process.env.REDIS_URL = 'redis://localhost:6379/0';
-  });
-
-  afterAll(() => {
-    process.env.REDIS_URL = originalRedisUrl;
-  });
-
   afterEach(async () => {
     await clearEmulatorUsers();
   });
