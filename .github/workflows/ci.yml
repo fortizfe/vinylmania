@@ -25,6 +25,10 @@ jobs:
       - name: Run tests
         working-directory: backend
         run: npm test
+        env:
+          DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
+          DISCOGS_CONSUMER_KEY: ${{ secrets.DISCOGS_CONSUMER_KEY }}
+          DISCOGS_CONSUMER_SECRET: ${{ secrets.DISCOGS_CONSUMER_SECRET }}
 
   frontend-test:
     name: Frontend tests
