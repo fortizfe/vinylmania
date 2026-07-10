@@ -1,5 +1,7 @@
 import nock from 'nock';
 
+import { __resetCircuitBreakerForTests } from '../../src/discogs/discogsCircuitBreaker';
+
 export const DISCOGS_BASE_URL = 'https://api.discogs.com';
 
 beforeAll(() => {
@@ -13,6 +15,11 @@ beforeAll(() => {
 
 afterEach(() => {
   nock.cleanAll();
+  // The catalog client's circuit breaker (feature 029) is a module-level
+  // singleton. Reset it after every test that imports this helper so a
+  // test simulating exhausted retries never leaves the breaker open for
+  // an unrelated test later in the same file.
+  __resetCircuitBreakerForTests();
 });
 
 afterAll(() => {

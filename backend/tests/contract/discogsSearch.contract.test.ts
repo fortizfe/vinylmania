@@ -8,9 +8,17 @@ import {
   stubReleaseRatingUnavailable,
 } from '../helpers/nock';
 import { createApp } from '../../src/app';
+import { MAX_ATTEMPTS } from '../../src/discogs/discogsRetry';
 import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
 
 const app = createApp();
+
+beforeAll(() => {
+  // Deterministic behavior regardless of a local Redis: several tests
+  // below reuse the same query/ID across success and failure cases, which
+  // a real cache-aside hit would otherwise short-circuit.
+  delete process.env.REDIS_URL;
+});
 
 describe('Discogs search API contract: GET /api/discogs/search', () => {
   afterEach(async () => {
@@ -367,6 +375,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     discogsScope()
       .get('/database/search')
       .query(true)
+      .times(MAX_ATTEMPTS)
       .reply(429, { message: 'too many requests' });
 
     const res = await request(app)
@@ -381,7 +390,11 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   it('returns 502 catalog_unavailable when Discogs is unreachable', async () => {
     const { idToken } = await getTestIdToken('search-network-user');
 
-    discogsScope().get('/database/search').query(true).replyWithError('connection reset');
+    discogsScope()
+      .get('/database/search')
+      .query(true)
+      .times(MAX_ATTEMPTS)
+      .replyWithError('connection reset');
 
     const res = await request(app)
       .get('/api/discogs/search')

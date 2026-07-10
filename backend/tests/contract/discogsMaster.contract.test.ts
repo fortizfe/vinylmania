@@ -2,6 +2,7 @@ import request from 'supertest';
 
 import { discogsScope } from '../helpers/nock';
 import { createApp } from '../../src/app';
+import { MAX_ATTEMPTS } from '../../src/discogs/discogsRetry';
 import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
 
 const app = createApp();
@@ -22,6 +23,13 @@ const rawMaster = {
 };
 
 describe('Discogs master API contract: GET /api/discogs/masters/:discogsId', () => {
+  beforeAll(() => {
+    // Deterministic behavior regardless of a local Redis: the success and
+    // rate-limit tests below reuse master ID 1660109, which a real
+    // cache-aside hit would otherwise short-circuit.
+    delete process.env.REDIS_URL;
+  });
+
   afterEach(async () => {
     await clearEmulatorUsers();
   });
@@ -73,7 +81,10 @@ describe('Discogs master API contract: GET /api/discogs/masters/:discogsId', () 
   it('returns 502 catalog_unavailable when Discogs is rate-limited', async () => {
     const { idToken } = await getTestIdToken('master-detail-ratelimit-user');
 
-    discogsScope().get('/masters/1660109').reply(429, { message: 'too many requests' });
+    discogsScope()
+      .get('/masters/1660109')
+      .times(MAX_ATTEMPTS)
+      .reply(429, { message: 'too many requests' });
 
     const res = await request(app)
       .get('/api/discogs/masters/1660109')
