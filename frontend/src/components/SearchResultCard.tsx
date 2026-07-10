@@ -36,8 +36,8 @@ export function SearchResultCard({
             aria-hidden="true"
             className="pointer-events-none absolute inset-0"
           >
-            <div className="absolute inset-0 translate-x-2 translate-y-2 rotate-3 rounded-md border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800" />
-            <div className="absolute inset-0 translate-x-1 translate-y-1 -rotate-2 rounded-md border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900" />
+            <div className="absolute inset-0 translate-x-3 translate-y-3 rotate-6 rounded-md border border-gray-200 bg-gray-100 shadow-md dark:border-gray-700 dark:bg-gray-800" />
+            <div className="absolute inset-0 translate-x-1.5 translate-y-1.5 -rotate-3 rounded-md border border-gray-200 bg-gray-50 shadow-sm dark:border-gray-700 dark:bg-gray-900" />
           </div>
         )}
         {result.thumbnailUrl ? (
@@ -76,11 +76,15 @@ export function SearchResultCard({
     : `/app/releases/${result.discogsId}`;
 
   return (
-    <Card padding="sm" className="flex flex-col gap-2">
+    <Card padding="sm" className="flex h-96 flex-col gap-2">
       <Link to={detailPath} state={{ from: searchPath }} className="contents">
         {visual}
       </Link>
-      {!isGrouped && <ResultCardActions onAdd={onAdd} adding={adding} added={added} />}
+      {isGrouped ? (
+        <Badge tone="muted">Multiple editions</Badge>
+      ) : (
+        <ResultCardActions onAdd={onAdd} adding={adding} added={added} />
+      )}
     </Card>
   );
 }

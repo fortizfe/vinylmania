@@ -16,7 +16,7 @@ interface FeedArticleCardProps {
 
 export function FeedArticleCard({ article }: FeedArticleCardProps) {
   return (
-    <Card padding="sm">
+    <Card padding="sm" className="h-96 overflow-hidden">
       <a
         href={article.link}
         target="_blank"
@@ -41,10 +41,12 @@ export function FeedArticleCard({ article }: FeedArticleCardProps) {
             {article.sourceName} · {formatPublishedAt(article.publishedAt)}
           </span>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="line-clamp-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
           {article.title}
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-300">{article.excerpt}</p>
+        <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-300">
+          {article.excerpt}
+        </p>
       </a>
     </Card>
   );
