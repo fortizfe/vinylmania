@@ -2,6 +2,7 @@ import request from 'supertest';
 
 import { discogsScope } from '../helpers/nock';
 import { createApp } from '../../src/app';
+import { MAX_ATTEMPTS } from '../../src/discogs/discogsRetry';
 import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
 
 const app = createApp();
@@ -25,6 +26,13 @@ const rawRelease = {
 };
 
 describe('Discogs release preview API contract: GET /api/discogs/releases/:discogsId', () => {
+  beforeAll(() => {
+    // Deterministic behavior regardless of a local Redis: the success and
+    // rate-limit tests below reuse release ID 1, which a real cache-aside
+    // hit would otherwise short-circuit.
+    delete process.env.REDIS_URL;
+  });
+
   afterEach(async () => {
     await clearEmulatorUsers();
   });
@@ -73,7 +81,10 @@ describe('Discogs release preview API contract: GET /api/discogs/releases/:disco
 
   it('returns 502 catalog_unavailable when Discogs is rate-limited', async () => {
     const { idToken } = await getTestIdToken('preview-ratelimit-user');
-    discogsScope().get('/releases/1').reply(429, { message: 'too many requests' });
+    discogsScope()
+      .get('/releases/1')
+      .times(MAX_ATTEMPTS)
+      .reply(429, { message: 'too many requests' });
 
     const res = await request(app)
       .get('/api/discogs/releases/1')

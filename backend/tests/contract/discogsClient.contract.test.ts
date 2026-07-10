@@ -8,6 +8,14 @@ import {
   DiscogsRateLimitError,
   DiscogsUnavailableError,
 } from '../../src/discogs/discogsErrors';
+import { MAX_ATTEMPTS } from '../../src/discogs/discogsRetry';
+
+beforeAll(() => {
+  // Deterministic behavior regardless of a local Redis: several tests
+  // below reuse the same catalog IDs across success and failure cases,
+  // which a real cache-aside hit would otherwise short-circuit.
+  delete process.env.REDIS_URL;
+});
 
 describe('Discogs client contract: searchCatalog', () => {
   it('returns mapped release results for a release-scoped search', async () => {
@@ -75,10 +83,11 @@ describe('Discogs client contract: searchCatalog', () => {
     ]);
   });
 
-  it('rejects with DiscogsRateLimitError on a 429 response', async () => {
+  it('rejects with DiscogsRateLimitError on a sustained 429', async () => {
     discogsScope()
       .get('/database/search')
       .query(true)
+      .times(MAX_ATTEMPTS)
       .reply(429, { message: 'too many requests' });
 
     await expect(
@@ -86,10 +95,11 @@ describe('Discogs client contract: searchCatalog', () => {
     ).rejects.toBeInstanceOf(DiscogsRateLimitError);
   });
 
-  it('rejects with DiscogsUnavailableError on a 500 response', async () => {
+  it('rejects with DiscogsUnavailableError on a sustained 500', async () => {
     discogsScope()
       .get('/database/search')
       .query(true)
+      .times(MAX_ATTEMPTS)
       .reply(500, { message: 'server error' });
 
     await expect(
@@ -97,8 +107,12 @@ describe('Discogs client contract: searchCatalog', () => {
     ).rejects.toBeInstanceOf(DiscogsUnavailableError);
   });
 
-  it('rejects with DiscogsUnavailableError on a network error', async () => {
-    discogsScope().get('/database/search').query(true).replyWithError('connection reset');
+  it('rejects with DiscogsUnavailableError on a sustained network error', async () => {
+    discogsScope()
+      .get('/database/search')
+      .query(true)
+      .times(MAX_ATTEMPTS)
+      .replyWithError('connection reset');
 
     await expect(
       searchCatalog('anything', { resultType: 'release' }),
@@ -228,6 +242,7 @@ describe('Discogs client contract: getRelease', () => {
           height: 600,
         },
       ],
+      identifiers: [],
       masterId: 1660109,
       discogsUrl: 'https://www.discogs.com/release/1-The-Persuader-Stockholm',
     });
@@ -241,17 +256,26 @@ describe('Discogs client contract: getRelease', () => {
     await expect(getRelease(999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
   });
 
-  it('rejects with DiscogsRateLimitError on a 429 response', async () => {
-    discogsScope().get('/releases/1').reply(429, { message: 'too many requests' });
+  it('rejects with DiscogsRateLimitError on a sustained 429', async () => {
+    discogsScope()
+      .get('/releases/1')
+      .times(MAX_ATTEMPTS)
+      .reply(429, { message: 'too many requests' });
 
     await expect(getRelease(1)).rejects.toBeInstanceOf(DiscogsRateLimitError);
   });
 
-  it('rejects with DiscogsUnavailableError on a 500 response and on a network error', async () => {
-    discogsScope().get('/releases/1').reply(500, { message: 'server error' });
+  it('rejects with DiscogsUnavailableError on a sustained 500 and on a sustained network error', async () => {
+    discogsScope()
+      .get('/releases/1')
+      .times(MAX_ATTEMPTS)
+      .reply(500, { message: 'server error' });
     await expect(getRelease(1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
 
-    discogsScope().get('/releases/1').replyWithError('connection reset');
+    discogsScope()
+      .get('/releases/1')
+      .times(MAX_ATTEMPTS)
+      .replyWithError('connection reset');
     await expect(getRelease(1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
   });
 });
@@ -311,29 +335,31 @@ describe('Discogs client contract: getArtist', () => {
     await expect(getArtist(999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
   });
 
-  it('rejects with DiscogsRateLimitError on a 429 response', async () => {
-    discogsScope().get('/artists/1').reply(429, { message: 'too many requests' });
+  it('rejects with DiscogsRateLimitError on a sustained 429', async () => {
+    discogsScope()
+      .get('/artists/1')
+      .times(MAX_ATTEMPTS)
+      .reply(429, { message: 'too many requests' });
 
     await expect(getArtist(1)).rejects.toBeInstanceOf(DiscogsRateLimitError);
   });
 
-  it('rejects with DiscogsUnavailableError on a 500 response and on a network error', async () => {
-    discogsScope().get('/artists/1').reply(500, { message: 'server error' });
+  it('rejects with DiscogsUnavailableError on a sustained 500 and on a sustained network error', async () => {
+    discogsScope()
+      .get('/artists/1')
+      .times(MAX_ATTEMPTS)
+      .reply(500, { message: 'server error' });
     await expect(getArtist(1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
 
-    discogsScope().get('/artists/1').replyWithError('connection reset');
+    discogsScope()
+      .get('/artists/1')
+      .times(MAX_ATTEMPTS)
+      .replyWithError('connection reset');
     await expect(getArtist(1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
   });
 });
 
 describe('Discogs client resilience: retry, circuit breaker, auth classification (feature 029)', () => {
-  beforeEach(async () => {
-    const { __resetCircuitBreakerForTests } = await import(
-      '../../src/discogs/discogsCircuitBreaker'
-    );
-    __resetCircuitBreakerForTests();
-  });
-
   describe('automatic retry on transient failures (FR-001, FR-003, FR-004, FR-010)', () => {
     it('retries once on a 429 then succeeds, logging outcome success with meta.attempts: 2', async () => {
       const infoSpy = jest.spyOn(logger, 'info');
