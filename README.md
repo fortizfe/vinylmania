@@ -1,7 +1,9 @@
 # Vinylmania
 
-A web application for vinyl record collectors to manage and organize their
-personal vinyl library.
+A modern web app for vinyl record collectors, built around three pillars:
+Discogs-powered catalog data, collector ratings, and related music news — with
+an editorial focus on rock and metal. Manage your personal vinyl library,
+discover releases via Discogs, and keep up with the scene, all in one place.
 
 ## Stack
 
@@ -58,6 +60,13 @@ Backend and frontend deploy as two independent Vercel projects — see
 [docs/deployment-vercel.md](docs/deployment-vercel.md) for the full step-by-step
 guide (project creation, environment variables, and verification).
 
+## Contributing
+
+Contributions are welcome in the spirit of this project's open-source,
+non-commercial license — bug fixes, features, and documentation improvements
+that keep Vinylmania free and open are all appreciated. If your idea involves
+a commercial or paid derivative, please read the License section below first.
+
 ## License
 
 Vinylmania is source-available under the [GNU Affero General Public License
@@ -70,3 +79,7 @@ non-business purposes, provided any project incorporating this code remains
 open source under the same license. Commercial or for-profit use, resale, or
 offering it (or a derivative service) as a paid product is not permitted
 without a separate commercial license from the copyright holder.
+
+Interested in a commercial license? Open a [GitHub Issue](https://github.com/fortizfe/vinylmania/issues)
+or reach out via the [maintainer's GitHub profile](https://github.com/fortizfe)
+to discuss terms.
