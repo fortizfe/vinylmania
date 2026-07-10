@@ -1,7 +1,9 @@
 import { discogsScope } from '../helpers/nock';
 
+import { logger } from '../../src/config/logger';
 import { getArtist, getRelease, searchCatalog } from '../../src/discogs/discogsClient';
 import {
+  DiscogsAuthError,
   DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
@@ -321,5 +323,212 @@ describe('Discogs client contract: getArtist', () => {
 
     discogsScope().get('/artists/1').replyWithError('connection reset');
     await expect(getArtist(1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+  });
+});
+
+describe('Discogs client resilience: retry, circuit breaker, auth classification (feature 029)', () => {
+  beforeEach(async () => {
+    const { __resetCircuitBreakerForTests } = await import(
+      '../../src/discogs/discogsCircuitBreaker'
+    );
+    __resetCircuitBreakerForTests();
+  });
+
+  describe('automatic retry on transient failures (FR-001, FR-003, FR-004, FR-010)', () => {
+    it('retries once on a 429 then succeeds, logging outcome success with meta.attempts: 2', async () => {
+      const infoSpy = jest.spyOn(logger, 'info');
+      discogsScope().get('/releases/5001').reply(429, { message: 'too many requests' });
+      discogsScope()
+        .get('/releases/5001')
+        .reply(200, {
+          id: 5001,
+          title: 'Retried Release',
+          artists: [],
+          labels: [],
+          formats: [],
+          genres: [],
+          styles: [],
+          tracklist: [],
+          images: [],
+          uri: 'https://www.discogs.com/release/5001',
+        });
+
+      const release = await getRelease(5001);
+
+      expect(release.discogsId).toBe(5001);
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'success',
+          meta: expect.objectContaining({ attempts: 2 }),
+        }),
+      );
+    });
+
+    it('retries once on a 500 then succeeds', async () => {
+      discogsScope().get('/releases/5002').reply(500, { message: 'server error' });
+      discogsScope()
+        .get('/releases/5002')
+        .reply(200, {
+          id: 5002,
+          title: 'Retried After 500',
+          artists: [],
+          labels: [],
+          formats: [],
+          genres: [],
+          styles: [],
+          tracklist: [],
+          images: [],
+          uri: 'https://www.discogs.com/release/5002',
+        });
+
+      const release = await getRelease(5002);
+
+      expect(release.discogsId).toBe(5002);
+    });
+
+    it('exhausts all 3 attempts on repeated 500s, rejects with DiscogsUnavailableError, logging meta.attempts: 3', async () => {
+      const errorSpy = jest.spyOn(logger, 'error');
+      discogsScope().get('/releases/5003').times(3).reply(500, { message: 'server error' });
+
+      await expect(getRelease(5003)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'unavailable',
+          meta: expect.objectContaining({ attempts: 3 }),
+        }),
+      );
+    }, 8_000);
+
+    it('exhausts all 3 attempts on repeated 429s, rejects with DiscogsRateLimitError, logging meta.attempts: 3', async () => {
+      const infoSpy = jest.spyOn(logger, 'info');
+      discogsScope()
+        .get('/releases/5004')
+        .times(3)
+        .reply(429, { message: 'too many requests' });
+
+      await expect(getRelease(5004)).rejects.toBeInstanceOf(DiscogsRateLimitError);
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'rate_limited',
+          meta: expect.objectContaining({ attempts: 3 }),
+        }),
+      );
+    }, 8_000);
+  });
+
+  describe('non-retryable failures never retry (FR-002)', () => {
+    it('rejects a 404 immediately with DiscogsNotFoundError after exactly one call', async () => {
+      const scope = discogsScope().get('/releases/5005').reply(404, { message: 'not found' });
+
+      await expect(getRelease(5005)).rejects.toBeInstanceOf(DiscogsNotFoundError);
+      expect(scope.isDone()).toBe(true);
+    });
+
+    it('rejects a 401 immediately with DiscogsAuthError (never retried)', async () => {
+      discogsScope().get('/releases/5006').reply(401, { message: 'unauthorized' });
+
+      await expect(getRelease(5006)).rejects.toBeInstanceOf(DiscogsAuthError);
+    });
+
+    it('rejects a 403 immediately with DiscogsAuthError (never retried)', async () => {
+      discogsScope().get('/releases/5007').reply(403, { message: 'forbidden' });
+
+      await expect(getRelease(5007)).rejects.toBeInstanceOf(DiscogsAuthError);
+    });
+  });
+
+  describe('circuit breaker (FR-011)', () => {
+    it('short-circuits after 5 exhausted-retry requests, making zero outbound calls for the 6th and logging circuit_open', async () => {
+      for (let i = 0; i < 5; i += 1) {
+        const id = 5100 + i;
+        discogsScope().get(`/releases/${id}`).times(3).reply(500, { message: 'server error' });
+        await expect(getRelease(id)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+      }
+
+      const warnSpy = jest.spyOn(logger, 'warn');
+
+      // No nock interceptor registered for 5999 at all — if the breaker did
+      // not short-circuit, the outbound call would hit nock's "no match"
+      // guard instead of resolving via a mocked response.
+      await expect(getRelease(5999)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ outcome: 'circuit_open' }),
+      );
+    }, 20_000);
+  });
+
+  describe('observability distinguishes attempt outcomes (FR-008, US3)', () => {
+    it('logs meta.attempts: 1 for a plain first-try success', async () => {
+      const infoSpy = jest.spyOn(logger, 'info');
+      discogsScope()
+        .get('/releases/5200')
+        .reply(200, {
+          id: 5200,
+          title: 'First Try',
+          artists: [],
+          labels: [],
+          formats: [],
+          genres: [],
+          styles: [],
+          tracklist: [],
+          images: [],
+          uri: 'https://www.discogs.com/release/5200',
+        });
+
+      await getRelease(5200);
+
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'success',
+          meta: expect.objectContaining({ attempts: 1 }),
+        }),
+      );
+    });
+
+    it('logs meta.attempts: 1 for an immediate 404 (never entered the retry path)', async () => {
+      const infoSpy = jest.spyOn(logger, 'info');
+      discogsScope().get('/releases/5201').reply(404, { message: 'not found' });
+
+      await expect(getRelease(5201)).rejects.toBeInstanceOf(DiscogsNotFoundError);
+
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'not_found',
+          meta: expect.objectContaining({ attempts: 1 }),
+        }),
+      );
+    });
+
+    it('logs meta.attempts: 1 for an immediate 401/403 (never entered the retry path)', async () => {
+      const warnSpy = jest.spyOn(logger, 'warn');
+      discogsScope().get('/releases/5202').reply(401, { message: 'unauthorized' });
+
+      await expect(getRelease(5202)).rejects.toBeInstanceOf(DiscogsAuthError);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'auth_failed',
+          meta: expect.objectContaining({ attempts: 1 }),
+        }),
+      );
+    });
+
+    it('a circuit_open log line carries no attempts field (no attempt was ever made)', async () => {
+      for (let i = 0; i < 5; i += 1) {
+        const id = 5300 + i;
+        discogsScope().get(`/releases/${id}`).times(3).reply(500, { message: 'server error' });
+        await expect(getRelease(id)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+      }
+
+      const warnSpy = jest.spyOn(logger, 'warn');
+      await expect(getRelease(5399)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+
+      const circuitOpenCall = warnSpy.mock.calls.find(
+        ([event]) => event.outcome === 'circuit_open',
+      );
+      expect(circuitOpenCall).toBeDefined();
+      expect(circuitOpenCall?.[0].meta?.attempts).toBeUndefined();
+    }, 20_000);
   });
 });

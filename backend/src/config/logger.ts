@@ -30,7 +30,9 @@ export type LogOutcome =
   | 'omitted'
   // RSS feed dashboard fetch lifecycle (feature 024)
   | 'feed_fetch_failed'
-  | 'feed_unavailable';
+  | 'feed_unavailable'
+  // Discogs retry/circuit-breaker resilience (feature 029)
+  | 'circuit_open';
 
 export interface LogEvent {
   route: string;
