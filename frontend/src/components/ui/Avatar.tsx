@@ -20,7 +20,7 @@ export function Avatar({ src, alt, size = 'md' }: AvatarProps) {
       <div
         role="img"
         aria-label={alt}
-        className={clsx(base, 'bg-gray-100 dark:bg-gray-800')}
+        className={clsx(base, 'bg-gray-100 dark:bg-gray-900')}
       />
     );
   }

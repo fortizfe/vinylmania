@@ -43,7 +43,7 @@ export function RecordCard({ entry }: RecordCardProps) {
                 className="aspect-square w-full rounded-md object-cover"
               />
             ) : (
-              <div className="aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-800" />
+              <div className="aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-900" />
             )}
             <div className="absolute top-2 right-2">
               <ReleaseRatingBadge displayValue={rating.displayValue} band={rating.band} />

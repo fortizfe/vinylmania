@@ -8,6 +8,12 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.12.0] - 2026-07-11
+
+### Added
+
+- `PATCH /api/auth/preferences` lets a signed-in user save an explicit theme preference (`"light"` or `"dark"`), persisted as a new optional `themePreference` field on their existing `users/{uid}` Firestore document — no new collection, and a preferences-only write never touches any other profile field (feature 031). `POST /api/auth/session` and `GET /api/auth/me` now include `themePreference` in their response when it has been set; it is simply absent for users who have never made an explicit choice.
+
 ## [0.11.0] - 2026-07-10
 
 ### Added

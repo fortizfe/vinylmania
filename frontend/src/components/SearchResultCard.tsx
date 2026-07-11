@@ -36,8 +36,8 @@ export function SearchResultCard({
             aria-hidden="true"
             className="pointer-events-none absolute inset-0"
           >
-            <div className="absolute inset-0 translate-x-3 translate-y-3 rotate-6 rounded-md border border-gray-200 bg-gray-100 shadow-md dark:border-gray-700 dark:bg-gray-800" />
-            <div className="absolute inset-0 translate-x-1.5 translate-y-1.5 -rotate-3 rounded-md border border-gray-200 bg-gray-50 shadow-sm dark:border-gray-700 dark:bg-gray-900" />
+            <div className="absolute inset-0 translate-x-3 translate-y-3 rotate-6 rounded-md border border-gray-200 bg-gray-100 shadow-md dark:border-gray-800 dark:bg-gray-900" />
+            <div className="absolute inset-0 translate-x-1.5 translate-y-1.5 -rotate-3 rounded-md border border-gray-200 bg-gray-50 shadow-sm dark:border-gray-800 dark:bg-gray-950" />
           </div>
         )}
         {result.thumbnailUrl ? (
@@ -49,7 +49,7 @@ export function SearchResultCard({
         ) : (
           <div
             data-testid="search-result-thumbnail-placeholder"
-            className="relative aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-800"
+            className="relative aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-900"
           />
         )}
         <div className="absolute top-2 right-2">

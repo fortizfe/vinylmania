@@ -23,7 +23,7 @@ export function Input({ label, id, hideLabel = false, className, ...props }: Inp
         id={id}
         {...props}
         className={clsx(
-          'rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100',
+          'rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100',
           className,
         )}
       />

@@ -9,9 +9,13 @@ const mocks = vi.hoisted(() => ({
   useDiscogsStatus: vi.fn(),
   useRequestDiscogsLink: vi.fn(),
   useDisconnectDiscogs: vi.fn(),
+  useThemePreference: vi.fn(),
 }));
 
 vi.mock('../../src/queries/discogsOauthQueries', () => mocks);
+vi.mock('../../src/theme/useThemePreference', () => ({
+  useThemePreference: mocks.useThemePreference,
+}));
 
 function renderProfile(state?: { discogsOutcome?: string }) {
   return render(
@@ -30,6 +34,11 @@ beforeEach(() => {
   });
   mocks.useRequestDiscogsLink.mockReturnValue({ mutate: vi.fn(), isPending: false });
   mocks.useDisconnectDiscogs.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  mocks.useThemePreference.mockReturnValue({
+    theme: 'light',
+    toggle: vi.fn(),
+    saveFailed: false,
+  });
 });
 
 describe('ProfilePage', () => {
@@ -57,6 +66,52 @@ describe('ProfilePage', () => {
     renderProfile();
 
     expect(screen.queryByText(/discogs account linked/i)).not.toBeInTheDocument();
+  });
+
+  describe('Preferences section', () => {
+    it('renders a Preferences section with the theme toggle as its first control', () => {
+      renderProfile();
+
+      const section = screen.getByRole('region', { name: 'Preferences' });
+      const toggle = screen.getByRole('switch', { name: /dark mode/i });
+      expect(section).toContainElement(toggle);
+
+      const firstControl = section.querySelector('input, button, [role="switch"]');
+      expect(firstControl).toBe(toggle);
+    });
+
+    it('shows a dismissible warning banner when the preference save has persistently failed', async () => {
+      const user = userEvent.setup();
+      mocks.useThemePreference.mockReturnValue({
+        theme: 'dark',
+        toggle: vi.fn(),
+        saveFailed: true,
+      });
+
+      renderProfile();
+
+      const notice = screen.getByText(/preference may not have been saved/i);
+      expect(notice).toBeInTheDocument();
+
+      const toggle = screen.getByRole('switch', { name: /dark mode/i });
+      expect(toggle).toBeEnabled();
+
+      const dismissButtons = screen.getAllByRole('button', { name: /dismiss/i });
+      await user.click(dismissButtons[dismissButtons.length - 1]);
+      expect(screen.queryByText(/preference may not have been saved/i)).not.toBeInTheDocument();
+    });
+
+    it('shows no failure banner when the save has not failed', () => {
+      mocks.useThemePreference.mockReturnValue({
+        theme: 'light',
+        toggle: vi.fn(),
+        saveFailed: false,
+      });
+
+      renderProfile();
+
+      expect(screen.queryByText(/preference may not have been saved/i)).not.toBeInTheDocument();
+    });
   });
 
   describe('failure outcomes (US3)', () => {

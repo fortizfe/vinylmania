@@ -5,6 +5,27 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vinylmania</title>
+    <script>
+      // No-flash theme bootstrap (FR-015, research.md R1): paints the
+      // correct theme before the SPA mounts, mirroring ThemeContext's own
+      // resolution order (cached preference, then OS setting).
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('vinylmania:theme-preference');
+          var isDark =
+            stored === 'dark' ||
+            (stored !== 'light' &&
+              window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch {
+          // localStorage/matchMedia unavailable (e.g. private browsing) —
+          // ThemeContext will resolve the theme once React mounts instead.
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

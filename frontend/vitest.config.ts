@@ -7,5 +7,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
     globals: true,
+    // Node 22+'s experimental global `localStorage` shadows jsdom's own
+    // window.localStorage unless disabled, leaving it undefined in tests.
+    pool: 'forks',
+    execArgv: ['--no-experimental-webstorage'],
   },
 });

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from '../../src/App';
 import { AuthProvider } from '../../src/auth/AuthContext';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
 import { createTestQueryClient } from '../testUtils';
 
 const mockOnAuthStateChanged = vi.fn();
@@ -47,13 +48,15 @@ function renderAuthenticatedApp(initialEntry: string) {
   }) as unknown as typeof fetch;
 
   return render(
-    <QueryClientProvider client={createTestQueryClient()}>
-      <MemoryRouter initialEntries={[initialEntry]}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <ThemeProvider>
+      <QueryClientProvider client={createTestQueryClient()}>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -104,13 +107,15 @@ describe('Navigation menu (US2)', () => {
     });
 
     render(
-      <QueryClientProvider client={createTestQueryClient()}>
-        <MemoryRouter initialEntries={['/']}>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </MemoryRouter>
-      </QueryClientProvider>,
+      <ThemeProvider>
+        <QueryClientProvider client={createTestQueryClient()}>
+          <MemoryRouter initialEntries={['/']}>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
     );
 
     await waitFor(() =>

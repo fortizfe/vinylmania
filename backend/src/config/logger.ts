@@ -32,7 +32,10 @@ export type LogOutcome =
   | 'feed_fetch_failed'
   | 'feed_unavailable'
   // Discogs retry/circuit-breaker resilience (feature 029)
-  | 'circuit_open';
+  | 'circuit_open'
+  // Theme preference persistence (feature 031)
+  | 'preference_saved'
+  | 'preference_save_failed';
 
 export interface LogEvent {
   route: string;

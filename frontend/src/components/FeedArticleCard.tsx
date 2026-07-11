@@ -32,7 +32,7 @@ export function FeedArticleCard({ article }: FeedArticleCardProps) {
         ) : (
           <div
             data-testid="feed-article-thumbnail-placeholder"
-            className="aspect-video w-full rounded-md bg-gray-100 dark:bg-gray-800"
+            className="aspect-video w-full rounded-md bg-gray-100 dark:bg-gray-900"
           />
         )}
         <div className="flex items-center gap-2">
