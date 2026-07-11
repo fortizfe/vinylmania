@@ -1,19 +1,17 @@
 <!--
 Sync Impact Report
-Version change: 2.0.0 → 2.1.0
-Modified principles: none (existing principles I-VI unchanged)
+Version change: 2.1.0 → 2.2.0
+Modified principles: none (existing principles I-VII unchanged)
 Added sections:
-  - VII. Curated Ratings & Music News (Rock/Metal Focus) — new Core Principle
-    covering personal ratings and RSS/news aggregation as first-class,
-    Discogs-adjacent product pillars, with rock/metal as the default curation
-    lens.
-  - Technology Stack: "News/RSS Data Source" bullet describing external feed
-    sourcing, attribution, and graceful degradation requirements.
-Changed sections:
-  - Mission statement (opening paragraph) expanded to describe Vinylmania as a
-    modern Discogs integration combined with music ratings and related news,
-    with a rock/metal editorial focus, rather than catalog/library management
-    alone.
+  - UI Design System & Styling (Tailwind CSS v4): two new mandatory bullets —
+    "Dual responsive layout (desktop & mobile)" (every screen MUST implement
+    a purpose-built wide-viewport layout that uses available horizontal
+    space, and a separate purpose-built mobile layout, both breakpoint-driven
+    rather than device-detected) and "Minimum touch target size (44×44 CSS
+    px)" (every interactive control MUST meet a 44×44 CSS px minimum touch
+    target on mobile, per WCAG 2.5.5 / Apple HIG, using Tailwind's stock
+    spacing scale). Section Rationale extended to cover both new rules.
+Changed sections: none (no existing principle or rule redefined)
 Removed sections: none
 Templates requiring updates:
   ✅ .specify/templates/plan-template.md (Constitution Check remains generic; no principle-specific references to update)
@@ -206,6 +204,24 @@ Firebase emulator for integration tests).
 - **No layout shift**: All states of a given component (skeleton, empty,
   error, populated) MUST share the same sizing classes (`w-*`, `h-*`,
   `min-h-*`) so that transitioning between states never causes layout shift.
+- **Dual responsive layout (desktop & mobile)**: Every screen MUST implement
+  two purpose-built layout states, not a single layout that merely reflows: a
+  desktop/wide-viewport layout that makes deliberate use of the available
+  horizontal space (e.g., multi-column grids, side-by-side panels, sidebars)
+  rather than a narrow single-column layout stretched to fill the viewport;
+  and a mobile-viewport layout specifically adapted for small, touch-first
+  screens (typically single-column, compact spacing, no horizontal scrolling
+  of primary content). Both layouts MUST be implemented with Tailwind's
+  responsive breakpoint utilities (`sm:`, `md:`, `lg:`, `xl:`), not a
+  separate device-detection mechanism.
+- **Minimum touch target size (44×44 CSS px)**: Every interactive control
+  (buttons, links acting as buttons, filter chips, form inputs, icon buttons,
+  etc.) MUST meet a minimum touch target size of 44×44 CSS pixels at mobile
+  viewport widths, per WCAG 2.5.5 (Level AAA) and the Apple Human Interface
+  Guidelines baseline. This MUST be satisfied using Tailwind's default
+  spacing scale (e.g., `min-h-11 min-w-11`, already 2.75rem/44px) rather than
+  an arbitrary value, consistent with the "No custom CSS without
+  justification" rule below.
 - **Theme-variable dark mode**: Dark mode MUST be implemented with Tailwind's
   `dark:` prefix, combined with CSS variables in the `@theme` block so colors
   respond without duplicating utility variants. Every component, including
@@ -224,7 +240,12 @@ maintainable as the catalog and library screens grow. Centralizing visual
 patterns in atomic components and CSS-first theme variables prevents drift
 between screens; skeleton-first loading avoids jarring blank/spinner states on
 a data-heavy collection app; and adherence to Tailwind v4's current API avoids
-technical debt from deprecated v3 utility names.
+technical debt from deprecated v3 utility names. Requiring a purpose-built
+desktop layout (rather than a stretched mobile layout) keeps information-dense
+screens (search results, library, news) usable on wide monitors instead of
+wasting horizontal space; requiring a dedicated mobile layout with a 44×44px
+touch-target floor keeps every screen comfortably usable and accessible on
+phones, not merely "not broken."
 
 ## Development Workflow (Quality Gates)
 
@@ -304,4 +325,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 2.1.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-10
+**Version**: 2.2.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-11
