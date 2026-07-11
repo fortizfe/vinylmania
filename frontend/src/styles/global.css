@@ -3,7 +3,16 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-primary: #6366f1;
+  /*
+   * Darkened from the original #6366f1 (feature 032): white text on
+   * #6366f1 measured 4.46:1, just under the WCAG AA 4.5:1 minimum for
+   * normal-size text — caught by the landing page's new automated
+   * accessibility gate (FR-010/SC-006) on the "Sign in with Google" button,
+   * which reuses this token. #4f46e5 (Tailwind indigo-600) measures 6.29:1
+   * against white while remaining visually adjacent to the original shade
+   * — see specs/032-landing-page-refresh/research.md §4.
+   */
+  --color-primary: #4f46e5;
   --font-sans:
     system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
@@ -24,6 +33,24 @@
    * specs/019-rating-badge-placeholder/research.md §2.
    */
   --color-rating-unrated: #d1d5db;
+
+  /*
+   * Landing page rock/metal-inflected accent palette (feature 032). Applied
+   * only in dark mode via `dark:bg-landing-surface` on the sticky header,
+   * hero, and pillar sections, paired with `--color-landing-accent` for
+   * icons/large text/emphasis — verified 9.15:1 contrast between the two
+   * (WCAG AAA). In light mode, sections keep the existing white/gray-50
+   * background and reuse the existing `--color-primary` for equivalent
+   * large-text/icon accents (verified >=3:1, the WCAG AA minimum for large
+   * text and non-text UI elements) instead of a new token — see
+   * specs/032-landing-page-refresh/research.md §4 for the full computation.
+   * Neither `--color-landing-accent` nor `--color-primary` is used for small
+   * body text in this feature; body copy always uses the existing
+   * gray-900/gray-100 tokens, which remain the only WCAG AA (4.5:1) safe
+   * choice for normal-size text.
+   */
+  --color-landing-surface: #0b0b10;
+  --color-landing-accent: #f59e0b;
 }
 
 @utility scrollbar-hidden {

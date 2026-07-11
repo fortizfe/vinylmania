@@ -30,7 +30,7 @@ function renderLandingPage() {
 }
 
 describe('LandingPage layout', () => {
-  it('renders the value proposition and the Google sign-in CTA inside a single no-scroll viewport container', () => {
+  it('renders the value proposition and the Google sign-in CTA inside the landing viewport container', () => {
     renderLandingPage();
 
     const viewport = screen.getByTestId('landing-viewport');
@@ -38,19 +38,41 @@ describe('LandingPage layout', () => {
     const heading = screen.getByRole('heading', { level: 1 });
     const cta = screen.getByRole('button', { name: /sign in with google/i });
 
-    // Both the value proposition and the CTA must live inside the same
-    // single-viewport container — i.e. neither is rendered outside it in a
-    // separate scrollable section.
     expect(viewport).toContainElement(heading);
     expect(viewport).toContainElement(cta);
   });
 
-  it('does not wrap the landing content in a scrollable element', () => {
+  it('renders the hero heading and supporting copy with both light- and dark-mode design tokens', () => {
     renderLandingPage();
 
-    const viewport = screen.getByTestId('landing-viewport');
-    // Presence of an explicit scroll utility class would defeat the
-    // no-scroll requirement (FR-001/FR-002).
-    expect(viewport.className).not.toMatch(/scroll/i);
+    const heading = screen.getByRole('heading', { level: 1 });
+    const copy = screen.getByText(/track your collection with discogs/i);
+
+    // Both elements must carry a `dark:` variant alongside their light-mode
+    // classes, so the refreshed hero stays consistent with the rest of the
+    // app's design system in both themes (FR-002).
+    expect(heading.className).toMatch(/dark:/);
+    expect(copy.className).toMatch(/dark:/);
+  });
+
+  it('renders the sign-in action inside a sticky header, not the scrollable body', () => {
+    renderLandingPage();
+
+    const header = screen.getByRole('banner');
+    const cta = screen.getByRole('button', { name: /sign in with google/i });
+
+    expect(header).toContainElement(cta);
+    expect(header.className).toMatch(/sticky/);
+  });
+
+  it('renders three pillar sections below the hero, each with a heading and descriptive text', () => {
+    renderLandingPage();
+
+    const pillarHeadings = screen.getAllByRole('heading', { level: 2 });
+    expect(pillarHeadings).toHaveLength(3);
+
+    expect(screen.getByRole('heading', { name: /catalog/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /rating/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /news/i })).toBeInTheDocument();
   });
 });

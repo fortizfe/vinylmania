@@ -12,9 +12,12 @@ describe('LandingHero', () => {
     expect(heading.textContent).toMatch(/vinyl/i);
   });
 
-  it('renders a short supporting statement of what the app does', () => {
+  it('renders supporting copy referencing the Discogs-backed catalog, personal ratings, and curated rock/metal news', () => {
     render(<LandingHero />);
 
-    expect(screen.getByText(/organi[sz]e|manage|collection/i)).toBeInTheDocument();
+    expect(screen.getByText(/discogs/i)).toBeInTheDocument();
+    expect(screen.getByText(/rat(e|ing)/i)).toBeInTheDocument();
+    expect(screen.getByText(/rock.*metal|metal.*rock/i)).toBeInTheDocument();
+    expect(screen.getByText(/news/i)).toBeInTheDocument();
   });
 });

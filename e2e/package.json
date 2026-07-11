@@ -8,6 +8,7 @@
     "test": "npx firebase --config ../backend/firebase.json emulators:exec --only auth,firestore --project vinylmania-test \"playwright test\""
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.61.1",
     "@types/node": "^22.7.5",
     "dotenv": "^16.4.5",
