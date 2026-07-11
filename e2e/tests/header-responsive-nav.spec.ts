@@ -82,4 +82,43 @@ test.describe('Responsive header navigation (US1, US2, US3)', () => {
     // Confirm the switch happened without a page reload/navigation.
     await expect(page).toHaveURL(/\/app$/);
   });
+
+  test.describe('brand mark responsiveness (feature 034)', () => {
+    test('shows the icon+wordmark lockup at 1280px, icon-only at 375px and 320px with no overlap of the hamburger, and stays fixed-size at an ultra-wide viewport', async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+
+      const brand = page.getByRole('link', { name: 'Vinylmania' });
+      await expect(brand).toBeVisible();
+      await expect(page.getByText('VINYLMANIA')).toBeVisible();
+      const desktopBox = await brand.boundingBox();
+
+      for (const width of [375, 320]) {
+        await page.setViewportSize({ width, height: 800 });
+        await expect(brand).toBeVisible();
+        await expect(page.getByText('VINYLMANIA')).toBeHidden();
+
+        const brandBox = await brand.boundingBox();
+        const hamburgerBox = await page.getByRole('button', { name: /^menu$/i }).boundingBox();
+        expect(brandBox).not.toBeNull();
+        expect(hamburgerBox).not.toBeNull();
+        if (brandBox && hamburgerBox) {
+          const overlaps =
+            brandBox.x < hamburgerBox.x + hamburgerBox.width &&
+            brandBox.x + brandBox.width > hamburgerBox.x;
+          expect(overlaps, `brand mark and hamburger overlap at ${width}px`).toBe(false);
+        }
+      }
+
+      // Ultra-wide: the lockup stays at its fixed size rather than scaling up.
+      await page.setViewportSize({ width: 2200, height: 900 });
+      await expect(page.getByText('VINYLMANIA')).toBeVisible();
+      const ultraWideBox = await brand.boundingBox();
+      expect(ultraWideBox?.width).toBeCloseTo(desktopBox?.width ?? 0, 0);
+      expect(ultraWideBox?.height).toBeCloseTo(desktopBox?.height ?? 0, 0);
+    });
+  });
 });

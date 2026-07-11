@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { useAuth } from './auth/AuthContext';
 import { AppHeader } from './components/AppHeader';
+import { VinylmaniaGrungeFilter } from './components/brand/VinylmaniaGrungeFilter';
 import { DashboardPage } from './pages/DashboardPage';
 import { DiscogsCallbackPage } from './pages/DiscogsCallbackPage';
 import { LandingPage } from './pages/LandingPage';
@@ -35,81 +36,84 @@ function AuthenticatedLayout({ children }: { children: ReactNode }) {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route
-        path="/app"
-        element={
-          <AuthenticatedLayout>
-            <DashboardPage />
-          </AuthenticatedLayout>
-        }
-      />
-      <Route
-        path="/app/library"
-        element={
-          <AuthenticatedLayout>
-            <LibraryListPage />
-          </AuthenticatedLayout>
-        }
-      />
-      <Route
-        path="/app/search"
-        element={
-          <AuthenticatedLayout>
-            <SearchResultsPage />
-          </AuthenticatedLayout>
-        }
-      />
-      <Route
-        path="/app/library/records/:entryId"
-        element={
-          <AuthenticatedLayout>
-            <RecordDetailPage />
-          </AuthenticatedLayout>
-        }
-      />
-      <Route
-        path="/app/releases/:discogsId"
-        element={
-          <AuthenticatedLayout>
-            <ReleaseDetailPage />
-          </AuthenticatedLayout>
-        }
-      />
-      <Route
-        path="/app/masters/:discogsId"
-        element={
-          <AuthenticatedLayout>
-            <MasterReleaseDetailPage />
-          </AuthenticatedLayout>
-        }
-      />
-      <Route
-        path="/app/wishlist"
-        element={
-          <AuthenticatedLayout>
-            <WishlistPage />
-          </AuthenticatedLayout>
-        }
-      />
-      <Route
-        path="/app/profile"
-        element={
-          <AuthenticatedLayout>
-            <ProfilePage />
-          </AuthenticatedLayout>
-        }
-      />
-      <Route
-        path="/app/profile/discogs/callback"
-        element={
-          <AuthenticatedLayout>
-            <DiscogsCallbackPage />
-          </AuthenticatedLayout>
-        }
-      />
-    </Routes>
+    <>
+      <VinylmaniaGrungeFilter />
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route
+          path="/app"
+          element={
+            <AuthenticatedLayout>
+              <DashboardPage />
+            </AuthenticatedLayout>
+          }
+        />
+        <Route
+          path="/app/library"
+          element={
+            <AuthenticatedLayout>
+              <LibraryListPage />
+            </AuthenticatedLayout>
+          }
+        />
+        <Route
+          path="/app/search"
+          element={
+            <AuthenticatedLayout>
+              <SearchResultsPage />
+            </AuthenticatedLayout>
+          }
+        />
+        <Route
+          path="/app/library/records/:entryId"
+          element={
+            <AuthenticatedLayout>
+              <RecordDetailPage />
+            </AuthenticatedLayout>
+          }
+        />
+        <Route
+          path="/app/releases/:discogsId"
+          element={
+            <AuthenticatedLayout>
+              <ReleaseDetailPage />
+            </AuthenticatedLayout>
+          }
+        />
+        <Route
+          path="/app/masters/:discogsId"
+          element={
+            <AuthenticatedLayout>
+              <MasterReleaseDetailPage />
+            </AuthenticatedLayout>
+          }
+        />
+        <Route
+          path="/app/wishlist"
+          element={
+            <AuthenticatedLayout>
+              <WishlistPage />
+            </AuthenticatedLayout>
+          }
+        />
+        <Route
+          path="/app/profile"
+          element={
+            <AuthenticatedLayout>
+              <ProfilePage />
+            </AuthenticatedLayout>
+          }
+        />
+        <Route
+          path="/app/profile/discogs/callback"
+          element={
+            <AuthenticatedLayout>
+              <DiscogsCallbackPage />
+            </AuthenticatedLayout>
+          }
+        />
+      </Routes>
+    </>
   );
 }
 

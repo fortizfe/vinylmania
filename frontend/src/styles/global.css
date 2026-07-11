@@ -17,6 +17,13 @@
     system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
   /*
+   * Wordmark display font (feature 034 — logo rebranding). Used only by
+   * VinylmaniaWordmark, never the app's body/UI text (--font-sans is
+   * unchanged) — see specs/034-logo-rebranding/research.md §6.
+   */
+  --font-display: 'Anton', sans-serif;
+
+  /*
    * Release rating badge bands (feature 017). Chosen for WCAG AA text
    * contrast (>=4.5:1) against their paired text color — see
    * specs/017-record-rating-cards/research.md §8 for the computed ratios.
@@ -51,6 +58,15 @@
    */
   --color-landing-surface: #0b0b10;
   --color-landing-accent: #f59e0b;
+
+  /*
+   * VinylmaniaIcon's dark-context outer-ring shade (feature 034 — logo
+   * rebranding). Every other icon color reuses an existing token above
+   * (--color-landing-surface, --color-landing-accent, --color-primary) —
+   * this is the one color in the design brief with no existing match, see
+   * specs/034-logo-rebranding/research.md §4.
+   */
+  --color-brand-icon-dark-bg: #1a1a22;
 }
 
 @utility scrollbar-hidden {

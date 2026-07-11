@@ -1,8 +1,12 @@
+import { VinylmaniaIcon } from './brand/VinylmaniaIcon';
+import { VinylmaniaWordmark } from './brand/VinylmaniaWordmark';
+
 export function LandingHero() {
   return (
     <div className="flex max-w-2xl flex-col gap-3">
-      <h1 className="text-4xl font-semibold tracking-tight text-gray-900 sm:text-6xl dark:text-gray-100">
-        Vinylmania
+      <h1 className="flex flex-col items-center gap-3 text-gray-900 dark:text-gray-100 sm:items-start">
+        <VinylmaniaIcon size={120} className="h-32 w-32" />
+        <VinylmaniaWordmark className="text-4xl sm:text-6xl" grunge />
       </h1>
       <span
         aria-hidden="true"

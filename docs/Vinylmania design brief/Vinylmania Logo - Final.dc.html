@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    body { margin: 0; background: #f4f2ee; }
+  </style>
+</helmet>
+
+<svg width="0" height="0" style="position:absolute">
+  <filter id="grungeF" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="noise" />
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.6" />
+  </filter>
+  <symbol id="vm-icon" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="85" fill="#0b0b10" />
+    <circle cx="100" cy="100" r="72" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5" />
+    <circle cx="100" cy="100" r="60" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5" />
+    <circle cx="100" cy="100" r="48" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5" />
+    <circle cx="100" cy="100" r="34" fill="#f59e0b" />
+    <text x="100" y="112" text-anchor="middle" font-family="Anton" font-size="30" fill="#0b0b10">VM</text>
+  </symbol>
+  <symbol id="vm-icon-dark-bg" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="85" fill="#1a1a22" />
+    <circle cx="100" cy="100" r="72" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="1.5" />
+    <circle cx="100" cy="100" r="60" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="1.5" />
+    <circle cx="100" cy="100" r="48" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="1.5" />
+    <circle cx="100" cy="100" r="34" fill="#4f46e5" />
+    <text x="100" y="112" text-anchor="middle" font-family="Anton" font-size="30" fill="#ffffff">VM</text>
+  </symbol>
+  <symbol id="vm-icon-mono-black" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="85" fill="none" stroke="#0b0b10" stroke-width="6" />
+    <circle cx="100" cy="100" r="34" fill="#0b0b10" />
+    <text x="100" y="112" text-anchor="middle" font-family="Anton" font-size="30" fill="#ffffff">VM</text>
+  </symbol>
+  <symbol id="vm-icon-mono-white" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="85" fill="none" stroke="#ffffff" stroke-width="6" />
+    <circle cx="100" cy="100" r="34" fill="#ffffff" />
+    <text x="100" y="112" text-anchor="middle" font-family="Anton" font-size="30" fill="#0b0b10">VM</text>
+  </symbol>
+</svg>
+
+<div style="max-width:1100px;margin:0 auto;padding:56px 32px 96px;font-family:Inter,sans-serif;color:#0b0b10;">
+
+  <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px;">
+    <h1 style="font-size:28px;margin:0;font-weight:600;">Vinylmania — Logo final</h1>
+    <span style="background:#4f46e5;color:white;font-size:13px;font-weight:600;padding:4px 10px;border-radius:100px;">Basado en Concepto 2</span>
+  </div>
+  <p style="color:#57534e;font-size:15px;margin:0 0 48px;max-width:640px;">Vinilo con "VM" en la etiqueta central. Tres piezas: logo general (icono + wordmark), lockup para el header web, e icono solo para el header móvil.</p>
+
+  <!-- 1. General logo -->
+  <section style="margin-bottom:56px;">
+    <h2 style="font-size:15px;text-transform:uppercase;letter-spacing:0.06em;color:#78716c;font-weight:600;margin:0 0 16px;">1. Logo general</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div style="background:#ffffff;border:1px solid #e7e4dd;border-radius:16px;padding:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+        <svg width="120" height="120"><use href="#vm-icon" /></svg>
+        <span style="font-family:'Anton',sans-serif;font-size:34px;letter-spacing:0.5px;color:#0b0b10;filter:url(#grungeF);">VINYLMANIA</span>
+      </div>
+      <div style="background:#0b0b10;border-radius:16px;padding:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+        <svg width="120" height="120"><use href="#vm-icon-dark-bg" /></svg>
+        <span style="font-family:'Anton',sans-serif;font-size:34px;letter-spacing:0.5px;color:#ffffff;filter:url(#grungeF);">VINYLMANIA</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Header logo -->
+  <section style="margin-bottom:56px;">
+    <h2 style="font-size:15px;text-transform:uppercase;letter-spacing:0.06em;color:#78716c;font-weight:600;margin:0 0 16px;">2. Logo con nombre — header web</h2>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div style="background:#ffffff;border:1px solid #e7e4dd;border-radius:12px;padding:16px 24px;display:flex;align-items:center;gap:12px;">
+        <svg width="36" height="36"><use href="#vm-icon" /></svg>
+        <span style="font-family:'Anton',sans-serif;font-size:20px;letter-spacing:0.3px;color:#0b0b10;filter:url(#grungeF);">VINYLMANIA</span>
+        <span style="margin-left:auto;font-size:12px;color:#a8a29e;font-family:monospace;">header claro</span>
+      </div>
+      <div style="background:#0b0b10;border-radius:12px;padding:16px 24px;display:flex;align-items:center;gap:12px;">
+        <svg width="36" height="36"><use href="#vm-icon-dark-bg" /></svg>
+        <span style="font-family:'Anton',sans-serif;font-size:20px;letter-spacing:0.3px;color:#ffffff;filter:url(#grungeF);">VINYLMANIA</span>
+        <span style="margin-left:auto;font-size:12px;color:#78716c;font-family:monospace;">header oscuro</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Mobile icon only -->
+  <section style="margin-bottom:56px;">
+    <h2 style="font-size:15px;text-transform:uppercase;letter-spacing:0.06em;color:#78716c;font-weight:600;margin:0 0 16px;">3. Icono solo — header móvil</h2>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <div style="background:#ffffff;border:1px solid #e7e4dd;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;width:200px;">
+        <svg width="28" height="28"><use href="#vm-icon" /></svg>
+        <span style="font-size:12px;color:#a8a29e;font-family:monospace;">28px · claro</span>
+      </div>
+      <div style="background:#0b0b10;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;width:200px;">
+        <svg width="28" height="28"><use href="#vm-icon-dark-bg" /></svg>
+        <span style="font-size:12px;color:#78716c;font-family:monospace;">28px · oscuro</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Monochrome + favicon sizes -->
+  <section>
+    <h2 style="font-size:15px;text-transform:uppercase;letter-spacing:0.06em;color:#78716c;font-weight:600;margin:0 0 16px;">Monocromo &amp; favicon</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:20px;">
+      <div style="background:#ffffff;border:1px solid #e7e4dd;border-radius:16px;padding:28px;display:flex;align-items:center;justify-content:center;">
+        <svg width="90" height="90"><use href="#vm-icon-mono-black" /></svg>
+      </div>
+      <div style="background:#0b0b10;border-radius:16px;padding:28px;display:flex;align-items:center;justify-content:center;">
+        <svg width="90" height="90"><use href="#vm-icon-mono-white" /></svg>
+      </div>
+      <div style="background:#ffffff;border:1px solid #e7e4dd;border-radius:16px;padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;">
+        <svg width="32" height="32"><use href="#vm-icon" /></svg>
+        <span style="font-size:11px;color:#a8a29e;font-family:monospace;">32px</span>
+      </div>
+      <div style="background:#ffffff;border:1px solid #e7e4dd;border-radius:16px;padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;">
+        <svg width="16" height="16"><use href="#vm-icon" /></svg>
+        <span style="font-size:11px;color:#a8a29e;font-family:monospace;">16px</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+</x-dc>
+</body>
+</html>
