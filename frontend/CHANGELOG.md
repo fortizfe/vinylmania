@@ -8,6 +8,13 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.21.0] - 2026-07-11
+
+### Changed
+
+- Adopted the new Vinylmania brand mark across the app: a circular "VM" icon paired with an "VINYLMANIA" wordmark in the Anton display font, replacing the previous plain-text label. The authenticated header shows the icon alone below the `md:` breakpoint and the full icon+wordmark lockup at `md:`+ (fixed size, never scaling on wider viewports); the landing page's sticky header uses the same lockup, and the hero uses the larger stacked "general logo" with a distressed/grunge wordmark treatment. All placements track the app's existing light/dark theme with no flash of the wrong variant (feature 034).
+- Replaced the browser-tab favicon with the new circular "VM" icon.
+
 ## [0.20.0] - 2026-07-11
 
 ### Changed

@@ -52,7 +52,7 @@ export function HeaderSearchBox() {
     <form
       onSubmit={handleSubmit}
       role="search"
-      className="flex w-40 gap-2 sm:w-64 md:w-80"
+      className="flex w-28 gap-2 sm:w-64 md:w-80"
     >
       <div className="flex-1">
         <Input

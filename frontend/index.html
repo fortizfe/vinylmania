@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vinylmania</title>
+    <!-- "Anton" wordmark display font (feature 034, research.md §6): loaded
+         with display=swap so text is never blocked/invisible while it loads;
+         layout stability comes from the brand-mark containers being sized by
+         the icon, not the wordmark's font metrics. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&display=swap"
+      rel="stylesheet"
+    />
     <script>
       // No-flash theme bootstrap (FR-015, research.md R1): paints the
       // correct theme before the SPA mounts, mirroring ThemeContext's own

@@ -38,4 +38,25 @@ describe('LandingHeader', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong');
   });
+
+  describe('brand mark (feature 034)', () => {
+    it('renders the icon and a clean (non-grunge) wordmark in place of the plain-text label', () => {
+      const { container } = render(<LandingHeader onClick={() => undefined} />);
+
+      const icon = container.querySelector('svg[aria-hidden="true"]');
+      expect(icon).toBeInTheDocument();
+
+      const wordmark = screen.getByText('VINYLMANIA');
+      expect(wordmark).toHaveClass('font-display');
+      expect(wordmark.style.filter).toBe('');
+    });
+
+    it('lets the brand area shrink rather than force the sign-in button off-screen at narrow widths (FR-008)', () => {
+      render(<LandingHeader onClick={() => undefined} />);
+
+      const wordmark = screen.getByText('VINYLMANIA');
+      const brandArea = wordmark.closest('div');
+      expect(brandArea).toHaveClass('min-w-0');
+    });
+  });
 });
