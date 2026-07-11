@@ -1,8 +1,33 @@
 import { Navigate } from 'react-router-dom';
 
-import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { LandingHeader } from '../components/LandingHeader';
 import { LandingHero } from '../components/LandingHero';
+import { LandingPillarSection } from '../components/LandingPillarSection';
+import { CatalogIcon, NewsIcon, RatingIcon } from '../components/landingPillarIcons';
 import { useAuth } from '../auth/AuthContext';
+
+const PILLAR_SECTIONS = [
+  {
+    id: 'catalog',
+    icon: <CatalogIcon />,
+    title: 'Your catalog, powered by Discogs',
+    description:
+      'Every release is backed by Discogs metadata — accurate, always up to date.',
+  },
+  {
+    id: 'ratings',
+    icon: <RatingIcon />,
+    title: 'Personal ratings for every record',
+    description: 'Score the records you love and keep track of your favorites over time.',
+  },
+  {
+    id: 'news',
+    icon: <NewsIcon />,
+    title: 'Curated rock and metal news',
+    description:
+      'Stay current with hand-picked rock and metal stories from trusted sources.',
+  },
+] as const;
 
 export function LandingPage() {
   const { user, loading, signingIn, error, signIn } = useAuth();
@@ -12,12 +37,24 @@ export function LandingPage() {
   }
 
   return (
-    <main
+    <div
       data-testid="landing-viewport"
-      className="flex h-dvh w-full flex-col items-center justify-center gap-8 overflow-hidden p-6 text-center sm:gap-12 sm:p-12"
+      className="flex min-h-dvh w-full flex-col bg-white dark:bg-landing-surface"
     >
-      <LandingHero />
-      <GoogleSignInButton onClick={signIn} loading={signingIn} error={error} />
-    </main>
+      <LandingHeader onClick={signIn} loading={signingIn} error={error} />
+      <main className="flex flex-1 flex-col items-center gap-16 p-6 text-center sm:gap-20 sm:p-12">
+        <LandingHero />
+        <div className="flex w-full max-w-4xl flex-col items-center gap-12 sm:flex-row sm:items-start sm:justify-center sm:gap-8">
+          {PILLAR_SECTIONS.map((pillar) => (
+            <LandingPillarSection
+              key={pillar.id}
+              icon={pillar.icon}
+              title={pillar.title}
+              description={pillar.description}
+            />
+          ))}
+        </div>
+      </main>
+    </div>
   );
 }

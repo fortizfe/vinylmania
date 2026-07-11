@@ -8,6 +8,14 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.19.0] - 2026-07-11
+
+### Changed
+
+- The landing page has been refreshed: it now scrolls through a hero and three sections highlighting the app's core pillars — the Discogs-backed catalog, personal ratings, and curated rock/metal news — each with an icon and short description. The "Sign in with Google" action now lives in a persistent (sticky) header, together with the Vinylmania wordmark, so it stays reachable at every scroll position and viewport size (feature 032).
+- In dark mode, the landing page uses a new, darker rock/metal-inflected surface and accent palette layered on top of the existing design tokens; light mode reuses the existing tokens (feature 032).
+- The app-wide primary color (`--color-primary`) was darkened slightly (from `#6366f1` to `#4f46e5`) so white text on primary-colored buttons meets the WCAG 2.1 AA 4.5:1 contrast minimum; this affects every primary button across the app, not just the landing page (feature 032).
+
 ## [0.18.0] - 2026-07-11
 
 ### Added
