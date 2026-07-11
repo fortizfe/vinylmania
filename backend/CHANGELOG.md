@@ -8,6 +8,16 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.13.0] - 2026-07-11
+
+### Added
+
+- MetalSucks (`https://feeds.feedburner.com/Metalsucks`) and Louder Sound (`https://www.loudersound.com/feeds.xml`) are now enabled Dashboard feed sources, merged into the existing "News" category alongside Metal Injection and subject to the same graceful per-source degradation as every other feed (feature 033).
+
+### Changed
+
+- `FeedSourceConfig` and `sourceStatuses` entries in `GET /api/feeds/dashboard` now carry a `priority` boolean flag, `true` for Metal Injection, MetalSucks, and Louder Sound and `false` for every other configured source. The flag only determines source-filter display order on the frontend — it has no effect on article ordering, card size, or prominence (feature 033).
+
 ## [0.12.0] - 2026-07-11
 
 ### Added

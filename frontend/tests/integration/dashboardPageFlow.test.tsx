@@ -66,7 +66,7 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     await waitFor(() =>
       expect(screen.getByText('DEVILDRIVER Unleash New Video')).toBeInTheDocument(),
     );
-    expect(screen.getByText(/Metal Injection/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Metal Injection/).length).toBeGreaterThan(0);
 
     const link = screen.getByRole('link', { name: /DEVILDRIVER Unleash New Video/i });
     expect(link).toHaveAttribute(
@@ -111,7 +111,7 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/Metal Storm/);
   });
 
-  it('groups articles under labeled category sections (feature 024, US2)', async () => {
+  it('renders every article together in one grid, not grouped into separate labeled sections (feature 033, US1)', async () => {
     mockGetDashboard.mockResolvedValue({
       categories: [
         {
@@ -155,9 +155,18 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText('News Article')).toBeInTheDocument());
-    expect(screen.getByRole('heading', { name: 'News' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Reviews' })).toBeInTheDocument();
+    // Both articles render together (no separate "News"/"Reviews" section headings).
+    expect(screen.queryByRole('heading', { name: 'News' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Reviews' })).not.toBeInTheDocument();
     expect(screen.getByText('Review Article')).toBeInTheDocument();
+
+    const link = screen.getByRole('link', { name: /News Article/i });
+    expect(link).toHaveAttribute('href', 'https://metalinjection.net/news');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+
+    const main = document.querySelector('main');
+    expect(main).toHaveClass('max-w-7xl');
   });
 
   it('filters the view down to one category and restores the full view when cleared (feature 024, US3)', async () => {
@@ -216,7 +225,7 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     expect(screen.getByText('Review Article')).toBeInTheDocument();
   });
 
-  it('renders a category with more than 5 articles inside a horizontally-scrollable carousel with navigation arrows (feature 025 US1, FR-005/FR-008)', async () => {
+  it('renders all articles across categories in one grid with no carousel/arrow controls (feature 033 US1, FR-001/FR-002)', async () => {
     const articles = Array.from({ length: 7 }).map((_, index) => ({
       id: `news-${index}`,
       title: `News Article ${index}`,
@@ -240,7 +249,7 @@ describe('Dashboard page flow (feature 024, US1)', () => {
 
     await waitFor(() => expect(screen.getByText('News Article 0')).toBeInTheDocument());
 
-    // All 7 articles are present (no fixed grid cap), each keeping its usual card fields.
+    // All 7 articles are present at once, no click-to-reveal interaction required.
     for (const article of articles) {
       expect(screen.getByText(article.title)).toBeInTheDocument();
     }
@@ -248,14 +257,14 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     const firstLink = screen.getByRole('link', { name: /News Article 0/i });
     expect(firstLink).toHaveAttribute('target', '_blank');
 
-    // Carousel navigation controls are present for this category.
+    // No carousel navigation controls remain.
     expect(
-      screen.getByRole('button', { name: /previous articles/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /next articles/i })).toBeInTheDocument();
+      screen.queryByRole('button', { name: /previous articles/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /next articles/i })).not.toBeInTheDocument();
   });
 
-  it('renders Reviews, Interviews, Articles, and Staff Picks as their own labeled carousel sections (feature 025 US2)', async () => {
+  it('renders articles from Reviews, Interviews, Articles, and Staff Picks together in the grid, filterable by category (feature 033 US1)', async () => {
     function categoryFixture(category: string) {
       return {
         category,
@@ -293,9 +302,14 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     await waitFor(() => expect(screen.getByText('News Article')).toBeInTheDocument());
 
     for (const category of ['News', 'Reviews', 'Interviews', 'Articles', 'Staff Picks']) {
-      expect(screen.getByRole('heading', { name: category })).toBeInTheDocument();
       expect(screen.getByText(`${category} Article`)).toBeInTheDocument();
     }
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Staff Picks' }));
+
+    expect(screen.getByText('Staff Picks Article')).toBeInTheDocument();
+    expect(screen.queryByText('News Article')).not.toBeInTheDocument();
   });
 
   it('does not render a "Dashboard" page heading (feature 025 US3, FR-001)', async () => {
@@ -328,6 +342,85 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     await waitFor(() => expect(screen.getByText('News Article')).toBeInTheDocument());
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
+  });
+
+  it('filters by source, combines with category, and clears back to the category-only view (feature 033, US4)', async () => {
+    mockGetDashboard.mockResolvedValue({
+      categories: [
+        {
+          category: 'News',
+          articles: [
+            {
+              id: '1',
+              title: 'Metal Injection News',
+              excerpt: 'x',
+              publishedAt: '2026-07-09T00:00:00.000Z',
+              link: 'https://metalinjection.net/news',
+              sourceId: 'metal-injection',
+              sourceName: 'Metal Injection',
+              category: 'News',
+            },
+            {
+              id: '2',
+              title: 'Louder Sound News',
+              excerpt: 'y',
+              publishedAt: '2026-07-08T00:00:00.000Z',
+              link: 'https://loudersound.com/news',
+              sourceId: 'louder-sound',
+              sourceName: 'Louder Sound',
+              category: 'News',
+            },
+          ],
+        },
+        {
+          category: 'Reviews',
+          articles: [
+            {
+              id: '3',
+              title: 'Metal Storm Review',
+              excerpt: 'z',
+              publishedAt: '2026-07-07T00:00:00.000Z',
+              link: 'https://metalstorm.net/reviews/1',
+              sourceId: 'metal-storm-reviews',
+              sourceName: 'Metal Storm',
+              category: 'Reviews',
+            },
+          ],
+        },
+      ],
+      sourceStatuses: [
+        { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok', priority: true },
+        { sourceId: 'louder-sound', sourceName: 'Louder Sound', status: 'ok', priority: true },
+        {
+          sourceId: 'metal-storm-reviews',
+          sourceName: 'Metal Storm',
+          status: 'ok',
+          priority: false,
+        },
+      ],
+      generatedAt: '2026-07-09T00:00:00.000Z',
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Metal Injection News')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+
+    // Source-only filter.
+    await user.click(screen.getByRole('button', { name: 'Louder Sound' }));
+    expect(screen.getByText('Louder Sound News')).toBeInTheDocument();
+    expect(screen.queryByText('Metal Injection News')).not.toBeInTheDocument();
+    expect(screen.queryByText('Metal Storm Review')).not.toBeInTheDocument();
+
+    // Combine with category.
+    await user.click(screen.getByRole('button', { name: 'Reviews' }));
+    expect(screen.queryByText('Louder Sound News')).not.toBeInTheDocument();
+    expect(screen.queryByText('Metal Storm Review')).not.toBeInTheDocument();
+    expect(screen.getByText(/check back soon/i)).toBeInTheDocument();
+
+    // Clear the source filter, restoring the category-only view.
+    await user.click(screen.getByRole('button', { name: 'All sources' }));
+    expect(screen.getByText('Metal Storm Review')).toBeInTheDocument();
   });
 
   it('shows a graceful empty state when there are zero articles across all sources (FR-011)', async () => {

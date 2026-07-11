@@ -67,13 +67,19 @@ export async function getDashboard(): Promise<DashboardResponse> {
   settled.forEach((result, index) => {
     const source = enabledSources[index];
     if (result.status === 'fulfilled') {
-      sourceStatuses.push({ sourceId: source.id, sourceName: source.name, status: 'ok' });
+      sourceStatuses.push({
+        sourceId: source.id,
+        sourceName: source.name,
+        status: 'ok',
+        priority: source.priority,
+      });
       allArticles.push(...result.value);
     } else {
       sourceStatuses.push({
         sourceId: source.id,
         sourceName: source.name,
         status: 'unavailable',
+        priority: source.priority,
       });
       logger.warn({
         route: 'feeds:aggregator',

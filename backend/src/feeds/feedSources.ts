@@ -14,6 +14,25 @@ export const FEED_SOURCES: FeedSourceConfig[] = [
     feedUrl: 'https://metalinjection.net/feed',
     category: 'News',
     enabled: true,
+    priority: true,
+  },
+  // Verified reachable (200, text/xml, valid RSS 2.0 XML, no Cloudflare
+  // challenge) during feature 033's planning research (research.md §6).
+  {
+    id: 'metalsucks',
+    name: 'MetalSucks',
+    feedUrl: 'https://feeds.feedburner.com/Metalsucks',
+    category: 'News',
+    enabled: true,
+    priority: true,
+  },
+  {
+    id: 'louder-sound',
+    name: 'Louder Sound',
+    feedUrl: 'https://www.loudersound.com/feeds.xml',
+    category: 'News',
+    enabled: true,
+    priority: true,
   },
   {
     id: 'metal-storm-news',
@@ -21,6 +40,7 @@ export const FEED_SOURCES: FeedSourceConfig[] = [
     feedUrl: 'https://metalstorm.net/rss/news.xml',
     category: 'News',
     enabled: true,
+    priority: false,
   },
   {
     id: 'metal-storm-reviews',
@@ -28,6 +48,7 @@ export const FEED_SOURCES: FeedSourceConfig[] = [
     feedUrl: 'https://metalstorm.net/rss/reviews.xml',
     category: 'Reviews',
     enabled: true,
+    priority: false,
   },
   {
     id: 'metal-storm-interviews',
@@ -35,6 +56,7 @@ export const FEED_SOURCES: FeedSourceConfig[] = [
     feedUrl: 'https://metalstorm.net/rss/interviews.xml',
     category: 'Interviews',
     enabled: true,
+    priority: false,
   },
   {
     id: 'metal-storm-articles',
@@ -42,6 +64,7 @@ export const FEED_SOURCES: FeedSourceConfig[] = [
     feedUrl: 'https://metalstorm.net/rss/articles.xml',
     category: 'Articles',
     enabled: true,
+    priority: false,
   },
   {
     id: 'metal-storm-picks',
@@ -49,5 +72,6 @@ export const FEED_SOURCES: FeedSourceConfig[] = [
     feedUrl: 'https://metalstorm.net/rss/picks.xml',
     category: 'Staff Picks',
     enabled: true,
+    priority: false,
   },
 ];

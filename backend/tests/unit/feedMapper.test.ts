@@ -7,6 +7,7 @@ const source: FeedSourceConfig = {
   feedUrl: 'https://metalinjection.net/feed',
   category: 'News',
   enabled: true,
+  priority: true,
 };
 
 describe('mapFeedItem', () => {

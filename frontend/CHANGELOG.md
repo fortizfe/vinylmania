@@ -8,6 +8,18 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.20.0] - 2026-07-11
+
+### Changed
+
+- The news Dashboard has been redesigned for usability: on desktop-width windows, articles now render in a responsive multi-column grid (up to 5 columns, capped for readability on ultra-wide monitors) instead of per-category horizontal carousels, with a sticky category+source filter bar. On mobile, the same grid collapses to a single scrollable column with a more compact card layout and 44×44px-minimum touch targets on every filter control (feature 033).
+- A new source filter lets users narrow the Dashboard down to a single news source, combinable with the existing category filter; every configured source is listed, with Metal Injection, MetalSucks, and Louder Sound always shown first. Combined filters producing zero results now show a clear empty-state message (feature 033).
+- Articles from the new MetalSucks and Louder Sound sources appear alongside Metal Injection with identical card size/prominence to any other source, distinguished only by their source badge (feature 033).
+
+### Removed
+
+- The horizontal-scroll carousel and per-category section layout (introduced in feature 025) have been removed in favor of the new responsive grid.
+
 ## [0.19.0] - 2026-07-11
 
 ### Changed
