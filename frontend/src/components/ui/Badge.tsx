@@ -7,7 +7,7 @@ interface BadgeProps {
 }
 
 const toneClasses: Record<NonNullable<BadgeProps['tone']>, string> = {
-  neutral: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200',
+  neutral: 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-200',
   muted: 'bg-transparent text-gray-500 dark:text-gray-400',
 };
 

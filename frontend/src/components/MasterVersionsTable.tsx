@@ -42,7 +42,7 @@ export function MasterVersionsTable({
             {results.map((version) => (
               <tr
                 key={version.discogsId}
-                className="border-t border-gray-200 dark:border-gray-800"
+                className="border-t border-gray-200 dark:border-gray-900"
               >
                 <td className="py-2 pr-4">
                   <Link

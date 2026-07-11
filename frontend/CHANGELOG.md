@@ -8,6 +8,16 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.18.0] - 2026-07-11
+
+### Added
+
+- A new "Preferences" section on the Profile page, whose first control is a modern sun (blue sky + clouds) / moon (night sky + stars) toggle for switching the whole app between light and dark mode instantly (feature 031). The chosen theme is saved to the signed-in user's account and applied automatically — with no visible flash — the next time they open the app on any device; users who never make an explicit choice keep following their operating system's setting. If saving the preference ultimately fails after a few retries, a dismissible notice lets the user know it may not have persisted, without blocking further use of the toggle.
+
+### Changed
+
+- Dark mode's neutral background, border, and surface colors are one step darker and more consistent across the app (cards, headers, skeletons, badges, and other UI), improving legibility while keeping text and interactive elements within WCAG 2.1 AA contrast (feature 031).
+
 ## [0.17.1] - 2026-07-09
 
 ### Changed

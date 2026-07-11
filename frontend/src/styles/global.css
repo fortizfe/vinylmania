@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-primary: #6366f1;
   --font-sans:
@@ -17,8 +19,9 @@
   /*
    * Unrated/error placeholder badge background (feature 019). Unlike the
    * bands above, this is a neutral gray that adapts per theme via the
-   * component's `dark:bg-gray-600` class, so only the light-mode value is
-   * defined here — see specs/019-rating-badge-placeholder/research.md §2.
+   * component's `dark:bg-gray-700` class (darkened one step by feature 031's
+   * dark-mode polish), so only the light-mode value is defined here — see
+   * specs/019-rating-badge-placeholder/research.md §2.
    */
   --color-rating-unrated: #d1d5db;
 }

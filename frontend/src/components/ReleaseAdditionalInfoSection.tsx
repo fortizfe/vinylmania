@@ -16,7 +16,7 @@ export function ReleaseAdditionalInfoSection({
   if (!hasContent) return null;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+    <div className="flex flex-col gap-3 border-t border-gray-200 pt-4 dark:border-gray-900">
       {notes && <p className="text-sm text-gray-700 dark:text-gray-300">{notes}</p>}
 
       {identifiers.length > 0 && (

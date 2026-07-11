@@ -10,7 +10,7 @@ describe('Skeleton', () => {
     const el = container.firstElementChild as HTMLElement;
     expect(el.className).toMatch(/animate-pulse/);
     expect(el.className).toMatch(/bg-gray-200/);
-    expect(el.className).toMatch(/dark:bg-gray-800/);
+    expect(el.className).toMatch(/dark:bg-gray-900/);
     expect(el.className).toMatch(/h-4/);
     expect(el.className).toMatch(/w-32/);
   });

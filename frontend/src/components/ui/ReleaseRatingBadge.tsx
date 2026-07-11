@@ -13,7 +13,7 @@ const BACKGROUND_CLASSES: Record<RatingBand, string> = {
   high: 'bg-rating-high',
   // Unrated/error placeholder (feature 019): adapts per theme, unlike the
   // fixed-color bands above — see research.md §2.
-  unrated: 'bg-rating-unrated dark:bg-gray-600',
+  unrated: 'bg-rating-unrated dark:bg-gray-700',
 };
 
 // Text color per band chosen alongside the background tokens in

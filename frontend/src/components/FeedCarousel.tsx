@@ -32,7 +32,7 @@ function ChevronRightIcon() {
 }
 
 const arrowButtonClassName =
-  'flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-0 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800';
+  'flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-0 dark:border-gray-900 dark:bg-gray-950 dark:text-gray-300 dark:hover:bg-gray-900';
 
 interface FeedCarouselProps {
   children: ReactNode;

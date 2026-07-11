@@ -40,7 +40,7 @@ export function HamburgerMenu() {
               key={link.to}
               to={link.to}
               onClick={() => setOpen(false)}
-              className="rounded-xl px-3 py-2 font-medium text-gray-900 no-underline hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800"
+              className="rounded-xl px-3 py-2 font-medium text-gray-900 no-underline hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900"
             >
               {link.label}
             </Link>

@@ -2,6 +2,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { getFirestoreDb } from '../config/firebase-admin';
 
+export type ThemePreference = 'light' | 'dark';
+
 export interface UserProfile {
   uid: string;
   displayName: string;
@@ -9,6 +11,7 @@ export interface UserProfile {
   photoURL?: string;
   createdAt: string;
   lastSignInAt: string;
+  themePreference?: ThemePreference;
 }
 
 export interface VerifiedIdentity {
@@ -48,6 +51,17 @@ export async function getUser(uid: string): Promise<UserProfile | null> {
   return toUserProfile(snapshot.data() as FirebaseFirestore.DocumentData);
 }
 
+export async function updateThemePreference(
+  uid: string,
+  themePreference: ThemePreference,
+): Promise<UserProfile> {
+  const docRef = getFirestoreDb().collection('users').doc(uid);
+  await docRef.update({ themePreference });
+
+  const snapshot = await docRef.get();
+  return toUserProfile(snapshot.data() as FirebaseFirestore.DocumentData);
+}
+
 function toUserProfile(data: FirebaseFirestore.DocumentData): UserProfile {
   return {
     uid: data.uid,
@@ -56,5 +70,6 @@ function toUserProfile(data: FirebaseFirestore.DocumentData): UserProfile {
     photoURL: data.photoURL ?? undefined,
     createdAt: data.createdAt?.toDate?.().toISOString() ?? new Date().toISOString(),
     lastSignInAt: data.lastSignInAt?.toDate?.().toISOString() ?? new Date().toISOString(),
+    ...(data.themePreference ? { themePreference: data.themePreference } : {}),
   };
 }
