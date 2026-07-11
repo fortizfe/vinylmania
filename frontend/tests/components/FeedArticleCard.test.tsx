@@ -38,15 +38,16 @@ describe('FeedArticleCard', () => {
   });
 
   describe('fixed-height cards with truncated text (feature 028, US4, FR-007, FR-008)', () => {
-    it('applies the same fixed-height class regardless of a short title and no excerpt', () => {
+    it('applies the same fixed-height classes regardless of a short title and no excerpt', () => {
       const { container } = render(
         <FeedArticleCard article={{ ...baseArticle, title: 'Short', excerpt: '' }} />,
       );
 
-      expect(container.firstChild).toHaveClass('h-96');
+      expect(container.firstChild).toHaveClass('h-40');
+      expect(container.firstChild).toHaveClass('sm:h-96');
     });
 
-    it('applies the same fixed-height class for a long title and excerpt', () => {
+    it('applies the same fixed-height classes for a long title and excerpt', () => {
       const { container } = render(
         <FeedArticleCard
           article={{
@@ -59,7 +60,8 @@ describe('FeedArticleCard', () => {
         />,
       );
 
-      expect(container.firstChild).toHaveClass('h-96');
+      expect(container.firstChild).toHaveClass('h-40');
+      expect(container.firstChild).toHaveClass('sm:h-96');
     });
 
     it('clamps the title to 2 lines', () => {
@@ -68,10 +70,79 @@ describe('FeedArticleCard', () => {
       expect(screen.getByText(baseArticle.title)).toHaveClass('line-clamp-2');
     });
 
-    it('clamps the excerpt to 2 lines', () => {
+    it('clamps the excerpt (fewer lines on the compact mobile layout than on desktop)', () => {
       render(<FeedArticleCard article={baseArticle} />);
 
-      expect(screen.getByText(baseArticle.excerpt)).toHaveClass('line-clamp-2');
+      const excerpt = screen.getByText(baseArticle.excerpt);
+      expect(excerpt).toHaveClass('line-clamp-1');
+      expect(excerpt).toHaveClass('sm:line-clamp-2');
+    });
+  });
+
+  describe('responsive layout (feature 033, US2, FR-005, FR-007)', () => {
+    it('uses a compact row layout (image beside text) at the base breakpoint, column at sm:+', () => {
+      const { container } = render(
+        <FeedArticleCard
+          article={{ ...baseArticle, imageUrl: 'https://cdn.example.com/cover.jpg' }}
+        />,
+      );
+
+      const link = container.querySelector('a');
+      expect(link).toHaveClass('flex-row');
+      expect(link).toHaveClass('sm:flex-col');
+
+      const image = screen.getByRole('img', { name: baseArticle.title });
+      expect(image).toHaveClass('w-24');
+      expect(image).toHaveClass('sm:w-full');
+      expect(image).toHaveClass('sm:aspect-video');
+    });
+
+    it('still shows title, excerpt, source, category badge, and date in the compact layout', () => {
+      render(<FeedArticleCard article={baseArticle} />);
+
+      expect(screen.getByText(baseArticle.title)).toBeInTheDocument();
+      expect(screen.getByText(baseArticle.excerpt)).toBeInTheDocument();
+      expect(screen.getByText(baseArticle.category)).toBeInTheDocument();
+      expect(screen.getByText(/Metal Injection/)).toBeInTheDocument();
+    });
+
+    it('still opens the original article in a new tab from the compact layout', () => {
+      render(<FeedArticleCard article={baseArticle} />);
+
+      const link = screen.getByRole('link', { name: new RegExp(baseArticle.title) });
+      expect(link).toHaveAttribute('href', baseArticle.link);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    });
+  });
+
+  describe('equal prominence across sources (feature 033, US3, FR-010, SC-004, SC-007)', () => {
+    const priorityArticles = [
+      { ...baseArticle, id: 'mi-1', sourceId: 'metal-injection', sourceName: 'Metal Injection' },
+      { ...baseArticle, id: 'ms-1', sourceId: 'metalsucks', sourceName: 'MetalSucks' },
+      { ...baseArticle, id: 'ls-1', sourceId: 'louder-sound', sourceName: 'Louder Sound' },
+    ];
+    const nonPriorityArticle = {
+      ...baseArticle,
+      id: 'ms-storm-1',
+      sourceId: 'metal-storm-reviews',
+      sourceName: 'Metal Storm',
+    };
+
+    it('renders an identical card size/structure for every source, differing only in the badge/source text', () => {
+      const renders = [...priorityArticles, nonPriorityArticle].map((article) =>
+        render(<FeedArticleCard article={article} />),
+      );
+
+      for (const { container } of renders) {
+        expect(container.firstChild).toHaveClass('h-40');
+        expect(container.firstChild).toHaveClass('sm:h-96');
+      }
+
+      expect(screen.getByText(/Metal Injection/)).toBeInTheDocument();
+      expect(screen.getByText(/MetalSucks/)).toBeInTheDocument();
+      expect(screen.getByText(/Louder Sound/)).toBeInTheDocument();
+      expect(screen.getByText(/Metal Storm/)).toBeInTheDocument();
     });
   });
 });

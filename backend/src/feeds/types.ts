@@ -4,6 +4,8 @@ export interface FeedSourceConfig {
   feedUrl: string;
   category: string;
   enabled: boolean;
+  /** Governs source-filter display order only (priority sources listed first); no effect on card size, article ordering, or prominence. */
+  priority: boolean;
 }
 
 export interface Article {
@@ -24,6 +26,7 @@ export interface SourceStatus {
   sourceId: string;
   sourceName: string;
   status: SourceHealth;
+  priority: boolean;
 }
 
 export interface CategoryGroup {

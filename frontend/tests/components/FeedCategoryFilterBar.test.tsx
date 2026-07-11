@@ -59,4 +59,19 @@ describe('FeedCategoryFilterBar', () => {
       'false',
     );
   });
+
+  it('gives every button a comfortable 44x44px minimum touch target (spec FR-006)', () => {
+    render(
+      <FeedCategoryFilterBar
+        categories={['News', 'Reviews']}
+        selectedCategory={null}
+        onSelectCategory={vi.fn()}
+      />,
+    );
+
+    for (const button of screen.getAllByRole('button')) {
+      expect(button).toHaveClass('min-h-11');
+      expect(button).toHaveClass('min-w-11');
+    }
+  });
 });

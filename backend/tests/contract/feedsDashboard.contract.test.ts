@@ -11,6 +11,7 @@ const CONTRACT_SOURCE_A: FeedSourceConfig = {
   feedUrl: 'https://contract-feed-a.test/rss',
   category: 'News',
   enabled: true,
+  priority: true,
 };
 const CONTRACT_SOURCE_B: FeedSourceConfig = {
   id: 'contract-source-b',
@@ -18,6 +19,7 @@ const CONTRACT_SOURCE_B: FeedSourceConfig = {
   feedUrl: 'https://contract-feed-b.test/rss',
   category: 'Reviews',
   enabled: true,
+  priority: false,
 };
 
 const mockMetalStormSources: FeedSourceConfig[] = [
@@ -27,6 +29,7 @@ const mockMetalStormSources: FeedSourceConfig[] = [
     feedUrl: 'https://contract-ms-news.test/rss',
     category: 'News',
     enabled: true,
+    priority: false,
   },
   {
     id: 'metal-storm-reviews',
@@ -34,6 +37,7 @@ const mockMetalStormSources: FeedSourceConfig[] = [
     feedUrl: 'https://contract-ms-reviews.test/rss',
     category: 'Reviews',
     enabled: true,
+    priority: false,
   },
   {
     id: 'metal-storm-interviews',
@@ -41,6 +45,7 @@ const mockMetalStormSources: FeedSourceConfig[] = [
     feedUrl: 'https://contract-ms-interviews.test/rss',
     category: 'Interviews',
     enabled: true,
+    priority: false,
   },
   {
     id: 'metal-storm-articles',
@@ -48,6 +53,7 @@ const mockMetalStormSources: FeedSourceConfig[] = [
     feedUrl: 'https://contract-ms-articles.test/rss',
     category: 'Articles',
     enabled: true,
+    priority: false,
   },
   {
     id: 'metal-storm-picks',
@@ -55,6 +61,7 @@ const mockMetalStormSources: FeedSourceConfig[] = [
     feedUrl: 'https://contract-ms-picks.test/rss',
     category: 'Staff Picks',
     enabled: true,
+    priority: false,
   },
 ];
 
@@ -66,6 +73,7 @@ jest.mock('../../src/feeds/feedSources', () => ({
       feedUrl: 'https://contract-feed-a.test/rss',
       category: 'News',
       enabled: true,
+      priority: true,
     },
     {
       id: 'contract-source-b',
@@ -73,6 +81,7 @@ jest.mock('../../src/feeds/feedSources', () => ({
       feedUrl: 'https://contract-feed-b.test/rss',
       category: 'Reviews',
       enabled: true,
+      priority: false,
     },
     ...mockMetalStormSources,
   ],
@@ -164,12 +173,23 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
     expect(res.status).toBe(200);
     expect(res.body.sourceStatuses).toEqual(
       expect.arrayContaining([
-        { sourceId: 'contract-source-a', sourceName: 'Contract Feed A', status: 'ok' },
-        { sourceId: 'contract-source-b', sourceName: 'Contract Feed B', status: 'ok' },
+        {
+          sourceId: 'contract-source-a',
+          sourceName: 'Contract Feed A',
+          status: 'ok',
+          priority: true,
+        },
+        {
+          sourceId: 'contract-source-b',
+          sourceName: 'Contract Feed B',
+          status: 'ok',
+          priority: false,
+        },
         ...mockMetalStormSources.map((source) => ({
           sourceId: source.id,
           sourceName: source.name,
           status: 'ok',
+          priority: false,
         })),
       ]),
     );

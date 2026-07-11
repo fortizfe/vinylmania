@@ -7,6 +7,7 @@ const mockFeedSources: FeedSourceConfig[] = [
     feedUrl: 'https://source-a.test/rss',
     category: 'News',
     enabled: true,
+    priority: true,
   },
   {
     id: 'agg-test-b',
@@ -14,6 +15,7 @@ const mockFeedSources: FeedSourceConfig[] = [
     feedUrl: 'https://source-b.test/rss',
     category: 'News',
     enabled: true,
+    priority: false,
   },
   {
     id: 'agg-test-disabled',
@@ -21,6 +23,7 @@ const mockFeedSources: FeedSourceConfig[] = [
     feedUrl: 'https://source-disabled.test/rss',
     category: 'Reviews',
     enabled: false,
+    priority: false,
   },
 ];
 
@@ -78,8 +81,8 @@ describe('getDashboard', () => {
 
     expect(result.sourceStatuses).toEqual(
       expect.arrayContaining([
-        { sourceId: 'agg-test-a', sourceName: 'Source A', status: 'ok' },
-        { sourceId: 'agg-test-b', sourceName: 'Source B', status: 'ok' },
+        { sourceId: 'agg-test-a', sourceName: 'Source A', status: 'ok', priority: true },
+        { sourceId: 'agg-test-b', sourceName: 'Source B', status: 'ok', priority: false },
       ]),
     );
     // The disabled source is never fetched and never appears in the response.
@@ -109,14 +112,38 @@ describe('getDashboard', () => {
 
     expect(result.sourceStatuses).toEqual(
       expect.arrayContaining([
-        { sourceId: 'agg-test-a', sourceName: 'Source A', status: 'ok' },
-        { sourceId: 'agg-test-b', sourceName: 'Source B', status: 'unavailable' },
+        { sourceId: 'agg-test-a', sourceName: 'Source A', status: 'ok', priority: true },
+        {
+          sourceId: 'agg-test-b',
+          sourceName: 'Source B',
+          status: 'unavailable',
+          priority: false,
+        },
       ]),
     );
 
     const newsCategory = result.categories.find((c) => c.category === 'News');
     expect(newsCategory?.articles).toHaveLength(1);
     expect(newsCategory?.articles[0].title).toBe('Healthy Article');
+  });
+
+  it('propagates each source\'s priority flag onto its sourceStatuses entry (data-model.md, spec FR-010 supporting)', async () => {
+    mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
+      if (feedUrl === mockFeedSources[0].feedUrl) {
+        return feedOutput([{ title: 'A1', link: 'https://source-a.test/1' }]);
+      }
+      if (feedUrl === mockFeedSources[1].feedUrl) {
+        throw new Error('simulated failure');
+      }
+      throw new Error(`unexpected feed url ${feedUrl}`);
+    });
+
+    const result = await getDashboard();
+
+    const sourceA = result.sourceStatuses.find((s) => s.sourceId === 'agg-test-a');
+    const sourceB = result.sourceStatuses.find((s) => s.sourceId === 'agg-test-b');
+    expect(sourceA).toMatchObject({ status: 'ok', priority: true });
+    expect(sourceB).toMatchObject({ status: 'unavailable', priority: false });
   });
 
   describe('category grouping, sorting, and cap (spec 024 FR-012, superseded by 025 FR-006)', () => {

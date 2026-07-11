@@ -23,6 +23,7 @@ export interface SourceStatus {
   sourceId: string;
   sourceName: string;
   status: SourceHealth;
+  priority: boolean;
 }
 
 export interface DashboardResponse {
