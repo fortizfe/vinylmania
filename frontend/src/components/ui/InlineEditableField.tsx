@@ -100,7 +100,7 @@ export const InlineEditableField = forwardRef<
         onClick={startEditing}
         aria-label={`Edit ${fieldLabel}`}
         className={clsx(
-          'flex items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors',
+          'flex min-h-11 items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors',
           'hover:bg-gray-100 dark:hover:bg-gray-900',
           '[@media(hover:none)]:bg-gray-50 [@media(hover:none)]:dark:bg-gray-900/60',
           !savedValue && 'italic text-gray-400 dark:text-gray-500',

@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -48,10 +48,11 @@ describe('MasterVersionsTable', () => {
 
     renderTable();
 
-    await waitFor(() => expect(screen.getByText(/Vinyl, LP, Album/)).toBeInTheDocument());
-    expect(screen.getByText('2000')).toBeInTheDocument();
-    expect(screen.getByText(/Warner Bros\. Records/)).toBeInTheDocument();
-    expect(screen.getByText('US')).toBeInTheDocument();
+    const table = await screen.findByRole('table');
+    expect(within(table).getByText(/Vinyl, LP, Album/)).toBeInTheDocument();
+    expect(within(table).getByText('2000')).toBeInTheDocument();
+    expect(within(table).getByText(/Warner Bros\. Records/)).toBeInTheDocument();
+    expect(within(table).getByText('US')).toBeInTheDocument();
     expect(mockGetMasterReleaseVersions).toHaveBeenCalledWith(1660109, 1);
   });
 
@@ -63,8 +64,9 @@ describe('MasterVersionsTable', () => {
 
     renderTable();
 
-    await waitFor(() => expect(screen.getByRole('link')).toBeInTheDocument());
-    expect(screen.getByRole('link')).toHaveAttribute('href', '/app/releases/98765');
+    const table = await screen.findByRole('table');
+    const link = within(table).getByRole('link');
+    expect(link).toHaveAttribute('href', '/app/releases/98765');
   });
 
   it('calls onPageChange when paginating', async () => {
@@ -92,7 +94,7 @@ describe('MasterVersionsTable', () => {
 
     renderTable();
 
-    await waitFor(() => expect(screen.getByText('Only Version')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText('Only Version').length).toBeGreaterThan(0));
     expect(screen.queryByRole('button', { name: /^next$/i })).not.toBeInTheDocument();
   });
 });

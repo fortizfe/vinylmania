@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { Button } from '../../../src/components/ui/Button';
+import { Button, iconButtonClassName } from '../../../src/components/ui/Button';
 
 describe('Button', () => {
   it('renders the primary variant by default', () => {
@@ -45,5 +45,30 @@ describe('Button', () => {
     const button = screen.getByRole('button', { name: 'Weighted' });
     expect(button.className).toMatch(/font-medium/);
     expect(button.className).not.toMatch(/font-bold/);
+  });
+
+  it('meets the 44px minimum touch target on the default "md" size (FR-004)', () => {
+    render(<Button>Tap me</Button>);
+
+    const button = screen.getByRole('button', { name: 'Tap me' });
+    expect(button.className).toMatch(/min-h-11/);
+  });
+
+  it('meets the 44x44px minimum touch target on the "icon" size (FR-004)', () => {
+    render(
+      <Button size="icon" aria-label="Icon action">
+        X
+      </Button>,
+    );
+
+    const button = screen.getByRole('button', { name: 'Icon action' });
+    expect(button.className).toMatch(/min-h-11/);
+    expect(button.className).toMatch(/min-w-11/);
+  });
+
+  it('applies the same 44x44px floor via iconButtonClassName() for non-button elements (FR-004)', () => {
+    const className = iconButtonClassName();
+    expect(className).toMatch(/min-h-11/);
+    expect(className).toMatch(/min-w-11/);
   });
 });

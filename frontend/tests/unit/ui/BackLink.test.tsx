@@ -25,4 +25,14 @@ describe('BackLink', () => {
 
     expect(screen.getByRole('link', { name: /back to library/i })).toBeInTheDocument();
   });
+
+  it('meets the 44px minimum touch target height (FR-004)', () => {
+    render(
+      <MemoryRouter>
+        <BackLink to="/app/library" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: /back/i }).className).toMatch(/min-h-11/);
+  });
 });

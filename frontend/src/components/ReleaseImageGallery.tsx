@@ -47,7 +47,7 @@ export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
               aria-label={`Show image ${index + 1} of ${images.length}`}
               aria-current={index === selectedIndex}
               className={clsx(
-                'aspect-square shrink-0 overflow-hidden rounded-md ring-2 transition',
+                'aspect-square min-h-11 min-w-11 shrink-0 overflow-hidden rounded-md ring-2 transition',
                 index === selectedIndex
                   ? 'ring-primary'
                   : 'ring-transparent hover:ring-gray-300 dark:hover:ring-gray-700',

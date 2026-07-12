@@ -14,12 +14,26 @@ const variantClasses: Record<NonNullable<ButtonProps['variant']>, string> = {
 };
 
 const sizeClasses: Record<NonNullable<ButtonProps['size']>, string> = {
-  md: 'px-4 py-2 text-sm',
-  icon: 'inline-flex h-9 w-9 items-center justify-center p-0',
+  md: 'min-h-11 px-4 py-2 text-sm',
+  icon: 'inline-flex min-h-11 min-w-11 items-center justify-center p-0',
 };
 
 const baseClassName =
   'rounded-xl font-medium transition-opacity disabled:cursor-default disabled:opacity-60';
+
+/**
+ * Class string matching a given `Button` variant/size, for non-`<button>`
+ * elements (e.g. a `Link`) that must look identical to one without nesting
+ * an interactive element inside another. Reuses the same touch-target floor
+ * (FR-004/FR-006) instead of hand-repeating Button's utility classes.
+ */
+export function buttonClassName(
+  variant: NonNullable<ButtonProps['variant']> = 'primary',
+  size: NonNullable<ButtonProps['size']> = 'md',
+  className?: string,
+) {
+  return clsx(baseClassName, sizeClasses[size], variantClasses[variant], className);
+}
 
 /**
  * Class string for a `size="icon" variant="secondary"` `Button`, for
@@ -27,7 +41,7 @@ const baseClassName =
  * without nesting an interactive element inside another.
  */
 export function iconButtonClassName(className?: string) {
-  return clsx(baseClassName, sizeClasses.icon, variantClasses.secondary, className);
+  return buttonClassName('secondary', 'icon', className);
 }
 
 export function Button({

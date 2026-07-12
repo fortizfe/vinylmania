@@ -23,4 +23,12 @@ describe('Input', () => {
 
     expect(handleChange).toHaveBeenCalled();
   });
+
+  it('meets the 44px minimum touch target height (FR-004)', () => {
+    render(
+      <Input id="record-search" label="Search Discogs" value="" onChange={() => {}} />,
+    );
+
+    expect(screen.getByLabelText('Search Discogs').className).toMatch(/min-h-11/);
+  });
 });

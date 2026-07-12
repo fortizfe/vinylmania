@@ -44,7 +44,10 @@ export function LandingPage() {
       <LandingHeader onClick={signIn} loading={signingIn} error={error} />
       <main className="flex flex-1 flex-col items-center gap-16 p-6 text-center sm:gap-20 sm:p-12">
         <LandingHero />
-        <div className="flex w-full max-w-4xl flex-col items-center gap-12 sm:flex-row sm:items-start sm:justify-center sm:gap-8">
+        <div
+          data-testid="landing-pillar-grid"
+          className="grid w-full max-w-4xl grid-cols-1 gap-12 sm:grid-cols-3 sm:gap-8 lg:max-w-5xl xl:max-w-6xl xl:gap-16"
+        >
           {PILLAR_SECTIONS.map((pillar) => (
             <LandingPillarSection
               key={pillar.id}

@@ -54,7 +54,7 @@ export function MasterReleaseDetailPage() {
 
   if (isLoading || !master) {
     return (
-      <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8">
+      <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
         <BackLink to={backTo} />
         <RecordDetailSkeleton />
       </main>
@@ -62,18 +62,18 @@ export function MasterReleaseDetailPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8">
+    <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
       <BackLink to={backTo} />
       <Card>
         <div
           data-testid="master-detail-content"
-          className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+          className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3"
         >
-          <div data-testid="master-detail-gallery" className="lg:col-span-2">
+          <div data-testid="master-detail-gallery" className="lg:col-span-2 xl:col-span-1">
             <ReleaseImageGallery images={master.images} alt={master.title} />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2 xl:col-span-2">
             <div data-testid="master-detail-details">
               <MasterReleaseDetailsSection master={master} />
             </div>
@@ -83,7 +83,7 @@ export function MasterReleaseDetailPage() {
             </div>
           </div>
 
-          <div data-testid="master-detail-versions" className="lg:col-span-2">
+          <div data-testid="master-detail-versions" className="lg:col-span-2 xl:col-span-3">
             <MasterVersionsTable
               discogsId={parsedId}
               page={versionsPage}

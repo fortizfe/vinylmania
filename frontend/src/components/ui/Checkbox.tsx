@@ -8,7 +8,7 @@ interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'typ
 
 export function Checkbox({ label, id, className, ...props }: CheckboxProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-h-11 items-center gap-2">
       <input
         id={id}
         type="checkbox"

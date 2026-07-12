@@ -83,6 +83,57 @@ test.describe('Responsive header navigation (US1, US2, US3)', () => {
     await expect(page).toHaveURL(/\/app$/);
   });
 
+  test.describe('44x44px touch targets (spec 035, Scenarios 14-15)', () => {
+    test('every mobile header control meets 44x44px: hamburger trigger, nav-modal rows, and search submit', async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 375, height: 812 });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+
+      const hamburger = page.getByRole('button', { name: /^menu$/i });
+      const hamburgerBox = await hamburger.boundingBox();
+      expect(hamburgerBox?.width).toBeGreaterThanOrEqual(44);
+      expect(hamburgerBox?.height).toBeGreaterThanOrEqual(44);
+
+      await hamburger.click();
+      const dialog = page.getByRole('dialog');
+      for (const name of [/my library/i, /my wishlist/i, /profile/i]) {
+        const box = await dialog.getByRole('link', { name }).boundingBox();
+        expect(box?.width).toBeGreaterThanOrEqual(44);
+        expect(box?.height).toBeGreaterThanOrEqual(44);
+      }
+      await page.keyboard.press('Escape');
+
+      const searchSubmit = page.getByRole('button', { name: /^search$/i });
+      const searchBox = await searchSubmit.boundingBox();
+      expect(searchBox?.width).toBeGreaterThanOrEqual(44);
+      expect(searchBox?.height).toBeGreaterThanOrEqual(44);
+    });
+
+    test('every desktop header control meets 44x44px: nav icons and sign-out button, with no regression to the existing composition', async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+
+      for (const name of [/^profile$/i, /my wishlist/i, /my library/i]) {
+        const box = await page.getByRole('link', { name }).boundingBox();
+        expect(box?.width).toBeGreaterThanOrEqual(44);
+        expect(box?.height).toBeGreaterThanOrEqual(44);
+      }
+
+      const signOut = page.getByRole('button', { name: /sign out/i });
+      const signOutBox = await signOut.boundingBox();
+      expect(signOutBox?.width).toBeGreaterThanOrEqual(44);
+      expect(signOutBox?.height).toBeGreaterThanOrEqual(44);
+
+      // Desktop composition unchanged: icons visible, hamburger hidden.
+      await expect(page.getByRole('button', { name: /^menu$/i })).toBeHidden();
+    });
+  });
+
   test.describe('brand mark responsiveness (feature 034)', () => {
     test('shows the icon+wordmark lockup at 1280px, icon-only at 375px and 320px with no overlap of the hamburger, and stays fixed-size at an ultra-wide viewport', async ({
       page,

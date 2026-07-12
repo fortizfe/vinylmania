@@ -6,11 +6,11 @@ export function RecordDetailSkeleton() {
     <Card>
       <div
         data-testid="record-detail-skeleton"
-        className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+        className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3"
       >
-        <Skeleton className="aspect-square w-full lg:col-span-2" />
+        <Skeleton className="aspect-square w-full lg:col-span-2 xl:col-span-1" />
 
-        <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2 xl:col-span-2">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-3">
               <Skeleton className="h-7 w-2/3" />
@@ -31,7 +31,7 @@ export function RecordDetailSkeleton() {
           </div>
         </div>
 
-        <Skeleton className="h-16 w-full lg:col-span-2" />
+        <Skeleton className="h-16 w-full lg:col-span-2 xl:col-span-3" />
       </div>
     </Card>
   );

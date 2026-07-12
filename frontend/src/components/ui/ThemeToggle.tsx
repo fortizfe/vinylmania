@@ -63,7 +63,7 @@ export function ThemeToggle({ theme, onToggle, className }: ThemeToggleProps) {
       aria-label="Dark mode"
       onClick={onToggle}
       className={clsx(
-        'relative inline-flex h-9 w-16 shrink-0 items-center overflow-hidden rounded-full border transition-colors duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+        'relative inline-flex min-h-11 h-9 w-16 shrink-0 items-center overflow-hidden rounded-full border transition-colors duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
         isDark
           ? 'border-slate-700 bg-linear-to-b from-slate-800 to-slate-950'
           : 'border-sky-300 bg-linear-to-b from-sky-300 to-sky-500',
