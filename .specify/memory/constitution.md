@@ -1,22 +1,23 @@
 <!--
 Sync Impact Report
-Version change: 2.1.0 → 2.2.0
+Version change: 2.2.0 → 2.3.0
 Modified principles: none (existing principles I-VII unchanged)
-Added sections:
-  - UI Design System & Styling (Tailwind CSS v4): two new mandatory bullets —
-    "Dual responsive layout (desktop & mobile)" (every screen MUST implement
-    a purpose-built wide-viewport layout that uses available horizontal
-    space, and a separate purpose-built mobile layout, both breakpoint-driven
-    rather than device-detected) and "Minimum touch target size (44×44 CSS
-    px)" (every interactive control MUST meet a 44×44 CSS px minimum touch
-    target on mobile, per WCAG 2.5.5 / Apple HIG, using Tailwind's stock
-    spacing scale). Section Rationale extended to cover both new rules.
-Changed sections: none (no existing principle or rule redefined)
-Removed sections: none
+Added sections: none
+Changed sections:
+  - Development Workflow (Quality Gates): the two "CHANGELOG.md" bullets
+    (mandatory per-package changelog entry + matching package.json version
+    bump on every backend/frontend PR) were replaced with a single rule
+    prohibiting manual changelog/version maintenance — changelog generation
+    and semantic version bumps are now handled by the GitHub Actions
+    pipeline from Conventional Commit history instead of by developers in
+    each PR. Reviewers MUST NOT reject PRs for missing a manual entry/bump,
+    and MUST NOT accept hand-written CHANGELOG.md/package.json version
+    edits. Rationale updated to reflect automation replacing manual upkeep.
+Removed sections: none (rule replaced in place, not deleted outright)
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (Constitution Check remains generic; no principle-specific references to update)
-  ✅ .specify/templates/spec-template.md (no principle-specific references; no change needed)
-  ✅ .specify/templates/tasks-template.md (no principle-specific references; no change needed)
+  ✅ .specify/templates/plan-template.md (no changelog-specific references; no change needed)
+  ✅ .specify/templates/spec-template.md (no changelog-specific references; no change needed)
+  ✅ .specify/templates/tasks-template.md (no changelog-specific references; no change needed)
   ✅ .specify/templates/checklist-template.md (generic checklist template; no conflicting gate)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
 Follow-up TODOs: none
@@ -276,36 +277,21 @@ frontend risk lives in cross-cutting flows (auth, search, navigation, collection
 management) that only fail when real user journeys are exercised end-to-end.
 Keeping e2e mandatory at pipeline level preserves release confidence without
 forcing every local development cycle to run the full suite.
-- Every development MUST keep a `CHANGELOG.md` up to date in each package it
-  touches: `backend/CHANGELOG.md` for `/backend` changes and
-  `frontend/CHANGELOG.md` for `/frontend` changes. Any PR that modifies code
-  under one of these directories MUST include a corresponding entry in that
-  package's `CHANGELOG.md` describing the change (following the
-  [Keep a Changelog](https://keepachangelog.com) `Added`/`Changed`/`Fixed`/
-  `Removed` categorization and aligned with Principle VI's semantic version
-  classification). Reviewers MUST reject PRs that change `/backend` or
-  `/frontend` code without a matching changelog entry.
-- Whenever a `CHANGELOG.md` entry is added, the same PR MUST bump that
-  package's `version` field in its `package.json` to match the semantic-version
-  classification of the change (MAJOR/MINOR/PATCH per Principle VI), and MUST
-  add the entry directly under a new version heading dated with the release
-  date. This project has no `[Unreleased]` staging section in either
-  changelog — Vercel deploys `main` on every merge (see Technology Stack:
-  Deployment), so every changelog entry is already deployed by the time it
-  lands; there is no pending/undeployed state to stage entries under.
-  Reviewers MUST reject PRs that add a changelog entry without a matching
-  version bump, or that bump a version without a corresponding changelog
-  entry.
-**Rationale**: A per-package changelog gives collectors, contributors, and
-reviewers a human-readable history of what shipped in each deployable unit,
-independent of git log archaeology, and keeps the changelog entry — not an
-afterthought — tied to the same PR that introduces the change it describes.
-Tying the version bump to the same PR keeps `package.json` and
-`CHANGELOG.md` from drifting apart, and keeps every release's version number
-a direct, reviewable consequence of Principle VI's classification rather than
-a separate, easy-to-forget release step. Dropping `[Unreleased]` reflects
-that continuous deployment leaves no meaningful "not yet released" state to
-track.
+- Developers MUST NOT manually maintain `backend/CHANGELOG.md` or
+  `frontend/CHANGELOG.md`, and MUST NOT manually bump the `version` field in
+  either package's `package.json` as part of a PR. Changelog generation and
+  semantic version bumps for both packages are handled automatically by the
+  GitHub Actions pipeline, driven by Conventional Commit messages (see the
+  commit message rule above and Principle VI's classification). Reviewers
+  MUST NOT reject a PR for missing a changelog entry or a manual version
+  bump; a PR MUST NOT include hand-written changes to either `CHANGELOG.md`
+  file or a hand-edited `version` field.
+**Rationale**: Manually keeping per-package changelogs and version bumps in
+sync with every PR was a recurring source of drift, merge conflicts, and
+forgotten steps. Deriving both from Conventional Commit history in the CI/CD
+pipeline (Principle III: Simplicity, YAGNI & KISS) removes duplicated
+developer effort while keeping the same Conventional Commits input and the
+same Principle VI classification as the source of truth.
 
 ## Governance
 
@@ -325,4 +311,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 2.2.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-11
+**Version**: 2.3.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-12
