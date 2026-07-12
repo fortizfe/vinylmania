@@ -46,7 +46,7 @@ function DismissibleBanner({
         type="button"
         aria-label="Dismiss"
         onClick={onDismiss}
-        className="font-medium opacity-70 transition-opacity hover:opacity-100"
+        className="flex min-h-11 min-w-11 items-center justify-center font-medium opacity-70 transition-opacity hover:opacity-100"
       >
         ✕
       </button>
@@ -87,7 +87,7 @@ export function ProfilePage() {
   }, [saveFailed]);
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8">
+    <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8 xl:max-w-5xl">
       <header>
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           Profile
@@ -104,25 +104,30 @@ export function ProfilePage() {
           onDismiss={() => setSaveFailureDismissed(true)}
         />
       )}
-      <section aria-label="Preferences" className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          Preferences
-        </h2>
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-900 dark:bg-gray-950">
-          <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              Dark mode
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Switch between a light or dark appearance for the whole app.
-            </p>
+      <div
+        data-testid="profile-panels"
+        className="flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-8"
+      >
+        <section aria-label="Preferences" className="flex flex-col gap-4 xl:flex-1">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            Preferences
+          </h2>
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-900 dark:bg-gray-950">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Dark mode
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Switch between a light or dark appearance for the whole app.
+              </p>
+            </div>
+            <ThemeToggle theme={theme} onToggle={toggle} />
           </div>
-          <ThemeToggle theme={theme} onToggle={toggle} />
-        </div>
-      </section>
-      <section aria-label="Connected services" className="flex flex-col gap-4">
-        <DiscogsConnectionCard />
-      </section>
+        </section>
+        <section aria-label="Connected services" className="flex flex-col gap-4 xl:flex-1">
+          <DiscogsConnectionCard />
+        </section>
+      </div>
     </main>
   );
 }

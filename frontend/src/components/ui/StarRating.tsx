@@ -28,7 +28,7 @@ export function StarRating({ value, onChange, disabled = false }: StarRatingProp
             disabled={disabled}
             onClick={() => handleClick(star)}
             className={[
-              'rounded p-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+              'flex min-h-11 min-w-11 items-center justify-center rounded transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
               disabled
                 ? 'cursor-not-allowed opacity-40'
                 : 'cursor-pointer hover:text-amber-400',

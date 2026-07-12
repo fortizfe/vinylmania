@@ -18,7 +18,7 @@ import { ApiError } from '../services/apiClient';
 const SKELETON_COUNT = 8;
 const PAGE_SIZE = 20;
 const resultsGridClasses =
-  'grid list-none grid-cols-2 gap-4 p-0 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
+  'grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
 const TEXT_FILTER_LABELS: Record<'genre' | 'style', string> = {
   genre: 'Genre',
@@ -120,7 +120,7 @@ export function SearchResultsPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6 sm:p-8">
+    <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
         Search results
       </h1>
@@ -179,7 +179,7 @@ export function SearchResultsPage() {
 
       {!loading && results.length > 0 && (
         <>
-          <ul className={resultsGridClasses}>
+          <ul className={resultsGridClasses} data-testid="search-results-grid">
             {results.map((result) => (
               <li key={result.discogsId}>
                 <SearchResultCard

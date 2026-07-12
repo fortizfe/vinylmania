@@ -8,6 +8,15 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.22.0] - 2026-07-12
+
+### Changed
+
+- Every screen except the Dashboard (already conformant) now has a purpose-built desktop composition that uses the available horizontal space — multi-column grids on Landing, Search results, and My library; a three-panel layout on the record/release/master-release detail pages; and side-by-side panels on Profile — instead of a single centered column with unused space on wide monitors (spec 035).
+- Every interactive control across those screens and the authenticated app header (buttons, links acting as buttons, filter chips, inputs, icon buttons, the hamburger menu's nav rows, and the Master Versions table's pagination) now measures at least 44×44 CSS px on mobile-width viewports, meeting WCAG 2.5.5. The fix is centralized in the shared `Button`, `Input`, `Checkbox`, `ThemeToggle`, `StarRating`, and `BackLink` components (spec 035).
+- The Master Versions table on the master-release detail page now renders as a stacked card list below the `md:` breakpoint instead of a horizontally-scrollable table, eliminating horizontal scroll on mobile (spec 035).
+- `LibraryLinkRequired`'s "Go to your profile" link now reuses the shared `Button` styling helper instead of duplicating it by hand (spec 035).
+
 ## [0.21.0] - 2026-07-11
 
 ### Changed

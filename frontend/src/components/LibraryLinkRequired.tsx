@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 
+import { buttonClassName } from './ui/Button';
 import { Card } from './ui/Card';
 
 interface LibraryLinkRequiredProps {
@@ -31,10 +32,7 @@ export function LibraryLinkRequired({ variant }: LibraryLinkRequiredProps) {
         {copy.title}
       </h2>
       <p className="text-gray-500 dark:text-gray-400">{copy.body}</p>
-      <Link
-        to="/app/profile"
-        className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-      >
+      <Link to="/app/profile" className={buttonClassName('primary', 'md', 'inline-flex items-center')}>
         Go to your profile
       </Link>
     </Card>

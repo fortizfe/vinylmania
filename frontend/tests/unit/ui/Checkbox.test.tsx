@@ -37,4 +37,13 @@ describe('Checkbox', () => {
 
     expect(handleChange).toHaveBeenCalledTimes(1);
   });
+
+  it('wraps the input+label in a row at least 44px tall (FR-004)', () => {
+    render(
+      <Checkbox id="format-vinyl" label="Vinyl" checked={false} onChange={() => {}} />,
+    );
+
+    const row = screen.getByLabelText('Vinyl').closest('div');
+    expect(row?.className).toMatch(/min-h-11/);
+  });
 });

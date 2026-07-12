@@ -55,6 +55,7 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+.hu/
 
 # Spec Kit extension catalog cache
 .specify/extensions/.cache/

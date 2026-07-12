@@ -145,6 +145,18 @@ describe('Modal', () => {
     expect(screen.getByRole('dialog').className).toMatch(/scrollbar-hidden/);
   });
 
+  it('renders a close button that meets the 44x44px minimum touch target (FR-004)', () => {
+    render(
+      <Modal open onClose={() => {}}>
+        Content
+      </Modal>,
+    );
+
+    const closeButton = screen.getByRole('button', { name: /close/i });
+    expect(closeButton.className).toMatch(/min-h-11/);
+    expect(closeButton.className).toMatch(/min-w-11/);
+  });
+
   it('still supports backdrop click, close button, and Escape when position="end"', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
