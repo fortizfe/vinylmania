@@ -49,3 +49,36 @@ jobs:
       - name: Run tests
         working-directory: frontend
         run: npm test
+
+  release:
+    name: Compute version & changelog
+    needs: [backend-test, frontend-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-main
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Run release script tests
+        run: node --test scripts/release/__tests__/*.test.js
+
+      - name: Configure release commit identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Compute version bump and changelog
+        run: node scripts/release/run-release.js
+
+      - name: Push release commit and tag (if any)
+        run: git push --follow-tags
