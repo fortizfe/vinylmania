@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
+import { FiltersControl } from '../components/FiltersControl';
 import { LibraryLinkRequired } from '../components/LibraryLinkRequired';
 import { RecordCard } from '../components/RecordCard';
 import { RecordCardSkeleton } from '../components/RecordCardSkeleton';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import {
+  buildLibraryPath,
+  type LibraryFilters,
+  useLibraryQueryParams,
+} from '../hooks/useLibraryQueryParams';
 import { useLibraryList, useRefreshLibrary } from '../queries/libraryQueries';
 import { ApiError } from '../services/apiClient';
 
@@ -22,16 +28,39 @@ function gateVariant(error: unknown): 'not-linked' | 'relink' | null {
   return null;
 }
 
-export function LibraryListPage() {
-  const [page, setPage] = useState(1);
-  const pageSize = 20;
+function activeCount(filters: LibraryFilters): number {
+  return (
+    (filters.genre?.length ?? 0) +
+    (filters.style?.length ?? 0) +
+    (filters.format?.length ?? 0)
+  );
+}
 
-  const { data, isLoading, isError: loadError, error } = useLibraryList(page, pageSize);
-  const refresh = useRefreshLibrary(page, pageSize);
+export function LibraryListPage() {
+  const navigate = useNavigate();
+  const pageSize = 20;
+  const { page, genre, style, format } = useLibraryQueryParams();
+  const filters: LibraryFilters = { genre, style, format };
+  const hasActiveFilters = activeCount(filters) > 0;
+
+  const { data, isLoading, isError: loadError, error } = useLibraryList(
+    page,
+    pageSize,
+    filters,
+  );
+  const refresh = useRefreshLibrary(page, pageSize, filters);
   const entries = data?.items ?? null;
   const totalItems = data?.totalItems ?? 0;
   const hasNextPage = page * pageSize < totalItems;
   const gate = loadError ? gateVariant(error) : null;
+
+  function applyFilters(newFilters: LibraryFilters) {
+    navigate(buildLibraryPath(1, newFilters));
+  }
+
+  function clearFilters() {
+    navigate(buildLibraryPath(1));
+  }
 
   // FR-003: while the accounts are not linked, the library shows only the
   // gate — no records, no add/refresh actions.
@@ -61,6 +90,8 @@ export function LibraryListPage() {
         </Button>
       </div>
 
+      <FiltersControl filters={filters} onApply={applyFilters} onClear={clearFilters} />
+
       {refresh.isError && (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">
           Couldn&apos;t refresh from Discogs right now. Please try again.
@@ -83,7 +114,15 @@ export function LibraryListPage() {
         </ul>
       )}
 
-      {!loadError && entries?.length === 0 && (
+      {!loadError && !isLoading && entries?.length === 0 && hasActiveFilters && (
+        <Card>
+          <p className="text-gray-500 dark:text-gray-400">
+            No results for the active filters. Try adjusting or clearing them.
+          </p>
+        </Card>
+      )}
+
+      {!loadError && !isLoading && entries?.length === 0 && !hasActiveFilters && (
         <Card>
           <p className="text-gray-500 dark:text-gray-400">
             No records yet. Add your first one to get started.
@@ -102,14 +141,14 @@ export function LibraryListPage() {
             <Button
               variant="secondary"
               disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
+              onClick={() => navigate(buildLibraryPath(page - 1, filters))}
             >
               Previous
             </Button>
             <Button
               variant="secondary"
               disabled={!hasNextPage}
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => navigate(buildLibraryPath(page + 1, filters))}
             >
               Next
             </Button>

@@ -6,6 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 
+import type { LibraryFilters } from '../hooks/useLibraryQueryParams';
 import * as libraryApi from '../services/libraryApi';
 import type {
   EnrichedLibraryEntry,
@@ -16,8 +17,8 @@ import type {
 export const libraryKeys = {
   all: ['library'] as const,
   lists: () => [...libraryKeys.all, 'list'] as const,
-  list: (page: number, pageSize: number) =>
-    [...libraryKeys.lists(), page, pageSize] as const,
+  list: (page: number, pageSize: number, filters: LibraryFilters = {}) =>
+    [...libraryKeys.lists(), page, pageSize, filters] as const,
   details: () => [...libraryKeys.all, 'detail'] as const,
   detail: (entryId: string) => [...libraryKeys.details(), entryId] as const,
 };
@@ -25,10 +26,11 @@ export const libraryKeys = {
 export function useLibraryList(
   page: number,
   pageSize: number,
+  filters: LibraryFilters = {},
 ): UseQueryResult<PaginatedLibraryEntries> {
   return useQuery({
-    queryKey: libraryKeys.list(page, pageSize),
-    queryFn: () => libraryApi.list(page, pageSize),
+    queryKey: libraryKeys.list(page, pageSize, filters),
+    queryFn: () => libraryApi.list(page, pageSize, false, filters),
     retry: false,
   });
 }
@@ -37,13 +39,14 @@ export function useLibraryList(
 export function useRefreshLibrary(
   page: number,
   pageSize: number,
+  filters: LibraryFilters = {},
 ): UseMutationResult<PaginatedLibraryEntries, unknown, void> {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => libraryApi.list(page, pageSize, true),
+    mutationFn: () => libraryApi.list(page, pageSize, true, filters),
     onSuccess: (data) => {
-      queryClient.setQueryData(libraryKeys.list(page, pageSize), data);
+      queryClient.setQueryData(libraryKeys.list(page, pageSize, filters), data);
     },
   });
 }

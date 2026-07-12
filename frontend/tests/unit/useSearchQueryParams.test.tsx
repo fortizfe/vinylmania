@@ -39,7 +39,7 @@ describe('useSearchQueryParams', () => {
     expect(result.current).toEqual({ query: '', page: 1 });
   });
 
-  it('parses genre/style filters from the URL (feature 021)', () => {
+  it('parses genre/style filters from the URL as arrays (feature 038)', () => {
     const { result } = renderHook(() => useSearchQueryParams(), {
       wrapper: wrapper(['/app/search?q=nirvana&genre=Rock&style=Grunge']),
     });
@@ -47,27 +47,47 @@ describe('useSearchQueryParams', () => {
     expect(result.current).toEqual({
       query: 'nirvana',
       page: 1,
-      genre: 'Rock',
-      style: 'Grunge',
+      genre: ['Rock'],
+      style: ['Grunge'],
     });
   });
 
-  it('omits a filter entirely when its URL param is absent or blank (feature 021)', () => {
+  it('parses a comma-joined genre/style URL param into a string[] of recognized values, in canonical catalog order (feature 038)', () => {
+    const { result } = renderHook(() => useSearchQueryParams(), {
+      wrapper: wrapper(['/app/search?q=nirvana&genre=Rock,Electronic&style=Shoegaze,Grunge']),
+    });
+
+    // "Rock,Electronic" in the URL, but GENRE_OPTIONS lists Electronic before Rock.
+    expect(result.current.genre).toEqual(['Electronic', 'Rock']);
+    // "Shoegaze,Grunge" in the URL, but STYLE_OPTIONS lists Grunge before Shoegaze.
+    expect(result.current.style).toEqual(['Grunge', 'Shoegaze']);
+  });
+
+  it('drops genre/style values not present in their catalogs while keeping recognized ones (feature 038)', () => {
+    const { result } = renderHook(() => useSearchQueryParams(), {
+      wrapper: wrapper(['/app/search?q=nirvana&genre=Rock,NotAGenre&style=Grunge,NotAStyle']),
+    });
+
+    expect(result.current.genre).toEqual(['Rock']);
+    expect(result.current.style).toEqual(['Grunge']);
+  });
+
+  it('omits a filter entirely when its URL param is absent, blank, or has no recognized values (feature 038)', () => {
     const { result } = renderHook(() => useSearchQueryParams(), {
       wrapper: wrapper(['/app/search?q=nirvana&genre=Rock&style=%20%20']),
     });
 
-    expect(result.current).toEqual({ query: 'nirvana', page: 1, genre: 'Rock' });
+    expect(result.current).toEqual({ query: 'nirvana', page: 1, genre: ['Rock'] });
     expect(result.current.style).toBeUndefined();
   });
 
   it('parses a comma-joined format URL param into a string[] of recognized values, in canonical FORMAT_OPTIONS order (feature 022)', () => {
     const { result } = renderHook(() => useSearchQueryParams(), {
-      wrapper: wrapper(['/app/search?q=nirvana&format=CD,Vinyl']),
+      wrapper: wrapper(['/app/search?q=nirvana&format=Vinyl,CD']),
     });
 
-    // "CD,Vinyl" in the URL, but FORMAT_OPTIONS lists Vinyl before CD.
-    expect(result.current.format).toEqual(['Vinyl', 'CD']);
+    // "Vinyl,CD" in the URL, but FORMAT_OPTIONS (feature 038) lists CD before Vinyl.
+    expect(result.current.format).toEqual(['CD', 'Vinyl']);
   });
 
   it('drops format values not present in FORMAT_OPTIONS while keeping recognized ones (FR-010, feature 022)', () => {
@@ -91,7 +111,7 @@ describe('useSearchQueryParams', () => {
       wrapper: wrapper(['/app/search?q=nirvana&artist=Nirvana&genre=Rock']),
     });
 
-    expect(result.current).toEqual({ query: 'nirvana', page: 1, genre: 'Rock' });
+    expect(result.current).toEqual({ query: 'nirvana', page: 1, genre: ['Rock'] });
     expect('artist' in result.current).toBe(false);
   });
 });
@@ -109,39 +129,45 @@ describe('buildSearchPath', () => {
     expect(buildSearchPath('stockholm', 1)).toBe('/app/search?q=stockholm');
   });
 
-  it('encodes non-empty text filters and omits unset ones (feature 021)', () => {
-    expect(buildSearchPath('stockholm', 1, { genre: 'Rock', style: 'Grunge' })).toBe(
-      '/app/search?q=stockholm&genre=Rock&style=Grunge',
+  it('encodes non-empty genre/style arrays and omits unset ones (feature 038)', () => {
+    expect(
+      buildSearchPath('stockholm', 1, { genre: ['Rock'], style: ['Grunge'] }),
+    ).toBe('/app/search?q=stockholm&genre=Rock&style=Grunge');
+  });
+
+  it('joins a genre/style array into a single comma-separated param, in canonical catalog order (feature 038)', () => {
+    expect(buildSearchPath('stockholm', 1, { genre: ['Rock', 'Electronic'] })).toBe(
+      '/app/search?q=stockholm&genre=Electronic%2CRock',
     );
   });
 
-  it('trims filter values and drops whitespace-only ones (feature 021)', () => {
-    expect(buildSearchPath('stockholm', 1, { genre: '  Rock  ', style: '   ' })).toBe(
-      '/app/search?q=stockholm&genre=Rock',
+  it('omits the genre/style params entirely when their arrays are empty (feature 038)', () => {
+    expect(buildSearchPath('stockholm', 1, { genre: [], style: ['Grunge'] })).toBe(
+      '/app/search?q=stockholm&style=Grunge',
     );
   });
 
   it('joins a format array into a single comma-separated param, in canonical FORMAT_OPTIONS order (feature 022)', () => {
-    expect(buildSearchPath('stockholm', 1, { format: ['CD', 'Vinyl'] })).toBe(
-      '/app/search?q=stockholm&format=Vinyl%2CCD',
+    expect(buildSearchPath('stockholm', 1, { format: ['Vinyl', 'CD'] })).toBe(
+      '/app/search?q=stockholm&format=CD%2CVinyl',
     );
   });
 
   it('omits the format param entirely when the array is empty (FR-005, feature 022)', () => {
-    expect(buildSearchPath('stockholm', 1, { genre: 'Rock', format: [] })).toBe(
+    expect(buildSearchPath('stockholm', 1, { genre: ['Rock'], format: [] })).toBe(
       '/app/search?q=stockholm&genre=Rock',
     );
   });
 
   it('does not accept/encode an artist filter (FR-001, feature 022, US2)', () => {
     // @ts-expect-error artist is no longer part of SearchFilters (feature 022)
-    expect(buildSearchPath('stockholm', 1, { artist: 'Nirvana', genre: 'Rock' })).toBe(
+    expect(buildSearchPath('stockholm', 1, { artist: 'Nirvana', genre: ['Rock'] })).toBe(
       '/app/search?q=stockholm&genre=Rock',
     );
   });
 
-  it('round-trips text filters through a built URL so a reload reproduces the identical filtered request (FR-007, Acceptance Scenario 3)', () => {
-    const filters = { genre: 'Rock', style: 'Grunge' };
+  it('round-trips genre/style arrays through a built URL so a reload reproduces the identical filtered request (FR-007, Acceptance Scenario 3)', () => {
+    const filters = { genre: ['Rock'], style: ['Grunge'] };
     const path = buildSearchPath('nevermind', 3, filters);
 
     const { result } = renderHook(() => useSearchQueryParams(), {
@@ -151,8 +177,8 @@ describe('buildSearchPath', () => {
     expect(result.current).toEqual({ query: 'nevermind', page: 3, ...filters });
   });
 
-  it('round-trips a format selection through a built URL, reproducing the identical array (FR-007, SC-003, feature 022)', () => {
-    const filters = { format: ['Vinyl', 'CD'] };
+  it('round-trips a format selection through a built URL, reproducing the identical set of values (FR-007, SC-003, feature 022)', () => {
+    const filters = { format: ['CD', 'Vinyl'] };
     const path = buildSearchPath('nevermind', 3, filters);
 
     const { result } = renderHook(() => useSearchQueryParams(), {
@@ -162,7 +188,7 @@ describe('buildSearchPath', () => {
     expect(result.current).toEqual({
       query: 'nevermind',
       page: 3,
-      format: ['Vinyl', 'CD'],
+      format: ['CD', 'Vinyl'],
     });
   });
 });

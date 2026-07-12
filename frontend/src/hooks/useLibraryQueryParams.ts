@@ -5,14 +5,13 @@ import { FORMAT_OPTIONS } from '../constants/formatOptions';
 import { GENRE_OPTIONS } from '../constants/genreOptions';
 import { STYLE_OPTIONS } from '../constants/styleOptions';
 
-export interface SearchFilters {
+export interface LibraryFilters {
   genre?: string[];
   style?: string[];
   format?: string[];
 }
 
-export interface SearchQueryParams extends SearchFilters {
-  query: string;
+export interface LibraryQueryParams extends LibraryFilters {
   page: number;
 }
 
@@ -25,8 +24,8 @@ const MULTI_VALUE_FILTERS = {
 /**
  * Parses a comma-joined URL param into the subset of values found in the
  * given catalog, re-ordered to match that catalog's canonical order
- * (generalized in feature 038 from `format`-only, feature 022 FR-010:
- * unrecognized values are silently dropped).
+ * (mirrors `useSearchQueryParams`' identical helper — feature 038, FR-010/
+ * FR-022 apply the same URL-reflects-filters requirement to Library).
  */
 function parseMultiValueParam(
   value: string | null,
@@ -53,19 +52,18 @@ function buildMultiValueParam(
   return ordered.length > 0 ? ordered.join(',') : undefined;
 }
 
-export function useSearchQueryParams(): SearchQueryParams {
+export function useLibraryQueryParams(): LibraryQueryParams {
   const location = useLocation();
 
   return useMemo(() => {
     const params = new URLSearchParams(location.search);
-    const query = params.get('q') ?? '';
     const parsedPage = Number(params.get('page'));
     const page =
       Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
-    const filters: SearchFilters = {};
+    const filters: LibraryFilters = {};
     for (const [name, catalog] of Object.entries(MULTI_VALUE_FILTERS) as [
-      keyof SearchFilters,
+      keyof LibraryFilters,
       readonly string[],
     ][]) {
       const values = parseMultiValueParam(params.get(name), catalog);
@@ -74,22 +72,17 @@ export function useSearchQueryParams(): SearchQueryParams {
       }
     }
 
-    return { query, page, ...filters };
+    return { page, ...filters };
   }, [location.search]);
 }
 
-export function buildSearchPath(
-  query: string,
-  page = 1,
-  filters?: SearchFilters,
-): string {
+export function buildLibraryPath(page = 1, filters?: LibraryFilters): string {
   const params = new URLSearchParams();
-  params.set('q', query.trim());
   if (page > 1) {
     params.set('page', String(page));
   }
   for (const [name, catalog] of Object.entries(MULTI_VALUE_FILTERS) as [
-    keyof SearchFilters,
+    keyof LibraryFilters,
     readonly string[],
   ][]) {
     const value = buildMultiValueParam(filters?.[name], catalog);
@@ -97,5 +90,6 @@ export function buildSearchPath(
       params.set(name, value);
     }
   }
-  return `/app/search?${params.toString()}`;
+  const query = params.toString();
+  return query ? `/app/library?${query}` : '/app/library';
 }

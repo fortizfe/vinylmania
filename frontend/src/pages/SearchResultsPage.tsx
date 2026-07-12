@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { SearchFiltersControl } from '../components/SearchFiltersControl';
+import { FiltersControl } from '../components/FiltersControl';
 import { SearchResultCard } from '../components/SearchResultCard';
 import { SearchResultCardSkeleton } from '../components/SearchResultCardSkeleton';
 import { Button } from '../components/ui/Button';
@@ -20,25 +20,21 @@ const PAGE_SIZE = 20;
 const resultsGridClasses =
   'grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
-const TEXT_FILTER_LABELS: Record<'genre' | 'style', string> = {
+const FILTER_LABELS: Record<keyof SearchFilters, string> = {
   genre: 'Genre',
   style: 'Style',
+  format: 'Format',
 };
 
 /**
- * Genre/Style show as a bare label ("Genre"); Format shows its actual
- * selected value(s) (e.g. "Format: Vinyl, CD") since it's a discrete,
- * enumerable multi-select where naming the selection is more useful than a
- * generic label (spec.md Edge Cases, feature 022).
+ * Every filter (Genre, Style, Format) is now a discrete, enumerable
+ * multi-select (feature 038), so each shows its actual selected value(s)
+ * (e.g. "Format: Vinyl, CD") rather than a bare label.
  */
 function activeFilterLabels(filters: SearchFilters): string[] {
-  const labels = (Object.keys(TEXT_FILTER_LABELS) as (keyof typeof TEXT_FILTER_LABELS)[])
-    .filter((name) => Boolean(filters[name]))
-    .map((name) => TEXT_FILTER_LABELS[name]);
-  if (filters.format && filters.format.length > 0) {
-    labels.push(`Format: ${filters.format.join(', ')}`);
-  }
-  return labels;
+  return (Object.keys(FILTER_LABELS) as (keyof SearchFilters)[])
+    .filter((name) => (filters[name]?.length ?? 0) > 0)
+    .map((name) => `${FILTER_LABELS[name]}: ${filters[name]!.join(', ')}`);
 }
 
 export function SearchResultsPage() {
@@ -125,11 +121,7 @@ export function SearchResultsPage() {
         Search results
       </h1>
 
-      <SearchFiltersControl
-        filters={filters}
-        onApply={applyFilters}
-        onClear={clearFilters}
-      />
+      <FiltersControl filters={filters} onApply={applyFilters} onClear={clearFilters} />
 
       {!searched && (
         <p className="text-gray-500 dark:text-gray-400">

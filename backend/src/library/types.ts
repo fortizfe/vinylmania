@@ -20,6 +20,22 @@ export interface LibraryEntry {
    */
   legacyCondition?: string;
   legacyNotes?: string;
+  /**
+   * Persisted at enrichment time from the release's catalog data (feature
+   * 038, FR-018), so Library can filter by them without a live per-request
+   * Discogs lookup. Absent until the entry's first successful enrichment;
+   * left untouched (not cleared) on a failed lookup (FR-024).
+   */
+  genre?: string[];
+  style?: string[];
+  format?: string[];
+}
+
+/** Genre/Style/Format selection for filtering the library listing (FR-015/FR-017). */
+export interface LibraryFilters {
+  genre?: string[];
+  style?: string[];
+  format?: string[];
 }
 
 export type CatalogStatus = 'ok' | 'unavailable';

@@ -91,7 +91,7 @@ describe('Discogs response caching (US2)', () => {
       { id: 'b', discogsReleaseId: 777, addedAt: '2026-07-04T00:00:00.000Z' },
     ];
 
-    const enriched = await enrichEntries(entries);
+    const enriched = await enrichEntries('cache-test-user', entries);
 
     expect(enriched[0].catalogStatus).toBe('ok');
     expect(enriched[1].catalogStatus).toBe('ok');

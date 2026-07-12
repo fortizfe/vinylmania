@@ -624,6 +624,91 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     });
   });
 
+  describe('multi-value genre/style passthrough (feature 038, US1)', () => {
+    it('forwards a comma-joined genre value verbatim, in a single outbound request (research.md Decision 1)', async () => {
+      const { idToken } = await getTestIdToken('search-filters-multigenre-user');
+
+      const scope = discogsScope()
+        .get('/database/search')
+        .query({
+          q: 'FilterMultiGenreTest',
+          page: '1',
+          per_page: '50',
+          genre: 'Rock,Electronic',
+        })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 0, per_page: 50 },
+          results: [],
+        });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'FilterMultiGenreTest', type: 'release', genre: 'Rock,Electronic' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(scope.isDone()).toBe(true);
+    });
+
+    it('forwards a comma-joined style value verbatim, in a single outbound request (research.md Decision 1)', async () => {
+      const { idToken } = await getTestIdToken('search-filters-multistyle-user');
+
+      const scope = discogsScope()
+        .get('/database/search')
+        .query({
+          q: 'FilterMultiStyleTest',
+          page: '1',
+          per_page: '50',
+          style: 'Grunge,Shoegaze',
+        })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 0, per_page: 50 },
+          results: [],
+        });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({ q: 'FilterMultiStyleTest', type: 'release', style: 'Grunge,Shoegaze' })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(scope.isDone()).toBe(true);
+    });
+
+    it('forwards comma-joined genre, style, and format together, unchanged, in a single outbound request', async () => {
+      const { idToken } = await getTestIdToken('search-filters-multicombo-user');
+
+      const scope = discogsScope()
+        .get('/database/search')
+        .query({
+          q: 'FilterMultiComboTest',
+          page: '1',
+          per_page: '50',
+          genre: 'Rock,Electronic',
+          style: 'Grunge,Shoegaze',
+          format: 'Vinyl,CD',
+        })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 0, per_page: 50 },
+          results: [],
+        });
+
+      const res = await request(app)
+        .get('/api/discogs/search')
+        .query({
+          q: 'FilterMultiComboTest',
+          type: 'release',
+          genre: 'Rock,Electronic',
+          style: 'Grunge,Shoegaze',
+          format: 'Vinyl,CD',
+        })
+        .set('Authorization', `Bearer ${idToken}`);
+
+      expect(res.status).toBe(200);
+      expect(scope.isDone()).toBe(true);
+    });
+  });
+
   describe('Artist filter removed (feature 022, US2)', () => {
     it('does NOT forward artist to the outbound Discogs search request, even when present on the incoming request (FR-009)', async () => {
       const { idToken } = await getTestIdToken('search-artist-removed-user');

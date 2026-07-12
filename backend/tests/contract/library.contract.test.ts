@@ -31,6 +31,20 @@ const rawRelease = {
   uri: 'https://www.discogs.com/release/1-The-Persuader-Stockholm',
 };
 
+const rawReleaseJazz = {
+  id: 2,
+  title: 'Kind Of Blue',
+  year: 1959,
+  artists: [{ id: 2, name: 'Miles Davis', anv: '', join: '', role: '' }],
+  labels: [{ id: 6, name: 'Columbia', catno: 'CL 1355' }],
+  formats: [{ name: 'CD', qty: '1', descriptions: [] }],
+  genres: ['Jazz'],
+  styles: ['Modal'],
+  tracklist: [],
+  images: [],
+  uri: 'https://www.discogs.com/release/2-Miles-Davis-Kind-Of-Blue',
+};
+
 beforeAll(() => {
   // Deterministic behavior regardless of a local Redis: no throttle marker
   // (every list GET syncs) and no cached per-user field map.
@@ -272,6 +286,132 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
     expect(res.status).toBe(503);
     expect(res.body.error).toBe('discogs_unavailable');
     await expect(getEntry(uid, existing.id)).resolves.not.toBeNull();
+  });
+});
+
+describe('Library API contract: GET /api/library genre/style/format filtering (feature 038, US2)', () => {
+  it('returns items enriched with persisted genre/style/format fields', async () => {
+    const { idToken, uid } = await getTestIdToken('filter-fields-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+
+    stubCollectionFields(username);
+    stubCollectionPage(username, [
+      rawCollectionInstance(1, { instanceId: 11, dateAdded: '2026-02-03T00:00:00-08:00' }),
+    ]);
+    discogsScope().get('/releases/1').reply(200, rawRelease);
+
+    const res = await request(app)
+      .get('/api/library')
+      .set('Authorization', `Bearer ${idToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0]).toMatchObject({
+      genre: ['Electronic'],
+      style: ['Deep House'],
+      format: ['Vinyl'],
+    });
+  });
+
+  it('returns only entries matching an active genre filter, with pagination computed over the filtered subset (FR-017)', async () => {
+    const { idToken, uid } = await getTestIdToken('filter-genre-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+
+    const instances = [
+      rawCollectionInstance(1, { instanceId: 11, dateAdded: '2026-02-03T00:00:00-08:00' }),
+      rawCollectionInstance(2, { instanceId: 12, dateAdded: '2026-02-02T00:00:00-08:00' }),
+    ];
+    // Sync's collection endpoints are hit fresh on every GET (each nock
+    // stub is single-use), so both requests below need their own stubs.
+    stubCollectionFields(username);
+    stubCollectionPage(username, instances);
+    discogsScope().get('/releases/1').reply(200, rawRelease);
+    discogsScope().get('/releases/2').reply(200, rawReleaseJazz);
+
+    // First, unfiltered sync/enrichment populates genre/style/format for both.
+    const unfiltered = await request(app)
+      .get('/api/library')
+      .set('Authorization', `Bearer ${idToken}`);
+    expect(unfiltered.body.totalItems).toBe(2);
+
+    stubCollectionFields(username);
+    stubCollectionPage(username, instances);
+
+    const filtered = await request(app)
+      .get('/api/library')
+      .query({ genre: 'Electronic' })
+      .set('Authorization', `Bearer ${idToken}`);
+
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.totalItems).toBe(1);
+    expect(filtered.body.items).toHaveLength(1);
+    expect(filtered.body.items[0]).toMatchObject({ discogsReleaseId: 1 });
+  });
+
+  it('combines multiple genre values with OR and different fields with AND (FR-015)', async () => {
+    const { idToken, uid } = await getTestIdToken('filter-combo-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+    const instances = [
+      rawCollectionInstance(1, { instanceId: 11, dateAdded: '2026-02-03T00:00:00-08:00' }),
+      rawCollectionInstance(2, { instanceId: 12, dateAdded: '2026-02-02T00:00:00-08:00' }),
+    ];
+
+    stubCollectionFields(username);
+    stubCollectionPage(username, instances);
+    discogsScope().get('/releases/1').reply(200, rawRelease);
+    discogsScope().get('/releases/2').reply(200, rawReleaseJazz);
+    await request(app).get('/api/library').set('Authorization', `Bearer ${idToken}`);
+
+    stubCollectionFields(username);
+    stubCollectionPage(username, instances);
+    const orMatch = await request(app)
+      .get('/api/library')
+      .query({ genre: 'Electronic,Jazz' })
+      .set('Authorization', `Bearer ${idToken}`);
+    expect(orMatch.body.totalItems).toBe(2);
+
+    stubCollectionFields(username);
+    stubCollectionPage(username, instances);
+    const andMismatch = await request(app)
+      .get('/api/library')
+      .query({ genre: 'Electronic', style: 'Modal' })
+      .set('Authorization', `Bearer ${idToken}`);
+    expect(andMismatch.body.totalItems).toBe(0);
+    expect(andMismatch.body.items).toEqual([]);
+  });
+
+  it('a never-enriched entry does not match any active filter until its next successful sync (FR-019)', async () => {
+    const { idToken, uid } = await getTestIdToken('filter-never-enriched-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+    // A pre-existing entry with no genre/style/format yet (never enriched).
+    await createSyncedEntry(uid, 1, 11);
+    const instances = [
+      rawCollectionInstance(1, { instanceId: 11, dateAdded: '2026-02-03T00:00:00-08:00' }),
+    ];
+
+    stubCollectionFields(username);
+    stubCollectionPage(username, instances);
+
+    const filteredBefore = await request(app)
+      .get('/api/library')
+      .query({ genre: 'Electronic' })
+      .set('Authorization', `Bearer ${idToken}`);
+    expect(filteredBefore.body.totalItems).toBe(0);
+
+    // An unfiltered load enriches (and persists) the entry's catalog fields.
+    stubCollectionFields(username);
+    stubCollectionPage(username, instances);
+    discogsScope().get('/releases/1').reply(200, rawRelease);
+    await request(app).get('/api/library').set('Authorization', `Bearer ${idToken}`);
+
+    stubCollectionFields(username);
+    stubCollectionPage(username, instances);
+    // Only consumed if the release cache expired; a cache hit leaves it unused.
+    discogsScope().get('/releases/1').reply(200, rawRelease);
+    const filteredAfter = await request(app)
+      .get('/api/library')
+      .query({ genre: 'Electronic' })
+      .set('Authorization', `Bearer ${idToken}`);
+    expect(filteredAfter.body.totalItems).toBe(1);
   });
 });
 

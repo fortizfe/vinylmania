@@ -22,6 +22,25 @@ async function deselectFormatOption(page: Page, option: string) {
   await page.keyboard.press('Escape');
 }
 
+/** Opens the Genre modal, checks the given option, and closes the modal (feature 038). */
+async function selectGenreOption(page: Page, option: string) {
+  await page.locator('#filter-genre-trigger').click();
+  await page.getByRole('dialog').getByLabel(option, { exact: true }).check();
+  await page.keyboard.press('Escape');
+}
+
+/** Opens the Style modal, checks the given option, and closes the modal (feature 038). */
+async function selectStyleOption(page: Page, option: string) {
+  await page.locator('#filter-style-trigger').click();
+  await page.getByRole('dialog').getByLabel(option, { exact: true }).check();
+  await page.keyboard.press('Escape');
+}
+
+/** Expands the collapsible filter panel from its default collapsed state (feature 038, FR-002/FR-003). */
+async function expandFilters(page: Page) {
+  await page.getByRole('button', { name: /^filters$/i }).click();
+}
+
 // Fakes the /api/discogs/search boundary at the browser network layer, same
 // rationale as the caching-navigation e2e suite: drives the real filter
 // control and search-results rendering without depending on a live Discogs
@@ -68,7 +87,8 @@ test.describe('Search result filters (feature 021, US1)', () => {
     await expect(page.getByText('Nevermind')).toBeVisible();
     await expect(page.getByText('Unplugged in New York')).toBeVisible();
 
-    await page.getByLabel(/^genre$/i).fill('Rock');
+    await expandFilters(page);
+    await selectGenreOption(page, 'Rock');
     await page.getByRole('button', { name: /apply filters/i }).click();
 
     await expect(page).toHaveURL(/genre=Rock/);
@@ -133,7 +153,8 @@ test.describe('Search result filters (feature 021, US2)', () => {
     await expect(page).toHaveURL(/\/app\/search/);
     await expect(page.getByText('Jazz Result')).toBeVisible();
 
-    await page.getByLabel(/^genre$/i).fill('Rock');
+    await expandFilters(page);
+    await selectGenreOption(page, 'Rock');
     await selectFormatOption(page, 'Vinyl');
     await page.getByRole('button', { name: /apply filters/i }).click();
 
@@ -203,7 +224,8 @@ test.describe('Search result filters (feature 021, US3)', () => {
     await page.getByRole('button', { name: /^search$/i }).click();
     await expect(page).toHaveURL(/\/app\/search/);
 
-    await page.getByLabel(/^genre$/i).fill('Rock');
+    await expandFilters(page);
+    await selectGenreOption(page, 'Rock');
     await page.getByRole('button', { name: /apply filters/i }).click();
     await expect(page.getByText('Page One Filtered Result')).toBeVisible();
     await expect(page).toHaveURL(/genre=Rock/);
@@ -217,12 +239,17 @@ test.describe('Search result filters (feature 021, US3)', () => {
 
     await page.reload();
     await expect(page.getByText('Page One Filtered Result')).toBeVisible();
-    await expect(page.getByLabel(/^genre$/i)).toHaveValue('Rock');
+    // A fresh mount always starts collapsed (feature 038, FR-002), but the
+    // active filter from the URL still shows on the collapsed trigger.
+    await expect(page.getByTestId('active-filter-badge')).toHaveText('1');
+    await expandFilters(page);
+    await expect(page.getByRole('button', { name: /^rock$/i })).toBeVisible();
 
     await page.getByRole('button', { name: /clear filters/i }).click();
     await expect(page).not.toHaveURL(/genre=/);
     await expect(page.getByText('Unfiltered Result')).toBeVisible();
-    await expect(page.getByLabel(/^genre$/i)).toHaveValue('');
+    await expect(page.getByRole('button', { name: /^genre$/i })).toBeVisible();
+    await expect(page.getByTestId('active-filter-badge')).toHaveCount(0);
   });
 });
 
@@ -408,6 +435,7 @@ test.describe('Search result filters (feature 022, US1)', () => {
     await expect(page).toHaveURL(/\/app\/search/);
     await expect(page.getByText('Cassette Only')).toBeVisible();
 
+    await expandFilters(page);
     await page.getByRole('button', { name: /^format$/i }).click();
     await page.getByRole('dialog').getByLabel('Vinyl', { exact: true }).check();
     await page.getByRole('dialog').getByLabel('CD', { exact: true }).check();
@@ -460,6 +488,7 @@ test.describe('Search result filters (feature 022, US2)', () => {
     await page.getByRole('button', { name: /^search$/i }).click();
     await expect(page).toHaveURL(/\/app\/search/);
 
+    await expandFilters(page);
     await expect(page.getByLabel(/^artist$/i)).toHaveCount(0);
 
     // Navigate directly to a link carrying an obsolete `artist` param, as if
@@ -468,7 +497,11 @@ test.describe('Search result filters (feature 022, US2)', () => {
 
     await expect(page.getByText('Nevermind')).toBeVisible();
     await expect(page.getByText('Unrelated Result')).not.toBeVisible();
-    await expect(page.getByLabel(/^genre$/i)).toHaveValue('Rock');
+    // Fresh navigation starts collapsed again (FR-002), but the active genre
+    // filter from the URL still shows on the collapsed trigger's badge.
+    await expect(page.getByTestId('active-filter-badge')).toHaveText('1');
+    await expandFilters(page);
+    await expect(page.getByRole('button', { name: /^rock$/i })).toBeVisible();
     await expect(page.getByLabel(/^artist$/i)).toHaveCount(0);
   });
 });
@@ -493,8 +526,11 @@ test.describe('Search result filters (feature 023, US1)', () => {
     await page.getByRole('button', { name: /^search$/i }).click();
     await expect(page).toHaveURL(/\/app\/search/);
 
+    await expandFilters(page);
     // Format is the first filter control, ahead of Genre and Style (FR-001).
-    const filterControls = page.locator('#filter-format-trigger, #filter-genre, #filter-style');
+    const filterControls = page.locator(
+      '#filter-format-trigger, #filter-genre-trigger, #filter-style-trigger',
+    );
     await expect(filterControls.first()).toHaveId('filter-format-trigger');
 
     // The trigger label updates live as selections are made, without clicking Apply (FR-002, FR-005).
@@ -714,18 +750,174 @@ test.describe('Search result filters (feature 023, US3)', () => {
     await expect(page).toHaveURL(/\/app\/search/);
     await expect(page.getByText('Other Result')).toBeVisible();
 
+    await expandFilters(page);
     const applyButton = page.getByRole('button', { name: /^apply filters$/i });
     const clearButton = page.getByRole('button', { name: /^clear filters$/i });
     await expect(applyButton).toHaveText('');
     await expect(clearButton).toHaveText('');
 
-    await page.getByLabel(/^genre$/i).fill('Rock');
+    await selectGenreOption(page, 'Rock');
     await applyButton.click();
     await expect(page).toHaveURL(/genre=Rock/);
     await expect(page.getByText('Other Result')).not.toBeVisible();
 
     await clearButton.click();
     await expect(page).not.toHaveURL(/genre=/);
-    await expect(page.getByLabel(/^genre$/i)).toHaveValue('');
+    await expect(page.getByRole('button', { name: /^genre$/i })).toBeVisible();
+  });
+});
+
+test.describe('Shared collapsible filters with selectable lists (feature 038, US1)', () => {
+  async function fulfillEmptySearch(page: Page) {
+    await page.route('**/api/discogs/search*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [{ discogsId: 9001, resultType: 'release', title: 'Collapsible Filters Result' }],
+          pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+        }),
+      });
+    });
+  }
+
+  test('the filter panel renders collapsed by default with no active-filter badge (FR-002, FR-005)', async ({
+    page,
+  }) => {
+    await fulfillEmptySearch(page);
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('collapsible');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+
+    await expect(page.getByRole('button', { name: /^filters$/i })).toBeVisible();
+    await expect(page.getByTestId('active-filter-badge')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^genre$/i })).toHaveCount(0);
+  });
+
+  test('expanding reveals Genre/Style/Format as checkbox lists, selecting values across all three and applying updates the URL and keeps the panel expanded (FR-003, FR-006, FR-007, FR-009, FR-010)', async ({
+    page,
+  }) => {
+    await fulfillEmptySearch(page);
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('collapsible');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+
+    await expandFilters(page);
+    await selectGenreOption(page, 'Rock');
+    await selectStyleOption(page, 'Grunge');
+    await selectFormatOption(page, 'Vinyl');
+    await page.getByRole('button', { name: /apply filters/i }).click();
+
+    await expect(page).toHaveURL(/genre=Rock/);
+    await expect(page).toHaveURL(/style=Grunge/);
+    await expect(page).toHaveURL(/format=Vinyl/);
+    // The panel stays expanded after Apply — it does not auto-collapse (FR-003).
+    await expect(page.getByRole('button', { name: /^rock$/i })).toBeVisible();
+  });
+
+  test("Style's list offers an in-list search box to narrow its 757 values, unlike Genre's plain list (FR-008, SC-006)", async ({
+    page,
+  }) => {
+    await fulfillEmptySearch(page);
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('collapsible');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+    await expandFilters(page);
+
+    await page.locator('#filter-style-trigger').click();
+    const styleDialog = page.getByRole('dialog');
+    await styleDialog.getByRole('textbox').fill('grun');
+    await expect(styleDialog.getByLabel('Grunge', { exact: true })).toBeVisible();
+    await expect(styleDialog.getByLabel('Shoegaze', { exact: true })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    await page.locator('#filter-genre-trigger').click();
+    await expect(page.getByRole('dialog').getByRole('textbox')).toHaveCount(0);
+  });
+
+  test('collapsing after applying shows an active-filter badge, and Clear removes it and resets the URL (FR-004, FR-011)', async ({
+    page,
+  }) => {
+    await fulfillEmptySearch(page);
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('collapsible');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+
+    await expandFilters(page);
+    await selectGenreOption(page, 'Rock');
+    await selectStyleOption(page, 'Grunge');
+    await page.getByRole('button', { name: /apply filters/i }).click();
+    await expect(page).toHaveURL(/genre=Rock/);
+
+    await page.getByRole('button', { name: /collapse filters/i }).click();
+    await expect(page.getByTestId('active-filter-badge')).toHaveText('2');
+
+    await expandFilters(page);
+    await page.getByRole('button', { name: /clear filters/i }).click();
+
+    await expect(page).not.toHaveURL(/genre=/);
+    await expect(page).not.toHaveURL(/style=/);
+    await expect(page.getByTestId('active-filter-badge')).toHaveCount(0);
+  });
+
+  test('a mobile viewport opens each selectable list as a full-screen modal, with no horizontal scroll (FR-012, FR-014, SC-005)', async ({
+    page,
+  }) => {
+    await fulfillEmptySearch(page);
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('collapsible');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+    await expandFilters(page);
+
+    await page.locator('#filter-style-trigger').click();
+    const dialog = page.getByRole('dialog');
+    const viewportSize = page.viewportSize();
+    const dialogBox = await dialog.boundingBox();
+    expect(dialogBox).not.toBeNull();
+    // Full-screen modal: it spans (approximately) the entire viewport height.
+    expect(dialogBox!.height).toBeGreaterThan((viewportSize?.height ?? 0) * 0.8);
+
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(viewportSize?.width ?? 0);
+  });
+
+  test('a desktop viewport opens each selectable list as an inline/anchored panel, distinct from the mobile full-screen modal, with no horizontal scroll (FR-013, FR-014, SC-005)', async ({
+    page,
+  }) => {
+    await fulfillEmptySearch(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await page.getByLabel(/search discogs/i).fill('collapsible');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+    await expandFilters(page);
+
+    await page.locator('#filter-style-trigger').click();
+    const dialog = page.getByRole('dialog');
+    const dialogBox = await dialog.boundingBox();
+    expect(dialogBox).not.toBeNull();
+    // Distinct from the mobile full-screen modal: it does not span the full viewport height.
+    expect(dialogBox!.height).toBeLessThan(900 * 0.8);
+
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(1440);
   });
 });

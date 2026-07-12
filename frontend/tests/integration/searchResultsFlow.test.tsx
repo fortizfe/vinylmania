@@ -70,6 +70,22 @@ async function toggleFormatOption(
 ) {
   await user.click(document.getElementById('filter-format-trigger')!);
   await user.click(within(screen.getByRole('dialog')).getByLabelText(option));
+  await user.keyboard('{Escape}');
+}
+
+/** Opens the Genre modal and toggles the given option's checkbox (feature 038). */
+async function toggleGenreOption(
+  user: ReturnType<typeof userEvent.setup>,
+  option: string,
+) {
+  await user.click(document.getElementById('filter-genre-trigger')!);
+  await user.click(within(screen.getByRole('dialog')).getByLabelText(option));
+  await user.keyboard('{Escape}');
+}
+
+/** Expands the collapsible filter panel from its default collapsed state (feature 038, FR-002/FR-003). */
+async function expandFilters(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: /^filters$/i }));
 }
 
 describe('Search results flow (US2)', () => {
@@ -461,14 +477,15 @@ describe('Search results flow (US2)', () => {
       });
 
       const user = userEvent.setup();
-      await user.type(screen.getByLabelText(/^genre$/i), 'Rock');
+      await expandFilters(user);
+      await toggleGenreOption(user, 'Rock');
       await act(async () => {
         await user.click(screen.getByRole('button', { name: /apply filters/i }));
       });
 
       await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
       expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
-        genre: 'Rock',
+        genre: ['Rock'],
       });
     });
 
@@ -487,14 +504,15 @@ describe('Search results flow (US2)', () => {
       });
 
       const user = userEvent.setup();
-      await user.type(screen.getByLabelText(/^genre$/i), 'Rock');
+      await expandFilters(user);
+      await toggleGenreOption(user, 'Rock');
       await act(async () => {
         await user.click(screen.getByRole('button', { name: /apply filters/i }));
       });
 
       await waitFor(() => expect(screen.getByText(/no results/i)).toBeInTheDocument());
       expect(
-        screen.getByText(/no results found for the active filters \(genre\)/i),
+        screen.getByText(/no results found for the active filters \(genre: rock\)/i),
       ).toBeInTheDocument();
     });
 
@@ -502,7 +520,8 @@ describe('Search results flow (US2)', () => {
       renderPage(['/app/search']);
 
       const user = userEvent.setup();
-      await user.type(screen.getByLabelText(/^genre$/i), 'Rock');
+      await expandFilters(user);
+      await toggleGenreOption(user, 'Rock');
       await user.click(screen.getByRole('button', { name: /apply filters/i }));
 
       expect(mockSearch).not.toHaveBeenCalled();
@@ -535,7 +554,7 @@ describe('Search results flow (US2)', () => {
 
       await waitFor(() => expect(screen.getByText('Fresh Result')).toBeInTheDocument());
       expect(mockSearch).toHaveBeenLastCalledWith('fresh', 'release', 1, 20, {
-        genre: 'Rock',
+        genre: ['Rock'],
       });
     });
   });
@@ -556,7 +575,8 @@ describe('Search results flow (US2)', () => {
       });
 
       const user = userEvent.setup();
-      await user.type(screen.getByLabelText(/^genre$/i), 'Rock');
+      await expandFilters(user);
+      await toggleGenreOption(user, 'Rock');
       await toggleFormatOption(user, 'Vinyl');
       await act(async () => {
         await user.click(screen.getByRole('button', { name: /apply filters/i }));
@@ -564,7 +584,7 @@ describe('Search results flow (US2)', () => {
 
       await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
       expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
-        genre: 'Rock',
+        genre: ['Rock'],
         format: ['Vinyl'],
       });
     });
@@ -584,6 +604,7 @@ describe('Search results flow (US2)', () => {
       });
 
       const user = userEvent.setup();
+      await expandFilters(user);
       await toggleFormatOption(user, 'Vinyl');
       await act(async () => {
         await user.click(screen.getByRole('button', { name: /apply filters/i }));
@@ -591,7 +612,7 @@ describe('Search results flow (US2)', () => {
 
       await waitFor(() =>
         expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
-          genre: 'Rock',
+          genre: ['Rock'],
         }),
       );
     });
@@ -613,6 +634,7 @@ describe('Search results flow (US2)', () => {
       });
 
       const user = userEvent.setup();
+      await expandFilters(user);
       await toggleFormatOption(user, 'Vinyl');
       await toggleFormatOption(user, 'CD');
       await act(async () => {
@@ -621,7 +643,7 @@ describe('Search results flow (US2)', () => {
 
       await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
       expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 1, 20, {
-        format: ['Vinyl', 'CD'],
+        format: ['CD', 'Vinyl'],
       });
     });
 
@@ -638,6 +660,7 @@ describe('Search results flow (US2)', () => {
           format: ['Vinyl'],
         }),
       );
+      await userEvent.setup().click(screen.getByRole('button', { name: /^filters$/i }));
       expect(screen.getByRole('button', { name: /^vinyl$/i })).toBeInTheDocument();
     });
 
@@ -656,6 +679,7 @@ describe('Search results flow (US2)', () => {
       });
 
       const user = userEvent.setup();
+      await expandFilters(user);
       await toggleFormatOption(user, 'Vinyl');
       await act(async () => {
         await user.click(screen.getByRole('button', { name: /apply filters/i }));
@@ -678,7 +702,7 @@ describe('Search results flow (US2)', () => {
       await waitFor(() => expect(screen.getByText(/no results/i)).toBeInTheDocument());
       expect(
         screen.getByText(
-          /no results found for the active filters \(Format: Vinyl, CD\)/i,
+          /no results found for the active filters \(Format: CD, Vinyl\)/i,
         ),
       ).toBeInTheDocument();
     });
@@ -695,7 +719,7 @@ describe('Search results flow (US2)', () => {
 
       await waitFor(() => expect(screen.getByText('Nevermind')).toBeInTheDocument());
       expect(mockSearch).toHaveBeenCalledWith('nirvana', 'release', 1, 20, {
-        genre: 'Rock',
+        genre: ['Rock'],
       });
       expect(screen.queryByLabelText(/^artist$/i)).not.toBeInTheDocument();
     });
@@ -724,7 +748,7 @@ describe('Search results flow (US2)', () => {
         expect(screen.getByText('Page Two Result')).toBeInTheDocument(),
       );
       expect(mockSearch).toHaveBeenLastCalledWith('nirvana', 'release', 2, 20, {
-        genre: 'Rock',
+        genre: ['Rock'],
       });
     });
   });

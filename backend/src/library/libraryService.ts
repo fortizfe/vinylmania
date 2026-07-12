@@ -4,6 +4,7 @@ import { getFirestoreDb } from '../config/firebase-admin';
 import type {
   CreateLibraryEntryInput,
   LibraryEntry,
+  LibraryFilters,
   PaginatedLibraryEntries,
 } from './types';
 
@@ -25,6 +26,9 @@ function toLibraryEntry(id: string, data: FirebaseFirestore.DocumentData): Libra
     // Pre-016 per-copy fields, kept only until their first-sync migration.
     ...(data.condition ? { legacyCondition: data.condition } : {}),
     ...(data.notes ? { legacyNotes: data.notes } : {}),
+    ...(data.genre !== undefined ? { genre: data.genre } : {}),
+    ...(data.style !== undefined ? { style: data.style } : {}),
+    ...(data.format !== undefined ? { format: data.format } : {}),
   };
 }
 
@@ -83,6 +87,66 @@ export async function listEntries(
 export async function listAllEntries(uid: string): Promise<LibraryEntry[]> {
   const querySnapshot = await entriesCollection(uid).orderBy('addedAt', 'desc').get();
   return querySnapshot.docs.map((doc) => toLibraryEntry(doc.id, doc.data()));
+}
+
+/**
+ * Upserts an entry's persisted genre/style/format (feature 038, FR-018).
+ * Called only on a successful enrichment lookup — a failed lookup makes no
+ * call at all, leaving previously stored values untouched (FR-024).
+ */
+export async function persistCatalogFields(
+  uid: string,
+  entryId: string,
+  fields: { genre: string[]; style: string[]; format: string[] },
+): Promise<void> {
+  // set+merge rather than update: an entry document might not exist yet in
+  // edge cases (e.g. a race with removal), and update() would throw NOT_FOUND.
+  await entriesCollection(uid).doc(entryId).set(fields, { merge: true });
+}
+
+const FILTER_FIELDS = ['genre', 'style', 'format'] as const;
+
+/**
+ * AND across genre/style/format, OR within each field's selected values
+ * (feature 038, FR-015). An entry with no stored values for a filtered
+ * field never matches (covers both a never-enriched entry and a release
+ * that genuinely lacks that field's data).
+ */
+export function matchesLibraryFilters(entry: LibraryEntry, filters: LibraryFilters): boolean {
+  for (const field of FILTER_FIELDS) {
+    const selected = filters[field];
+    if (!selected || selected.length === 0) continue;
+    const entryValues = entry[field] ?? [];
+    if (!selected.some((value) => entryValues.includes(value))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Filtered/paginated library listing (feature 038, FR-017; research.md
+ * Decision 2): fetches the full per-user mirror and matches/paginates in
+ * application code rather than via an unsupported multi-field Firestore
+ * compound query, correct at this app's "few hundred records" per-user
+ * scale (spec 003) without new indexes.
+ */
+export async function listEntriesFiltered(
+  uid: string,
+  page: number,
+  pageSize: number,
+  filters: LibraryFilters,
+): Promise<PaginatedLibraryEntries> {
+  const all = await listAllEntries(uid);
+  const matched = all.filter((entry) => matchesLibraryFilters(entry, filters));
+
+  const offset = (page - 1) * pageSize;
+  return {
+    items: matched.slice(offset, offset + pageSize),
+    page,
+    pageSize,
+    totalItems: matched.length,
+  };
 }
 
 /** Points an entry at its managed Discogs collection instance. */
