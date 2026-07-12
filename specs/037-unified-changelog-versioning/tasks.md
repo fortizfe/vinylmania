@@ -83,7 +83,7 @@ No additional cross-story infrastructure is needed beyond Phase 1 — this featu
 - [X] T007 [P] [US1] Bump `backend/package.json` `"version"` from `0.13.1` to `0.22.1` (frontend's `package.json` already reports `0.22.1`, no change needed there)
 - [X] T008 [P] [US1] Prepend a short frozen/superseded notice to the top of `backend/CHANGELOG.md` and `frontend/CHANGELOG.md`, pointing at the new root `CHANGELOG.md`, without altering any existing entry's wording (FR-005)
 - [X] T009 [US1] Run T003 and T004 and confirm both now pass (depends on T005, T006, T007, T008)
-- [ ] T010 [US1] Seed annotated git tag `v0.22.1` on the migration commit that includes T005-T008, only after T009 confirms both tests pass (per research.md's "git tags as release marker" decision) — this tag is the anchor US2's automation will diff against (depends on T009)
+- [X] T010 [US1] Seed annotated git tag `v0.22.1` on the migration commit that includes T005-T008, only after T009 confirms both tests pass (per research.md's "git tags as release marker" decision) — this tag is the anchor US2's automation will diff against (depends on T009)
 
 **Checkpoint**: Root `CHANGELOG.md` and lockstep `0.22.1` version fully in place and tagged — User Story 1 is independently complete and demoable.
 
