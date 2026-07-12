@@ -8,6 +8,14 @@ of the `backend` package. Every entry below is already deployed — this project
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.22.1] - 2026-07-12
+
+### Fixed
+
+- The authenticated header's "Sign out" control moved into the existing hamburger menu below the `md:` breakpoint instead of always rendering in the header row, fixing a real layout overlap where it intercepted clicks on the search button at narrow (~375px) viewports; it remains unchanged in the header at `md:`+. Fixed a related overlap between the search submit button and the hamburger button, caused by the search input's flex wrapper not being allowed to shrink below its browser-default width. Fixed a bug where search-result card titles/artists could render at zero height on mobile once the results grid became single-column, by scoping the cards' fixed height to `sm:`+ and letting mobile cards size to their natural content height (spec 036).
+- Nine stale/broken Playwright e2e tests (a heading assertion for UI that no longer exists, an ambiguous locator matching two elements, and a test fixture missing fields the real API always sends) were corrected to reflect the app's current behavior, restoring the e2e suite as a reliable quality gate (spec 036).
+- `ReleaseAdditionalInfoSection` no longer crashes the page render if `identifiers` is unexpectedly missing from an API response (spec 036).
+
 ## [0.22.0] - 2026-07-12
 
 ### Changed

@@ -76,7 +76,7 @@ export function SearchResultCard({
     : `/app/releases/${result.discogsId}`;
 
   return (
-    <Card padding="sm" className="flex h-96 flex-col gap-2">
+    <Card padding="sm" className="flex flex-col gap-2 sm:h-96">
       <Link to={detailPath} state={{ from: searchPath }} className="contents">
         {visual}
       </Link>

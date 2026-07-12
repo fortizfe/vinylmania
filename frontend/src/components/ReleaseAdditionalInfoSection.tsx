@@ -11,7 +11,11 @@ export function ReleaseAdditionalInfoSection({
   identifiers,
   community,
 }: ReleaseAdditionalInfoSectionProps) {
-  const hasContent = Boolean(notes) || identifiers.length > 0 || Boolean(community);
+  // `identifiers` is typed as required, but an incomplete API response (or
+  // a stale test fixture) can still deliver `undefined` at runtime — guard
+  // defensively rather than crashing the whole page render (spec 036).
+  const safeIdentifiers = identifiers ?? [];
+  const hasContent = Boolean(notes) || safeIdentifiers.length > 0 || Boolean(community);
 
   if (!hasContent) return null;
 
@@ -19,9 +23,9 @@ export function ReleaseAdditionalInfoSection({
     <div className="flex flex-col gap-3 border-t border-gray-200 pt-4 dark:border-gray-900">
       {notes && <p className="text-sm text-gray-700 dark:text-gray-300">{notes}</p>}
 
-      {identifiers.length > 0 && (
+      {safeIdentifiers.length > 0 && (
         <ul className="flex flex-col gap-1 text-sm text-gray-500 dark:text-gray-400">
-          {identifiers.map((identifier) => (
+          {safeIdentifiers.map((identifier) => (
             <li key={`${identifier.type}-${identifier.value}`}>
               {identifier.type}: {identifier.value}
               {identifier.description && ` (${identifier.description})`}

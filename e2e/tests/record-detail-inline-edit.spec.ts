@@ -82,7 +82,7 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await signInAsFakeGoogleUser(page);
 
     await page.goto(`/app/library/records/${ENTRY_ID}`);
-    await expect(page.getByText('Stockholm')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
     const patchRequest = page.waitForRequest(
       (request) => request.url().includes(`/api/library/${ENTRY_ID}`) && request.method() === 'PATCH',
@@ -122,7 +122,7 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
     await page.goto(`/app/library/records/${ENTRY_ID}`);
-    await expect(page.getByText('Stockholm')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
     const patchRequest = page.waitForRequest(
       (request) => request.url().includes(`/api/library/${ENTRY_ID}`) && request.method() === 'PATCH',
@@ -149,7 +149,7 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await signInAsFakeGoogleUser(page);
     await page.goto(`/app/library/records/${ENTRY_ID}`);
 
-    await expect(page.getByText('Stockholm')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
     const gallery = page.getByTestId('record-detail-gallery');
     const details = page.getByTestId('record-detail-details');
@@ -195,7 +195,7 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await signInAsFakeGoogleUser(page);
     await page.goto(`/app/library/records/${ENTRY_ID}`);
 
-    await expect(page.getByText('Stockholm')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
     const gallery = page.getByTestId('record-detail-gallery');
     const details = page.getByTestId('record-detail-details');
@@ -247,7 +247,7 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await expect(page.getByTestId('record-detail-details')).toHaveCount(1);
     await expect(page.getByTestId('record-detail-tracklist')).toHaveCount(1);
     await expect(page.getByTestId('record-detail-additional-info')).toHaveCount(1);
-    await expect(page.getByText('Stockholm')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
     await expect(page.getByText('Your copy')).toBeVisible();
     await expect(page.getByText(/Östermalm/)).toBeVisible();
   });
