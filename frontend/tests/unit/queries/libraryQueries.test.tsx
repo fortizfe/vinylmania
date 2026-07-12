@@ -41,7 +41,7 @@ describe('libraryQueries', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockList).toHaveBeenCalledWith(1, 20);
+    expect(mockList).toHaveBeenCalledWith(1, 20, false, {});
     expect(result.current.data).toEqual({
       items: [],
       page: 1,

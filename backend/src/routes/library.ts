@@ -27,7 +27,7 @@ import {
   syncLibrary,
   updateCopyData,
 } from '../library/librarySyncService';
-import type { EntryDiscogsData, LibraryEntry } from '../library/types';
+import type { EntryDiscogsData, LibraryEntry, LibraryFilters } from '../library/types';
 import type { Release } from '../discogs/types';
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -40,6 +40,29 @@ function parsePageParams(req: Request): { page: number; pageSize: number } {
     Math.max(1, Number(req.query.pageSize) || DEFAULT_PAGE_SIZE),
   );
   return { page, pageSize };
+}
+
+const FILTER_PARAM_NAMES = ['genre', 'style', 'format'] as const;
+
+/** Reads and splits the three comma-joined filter query params (feature 038, FR-017). */
+function parseLibraryFilters(req: Request): LibraryFilters {
+  const filters: LibraryFilters = {};
+  for (const name of FILTER_PARAM_NAMES) {
+    const raw = req.query[name];
+    if (typeof raw !== 'string') continue;
+    const values = raw
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    if (values.length > 0) {
+      filters[name] = values;
+    }
+  }
+  return filters;
+}
+
+function hasActiveLibraryFilters(filters: LibraryFilters): boolean {
+  return Boolean(filters.genre?.length || filters.style?.length || filters.format?.length);
 }
 
 /** Public entry shape: legacy per-copy fields never leave the backend. */
@@ -227,7 +250,7 @@ libraryRouter.get('/:id', requireAuth, async (req: Request, res: Response) => {
     }
 
     const [enriched, discogs] = await Promise.all([
-      enrichEntry(entry),
+      enrichEntry(uid, entry),
       getCopyData(connection, entry),
     ]);
 
@@ -252,12 +275,15 @@ libraryRouter.get('/:id', requireAuth, async (req: Request, res: Response) => {
 libraryRouter.get('/', requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   const { page, pageSize } = parsePageParams(req);
+  const filters = parseLibraryFilters(req);
 
   try {
     await syncLibrary(uid, { force: req.query.refresh === 'true' });
 
-    const { items, totalItems } = await libraryService.listEntries(uid, page, pageSize);
-    const enriched = await enrichEntries(items);
+    const { items, totalItems } = hasActiveLibraryFilters(filters)
+      ? await libraryService.listEntriesFiltered(uid, page, pageSize, filters)
+      : await libraryService.listEntries(uid, page, pageSize);
+    const enriched = await enrichEntries(uid, items);
     const serialized = enriched.map((item) =>
       serializeEntry(
         item,
@@ -266,7 +292,12 @@ libraryRouter.get('/', requireAuth, async (req: Request, res: Response) => {
       ),
     );
 
-    logger.info({ route: '/api/library', outcome: 'success', uid });
+    logger.info({
+      route: '/api/library',
+      outcome: 'success',
+      uid,
+      meta: { filters: Object.keys(filters) },
+    });
     res.status(200).json({ items: serialized, page, pageSize, totalItems });
   } catch (err) {
     if (respondCollectionError(res, '/api/library', uid, err)) {
@@ -317,7 +348,7 @@ libraryRouter.patch('/:id', requireAuth, async (req: Request, res: Response) => 
     await updateCopyData(connection, entry, parsed.data);
 
     const [enriched, discogs] = await Promise.all([
-      enrichEntry(entry),
+      enrichEntry(uid, entry),
       getCopyData(connection, entry),
     ]);
 

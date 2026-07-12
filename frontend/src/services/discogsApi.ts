@@ -34,13 +34,11 @@ export async function search(
   const params = new URLSearchParams({ q: query, type: resultType });
   if (page !== undefined) params.set('page', String(page));
   if (perPage !== undefined) params.set('perPage', String(perPage));
-  const { format, ...textFilters } = filters ?? {};
-  for (const [name, value] of Object.entries(textFilters)) {
-    const trimmed = value?.trim();
-    if (trimmed) params.set(name, trimmed);
-  }
-  if (format && format.length > 0) {
-    params.set('format', format.join(','));
+  const { genre, style, format } = filters ?? {};
+  for (const [name, values] of Object.entries({ genre, style, format })) {
+    if (values && values.length > 0) {
+      params.set(name, values.join(','));
+    }
   }
   const res = await authorizedFetch(`/api/discogs/search?${params.toString()}`);
   return res.json();

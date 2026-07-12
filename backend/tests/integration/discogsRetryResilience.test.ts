@@ -86,7 +86,7 @@ describe('Discogs retry resilience — background library enrichment scope (FR-0
     discogsScope().get('/releases/6001').reply(429, { message: 'too many requests' });
     discogsScope().get('/releases/6001').reply(200, rawRelease(6001));
 
-    const enriched = await enrichEntry(libraryEntry(6001));
+    const enriched = await enrichEntry('retry-test-user', libraryEntry(6001));
 
     expect(enriched.catalogStatus).toBe('ok');
     expect(enriched.release?.discogsId).toBe(6001);
@@ -95,7 +95,7 @@ describe('Discogs retry resilience — background library enrichment scope (FR-0
   it('still degrades to catalogStatus "unavailable" once retries are fully exhausted', async () => {
     discogsScope().get('/releases/6002').times(3).reply(500, { message: 'server error' });
 
-    const enriched = await enrichEntry(libraryEntry(6002));
+    const enriched = await enrichEntry('retry-test-user', libraryEntry(6002));
 
     expect(enriched.catalogStatus).toBe('unavailable');
     expect(enriched.release).toBeNull();

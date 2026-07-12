@@ -1,3 +1,4 @@
+import type { LibraryFilters } from '../hooks/useLibraryQueryParams';
 import { authorizedFetch } from './apiClient';
 
 export interface ReleaseArtistCredit {
@@ -95,6 +96,10 @@ export interface EnrichedLibraryEntry {
   release: Release | null;
   /** Null in list responses and when the copy is gone from Discogs. */
   discogs: EntryDiscogsData | null;
+  /** Persisted at enrichment time (feature 038); absent until first successful enrichment. */
+  genre?: string[];
+  style?: string[];
+  format?: string[];
 }
 
 export interface PaginatedLibraryEntries {
@@ -124,10 +129,17 @@ export async function list(
   page = 1,
   pageSize = 20,
   refresh = false,
+  filters?: LibraryFilters,
 ): Promise<PaginatedLibraryEntries> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (refresh) {
     params.set('refresh', 'true');
+  }
+  const { genre, style, format } = filters ?? {};
+  for (const [name, values] of Object.entries({ genre, style, format })) {
+    if (values && values.length > 0) {
+      params.set(name, values.join(','));
+    }
   }
   const res = await authorizedFetch(`/api/library?${params.toString()}`);
   return res.json();

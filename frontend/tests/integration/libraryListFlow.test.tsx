@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,10 +14,10 @@ vi.mock('../../src/services/libraryApi', () => ({
   list: (...args: unknown[]) => mockList(...args),
 }));
 
-function renderPage() {
+function renderPage(initialEntries: string[] = ['/app/library']) {
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
         <LibraryListPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -149,6 +149,133 @@ describe('Library list flow (US2)', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /refresh/i }));
 
-    await waitFor(() => expect(mockList).toHaveBeenCalledWith(1, 20, true));
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith(1, 20, true, {}));
+  });
+});
+
+describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
+  beforeEach(() => {
+    mockList.mockReset();
+  });
+
+  function releaseEntry(
+    id: string,
+    title: string,
+    overrides: { genre?: string[]; style?: string[]; format?: string[] } = {},
+  ) {
+    return {
+      id,
+      discogsReleaseId: Number(id.replace(/\D/g, '')) || 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title,
+        artists: [],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+      ...overrides,
+    };
+  }
+
+  it('renders the same collapsible filter component (collapsed by default) above the records grid (FR-016)', async () => {
+    mockList.mockResolvedValue({
+      items: [releaseEntry('entry-1', 'Stockholm')],
+      page: 1,
+      pageSize: 20,
+      totalItems: 1,
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: /^filters$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^genre$/i })).not.toBeInTheDocument();
+  });
+
+  it('applying a Genre filter narrows the displayed entries and updates pagination totals (FR-017)', async () => {
+    mockList.mockImplementation((_page, _pageSize, _refresh, filters) => {
+      if (filters?.genre?.includes('Rock')) {
+        return Promise.resolve({
+          items: [releaseEntry('entry-1', 'Rock Only')],
+          page: 1,
+          pageSize: 20,
+          totalItems: 1,
+        });
+      }
+      return Promise.resolve({
+        items: [releaseEntry('entry-1', 'Rock Only'), releaseEntry('entry-2', 'Jazz Only')],
+        page: 1,
+        pageSize: 20,
+        totalItems: 2,
+      });
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Jazz Only')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^filters$/i }));
+    await user.click(screen.getByRole('button', { name: /^genre$/i }));
+    await user.click(within(screen.getByRole('dialog')).getByLabelText('Rock'));
+    await user.click(screen.getByRole('button', { name: /apply filters/i }));
+
+    await waitFor(() => expect(screen.getByText('Rock Only')).toBeInTheDocument());
+    expect(screen.queryByText('Jazz Only')).not.toBeInTheDocument();
+  });
+
+  it('shows a "no results for the active filters" message distinct from the empty-library message (FR-021)', async () => {
+    mockList.mockImplementation((_page, _pageSize, _refresh, filters) => {
+      if (filters?.genre?.includes('Non-Music')) {
+        return Promise.resolve({ items: [], page: 1, pageSize: 20, totalItems: 0 });
+      }
+      return Promise.resolve({
+        items: [releaseEntry('entry-1', 'Stockholm')],
+        page: 1,
+        pageSize: 20,
+        totalItems: 1,
+      });
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^filters$/i }));
+    await user.click(screen.getByRole('button', { name: /^genre$/i }));
+    await user.click(within(screen.getByRole('dialog')).getByLabelText('Non-Music'));
+    await user.click(screen.getByRole('button', { name: /apply filters/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/no results for the active filters/i)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/no records yet/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps filters active when navigating to another page (FR-022)', async () => {
+    mockList.mockImplementation((page) =>
+      Promise.resolve({
+        items: [releaseEntry(`entry-${page}`, `Rock Result Page ${page}`)],
+        page,
+        pageSize: 20,
+        totalItems: 40,
+      }),
+    );
+
+    renderPage(['/app/library?genre=Rock']);
+    await waitFor(() => expect(screen.getByText(/rock result page 1/i)).toBeInTheDocument());
+    expect(mockList).toHaveBeenLastCalledWith(1, 20, false, { genre: ['Rock'] });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+
+    await waitFor(() => expect(screen.getByText(/rock result page 2/i)).toBeInTheDocument());
+    expect(mockList).toHaveBeenLastCalledWith(2, 20, false, { genre: ['Rock'] });
   });
 });
