@@ -1,4 +1,9 @@
-# Changelog
+# Changelog (frozen — superseded by ../CHANGELOG.md)
+
+> **This file is frozen and no longer receives new entries.** As of `0.22.1`,
+> the whole project shares a single `CHANGELOG.md` at the repository root,
+> updated automatically by CI. This file is preserved as a historical
+> archive only (spec 037).
 
 All notable changes to the Vinylmania backend are documented in this file.
 

@@ -1,0 +1,9 @@
+{
+  "name": "vinylmania-release-tooling",
+  "private": true,
+  "type": "commonjs",
+  "description": "Root-level release automation for the unified CHANGELOG.md and lockstep versioning (spec 037). Not published; no runtime dependencies.",
+  "scripts": {
+    "test": "node --test scripts/release/__tests__/*.test.js"
+  }
+}
