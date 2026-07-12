@@ -103,6 +103,17 @@ test.describe('Responsive header navigation (US1, US2, US3)', () => {
         expect(box?.width).toBeGreaterThanOrEqual(44);
         expect(box?.height).toBeGreaterThanOrEqual(44);
       }
+
+      // Sign out lives inside the hamburger menu below `md` (spec 036,
+      // Cluster D) — the header-row "Sign out" button is hidden here.
+      const signOutRow = dialog.getByRole('button', { name: /sign out/i });
+      const signOutBox = await signOutRow.boundingBox();
+      expect(signOutBox?.width).toBeGreaterThanOrEqual(44);
+      expect(signOutBox?.height).toBeGreaterThanOrEqual(44);
+      await expect(
+        page.getByRole('button', { name: /sign out/i }).and(page.locator(':visible')),
+      ).toHaveCount(1);
+
       await page.keyboard.press('Escape');
 
       const searchSubmit = page.getByRole('button', { name: /^search$/i });

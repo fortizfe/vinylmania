@@ -26,7 +26,10 @@ export function DashboardPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-6 p-6 sm:p-8">
+    <main
+      data-testid="dashboard-page"
+      className="mx-auto flex max-w-7xl flex-col gap-6 p-6 sm:p-8"
+    >
       <FeedSourceStatusBanner sourceStatuses={sourceStatuses} />
       {renderContent()}
     </main>

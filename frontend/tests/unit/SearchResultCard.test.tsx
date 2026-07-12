@@ -163,21 +163,27 @@ describe('SearchResultCard', () => {
     });
   });
 
-  describe('fixed-height cards (feature 028, US2, FR-002)', () => {
-    it('applies the same fixed-height class to a standalone release card', () => {
+  describe('fixed-height cards (feature 028, US2, FR-002; scoped to sm:+ since spec 036)', () => {
+    // Fixed height only applies from `sm:` up, where the multi-column grid
+    // keeps cards narrow enough for a fixed height to fit the image without
+    // clipping the title/artist text below it. Below `sm:` (single-column
+    // mobile), cards use their natural content height instead (spec 036) —
+    // a fixed h-96 there squeezed the title/artist text to zero height once
+    // the mobile grid became a single full-width column (feature 035).
+    it('applies the same sm:+ fixed-height class to a standalone release card', () => {
       const { container } = renderCard(baseResult);
 
-      expect(container.firstChild).toHaveClass('h-96');
+      expect(container.firstChild).toHaveClass('sm:h-96');
     });
 
-    it('applies the same fixed-height class to a master (grouped) card', () => {
+    it('applies the same sm:+ fixed-height class to a master (grouped) card', () => {
       const { container } = renderCard({
         ...baseResult,
         resultType: 'master',
         discogsId: 12345,
       });
 
-      expect(container.firstChild).toHaveClass('h-96');
+      expect(container.firstChild).toHaveClass('sm:h-96');
     });
   });
 

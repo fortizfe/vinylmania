@@ -4,14 +4,21 @@ import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const ENTRY_ID = 'e2e-cache-entry-1';
 
-function buildEntry(condition: string) {
+function buildEntry(mediaCondition: string) {
   return {
     id: ENTRY_ID,
     discogsReleaseId: 1,
     addedAt: '2026-07-04T00:00:00.000Z',
-    condition,
-    notes: 'Bought at a record fair',
     catalogStatus: 'ok',
+    discogs: {
+      instanceId: 100,
+      folderId: 1,
+      rating: 0,
+      mediaCondition,
+      sleeveCondition: null,
+      notes: 'Bought at a record fair',
+      editable: { mediaCondition: true, sleeveCondition: true, notes: true },
+    },
     release: {
       discogsId: 1,
       title: 'Stockholm',
@@ -23,6 +30,7 @@ function buildEntry(condition: string) {
       styles: [],
       tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
       images: [],
+      identifiers: [],
       discogsUrl: 'https://www.discogs.com/release/1',
     },
   };
@@ -36,7 +44,7 @@ test.describe('Caching: instant revisits and post-edit freshness (US1, US3)', ()
   test('revisiting the library list and a record detail page is served from cache, and an edit is reflected on the list without a manual reload', async ({
     page,
   }) => {
-    let currentCondition = 'Good';
+    let currentCondition = 'Good (G)';
     let listRequests = 0;
     let detailRequests = 0;
 
@@ -56,8 +64,8 @@ test.describe('Caching: instant revisits and post-edit freshness (US1, US3)', ()
 
     await page.route(`**/api/library/${ENTRY_ID}`, async (route) => {
       if (route.request().method() === 'PATCH') {
-        const body = route.request().postDataJSON() as { condition?: string };
-        currentCondition = body.condition ?? currentCondition;
+        const body = route.request().postDataJSON() as { mediaCondition?: string };
+        currentCondition = body.mediaCondition ?? currentCondition;
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -102,17 +110,18 @@ test.describe('Caching: instant revisits and post-edit freshness (US1, US3)', ()
     const patchRequest = page.waitForRequest(
       (request) => request.url().includes(`/api/library/${ENTRY_ID}`) && request.method() === 'PATCH',
     );
-    await page.getByText('Good', { exact: true }).click();
-    await page.getByLabel('Condition').selectOption('Mint');
-    await page.getByLabel('Condition').blur();
+    await page.getByLabel('Media Condition').selectOption('Mint (M)');
+    await page.getByLabel('Media Condition').blur();
     await patchRequest;
-    await expect(page.getByText('Mint', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Media Condition')).toHaveValue('Mint (M)');
 
-    // Navigating back to the library list must show the update immediately,
-    // with no manual reload (US3, FR-004/SC-004).
+    // Navigating back to the library list must refetch (not reuse the stale
+    // cached response) so the edit is reflected without a manual reload
+    // (US3, FR-004/SC-004). RecordCard doesn't render media condition on the
+    // list, so the observable signal here is the refetch itself.
     await page.getByRole('link', { name: /back/i }).click();
     await expect(page.getByText('Stockholm')).toBeVisible();
-    await expect(page.getByText('Mint', { exact: true })).toBeVisible();
+    expect(listRequests).toBe(2);
   });
 });
 

@@ -24,8 +24,8 @@ export function AppHeader() {
       <HeaderSearchBox />
       <div className="flex items-center justify-self-end gap-2">
         <HeaderNavIcons />
-        <HamburgerMenu />
-        <Button variant="secondary" onClick={signOut}>
+        <HamburgerMenu onSignOut={signOut} />
+        <Button variant="secondary" onClick={signOut} className="hidden md:inline-flex">
           Sign out
         </Button>
       </div>

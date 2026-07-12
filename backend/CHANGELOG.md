@@ -8,6 +8,12 @@ of the `frontend` package. Every entry below is already deployed — this projec
 has no `[Unreleased]` staging section, since Vercel deploys `main` on every
 merge, so a changelog entry and its version bump land in the same PR.
 
+## [0.13.1] - 2026-07-12
+
+### Fixed
+
+- Metal Storm's News category articles now show their band/album photo on the Dashboard, matching Metal Injection, MetalSucks, and Louder Sound. Metal Storm's feeds don't use the Media RSS extension as originally suspected — the News feed instead carries images via a non-standard `data-image-url` attribute on `<a class="ms-link">` anchors, using a relative path resolved against the source's feed URL. Reviews, Interviews, Articles, and Staff Picks categories carry no image data in their raw feeds at all, so they correctly continue to show the existing placeholder (spec 036).
+
 ## [0.13.0] - 2026-07-11
 
 ### Added

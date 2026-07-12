@@ -1,16 +1,19 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { HamburgerMenu } from '../../src/components/HamburgerMenu';
 
-function renderMenu() {
-  return render(
-    <MemoryRouter>
-      <HamburgerMenu />
-    </MemoryRouter>,
-  );
+function renderMenu(onSignOut = vi.fn()) {
+  return {
+    onSignOut,
+    ...render(
+      <MemoryRouter>
+        <HamburgerMenu onSignOut={onSignOut} />
+      </MemoryRouter>,
+    ),
+  };
 }
 
 describe('HamburgerMenu', () => {
@@ -63,5 +66,38 @@ describe('HamburgerMenu', () => {
     await user.keyboard('{Escape}');
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  describe('sign out row (spec 036, Cluster D)', () => {
+    it('renders a "Sign out" row alongside the existing nav links', async () => {
+      const user = userEvent.setup();
+      renderMenu();
+
+      await user.click(screen.getByRole('button', { name: /menu/i }));
+
+      expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
+    });
+
+    it('calls onSignOut and closes the menu when the sign-out row is selected', async () => {
+      const user = userEvent.setup();
+      const { onSignOut } = renderMenu();
+
+      await user.click(screen.getByRole('button', { name: /menu/i }));
+      await user.click(screen.getByRole('button', { name: /sign out/i }));
+
+      expect(onSignOut).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('meets the 44px minimum touch target height (FR-004, feature 035)', async () => {
+      const user = userEvent.setup();
+      renderMenu();
+
+      await user.click(screen.getByRole('button', { name: /menu/i }));
+
+      expect(screen.getByRole('button', { name: /sign out/i }).className).toMatch(
+        /min-h-11/,
+      );
+    });
   });
 });

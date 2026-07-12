@@ -19,8 +19,20 @@ function HamburgerIcon() {
   );
 }
 
-export function HamburgerMenu() {
+interface HamburgerMenuProps {
+  onSignOut: () => void;
+}
+
+const navRowClassName =
+  'flex min-h-11 items-center rounded-xl px-3 py-2 font-medium text-gray-900 no-underline hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900';
+
+export function HamburgerMenu({ onSignOut }: HamburgerMenuProps) {
   const [open, setOpen] = useState(false);
+
+  function handleSignOut() {
+    setOpen(false);
+    onSignOut();
+  }
 
   return (
     <>
@@ -40,11 +52,14 @@ export function HamburgerMenu() {
               key={link.to}
               to={link.to}
               onClick={() => setOpen(false)}
-              className="flex min-h-11 items-center rounded-xl px-3 py-2 font-medium text-gray-900 no-underline hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900"
+              className={navRowClassName}
             >
               {link.label}
             </Link>
           ))}
+          <button type="button" onClick={handleSignOut} className={`${navRowClassName} text-left`}>
+            Sign out
+          </button>
         </nav>
       </Modal>
     </>

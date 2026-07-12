@@ -16,7 +16,7 @@ test.describe('Returning session (US1)', () => {
     await page.reload();
 
     await expect(page).toHaveURL(/\/app$/);
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+    await expect(page.getByTestId('dashboard-page')).toBeVisible();
     await expect(page.getByTestId('landing-viewport')).not.toBeVisible();
   });
 });

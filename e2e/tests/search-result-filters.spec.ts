@@ -558,7 +558,7 @@ test.describe('Search results UI polish (feature 028)', () => {
     await expect(page.getByText('Second Batch Result 0')).toBeVisible();
   });
 
-  test('renders every search result card at the same fixed height across the whole grid, at mobile, tablet, and desktop viewport sizes (US2, FR-002, FR-003, SC-002)', async ({
+  test('renders every search result card at the same fixed height across the grid at tablet and desktop, and with fully visible (non-clipped) text at mobile (US2, FR-002, FR-003, SC-002; scoped per spec 036)', async ({
     page,
   }) => {
     const mixedResults = [
@@ -591,13 +591,15 @@ test.describe('Search results UI polish (feature 028)', () => {
     await page.getByRole('button', { name: /^search$/i }).click();
     await expect(page.getByText('A Master Grouping')).toBeVisible();
 
-    const viewports = [
-      { width: 375, height: 812 }, // mobile
+    // At >=sm: (multi-column grid), every card still shares the same fixed
+    // height regardless of content (feature 028) — this is where uneven
+    // card heights would look visually broken side-by-side in a row.
+    const multiColumnViewports = [
       { width: 834, height: 1194 }, // tablet
       { width: 1440, height: 900 }, // desktop
     ];
 
-    for (const viewport of viewports) {
+    for (const viewport of multiColumnViewports) {
       await page.setViewportSize(viewport);
       const cards = page.locator('li', {
         hasText: /A Master Grouping|A Standalone Release|Another Release|Another Master/,
@@ -610,6 +612,25 @@ test.describe('Search results UI polish (feature 028)', () => {
       for (const height of rest) {
         expect(height).toBeCloseTo(first, 0);
       }
+    }
+
+    // At mobile (<sm:, single-column grid), each card is the only item in
+    // its own row, so a fixed cross-card height no longer serves the
+    // original "no visual misalignment in a shared row" purpose — and a
+    // fixed height there previously squeezed the title/artist text to zero
+    // height once cards became full-width (spec 036). Cards instead use
+    // their natural content height; what must hold is that every card's own
+    // title text renders fully, with non-zero size.
+    await page.setViewportSize({ width: 375, height: 812 });
+    for (const title of [
+      'A Master Grouping',
+      'A Standalone Release',
+      'Another Release',
+      'Another Master',
+    ]) {
+      const box = await page.getByText(title, { exact: true }).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box?.height).toBeGreaterThan(0);
     }
   });
 

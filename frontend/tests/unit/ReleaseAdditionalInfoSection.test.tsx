@@ -51,4 +51,16 @@ describe('ReleaseAdditionalInfoSection', () => {
 
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('renders without throwing when identifiers is undefined (spec 036, Cluster C hardening)', () => {
+    // TypeScript declares `identifiers` as required, but an incomplete API
+    // response (or a stale test fixture, per spec 036 research.md §6) can
+    // still deliver `undefined` at runtime — this must not crash the render.
+    const props = { notes: 'Some notes' } as unknown as Parameters<
+      typeof ReleaseAdditionalInfoSection
+    >[0];
+
+    expect(() => render(<ReleaseAdditionalInfoSection {...props} />)).not.toThrow();
+    expect(screen.getByText('Some notes')).toBeInTheDocument();
+  });
 });
