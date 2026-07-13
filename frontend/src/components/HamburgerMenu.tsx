@@ -24,7 +24,7 @@ interface HamburgerMenuProps {
 }
 
 const navRowClassName =
-  'flex min-h-11 items-center rounded-xl px-3 py-2 font-medium text-gray-900 no-underline hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900';
+  'flex min-h-11 items-center rounded-xl px-3 py-2 font-medium text-stone-900 no-underline hover:bg-stone-100 dark:text-stone-100 dark:hover:bg-stone-900';
 
 export function HamburgerMenu({ onSignOut }: HamburgerMenuProps) {
   const [open, setOpen] = useState(false);

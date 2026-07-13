@@ -27,7 +27,7 @@ const OUTCOME_MESSAGES: Record<
 
 const TONE_CLASSES: Record<'success' | 'warning', string> = {
   success:
-    'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-900 dark:bg-gray-950 dark:text-gray-200',
+    'border-stone-200 bg-stone-50 text-stone-800 dark:border-stone-900 dark:bg-stone-950 dark:text-stone-200',
   warning:
     'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200',
 };
@@ -89,10 +89,10 @@ export function ProfilePage() {
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8 xl:max-w-5xl">
       <header>
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <h1 className="font-display text-xl leading-tight text-stone-900 dark:text-stone-100">
           Profile
         </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-stone-600 dark:text-stone-400">
           Manage your account and connected services.
         </p>
       </header>
@@ -109,15 +109,15 @@ export function ProfilePage() {
         className="flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-8"
       >
         <section aria-label="Preferences" className="flex flex-col gap-4 xl:flex-1">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
             Preferences
           </h2>
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-900 dark:bg-gray-950">
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-900 dark:bg-stone-950">
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
                 Dark mode
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-stone-600 dark:text-stone-400">
                 Switch between a light or dark appearance for the whole app.
               </p>
             </div>

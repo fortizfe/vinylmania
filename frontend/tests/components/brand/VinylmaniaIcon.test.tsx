@@ -17,10 +17,10 @@ describe('VinylmaniaIcon', () => {
     const circles = container.querySelectorAll('circle');
 
     const outer = Array.from(circles).find((c) =>
-      c.getAttribute('class')?.includes('fill-landing-surface'),
+      c.getAttribute('class')?.includes('fill-surface'),
     );
     const center = Array.from(circles).find((c) =>
-      c.getAttribute('class')?.includes('fill-landing-accent'),
+      c.getAttribute('class')?.includes('fill-accent'),
     );
 
     expect(outer).toBeDefined();

@@ -14,11 +14,11 @@ export function Checkbox({ label, id, className, ...props }: CheckboxProps) {
         type="checkbox"
         {...props}
         className={clsx(
-          'h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:border-gray-800 dark:bg-gray-950',
+          'h-4 w-4 rounded border-stone-300 text-primary focus:ring-primary dark:border-stone-800 dark:bg-stone-950',
           className,
         )}
       />
-      <label htmlFor={id} className="text-sm text-gray-700 dark:text-gray-300">
+      <label htmlFor={id} className="text-sm text-stone-700 dark:text-stone-300">
         {label}
       </label>
     </div>

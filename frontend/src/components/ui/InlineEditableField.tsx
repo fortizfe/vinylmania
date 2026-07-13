@@ -101,12 +101,12 @@ export const InlineEditableField = forwardRef<
         aria-label={`Edit ${fieldLabel}`}
         className={clsx(
           'flex min-h-11 items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors',
-          'hover:bg-gray-100 dark:hover:bg-gray-900',
-          '[@media(hover:none)]:bg-gray-50 [@media(hover:none)]:dark:bg-gray-900/60',
-          !savedValue && 'italic text-gray-400 dark:text-gray-500',
+          'hover:bg-stone-100 dark:hover:bg-stone-900',
+          '[@media(hover:none)]:bg-stone-50 [@media(hover:none)]:dark:bg-stone-900/60',
+          !savedValue && 'italic text-stone-400 dark:text-stone-500',
         )}
       >
-        <span className="text-gray-700 dark:text-gray-300">{displayText}</span>
+        <span className="text-stone-700 dark:text-stone-300">{displayText}</span>
         {mode === 'saved' && (
           <output className="text-xs font-medium text-green-600 dark:text-green-400">
             Saved
@@ -126,7 +126,7 @@ export const InlineEditableField = forwardRef<
         autoFocus: true,
       })}
       {mode === 'saving' && (
-        <span className="text-xs text-gray-500 dark:text-gray-400">Saving…</span>
+        <span className="text-xs text-stone-500 dark:text-stone-400">Saving…</span>
       )}
       {mode === 'error' && (
         <span className="text-xs text-red-600 dark:text-red-400" role="alert">

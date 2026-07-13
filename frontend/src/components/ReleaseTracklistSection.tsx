@@ -9,8 +9,8 @@ export function ReleaseTracklistSection({ tracklist }: ReleaseTracklistSectionPr
 
   return (
     <div>
-      <h4 className="mb-2 font-semibold text-gray-900 dark:text-gray-100">Tracklist</h4>
-      <ol className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
+      <h4 className="mb-2 font-semibold text-stone-900 dark:text-stone-100">Tracklist</h4>
+      <ol className="flex flex-col gap-1 text-sm text-stone-700 dark:text-stone-300">
         {tracklist.map((track) => (
           <li key={`${track.position}-${track.title}`}>
             {track.position}. {track.title}

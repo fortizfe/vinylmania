@@ -1,23 +1,34 @@
 <!--
 Sync Impact Report
-Version change: 2.2.0 → 2.3.0
+Version change: 2.3.0 → 2.4.0
 Modified principles: none (existing principles I-VII unchanged)
 Added sections: none
 Changed sections:
-  - Development Workflow (Quality Gates): the two "CHANGELOG.md" bullets
-    (mandatory per-package changelog entry + matching package.json version
-    bump on every backend/frontend PR) were replaced with a single rule
-    prohibiting manual changelog/version maintenance — changelog generation
-    and semantic version bumps are now handled by the GitHub Actions
-    pipeline from Conventional Commit history instead of by developers in
-    each PR. Reviewers MUST NOT reject PRs for missing a manual entry/bump,
-    and MUST NOT accept hand-written CHANGELOG.md/package.json version
-    edits. Rationale updated to reflect automation replacing manual upkeep.
-Removed sections: none (rule replaced in place, not deleted outright)
+  - UI Design System & Styling: "Visual lightness" replaced with "Visual
+    lightness & brand personality" — the palette requirement flips from a
+    reduced gray/slate + single accent to a warm-neutral (stone) family
+    plus a mandatory dual accent (--color-primary indigo as the sole
+    primary-action color, --color-accent amber for secondary emphasis); the
+    typography rule now carries a scoped exception allowing the brand
+    display typeface (--font-display, Anton) on page headers, pillar
+    headers, and single-record showcase titles (never body text, labels,
+    data values, or repeated per-item titles). "Theme-variable dark mode"
+    gains an appended clause requiring the near-black --color-surface/
+    --color-surface-raised tokens (not generic gray-950/900) for dark
+    mode's primary/elevated surfaces, plus a no-CLS rule for headings using
+    --font-display. "Skeleton loading states" example utilities updated
+    from bg-gray-200/dark:bg-gray-800 to bg-stone-200/dark:bg-surface-raised
+    to match the palette rebuild — the loading-state requirement itself
+    (mirror exact shape/dimensions, no generic spinners) is unchanged. Every
+    other "UI Design System & Styling" bullet (CSS-first configuration,
+    card-based layout, reusable atomic components, no layout shift, dual
+    responsive layout, minimum touch target size, v4-current utility
+    naming, no custom CSS without justification) is textually unchanged.
+Removed sections: none (rules replaced/amended in place, not deleted)
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (no changelog-specific references; no change needed)
-  ✅ .specify/templates/spec-template.md (no changelog-specific references; no change needed)
-  ✅ .specify/templates/tasks-template.md (no changelog-specific references; no change needed)
+  ✅ .specify/templates/plan-template.md (no palette/typography-specific references; no change needed)
+  ✅ .specify/templates/spec-template.md (no palette/typography-specific references; no change needed)
+  ✅ .specify/templates/tasks-template.md (no palette/typography-specific references; no change needed)
   ✅ .specify/templates/checklist-template.md (generic checklist template; no conflicting gate)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
 Follow-up TODOs: none
@@ -192,16 +203,26 @@ Firebase emulator for integration tests).
   function (e.g., `clsx`, `tailwind-variants`).
 - **Skeleton loading states**: Any content that depends on an asynchronous
   request MUST show a skeleton loader built with Tailwind utilities
-  (`bg-gray-200`/`dark:bg-gray-800`, `animate-pulse`, `rounded-md`) that
-  mirrors the exact shape and dimensions of the final content (same card
-  structure, same approximate number of lines/blocks). Generic spinners and
-  blank screens MUST NOT be used as the default loading state.
-- **Visual lightness**: Layouts MUST use the spacing scale generously (`gap-4`,
-  `space-y-4`, `p-6`); typography MUST rely on `font-medium`/`font-semibold`
-  for hierarchy rather than heavy bold weights; the color palette MUST stay
-  reduced and defined in `@theme` (neutrals such as gray/slate plus one accent
-  via `--color-primary`); and shadows MUST stay soft (`shadow-sm`), reserving
-  `shadow-xl`/`shadow-2xl` for floating elements such as modals.
+  (`bg-stone-200`/`dark:bg-surface-raised`, `animate-pulse`, `rounded-md`)
+  that mirrors the exact shape and dimensions of the final content (same
+  card structure, same approximate number of lines/blocks). Generic spinners
+  and blank screens MUST NOT be used as the default loading state.
+- **Visual lightness & brand personality**: Layouts MUST use the spacing
+  scale generously (`gap-4`, `space-y-4`, `p-6`); typography MUST rely on
+  `font-medium`/`font-semibold` for hierarchy rather than heavy bold
+  weights, except page headers, dashboard/landing section ("pillar")
+  headers, and single-record showcase titles, which MUST use the brand's
+  display typeface (`--font-display`, Anton) per the layout-shift rule
+  below — never body text, labels, data values, or repeated per-item titles
+  in dense lists/grids; the color palette MUST stay defined in `@theme` and
+  MUST use the warm-neutral (`stone`) family — not cool `gray`/`slate` —
+  for backgrounds, text, and borders, plus at least two brand accents
+  (`--color-primary` indigo as the primary-action color everywhere, and
+  `--color-accent` amber for secondary emphasis: highlights, badges, hover
+  accents, decorative brand moments) rather than a single reduced accent;
+  shadows MUST stay soft (`shadow-sm`/`shadow-md`) for in-flow cards,
+  reserving `shadow-lg`/`shadow-xl`/`shadow-2xl` for floating elements such
+  as modals.
 - **No layout shift**: All states of a given component (skeleton, empty,
   error, populated) MUST share the same sizing classes (`w-*`, `h-*`,
   `min-h-*`) so that transitioning between states never causes layout shift.
@@ -226,7 +247,13 @@ Firebase emulator for integration tests).
 - **Theme-variable dark mode**: Dark mode MUST be implemented with Tailwind's
   `dark:` prefix, combined with CSS variables in the `@theme` block so colors
   respond without duplicating utility variants. Every component, including
-  skeletons, MUST support dark mode.
+  skeletons, MUST support dark mode. Dark mode's primary and elevated
+  surfaces MUST use the brand's near-black tokens (`--color-surface`,
+  `--color-surface-raised`) rather than a generic `gray-950`/`gray-900`.
+  Headings using `--font-display` MUST pair a fixed `text-*`/`leading-*`
+  utility so font-swap reflow never changes line-box height (no cumulative
+  layout shift), consistent with the "No layout shift" rule above applied to
+  font loading instead of async data.
 - **v4-current utility naming**: Only current Tailwind v4 utility names MUST
   be used (e.g., `bg-linear-*` instead of the deprecated `bg-gradient-to-*`,
   and explicit-suffix shadow/radius/blur scales). Deprecated v3-era class
@@ -311,4 +338,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 2.3.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-12
+**Version**: 2.4.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-13

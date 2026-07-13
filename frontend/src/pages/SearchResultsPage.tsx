@@ -117,21 +117,21 @@ export function SearchResultsPage() {
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
-      <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+      <h1 className="font-display text-2xl leading-tight text-stone-900 dark:text-stone-100">
         Search results
       </h1>
 
       <FiltersControl filters={filters} onApply={applyFilters} onClear={clearFilters} />
 
       {!searched && (
-        <p className="text-gray-500 dark:text-gray-400">
+        <p className="text-stone-500 dark:text-stone-400">
           Use the search box in the header to look up a record in the Discogs catalog.
         </p>
       )}
 
       {gateError && (
         <Card>
-          <p className="text-gray-700 dark:text-gray-300">
+          <p className="text-stone-700 dark:text-stone-300">
             {gateError === 'not-linked'
               ? 'You need to link your Discogs account before adding records to your library.'
               : 'Your Discogs link is no longer valid. Please re-link your account to add records.'}
@@ -152,7 +152,7 @@ export function SearchResultsPage() {
       )}
 
       {!loading && searched && results.length === 0 && (
-        <p className="text-gray-500 dark:text-gray-400">
+        <p className="text-stone-500 dark:text-stone-400">
           {activeFilters.length > 0
             ? `No results found for the active filters (${activeFilters.join(', ')}). Try adjusting or clearing them.`
             : 'No results found. Try a different search.'}
@@ -206,7 +206,7 @@ export function SearchResultsPage() {
           )}
 
           {!hasNextPage && !nextPageError && !isFetchingNextPage && (
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-center text-sm text-stone-500 dark:text-stone-400">
               No more results.
             </p>
           )}

@@ -14,18 +14,18 @@ export function MasterReleaseDetailsSection({
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="font-display text-lg leading-tight text-stone-900 dark:text-stone-100">
           {master.title}
         </h3>
         {master.artists.map((artist) => (
-          <p key={artist.discogsArtistId} className="text-gray-500 dark:text-gray-400">
+          <p key={artist.discogsArtistId} className="text-stone-500 dark:text-stone-400">
             {artist.name}
           </p>
         ))}
       </div>
 
       {hasMetaRow && (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
           {master.year && <span>{master.year}</span>}
           {master.genres.map((genre) => (
             <Badge key={genre}>{genre}</Badge>

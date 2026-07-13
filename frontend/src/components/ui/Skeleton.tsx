@@ -15,7 +15,7 @@ export function Skeleton({ className, rounded = 'md' }: SkeletonProps) {
     <div
       aria-hidden="true"
       className={clsx(
-        'animate-pulse bg-gray-200 dark:bg-gray-900',
+        'animate-pulse bg-stone-200 dark:bg-stone-800',
         roundedClasses[rounded],
         className,
       )}

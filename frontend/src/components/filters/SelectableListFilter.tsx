@@ -68,7 +68,7 @@ export function SelectableListFilter({
   return (
     <>
       <div className="flex flex-1 min-w-40 flex-col gap-1">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
           {label}
         </span>
         <Button

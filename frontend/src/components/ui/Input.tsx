@@ -13,7 +13,7 @@ export function Input({ label, id, hideLabel = false, className, ...props }: Inp
       <label
         htmlFor={id}
         className={clsx(
-          'text-sm font-medium text-gray-700 dark:text-gray-300',
+          'text-sm font-medium text-stone-700 dark:text-stone-300',
           hideLabel && 'sr-only',
         )}
       >
@@ -23,7 +23,7 @@ export function Input({ label, id, hideLabel = false, className, ...props }: Inp
         id={id}
         {...props}
         className={clsx(
-          'min-h-11 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100',
+          'min-h-11 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-stone-800 dark:bg-stone-950 dark:text-stone-100',
           className,
         )}
       />

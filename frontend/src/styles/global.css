@@ -35,35 +35,42 @@
   /*
    * Unrated/error placeholder badge background (feature 019). Unlike the
    * bands above, this is a neutral gray that adapts per theme via the
-   * component's `dark:bg-gray-700` class (darkened one step by feature 031's
+   * component's `dark:bg-stone-700` class (darkened one step by feature 031's
    * dark-mode polish), so only the light-mode value is defined here — see
    * specs/019-rating-badge-placeholder/research.md §2.
    */
   --color-rating-unrated: #d1d5db;
 
   /*
-   * Landing page rock/metal-inflected accent palette (feature 032). Applied
-   * only in dark mode via `dark:bg-landing-surface` on the sticky header,
-   * hero, and pillar sections, paired with `--color-landing-accent` for
-   * icons/large text/emphasis — verified 9.15:1 contrast between the two
-   * (WCAG AAA). In light mode, sections keep the existing white/gray-50
-   * background and reuse the existing `--color-primary` for equivalent
-   * large-text/icon accents (verified >=3:1, the WCAG AA minimum for large
-   * text and non-text UI elements) instead of a new token — see
-   * specs/032-landing-page-refresh/research.md §4 for the full computation.
-   * Neither `--color-landing-accent` nor `--color-primary` is used for small
-   * body text in this feature; body copy always uses the existing
-   * gray-900/gray-100 tokens, which remain the only WCAG AA (4.5:1) safe
-   * choice for normal-size text.
+   * App-wide near-black dark-mode brand surface + dual accent palette
+   * (feature 039 — theme personality rebuild, generalized from the
+   * landing-only tokens introduced by feature 032). `--color-surface` is the
+   * dark-mode page/app background; `--color-surface-raised` is one
+   * elevation step lighter, for cards/modals/the header sitting above the
+   * page; `--color-border-dark` is the default dark-mode border on those
+   * raised surfaces. `--color-primary` (indigo) stays the sole
+   * primary-action color everywhere; `--color-accent` (amber) is the
+   * secondary-emphasis accent (badges, hover accents, highlights,
+   * decorative brand moments) in both modes. `--color-accent-text` is a
+   * darker amber-700 step used only when amber is a *foreground text or
+   * icon stroke color on a light-mode surface* — raw `--color-accent` at
+   * 2.15:1 on `stone-50` fails WCAG AA there; `--color-accent-text` at
+   * 4.81:1 passes. Every other pairing (amber on dark surfaces, amber as a
+   * background with dark text) already clears AA with the base
+   * `--color-accent` value — see specs/039-theme-personality-rebuild/
+   * research.md §2–4 for the full computation.
    */
-  --color-landing-surface: #0b0b10;
-  --color-landing-accent: #f59e0b;
+  --color-surface: #0b0b10;
+  --color-surface-raised: #16161f;
+  --color-border-dark: #262631;
+  --color-accent: #f59e0b;
+  --color-accent-text: #b45309;
 
   /*
    * VinylmaniaIcon's dark-context outer-ring shade (feature 034 — logo
    * rebranding). Every other icon color reuses an existing token above
-   * (--color-landing-surface, --color-landing-accent, --color-primary) —
-   * this is the one color in the design brief with no existing match, see
+   * (--color-surface, --color-accent, --color-primary) — this is the one
+   * color in the design brief with no existing match, see
    * specs/034-logo-rebranding/research.md §4.
    */
   --color-brand-icon-dark-bg: #1a1a22;

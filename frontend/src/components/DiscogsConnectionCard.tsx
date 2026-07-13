@@ -14,7 +14,7 @@ function DiscogsMark() {
   return (
     <span
       aria-hidden="true"
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white dark:bg-gray-100 dark:text-gray-900"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-stone-900 text-sm font-semibold text-white dark:bg-stone-100 dark:text-stone-900"
     >
       D
     </span>
@@ -44,7 +44,7 @@ export function DiscogsConnectionCard() {
       <Card>
         <div className="flex min-h-36 flex-col gap-4">
           <CardHeading />
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-stone-600 dark:text-stone-400">
             We could not load your Discogs connection right now. Please try again later.
           </p>
         </div>
@@ -60,16 +60,16 @@ export function DiscogsConnectionCard() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Badge>Connected</Badge>
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-medium text-stone-900 dark:text-stone-100">
                 {status.data.discogsUsername}
               </span>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-stone-600 dark:text-stone-400">
               Linked on {formatLinkedDate(status.data.linkedAt)}
             </p>
             {confirmingDisconnect ? (
               <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-stone-600 dark:text-stone-400">
                   Disconnect your Discogs account?
                 </span>
                 <Button
@@ -101,7 +101,7 @@ export function DiscogsConnectionCard() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-stone-600 dark:text-stone-400">
               Not connected. Link your Discogs account to prepare for collection syncing.
             </p>
             <div>
@@ -124,8 +124,8 @@ function CardHeading() {
     <div className="flex items-center gap-3">
       <DiscogsMark />
       <div>
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Discogs</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <h2 className="font-semibold text-stone-900 dark:text-stone-100">Discogs</h2>
+        <p className="text-sm text-stone-600 dark:text-stone-400">
           Link your Vinylmania account with your Discogs account.
         </p>
       </div>

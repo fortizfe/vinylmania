@@ -36,8 +36,8 @@ export function SearchResultCard({
             aria-hidden="true"
             className="pointer-events-none absolute inset-0"
           >
-            <div className="absolute inset-0 translate-x-3 translate-y-3 rotate-6 rounded-md border border-gray-200 bg-gray-100 shadow-md dark:border-gray-800 dark:bg-gray-900" />
-            <div className="absolute inset-0 translate-x-1.5 translate-y-1.5 -rotate-3 rounded-md border border-gray-200 bg-gray-50 shadow-sm dark:border-gray-800 dark:bg-gray-950" />
+            <div className="absolute inset-0 translate-x-3 translate-y-3 rotate-6 rounded-md border border-stone-200 bg-stone-100 shadow-md dark:border-stone-800 dark:bg-stone-900" />
+            <div className="absolute inset-0 translate-x-1.5 translate-y-1.5 -rotate-3 rounded-md border border-stone-200 bg-stone-50 shadow-sm dark:border-stone-800 dark:bg-stone-950" />
           </div>
         )}
         {result.thumbnailUrl ? (
@@ -49,22 +49,22 @@ export function SearchResultCard({
         ) : (
           <div
             data-testid="search-result-thumbnail-placeholder"
-            className="relative aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-900"
+            className="relative aspect-square w-full rounded-md bg-stone-100 dark:bg-stone-900"
           />
         )}
         <div className="absolute top-2 right-2">
           <ReleaseRatingBadge displayValue={rating.displayValue} band={rating.band} />
         </div>
       </div>
-      <span className="truncate font-semibold text-gray-900 dark:text-gray-100">
+      <span className="truncate font-semibold text-stone-900 dark:text-stone-100">
         {result.title}
       </span>
       {result.artist && (
-        <span className="truncate text-sm text-gray-500 dark:text-gray-400">
+        <span className="truncate text-sm text-stone-500 dark:text-stone-400">
           {result.artist}
         </span>
       )}
-      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+      <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
         {result.year && <span>{result.year}</span>}
         {!isGrouped && format && <Badge tone="muted">{format}</Badge>}
       </div>

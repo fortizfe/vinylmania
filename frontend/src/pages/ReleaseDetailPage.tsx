@@ -50,7 +50,7 @@ export function ReleaseDetailPage() {
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
         <BackLink to={backTo} />
         <Card>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-stone-500 dark:text-stone-400">
             Couldn&apos;t find that release in the catalog.
           </p>
         </Card>
@@ -91,7 +91,7 @@ export function ReleaseDetailPage() {
                   {added ? 'Added to library' : 'Add to library'}
                 </Button>
                 {gateError && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
                     {gateError === 'not-linked'
                       ? 'You need to link your Discogs account before adding records to your library.'
                       : 'Your Discogs link is no longer valid. Please re-link your account to add records.'}

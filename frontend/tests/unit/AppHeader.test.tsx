@@ -42,7 +42,7 @@ describe('AppHeader', () => {
     expect(header).toHaveClass('sticky');
     expect(header).toHaveClass('top-0');
     expect(header).toHaveClass('bg-white');
-    expect(header).toHaveClass('dark:bg-gray-950');
+    expect(header).toHaveClass('dark:bg-surface-raised');
   });
 
   describe('brand mark (feature 034)', () => {

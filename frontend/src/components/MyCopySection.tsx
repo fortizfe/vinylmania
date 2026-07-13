@@ -28,8 +28,8 @@ export const SLEEVE_CONDITIONS = [
 ] as const;
 
 const fieldClasses =
-  'min-h-11 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed';
-const labelClasses = 'text-sm font-medium text-gray-700 dark:text-gray-300';
+  'min-h-11 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-stone-800 dark:bg-stone-950 dark:text-stone-100 disabled:opacity-50 disabled:cursor-not-allowed';
+const labelClasses = 'text-sm font-medium text-stone-700 dark:text-stone-300';
 
 interface MyCopySectionProps {
   discogs: EntryDiscogsData | null;
@@ -66,7 +66,7 @@ export function MyCopySection({
 
   return (
     <div>
-      <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
+      <h2 className="mb-3 text-lg font-semibold text-stone-900 dark:text-stone-100">
         Your copy
       </h2>
       <div className="flex flex-col gap-4">
@@ -84,7 +84,7 @@ export function MyCopySection({
         <div className="flex flex-col gap-1">
           <span className={labelClasses}>Media Condition</span>
           {!editable.mediaCondition && discogs !== null && (
-            <p className="text-xs text-gray-400 dark:text-gray-500">
+            <p className="text-xs text-stone-400 dark:text-stone-500">
               The &ldquo;Media Condition&rdquo; field is not available on this collection.
             </p>
           )}
@@ -108,7 +108,7 @@ export function MyCopySection({
         <div className="flex flex-col gap-1">
           <span className={labelClasses}>Sleeve Condition</span>
           {!editable.sleeveCondition && discogs !== null && (
-            <p className="text-xs text-gray-400 dark:text-gray-500">
+            <p className="text-xs text-stone-400 dark:text-stone-500">
               The &ldquo;Sleeve Condition&rdquo; field is not available on this
               collection.
             </p>
@@ -133,7 +133,7 @@ export function MyCopySection({
         <div className="flex flex-col gap-1">
           <span className={labelClasses}>Notes</span>
           {!editable.notes && discogs !== null && (
-            <p className="text-xs text-gray-400 dark:text-gray-500">
+            <p className="text-xs text-stone-400 dark:text-stone-500">
               The &ldquo;Notes&rdquo; field is not available on this collection.
             </p>
           )}
