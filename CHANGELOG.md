@@ -17,6 +17,16 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [0.24.0] - 2026-07-13
+
+### Added
+
+- smooth Discogs rate limiting and reduce redundant calls (feature 040) ([e41005b])
+
+### Fixed
+
+- drop stale pinned-version assertion in lockstep test ([92770ba])
+
 ## [0.23.0] - 2026-07-13
 
 ### Added
