@@ -17,6 +17,13 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [0.23.0] - 2026-07-13
+
+### Added
+
+- rebuild theme with warm-neutral palette and dual accent (feature 039) ([3ec93bd])
+- rebuild filters as a shared collapsible component with selectable lists (feature 038) ([d2ca45d])
+
 ## Historical merged entries (backend + frontend, pre-unification)
 
 Prior to `0.22.1`, `backend` and `frontend` each kept an independent
