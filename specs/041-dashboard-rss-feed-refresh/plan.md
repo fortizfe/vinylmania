@@ -92,7 +92,6 @@ backend/
     ├── unit/feedAggregator.test.ts     # Add getSourceArticles unit coverage
     ├── contract/feedsDashboard.contract.test.ts       # Remove Metal Storm assertions
     ├── contract/feedsSource.contract.test.ts          # New: GET /sources/:sourceId contract
-    ├── integration/feedsDashboard.integration.test.ts # Remove Metal Storm assertions
     ├── integration/feedsDashboardNewSources.integration.test.ts # Extend/replace with the 5 new sources
     └── integration/feedsDashboardMetalStormCategories.integration.test.ts # Delete (Metal Storm-only file)
 
