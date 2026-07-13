@@ -1,13 +1,28 @@
-import axios, { type AxiosInstance, isAxiosError } from 'axios';
+import axios, {
+  type AxiosInstance,
+  type InternalAxiosRequestConfig,
+  isAxiosError,
+} from 'axios';
 
 import { withCache } from '../../cache/cacheAside';
 import { logger } from '../../config/logger';
+import {
+  recordExhaustedFailure,
+  recordSuccess,
+  shouldShortCircuit,
+} from '../discogsCircuitBreaker';
 import {
   DiscogsAuthError,
   DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
 } from '../discogsErrors';
+import { acquireSlot, recordRateLimitHeaders } from '../discogsRateLimiter';
+import {
+  backoffDelayMs,
+  classifyForRetry,
+  MAX_ATTEMPTS,
+} from '../discogsRetry';
 import { getOauthApiBaseUrl } from '../oauth/oauthHttpClient';
 import {
   buildProtectedResourceHeader,
@@ -44,6 +59,34 @@ function getCredentials(): ConsumerCredentials {
   return { consumerKey, consumerSecret };
 }
 
+/**
+ * Extra, non-axios properties carried on a request config across a retry
+ * sequence (feature 040, US3 — mirrors discogsClient.ts's feature 029
+ * pattern). `__attempt` tracks which attempt this is (1 = the original
+ * request); `__skipRetry` opts a specific call (the non-idempotent
+ * `addReleaseToCollection`) out of retry only — the circuit breaker still
+ * applies to it.
+ */
+interface ResilienceRequestState {
+  __attempt?: number;
+  __skipRetry?: boolean;
+}
+
+type ResilienceConfig = InternalAxiosRequestConfig & ResilienceRequestState;
+
+/** Signals a request that never left this process — the breaker was open. */
+class CircuitOpenError extends Error {
+  constructor(public readonly endpoint: string) {
+    super('Discogs circuit breaker is open');
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 function createClient(connection: DiscogsConnection): AxiosInstance {
   const instance = axios.create({
     baseURL: getOauthApiBaseUrl(),
@@ -53,18 +96,29 @@ function createClient(connection: DiscogsConnection): AxiosInstance {
     },
   });
 
-  instance.interceptors.request.use((config) => {
+  instance.interceptors.request.use(async (config: ResilienceConfig) => {
+    // Reusing feature 029's shared breaker (also used by discogsClient.ts)
+    // — checked first so a breaker-rejected request never pays a throttle
+    // delay (contracts/collection-client-resilience.md).
+    if (shouldShortCircuit()) {
+      return Promise.reject(new CircuitOpenError(config.url ?? 'unknown'));
+    }
     // A fresh nonce/timestamp per request, so the header is built here
     // rather than once at client creation.
     config.headers.Authorization = buildProtectedResourceHeader(getCredentials(), {
       token: connection.accessToken,
       tokenSecret: connection.accessTokenSecret,
     });
+    // Shared preventive throttle (feature 040) — the catalog and
+    // collection clients consume the same per-IP Discogs budget.
+    await acquireSlot();
     return config;
   });
 
   instance.interceptors.response.use(
     (response) => {
+      recordRateLimitHeaders(response.headers);
+      recordSuccess();
       logger.info({
         route: response.config.url ?? 'unknown',
         outcome: 'success',
@@ -75,10 +129,27 @@ function createClient(connection: DiscogsConnection): AxiosInstance {
       });
       return response;
     },
-    (error: unknown) => {
-      const endpoint = isAxiosError(error) ? (error.config?.url ?? 'unknown') : 'unknown';
+    async (error: unknown) => {
+      if (error instanceof CircuitOpenError) {
+        logger.warn({ route: error.endpoint, outcome: 'circuit_open' });
+        return Promise.reject(new DiscogsUnavailableError(error));
+      }
 
-      if (isAxiosError(error) && error.response) {
+      if (!isAxiosError(error)) {
+        logger.error({
+          route: 'unknown',
+          outcome: 'unavailable',
+          message: 'Unknown network error',
+        });
+        return Promise.reject(new DiscogsUnavailableError(error));
+      }
+
+      const config = error.config as ResilienceConfig | undefined;
+      const endpoint = config?.url ?? 'unknown';
+      const attempt = config?.__attempt ?? 1;
+
+      if (error.response) {
+        recordRateLimitHeaders(error.response.headers);
         const { status } = error.response;
 
         if (status === 401 || status === 403) {
@@ -92,27 +163,40 @@ function createClient(connection: DiscogsConnection): AxiosInstance {
         if (status === 404) {
           return Promise.reject(new DiscogsNotFoundError(error));
         }
-        if (status === 429) {
-          logger.warn({
-            route: endpoint,
-            outcome: 'rate_limited',
-            message: 'Discogs collection 429',
-          });
-          return Promise.reject(new DiscogsRateLimitError(error));
-        }
+      }
 
-        logger.error({
+      const classification = classifyForRetry(error);
+      const eligibleForRetry =
+        classification !== null &&
+        !config?.__skipRetry &&
+        config !== undefined &&
+        attempt < MAX_ATTEMPTS;
+
+      if (eligibleForRetry && config) {
+        config.__attempt = attempt + 1;
+        await delay(backoffDelayMs(attempt + 1));
+        return instance.request(config);
+      }
+
+      if (classification) {
+        recordExhaustedFailure();
+      }
+
+      if (classification === 'rate_limited' && error.response) {
+        logger.warn({
           route: endpoint,
-          outcome: 'unavailable',
-          message: `Discogs collection responded with status ${status}`,
+          outcome: 'rate_limited',
+          message: 'Discogs collection 429',
         });
-        return Promise.reject(new DiscogsUnavailableError(error));
+        return Promise.reject(new DiscogsRateLimitError(error));
       }
 
       logger.error({
         route: endpoint,
         outcome: 'unavailable',
-        message: isAxiosError(error) ? error.message : 'Unknown network error',
+        message: error.response
+          ? `Discogs collection responded with status ${error.response.status}`
+          : error.message,
       });
       return Promise.reject(new DiscogsUnavailableError(error));
     },
@@ -232,6 +316,10 @@ export async function addReleaseToCollection(
 ): Promise<{ instanceId: number; folderId: number }> {
   const response = await createClient(connection).post(
     `/users/${encodeURIComponent(connection.discogsUsername)}/collection/folders/${UNCATEGORIZED_FOLDER_ID}/releases/${releaseId}`,
+    undefined,
+    // Non-idempotent write (spec FR-016): never auto-retried, even though
+    // it remains circuit-breaker-eligible — the collector retries manually.
+    { __skipRetry: true } as Parameters<AxiosInstance['post']>[2],
   );
   const body = response.data as { instance_id: number };
   return { instanceId: body.instance_id, folderId: UNCATEGORIZED_FOLDER_ID };

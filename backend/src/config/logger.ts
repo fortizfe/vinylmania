@@ -35,7 +35,10 @@ export type LogOutcome =
   | 'circuit_open'
   // Theme preference persistence (feature 031)
   | 'preference_saved'
-  | 'preference_save_failed';
+  | 'preference_save_failed'
+  // Discogs rate-limit smoothing (feature 040)
+  | 'throttled'
+  | 'throttle_unavailable';
 
 export interface LogEvent {
   route: string;
