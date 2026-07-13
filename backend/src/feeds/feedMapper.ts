@@ -5,14 +5,6 @@ import type { Article, FeedSourceConfig } from './types';
 const EXCERPT_MAX_LENGTH = 200;
 const SAFE_IMAGE_URL_PATTERN = /^https?:\/\//i;
 const IMG_SRC_PATTERN = /<img[^>]+src=["']([^"']+)["']/i;
-// Metal Storm has no <enclosure>/<img>/Media RSS image data in its feeds —
-// its News category instead carries a band/album photo via a non-standard
-// data-image-url attribute on <a class="ms-link"> anchors, using a relative
-// path (research.md §1). The other Metal Storm categories (Reviews,
-// Interviews, Articles, Staff Picks) have no image markup at all, so this
-// tier simply won't match for them.
-const DATA_IMAGE_URL_PATTERN =
-  /<a[^>]+class=["']ms-link["'][^>]*data-image-url=["']([^"']+)["']/i;
 
 function decodeEntities(input: string): string {
   return input
@@ -46,7 +38,7 @@ function truncate(text: string, maxLength: number): string {
 }
 
 /** Only http(s) image URLs are ever accepted — rejects javascript:/data: URIs from a hostile feed. */
-function extractImageUrl(item: Parser.Item, source: FeedSourceConfig): string | undefined {
+function extractImageUrl(item: Parser.Item): string | undefined {
   const enclosureUrl = item.enclosure?.url;
   if (enclosureUrl && SAFE_IMAGE_URL_PATTERN.test(enclosureUrl)) {
     return enclosureUrl;
@@ -57,24 +49,6 @@ function extractImageUrl(item: Parser.Item, source: FeedSourceConfig): string | 
   const imgMatch = IMG_SRC_PATTERN.exec(rawHtml);
   if (imgMatch && SAFE_IMAGE_URL_PATTERN.test(imgMatch[1])) {
     return imgMatch[1];
-  }
-
-  const dataImageMatch = DATA_IMAGE_URL_PATTERN.exec(rawHtml);
-  if (dataImageMatch) {
-    const rawValue = dataImageMatch[1];
-    // Reject protocol-relative values before resolving — new URL() would
-    // otherwise happily turn "//evil.com/x" into "https://evil.com/x",
-    // escaping the source's own host (research.md §3).
-    if (!rawValue.startsWith('//')) {
-      try {
-        const resolved = new URL(rawValue, source.feedUrl).toString();
-        if (SAFE_IMAGE_URL_PATTERN.test(resolved)) {
-          return resolved;
-        }
-      } catch {
-        // Malformed data-image-url — fall through to undefined.
-      }
-    }
   }
 
   return undefined;
@@ -112,7 +86,7 @@ export function mapFeedItem(
     id: item.guid ?? link,
     title,
     excerpt,
-    imageUrl: extractImageUrl(item, source),
+    imageUrl: extractImageUrl(item),
     publishedAt: resolvePublishedAt(item),
     link,
     sourceId: source.id,

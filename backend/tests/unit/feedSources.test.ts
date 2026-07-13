@@ -33,16 +33,58 @@ describe('FEED_SOURCES priority configuration (spec FR-008, FR-009, FR-010, FR-0
     expect(findSource('metal-injection').priority).toBe(true);
   });
 
-  it('marks every Metal Storm entry as non-priority', () => {
-    const metalStormSources = FEED_SOURCES.filter((s) => s.name === 'Metal Storm');
-    expect(metalStormSources.length).toBeGreaterThan(0);
-    for (const source of metalStormSources) {
-      expect(source.priority).toBe(false);
-    }
+  it('contains no Metal Storm entry (spec 041 FR-001)', () => {
+    const metalStormById = FEED_SOURCES.filter((s) => s.id.startsWith('metal-storm-'));
+    const metalStormByName = FEED_SOURCES.filter((s) => s.name === 'Metal Storm');
+    expect(metalStormById).toHaveLength(0);
+    expect(metalStormByName).toHaveLength(0);
   });
 
   it('declares the three priority sources in Metal Injection, MetalSucks, Louder Sound order (spec FR-012)', () => {
     const priorityIds = FEED_SOURCES.filter((s) => s.priority).map((s) => s.id);
     expect(priorityIds).toEqual(['metal-injection', 'metalsucks', 'louder-sound']);
+  });
+
+  it('adds the 5 confirmed-reachable new sources as enabled, non-priority News sources (spec 041 FR-005)', () => {
+    expect(findSource('heavy-mag')).toMatchObject({
+      name: 'Heavy Mag',
+      feedUrl: 'https://heavymag.com.au/feed/',
+      category: 'News',
+      enabled: true,
+      priority: false,
+    });
+    expect(findSource('metal-underground')).toMatchObject({
+      name: 'Metal Underground',
+      feedUrl: 'https://feeds.feedburner.com/metalunderground',
+      category: 'News',
+      enabled: true,
+      priority: false,
+    });
+    expect(findSource('heavy-metal-overload')).toMatchObject({
+      name: 'Heavy Metal Overload',
+      feedUrl: 'https://heavymetaloverload.com/feed/',
+      category: 'News',
+      enabled: true,
+      priority: false,
+    });
+    expect(findSource('femme-metal')).toMatchObject({
+      name: 'Femme Metal',
+      feedUrl: 'https://femmetal.rocks/feed/',
+      category: 'News',
+      enabled: true,
+      priority: false,
+    });
+    expect(findSource('metaltalk')).toMatchObject({
+      name: 'MetalTalk',
+      feedUrl: 'https://www.metaltalk.net/feed',
+      category: 'News',
+      enabled: true,
+      priority: false,
+    });
+  });
+
+  it('does not include Metal Blade Records — confirmed persistently unreachable (research.md §1, spec 041 FR-006)', () => {
+    expect(FEED_SOURCES.find((s) => s.name === 'Metal Blade Records')).toBeUndefined();
+    expect(FEED_SOURCES.some((s) => s.feedUrl.includes('metalblade.com'))).toBe(false);
   });
 });

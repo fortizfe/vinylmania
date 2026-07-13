@@ -8,6 +8,7 @@ import type {
   CategoryGroup,
   DashboardResponse,
   FeedSourceConfig,
+  SourceFeedResponse,
   SourceStatus,
 } from './types';
 
@@ -95,4 +96,44 @@ export async function getDashboard(): Promise<DashboardResponse> {
     sourceStatuses,
     generatedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Queries one enabled source directly and returns every article it has, with
+ * no per-category cap — reuses the same per-source cache and timeout as
+ * `getDashboard()` (spec 041 FR-008, FR-009, FR-010). Returns `null` when
+ * `sourceId` doesn't match an enabled source, so the route can 404.
+ */
+export async function getSourceArticles(sourceId: string): Promise<SourceFeedResponse | null> {
+  const source = FEED_SOURCES.find((s) => s.id === sourceId && s.enabled);
+  if (!source) {
+    return null;
+  }
+
+  try {
+    const articles = await fetchSourceArticles(source);
+    return {
+      sourceId: source.id,
+      sourceName: source.name,
+      status: 'ok',
+      articles: [...articles].sort(
+        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+      ),
+      generatedAt: new Date().toISOString(),
+    };
+  } catch (err) {
+    logger.warn({
+      route: 'feeds:aggregator',
+      outcome: 'feed_unavailable',
+      meta: { sourceId: source.id },
+      message: err instanceof Error ? err.message : 'unknown error',
+    });
+    return {
+      sourceId: source.id,
+      sourceName: source.name,
+      status: 'unavailable',
+      articles: [],
+      generatedAt: new Date().toISOString(),
+    };
+  }
 }

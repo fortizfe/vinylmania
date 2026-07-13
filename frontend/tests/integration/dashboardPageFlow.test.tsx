@@ -8,9 +8,11 @@ import { DashboardPage } from '../../src/pages/DashboardPage';
 import { createTestQueryClient } from '../testUtils';
 
 const mockGetDashboard = vi.fn();
+const mockGetSourceFeed = vi.fn();
 
 vi.mock('../../src/services/feedsApi', () => ({
   getDashboard: (...args: unknown[]) => mockGetDashboard(...args),
+  getSourceFeed: (...args: unknown[]) => mockGetSourceFeed(...args),
 }));
 
 function renderPage() {
@@ -26,6 +28,7 @@ function renderPage() {
 describe('Dashboard page flow (feature 024, US1)', () => {
   beforeEach(() => {
     mockGetDashboard.mockReset();
+    mockGetSourceFeed.mockReset();
   });
 
   it('shows a loading state while feeds are being fetched', async () => {
@@ -98,7 +101,7 @@ describe('Dashboard page flow (feature 024, US1)', () => {
       ],
       sourceStatuses: [
         { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' },
-        { sourceId: 'metal-storm', sourceName: 'Metal Storm', status: 'unavailable' },
+        { sourceId: 'sample-source', sourceName: 'Sample Source', status: 'unavailable' },
       ],
       generatedAt: '2026-07-08T00:00:00.000Z',
     });
@@ -108,7 +111,7 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     await waitFor(() =>
       expect(screen.getByText('Still Working Article')).toBeInTheDocument(),
     );
-    expect(screen.getByRole('status')).toHaveTextContent(/Metal Storm/);
+    expect(screen.getByRole('status')).toHaveTextContent(/Sample Source/);
   });
 
   it('renders every article together in one grid, not grouped into separate labeled sections (feature 033, US1)', async () => {
@@ -137,9 +140,9 @@ describe('Dashboard page flow (feature 024, US1)', () => {
               title: 'Review Article',
               excerpt: 'y',
               publishedAt: '2026-07-06T00:00:00.000Z',
-              link: 'https://metalstorm.net/reviews/1',
-              sourceId: 'metal-storm',
-              sourceName: 'Metal Storm',
+              link: 'https://sample-source.test/reviews/1',
+              sourceId: 'sample-source',
+              sourceName: 'Sample Source',
               category: 'Reviews',
             },
           ],
@@ -147,7 +150,7 @@ describe('Dashboard page flow (feature 024, US1)', () => {
       ],
       sourceStatuses: [
         { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' },
-        { sourceId: 'metal-storm', sourceName: 'Metal Storm', status: 'ok' },
+        { sourceId: 'sample-source', sourceName: 'Sample Source', status: 'ok' },
       ],
       generatedAt: '2026-07-08T00:00:00.000Z',
     });
@@ -195,9 +198,9 @@ describe('Dashboard page flow (feature 024, US1)', () => {
               title: 'Review Article',
               excerpt: 'y',
               publishedAt: '2026-07-06T00:00:00.000Z',
-              link: 'https://metalstorm.net/reviews/1',
-              sourceId: 'metal-storm',
-              sourceName: 'Metal Storm',
+              link: 'https://sample-source.test/reviews/1',
+              sourceId: 'sample-source',
+              sourceName: 'Sample Source',
               category: 'Reviews',
             },
           ],
@@ -205,7 +208,7 @@ describe('Dashboard page flow (feature 024, US1)', () => {
       ],
       sourceStatuses: [
         { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok' },
-        { sourceId: 'metal-storm', sourceName: 'Metal Storm', status: 'ok' },
+        { sourceId: 'sample-source', sourceName: 'Sample Source', status: 'ok' },
       ],
       generatedAt: '2026-07-08T00:00:00.000Z',
     });
@@ -274,9 +277,9 @@ describe('Dashboard page flow (feature 024, US1)', () => {
             title: `${category} Article`,
             excerpt: 'x',
             publishedAt: '2026-07-08T00:00:00.000Z',
-            link: `https://metalstorm.net/${category.toLowerCase()}/1`,
-            sourceId: `metal-storm-${category.toLowerCase()}`,
-            sourceName: 'Metal Storm',
+            link: `https://sample-source.test/${category.toLowerCase()}/1`,
+            sourceId: `sample-source-${category.toLowerCase()}`,
+            sourceName: 'Sample Source',
             category,
           },
         ],
@@ -344,7 +347,7 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
   });
 
-  it('filters by source, combines with category, and clears back to the category-only view (feature 033, US4)', async () => {
+  it('filters by source via a direct query, combines with category, and clears back to the category-only view (spec 041 US3, FR-012)', async () => {
     mockGetDashboard.mockResolvedValue({
       categories: [
         {
@@ -377,12 +380,12 @@ describe('Dashboard page flow (feature 024, US1)', () => {
           articles: [
             {
               id: '3',
-              title: 'Metal Storm Review',
+              title: 'Sample Source Review',
               excerpt: 'z',
               publishedAt: '2026-07-07T00:00:00.000Z',
-              link: 'https://metalstorm.net/reviews/1',
-              sourceId: 'metal-storm-reviews',
-              sourceName: 'Metal Storm',
+              link: 'https://sample-source.test/reviews/1',
+              sourceId: 'sample-source',
+              sourceName: 'Sample Source',
               category: 'Reviews',
             },
           ],
@@ -392,8 +395,8 @@ describe('Dashboard page flow (feature 024, US1)', () => {
         { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok', priority: true },
         { sourceId: 'louder-sound', sourceName: 'Louder Sound', status: 'ok', priority: true },
         {
-          sourceId: 'metal-storm-reviews',
-          sourceName: 'Metal Storm',
+          sourceId: 'sample-source',
+          sourceName: 'Sample Source',
           status: 'ok',
           priority: false,
         },
@@ -401,26 +404,55 @@ describe('Dashboard page flow (feature 024, US1)', () => {
       generatedAt: '2026-07-09T00:00:00.000Z',
     });
 
+    // Louder Sound's direct query mirrors what already appears in the
+    // general view (Acceptance Scenario 2, FR-009) — its own News article.
+    mockGetSourceFeed.mockImplementation((sourceId: string) => {
+      if (sourceId === 'louder-sound') {
+        return Promise.resolve({
+          sourceId: 'louder-sound',
+          sourceName: 'Louder Sound',
+          status: 'ok',
+          articles: [
+            {
+              id: '2',
+              title: 'Louder Sound News',
+              excerpt: 'y',
+              publishedAt: '2026-07-08T00:00:00.000Z',
+              link: 'https://loudersound.com/news',
+              sourceId: 'louder-sound',
+              sourceName: 'Louder Sound',
+              category: 'News',
+            },
+          ],
+          generatedAt: '2026-07-09T00:00:00.000Z',
+        });
+      }
+      return Promise.reject(new Error(`unexpected sourceId ${sourceId}`));
+    });
+
     renderPage();
     await waitFor(() => expect(screen.getByText('Metal Injection News')).toBeInTheDocument());
 
     const user = userEvent.setup();
 
-    // Source-only filter.
+    // Source-only filter — now backed by a direct query to that source's feed.
     await user.click(screen.getByRole('button', { name: 'Louder Sound' }));
-    expect(screen.getByText('Louder Sound News')).toBeInTheDocument();
+    await waitFor(() => expect(mockGetSourceFeed).toHaveBeenCalledWith('louder-sound'));
+    await waitFor(() => expect(screen.getByText('Louder Sound News')).toBeInTheDocument());
     expect(screen.queryByText('Metal Injection News')).not.toBeInTheDocument();
-    expect(screen.queryByText('Metal Storm Review')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sample Source Review')).not.toBeInTheDocument();
 
-    // Combine with category.
+    // Combine with a category the source's direct-query articles don't
+    // match (Louder Sound's own articles are all "News") — expected empty
+    // result, not a defect (edge case, FR-012).
     await user.click(screen.getByRole('button', { name: 'Reviews' }));
     expect(screen.queryByText('Louder Sound News')).not.toBeInTheDocument();
-    expect(screen.queryByText('Metal Storm Review')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sample Source Review')).not.toBeInTheDocument();
     expect(screen.getByText(/check back soon/i)).toBeInTheDocument();
 
-    // Clear the source filter, restoring the category-only view.
+    // Clear the source filter, restoring the category-only aggregated view (FR-011).
     await user.click(screen.getByRole('button', { name: 'All sources' }));
-    expect(screen.getByText('Metal Storm Review')).toBeInTheDocument();
+    expect(screen.getByText('Sample Source Review')).toBeInTheDocument();
   });
 
   it('shows a graceful empty state when there are zero articles across all sources (FR-011)', async () => {
@@ -432,7 +464,7 @@ describe('Dashboard page flow (feature 024, US1)', () => {
           sourceName: 'Metal Injection',
           status: 'unavailable',
         },
-        { sourceId: 'metal-storm', sourceName: 'Metal Storm', status: 'unavailable' },
+        { sourceId: 'sample-source', sourceName: 'Sample Source', status: 'unavailable' },
       ],
       generatedAt: '2026-07-08T00:00:00.000Z',
     });
@@ -441,6 +473,6 @@ describe('Dashboard page flow (feature 024, US1)', () => {
 
     await waitFor(() => expect(screen.getByText(/check back soon/i)).toBeInTheDocument());
     expect(screen.getByRole('status')).toHaveTextContent(/Metal Injection/);
-    expect(screen.getByRole('status')).toHaveTextContent(/Metal Storm/);
+    expect(screen.getByRole('status')).toHaveTextContent(/Sample Source/);
   });
 });

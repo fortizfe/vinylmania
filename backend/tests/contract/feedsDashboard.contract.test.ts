@@ -22,43 +22,43 @@ const CONTRACT_SOURCE_B: FeedSourceConfig = {
   priority: false,
 };
 
-const mockMetalStormSources: FeedSourceConfig[] = [
+const mockMultiCategorySources: FeedSourceConfig[] = [
   {
-    id: 'metal-storm-news',
-    name: 'Metal Storm',
-    feedUrl: 'https://contract-ms-news.test/rss',
+    id: 'contract-source-c',
+    name: 'Contract Feed C',
+    feedUrl: 'https://contract-feed-c.test/rss',
     category: 'News',
     enabled: true,
     priority: false,
   },
   {
-    id: 'metal-storm-reviews',
-    name: 'Metal Storm',
-    feedUrl: 'https://contract-ms-reviews.test/rss',
+    id: 'contract-source-d',
+    name: 'Contract Feed D',
+    feedUrl: 'https://contract-feed-d.test/rss',
     category: 'Reviews',
     enabled: true,
     priority: false,
   },
   {
-    id: 'metal-storm-interviews',
-    name: 'Metal Storm',
-    feedUrl: 'https://contract-ms-interviews.test/rss',
+    id: 'contract-source-e',
+    name: 'Contract Feed E',
+    feedUrl: 'https://contract-feed-e.test/rss',
     category: 'Interviews',
     enabled: true,
     priority: false,
   },
   {
-    id: 'metal-storm-articles',
-    name: 'Metal Storm',
-    feedUrl: 'https://contract-ms-articles.test/rss',
+    id: 'contract-source-f',
+    name: 'Contract Feed F',
+    feedUrl: 'https://contract-feed-f.test/rss',
     category: 'Articles',
     enabled: true,
     priority: false,
   },
   {
-    id: 'metal-storm-picks',
-    name: 'Metal Storm',
-    feedUrl: 'https://contract-ms-picks.test/rss',
+    id: 'contract-source-g',
+    name: 'Contract Feed G',
+    feedUrl: 'https://contract-feed-g.test/rss',
     category: 'Staff Picks',
     enabled: true,
     priority: false,
@@ -83,7 +83,7 @@ jest.mock('../../src/feeds/feedSources', () => ({
       enabled: true,
       priority: false,
     },
-    ...mockMetalStormSources,
+    ...mockMultiCategorySources,
   ],
 }));
 
@@ -112,7 +112,7 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
     await invalidateCache(`feeds:${CONTRACT_SOURCE_A.id}`);
     await invalidateCache(`feeds:${CONTRACT_SOURCE_B.id}`);
     await Promise.all(
-      mockMetalStormSources.map((source) => invalidateCache(`feeds:${source.id}`)),
+      mockMultiCategorySources.map((source) => invalidateCache(`feeds:${source.id}`)),
     );
   });
 
@@ -149,7 +149,7 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
         ]),
       );
 
-    for (const source of mockMetalStormSources) {
+    for (const source of mockMultiCategorySources) {
       // Dated before contract-feed-a/-b's items so they never displace the
       // pre-existing articles[0] assertions below when categories merge.
       nock(new URL(source.feedUrl).origin)
@@ -185,7 +185,7 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
           status: 'ok',
           priority: false,
         },
-        ...mockMetalStormSources.map((source) => ({
+        ...mockMultiCategorySources.map((source) => ({
           sourceId: source.id,
           sourceName: source.name,
           status: 'ok',

@@ -32,7 +32,20 @@ export interface DashboardResponse {
   generatedAt: string;
 }
 
+export interface SourceFeedResponse {
+  sourceId: string;
+  sourceName: string;
+  status: SourceHealth;
+  articles: Article[];
+  generatedAt: string;
+}
+
 export async function getDashboard(): Promise<DashboardResponse> {
   const res = await authorizedFetch('/api/feeds/dashboard');
+  return res.json();
+}
+
+export async function getSourceFeed(sourceId: string): Promise<SourceFeedResponse> {
+  const res = await authorizedFetch(`/api/feeds/sources/${sourceId}`);
   return res.json();
 }

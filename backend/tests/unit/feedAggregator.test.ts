@@ -32,7 +32,7 @@ jest.mock('../../src/feeds/feedClient');
 
 import { invalidateCache } from '../../src/cache/cacheAside';
 import { fetchFeed } from '../../src/feeds/feedClient';
-import { getDashboard } from '../../src/feeds/feedAggregator';
+import { getDashboard, getSourceArticles } from '../../src/feeds/feedAggregator';
 
 const mockedFetchFeed = jest.mocked(fetchFeed);
 
@@ -243,6 +243,87 @@ describe('getDashboard', () => {
       const result = await getDashboard();
 
       expect(result.categories.every((c) => c.articles.length > 0)).toBe(true);
+    });
+  });
+});
+
+describe('getSourceArticles (spec 041 FR-008, FR-009, FR-010)', () => {
+  beforeEach(async () => {
+    await invalidateCache('feeds:agg-test-a');
+    await invalidateCache('feeds:agg-test-b');
+    await invalidateCache('feeds:agg-test-disabled');
+    mockedFetchFeed.mockReset();
+  });
+
+  it('returns every article for a known source uncapped, sorted most-recent-first', async () => {
+    const twelveItems: RawItem[] = Array.from({ length: 12 }).map((_, index) => ({
+      title: `Article ${index}`,
+      link: `https://source-a.test/${index}`,
+      pubDate: new Date(Date.UTC(2026, 0, index + 1)).toUTCString(),
+    }));
+    mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
+      if (feedUrl === mockFeedSources[0].feedUrl) {
+        return feedOutput(twelveItems);
+      }
+      throw new Error(`unexpected feed url ${feedUrl}`);
+    });
+
+    const result = await getSourceArticles('agg-test-a');
+
+    expect(result?.status).toBe('ok');
+    expect(result?.sourceId).toBe('agg-test-a');
+    expect(result?.sourceName).toBe('Source A');
+    expect(result?.articles).toHaveLength(12);
+    expect(result?.articles[0].title).toBe('Article 11');
+    expect(result?.articles[11].title).toBe('Article 0');
+  });
+
+  it('returns null for an unknown sourceId', async () => {
+    const result = await getSourceArticles('does-not-exist');
+    expect(result).toBeNull();
+  });
+
+  it('returns null for a disabled sourceId', async () => {
+    const result = await getSourceArticles('agg-test-disabled');
+    expect(result).toBeNull();
+    expect(mockedFetchFeed).not.toHaveBeenCalled();
+  });
+
+  it('returns status "unavailable" with an empty article list when the underlying fetch throws', async () => {
+    mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
+      if (feedUrl === mockFeedSources[0].feedUrl) {
+        throw new Error('simulated timeout');
+      }
+      throw new Error(`unexpected feed url ${feedUrl}`);
+    });
+
+    const result = await getSourceArticles('agg-test-a');
+
+    expect(result).toEqual({
+      sourceId: 'agg-test-a',
+      sourceName: 'Source A',
+      status: 'unavailable',
+      articles: [],
+      generatedAt: expect.any(String),
+    });
+  });
+
+  it('returns status "ok" with an empty article list when the feed responds with zero items', async () => {
+    mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
+      if (feedUrl === mockFeedSources[0].feedUrl) {
+        return feedOutput([]);
+      }
+      throw new Error(`unexpected feed url ${feedUrl}`);
+    });
+
+    const result = await getSourceArticles('agg-test-a');
+
+    expect(result).toEqual({
+      sourceId: 'agg-test-a',
+      sourceName: 'Source A',
+      status: 'ok',
+      articles: [],
+      generatedAt: expect.any(String),
     });
   });
 });

@@ -1,12 +1,5 @@
 import type { FeedSourceConfig } from './types';
 
-// Metal Storm's general feed-listing page (metalstorm.net/home/rss.php) was
-// Cloudflare-challenge-protected and unusable (research.md §3, feature 024).
-// These direct per-category RSS/XML endpoints are unaffected by that
-// restriction — verified reachable (200, application/rss+xml, valid XML,
-// no Cloudflare challenge) during feature 025's implementation (research.md
-// §4). "News" intentionally shares its category with `metal-injection`
-// below so their articles merge into one "News" category (spec 025 FR-004).
 export const FEED_SOURCES: FeedSourceConfig[] = [
   {
     id: 'metal-injection',
@@ -34,43 +27,48 @@ export const FEED_SOURCES: FeedSourceConfig[] = [
     enabled: true,
     priority: true,
   },
+  // Metal Blade Records (https://www.metalblade.com/us/feed/ and variants)
+  // was evaluated as a candidate source and confirmed persistently
+  // unreachable (no response across 3 URL variants, verified live during
+  // feature 041 planning — research.md §1). It is intentionally excluded
+  // rather than added disabled — see spec 041 FR-006.
   {
-    id: 'metal-storm-news',
-    name: 'Metal Storm',
-    feedUrl: 'https://metalstorm.net/rss/news.xml',
+    id: 'heavy-mag',
+    name: 'Heavy Mag',
+    feedUrl: 'https://heavymag.com.au/feed/',
     category: 'News',
     enabled: true,
     priority: false,
   },
   {
-    id: 'metal-storm-reviews',
-    name: 'Metal Storm',
-    feedUrl: 'https://metalstorm.net/rss/reviews.xml',
-    category: 'Reviews',
+    id: 'metal-underground',
+    name: 'Metal Underground',
+    feedUrl: 'https://feeds.feedburner.com/metalunderground',
+    category: 'News',
     enabled: true,
     priority: false,
   },
   {
-    id: 'metal-storm-interviews',
-    name: 'Metal Storm',
-    feedUrl: 'https://metalstorm.net/rss/interviews.xml',
-    category: 'Interviews',
+    id: 'heavy-metal-overload',
+    name: 'Heavy Metal Overload',
+    feedUrl: 'https://heavymetaloverload.com/feed/',
+    category: 'News',
     enabled: true,
     priority: false,
   },
   {
-    id: 'metal-storm-articles',
-    name: 'Metal Storm',
-    feedUrl: 'https://metalstorm.net/rss/articles.xml',
-    category: 'Articles',
+    id: 'femme-metal',
+    name: 'Femme Metal',
+    feedUrl: 'https://femmetal.rocks/feed/',
+    category: 'News',
     enabled: true,
     priority: false,
   },
   {
-    id: 'metal-storm-picks',
-    name: 'Metal Storm',
-    feedUrl: 'https://metalstorm.net/rss/picks.xml',
-    category: 'Staff Picks',
+    id: 'metaltalk',
+    name: 'MetalTalk',
+    feedUrl: 'https://www.metaltalk.net/feed',
+    category: 'News',
     enabled: true,
     priority: false,
   },
