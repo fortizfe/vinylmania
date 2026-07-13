@@ -1,7 +1,7 @@
 import { logger } from '../config/logger';
 import { getRelease } from '../discogs/discogsClient';
 import { DiscogsError } from '../discogs/discogsErrors';
-import { mapWithConcurrency } from './concurrency';
+import { mapWithConcurrency } from '../shared/concurrency';
 import { persistCatalogFields } from './libraryService';
 import type { EnrichedLibraryEntry, LibraryEntry } from './types';
 

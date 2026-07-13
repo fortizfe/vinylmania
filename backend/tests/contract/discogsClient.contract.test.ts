@@ -1,13 +1,19 @@
 import { discogsScope } from '../helpers/nock';
 
 import { logger } from '../../src/config/logger';
-import { getArtist, getRelease, searchCatalog } from '../../src/discogs/discogsClient';
+import {
+  getArtist,
+  getDiscogsHttpClient,
+  getRelease,
+  searchCatalog,
+} from '../../src/discogs/discogsClient';
 import {
   DiscogsAuthError,
   DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
 } from '../../src/discogs/discogsErrors';
+import { MAX_WAIT_MS } from '../../src/discogs/discogsRateLimiter';
 import { MAX_ATTEMPTS } from '../../src/discogs/discogsRetry';
 
 beforeAll(() => {
@@ -556,5 +562,252 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
       expect(circuitOpenCall).toBeDefined();
       expect(circuitOpenCall?.[0].meta?.attempts).toBeUndefined();
     }, 20_000);
+  });
+
+  describe('preventive rate-limit throttle (feature 040, US1)', () => {
+    function rawReleaseFor(id: number) {
+      return {
+        id,
+        title: `Throttle Release ${id}`,
+        artists: [],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        tracklist: [],
+        images: [],
+        uri: `https://www.discogs.com/release/${id}`,
+      };
+    }
+
+    beforeEach(() => {
+      // setImmediate/nextTick stay real so nock's internal response
+      // delivery keeps working; only Date/setTimeout are faked so the
+      // throttle's own delay can be deterministically controlled.
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('spaces out the next request once a response reports remaining at/below the safety threshold, capped at MAX_WAIT_MS', async () => {
+      discogsScope()
+        .get('/releases/9001')
+        .reply(200, rawReleaseFor(9001), {
+          'x-discogs-ratelimit': '60',
+          'x-discogs-ratelimit-remaining': '8',
+        });
+      discogsScope()
+        .get('/releases/9002')
+        .reply(200, rawReleaseFor(9002), {
+          'x-discogs-ratelimit': '60',
+          'x-discogs-ratelimit-remaining': '7',
+        });
+
+      // Corrects the shared budget to remaining=8, at/below the
+      // ceil(60*0.15)=9 safety threshold.
+      await getRelease(9001);
+
+      let resolved = false;
+      const secondCall = getRelease(9002).then((release) => {
+        resolved = true;
+        return release;
+      });
+
+      await jest.advanceTimersByTimeAsync(MAX_WAIT_MS - 1);
+      expect(resolved).toBe(false);
+
+      await jest.advanceTimersByTimeAsync(1);
+      const release = await secondCall;
+
+      expect(resolved).toBe(true);
+      expect(release.discogsId).toBe(9002);
+    });
+
+    it('never blocks a request past MAX_WAIT_MS even when remaining is far below the threshold', async () => {
+      discogsScope()
+        .get('/releases/9003')
+        .reply(200, rawReleaseFor(9003), {
+          'x-discogs-ratelimit': '60',
+          'x-discogs-ratelimit-remaining': '1',
+        });
+      discogsScope()
+        .get('/releases/9004')
+        .reply(200, rawReleaseFor(9004), {
+          'x-discogs-ratelimit': '60',
+          'x-discogs-ratelimit-remaining': '1',
+        });
+
+      await getRelease(9003);
+
+      const before = Date.now();
+      const secondCallPromise = getRelease(9004);
+      await jest.advanceTimersByTimeAsync(MAX_WAIT_MS);
+      await secondCallPromise;
+
+      expect(Date.now() - before).toBeLessThanOrEqual(MAX_WAIT_MS);
+    });
+
+    it('applies zero delay while remaining stays comfortably above the safety threshold', async () => {
+      const scope = discogsScope()
+        .get('/releases/9005')
+        .reply(200, rawReleaseFor(9005), {
+          'x-discogs-ratelimit': '60',
+          'x-discogs-ratelimit-remaining': '55',
+        });
+
+      const before = Date.now();
+      await getRelease(9005);
+
+      expect(Date.now() - before).toBe(0);
+      expect(scope.isDone()).toBe(true);
+    });
+  });
+
+  describe('search-result rating enrichment concurrency (feature 040, US2, FR-009/FR-010/FR-011)', () => {
+    function rawEligibleResult(id: number) {
+      return {
+        id,
+        type: 'release' as const,
+        title: `Concurrency Result ${id}`,
+        thumb: '',
+        cover_image: '',
+        year: '2000',
+        format: ['Vinyl'],
+      };
+    }
+
+    /**
+     * Spies on the shared client's `.get()` to count how many calls are
+     * simultaneously in flight, with a small artificial per-call delay so
+     * overlapping calls actually overlap in real time (rather than
+     * resolving one microtask after another, which would hide an
+     * unbounded-concurrency bug). This measures the real number of
+     * concurrent Discogs calls directly, instead of relying on brittle
+     * nock-level response-timing assertions.
+     */
+    function spyOnInFlightRequests(): {
+      getMaxInFlight: () => number;
+      restore: () => void;
+    } {
+      const client = getDiscogsHttpClient();
+      let inFlight = 0;
+      let maxInFlight = 0;
+      const originalGet = client.get.bind(client);
+      const spy = jest
+        .spyOn(client, 'get')
+        .mockImplementation(async (...args: Parameters<typeof originalGet>) => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          try {
+            await new Promise((resolve) => {
+              setTimeout(resolve, 20);
+            });
+            return await originalGet(...args);
+          } finally {
+            inFlight -= 1;
+          }
+        });
+      return {
+        getMaxInFlight: () => maxInFlight,
+        restore: () => spy.mockRestore(),
+      };
+    }
+
+    it('bounds rating-lookup concurrency to 5 in-flight calls for a page with more than 5 eligible results (FR-009)', async () => {
+      const eligibleCount = 8;
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Concurrency Bounded', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: eligibleCount, per_page: 50 },
+          results: Array.from({ length: eligibleCount }, (_, i) =>
+            rawEligibleResult(3000 + i),
+          ),
+        });
+      for (let i = 0; i < eligibleCount; i += 1) {
+        discogsScope()
+          .get(`/releases/${3000 + i}/rating`)
+          .reply(200, { release_id: 3000 + i, rating: { average: 4, count: 10 } });
+      }
+
+      const { getMaxInFlight, restore } = spyOnInFlightRequests();
+      try {
+        const result = await searchCatalog('Concurrency Bounded', {
+          resultType: 'release',
+        });
+
+        expect(result.results).toHaveLength(eligibleCount);
+        // Never more than SEARCH_RATING_CONCURRENCY (5) rating lookups
+        // outstanding at once...
+        expect(getMaxInFlight()).toBeLessThanOrEqual(5);
+        // ...but genuinely parallel, not accidentally serialized to 1.
+        expect(getMaxInFlight()).toBeGreaterThan(1);
+      } finally {
+        restore();
+      }
+    }, 10_000);
+
+    it('leaves a page with 5 or fewer eligible results unaffected — identical to today', async () => {
+      const eligibleCount = 3;
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Concurrency Unaffected', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: eligibleCount, per_page: 50 },
+          results: Array.from({ length: eligibleCount }, (_, i) =>
+            rawEligibleResult(3100 + i),
+          ),
+        });
+      for (let i = 0; i < eligibleCount; i += 1) {
+        discogsScope()
+          .get(`/releases/${3100 + i}/rating`)
+          .reply(200, { release_id: 3100 + i, rating: { average: 4, count: 10 } });
+      }
+
+      const { getMaxInFlight, restore } = spyOnInFlightRequests();
+      try {
+        const result = await searchCatalog('Concurrency Unaffected', {
+          resultType: 'release',
+        });
+
+        expect(result.results).toHaveLength(eligibleCount);
+        // All 3 run in parallel, exactly as Promise.all would have done.
+        expect(getMaxInFlight()).toBe(eligibleCount);
+      } finally {
+        restore();
+      }
+    }, 10_000);
+
+    it('preserves fail-soft rating omission under the new bounded concurrency (FR-011)', async () => {
+      const eligibleCount = 6;
+      discogsScope()
+        .get('/database/search')
+        .query({ q: 'Concurrency Fail Soft', page: '1', per_page: '50' })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: eligibleCount, per_page: 50 },
+          results: Array.from({ length: eligibleCount }, (_, i) =>
+            rawEligibleResult(3200 + i),
+          ),
+        });
+      // One lookup fails outright; the rest succeed.
+      discogsScope().get('/releases/3200/rating').reply(503, { message: 'unavailable' });
+      for (let i = 1; i < eligibleCount; i += 1) {
+        discogsScope()
+          .get(`/releases/${3200 + i}/rating`)
+          .reply(200, { release_id: 3200 + i, rating: { average: 4, count: 10 } });
+      }
+
+      const result = await searchCatalog('Concurrency Fail Soft', {
+        resultType: 'release',
+      });
+
+      expect(result.results).toHaveLength(eligibleCount);
+      expect(result.results.find((r) => r.discogsId === 3200)?.communityRating).toBeUndefined();
+      expect(
+        result.results.filter((r) => r.discogsId !== 3200).every((r) => r.communityRating),
+      ).toBe(true);
+    });
   });
 });

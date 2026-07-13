@@ -1,6 +1,7 @@
 import nock from 'nock';
 
 import { __resetCircuitBreakerForTests } from '../../src/discogs/discogsCircuitBreaker';
+import { __resetRateLimiterForTests } from '../../src/discogs/discogsRateLimiter';
 
 export const DISCOGS_BASE_URL = 'https://api.discogs.com';
 
@@ -20,6 +21,11 @@ afterEach(() => {
   // test simulating exhausted retries never leaves the breaker open for
   // an unrelated test later in the same file.
   __resetCircuitBreakerForTests();
+  // The shared preventive throttle (feature 040) is likewise a
+  // module-level singleton consulted on every outgoing request. Reset it
+  // too, so a test that drains the budget (or corrects it via response
+  // headers) never leaves a later, unrelated test throttled.
+  __resetRateLimiterForTests();
 });
 
 afterAll(() => {

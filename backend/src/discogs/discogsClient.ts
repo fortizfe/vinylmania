@@ -7,6 +7,7 @@ import axios, {
 
 import { withCache } from '../cache/cacheAside';
 import { logger } from '../config/logger';
+import { mapWithConcurrency } from '../shared/concurrency';
 import {
   recordExhaustedFailure,
   recordSuccess,
@@ -18,6 +19,7 @@ import {
   DiscogsRateLimitError,
   DiscogsUnavailableError,
 } from './discogsErrors';
+import { acquireSlot, recordRateLimitHeaders } from './discogsRateLimiter';
 import {
   mapArtist,
   mapMasterRelease,
@@ -94,13 +96,11 @@ export function createDiscogsHttpClient(): AxiosInstance {
     },
   });
 
-  instance.interceptors.request.use((config: ResilienceConfig) => {
-    if (config.__skipResilience) {
-      return config;
-    }
-    if (shouldShortCircuit()) {
+  instance.interceptors.request.use(async (config: ResilienceConfig) => {
+    if (!config.__skipResilience && shouldShortCircuit()) {
       return Promise.reject(new CircuitOpenError(config.url ?? 'unknown'));
     }
+    await acquireSlot();
     return config;
   });
 
@@ -108,6 +108,7 @@ export function createDiscogsHttpClient(): AxiosInstance {
     (response: AxiosResponse) => {
       const config = response.config as ResilienceConfig;
       const attempts = config.__attempt ?? 1;
+      recordRateLimitHeaders(response.headers);
       if (!config.__skipResilience) {
         recordSuccess();
       }
@@ -136,6 +137,7 @@ export function createDiscogsHttpClient(): AxiosInstance {
       const attempt = config?.__attempt ?? 1;
 
       if (error.response) {
+        recordRateLimitHeaders(error.response.headers);
         const { status } = error.response;
 
         if (status === 404) {
@@ -242,6 +244,12 @@ const RATING_CACHE_TTL_SECONDS = 30 * 60;
 // seconds is treated identically to a failed lookup, so search results are
 // never blocked or perceptibly delayed by rating enrichment.
 const RATING_LOOKUP_TIMEOUT_MS = 2_000;
+
+// Spec FR-009/FR-010 (feature 040, US2): bounds how many rating/master
+// lookups a single search's enrichment fan-out can have in flight at once,
+// matching libraryEnrichment.ts's existing ENRICHMENT_CONCURRENCY — the
+// single largest known source of Discogs request bursts.
+const SEARCH_RATING_CONCURRENCY = 5;
 
 /** Fetches (and caches) one release's community rating; rejects if the lookup fails or times out. */
 export async function getReleaseRating(
@@ -409,7 +417,11 @@ export async function searchCatalog(
         : results;
 
     const mappedResults = wantedResults.map(mapSearchResult);
-    const enrichedResults = await Promise.all(mappedResults.map(enrichWithRating));
+    const enrichedResults = await mapWithConcurrency(
+      mappedResults,
+      SEARCH_RATING_CONCURRENCY,
+      enrichWithRating,
+    );
 
     return {
       results: enrichedResults,
