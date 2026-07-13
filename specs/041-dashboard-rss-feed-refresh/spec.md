@@ -50,9 +50,9 @@ Injection, MetalSucks, Louder Sound) keep working exactly as before.
 
 ---
 
-### User Story 2 - Add 6 new RSS sources (Priority: P1)
+### User Story 2 - Add 5 confirmed new RSS sources (Priority: P1)
 
-As a collector visiting the Dashboard, I want to see news from 6 new metal
+As a collector visiting the Dashboard, I want to see news from 5 new metal
 sources, so that I have more variety and volume of genre news after Metal
 Storm is retired.
 
@@ -61,9 +61,10 @@ retiring Metal Storm (User Story 1), so the Dashboard doesn't regress in
 content richness.
 
 **Independent Test**: Can be fully tested by loading the Dashboard after the
-change and confirming articles from each of the 6 new sources appear
-(individually verifiable via the source filter), with a failing individual
-source degrading gracefully rather than breaking the rest of the Dashboard.
+change and confirming articles from each of the 5 confirmed new sources
+appear (individually verifiable via the source filter), with a failing
+individual source degrading gracefully rather than breaking the rest of the
+Dashboard.
 
 **Sources to add** (reachability verified against the live feed on
 2026-07-13):
@@ -80,9 +81,10 @@ source degrading gracefully rather than breaking the rest of the Dashboard.
 **Acceptance Scenarios**:
 
 1. **Given** the source catalog, **When** the change is applied, **Then** it
-   contains one new entry for each of the 6 sources above, enabled and
-   following the same shape as existing sources (identifier, display name,
-   feed URL, category, priority flag).
+   contains one new entry for each of the 5 sources above confirmed
+   reachable (all except Metal Blade Records — see Acceptance Scenario 4),
+   enabled and following the same shape as existing sources (identifier,
+   display name, feed URL, category, priority flag).
 2. **Given** each new source is reachable, **When** the Dashboard aggregates
    all sources, **Then** its articles appear the same way as any existing
    source's articles, with per-source failure isolation (an individual feed
@@ -176,10 +178,12 @@ when selected.
   Metal Storm (including its dedicated article-image extraction handling)
   MUST be removed along with Metal Storm, leaving no dead, source-specific
   logic behind.
-- **FR-005**: The source catalog MUST include the 6 new sources listed in
-  User Story 2, each enabled and configured with the same required
-  attributes (identifier, display name, feed URL, category, priority flag)
-  as existing sources.
+- **FR-005**: The source catalog MUST include every one of the 6 candidate
+  sources listed in User Story 2 that is confirmed reachable, each enabled
+  and configured with the same required attributes (identifier, display
+  name, feed URL, category, priority flag) as existing sources. A candidate
+  confirmed persistently unreachable (see FR-006) is excluded rather than
+  added.
 - **FR-006**: Metal Blade Records' real reachability MUST be confirmed
   before it is enabled; if it is persistently unreachable, this MUST be
   handled the same way as any other unavailable source (graceful per-source
@@ -230,9 +234,9 @@ when selected.
 
 ### Measurable Outcomes
 
-- **SC-001**: The source catalog contains zero Metal Storm entries and all
-  6 newly verified reachable sources (with Metal Blade Records confirmed
-  live before being counted as enabled).
+- **SC-001**: The source catalog contains zero Metal Storm entries and every
+  one of the 6 candidate sources that was confirmed reachable (Metal Blade
+  Records excluded per FR-006 — see Assumptions).
 - **SC-002**: The Dashboard shows zero references to Metal Storm (cards,
   filter labels, status banners) after the change ships.
 - **SC-003**: Clicking any source's filter label shows all of that source's
@@ -247,15 +251,15 @@ when selected.
 
 ## Assumptions
 
-- **Category for the 6 new sources**: no category was specified for the new
-  sources individually, so all 6 are classified as `News`, matching Metal
+- **Category for the 5 new sources**: no category was specified for the new
+  sources individually, so all 5 are classified as `News`, matching Metal
   Injection, MetalSucks, and Louder Sound. A consequence of this default
   combined with Metal Storm's removal is that the Dashboard's category
   filter temporarily has only one populated category (`News`) until new
   categorized sources are added — this is an accepted, documented tradeoff
   of this change, not a defect.
-- **Priority of the 6 new sources**: no source was flagged as needing to
-  appear first in the filter, so all 6 are treated as non-priority, leaving
+- **Priority of the 5 new sources**: no source was flagged as needing to
+  appear first in the filter, so all 5 are treated as non-priority, leaving
   Metal Injection, MetalSucks, and Louder Sound as the only priority
   sources.
 - **Relative priority of the three stories**: all three are P1 because they
