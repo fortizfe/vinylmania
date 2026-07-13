@@ -39,3 +39,12 @@ export interface DashboardResponse {
   sourceStatuses: SourceStatus[];
   generatedAt: string;
 }
+
+/** All articles for one source, uncapped — spec 041 FR-008. */
+export interface SourceFeedResponse {
+  sourceId: string;
+  sourceName: string;
+  status: SourceHealth;
+  articles: Article[];
+  generatedAt: string;
+}

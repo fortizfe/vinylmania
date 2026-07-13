@@ -10,14 +10,14 @@ const sourceStatuses: SourceStatus[] = [
   { sourceId: 'metalsucks', sourceName: 'MetalSucks', status: 'ok', priority: true },
   { sourceId: 'louder-sound', sourceName: 'Louder Sound', status: 'ok', priority: true },
   {
-    sourceId: 'metal-storm-news',
-    sourceName: 'Metal Storm',
+    sourceId: 'sample-source-1',
+    sourceName: 'Sample Source',
     status: 'ok',
     priority: false,
   },
   {
-    sourceId: 'metal-storm-reviews',
-    sourceName: 'Metal Storm',
+    sourceId: 'sample-source-2',
+    sourceName: 'Sample Source',
     status: 'ok',
     priority: false,
   },
@@ -52,8 +52,8 @@ describe('FeedSourceFilterBar', () => {
       'Metal Injection',
       'MetalSucks',
       'Louder Sound',
-      'Metal Storm',
-      'Metal Storm',
+      'Sample Source',
+      'Sample Source',
     ]);
   });
 

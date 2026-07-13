@@ -98,73 +98,16 @@ describe('mapFeedItem', () => {
     expect(mapped?.excerpt.length).toBeLessThanOrEqual(201);
   });
 
-  describe('Metal Storm data-image-url extraction (spec 036)', () => {
-    const metalStormSource: FeedSourceConfig = {
-      id: 'metal-storm-news',
-      name: 'Metal Storm',
-      feedUrl: 'https://metalstorm.net/rss/news.xml',
-      category: 'News',
-      enabled: true,
-      priority: false,
-    };
-
-    it('resolves a relative data-image-url on an <a class="ms-link"> anchor to an absolute URL', () => {
+  describe('data-image-url extraction removed (feature 041)', () => {
+    it('does not extract an image from a data-image-url attribute on any source, even well-formed markup that used to match', () => {
       const mapped = mapFeedItem(
         {
           title: 'Harlott Announce New Album',
-          link: 'https://metalstorm.net/bands/news.php?id=1',
+          link: 'https://example.com/bands/news.php?id=1',
           content:
             '<a class="ms-link" href="band.php?band_id=9141" data-image-url="/images/bands/9141.jpg">Harlott</a> announce new album.',
         },
-        metalStormSource,
-      );
-
-      expect(mapped?.imageUrl).toBe('https://metalstorm.net/images/bands/9141.jpg');
-    });
-
-    it('takes the first ms-link anchor when an item has more than one', () => {
-      const mapped = mapFeedItem(
-        {
-          title: 'Two Bands Mentioned',
-          link: 'https://metalstorm.net/bands/news.php?id=2',
-          content:
-            '<a class="ms-link" data-image-url="/images/bands/1.jpg">Band One</a> and ' +
-            '<a class="ms-link" data-image-url="/images/albums/2/2.jpg">Album Two</a>.',
-        },
-        metalStormSource,
-      );
-
-      expect(mapped?.imageUrl).toBe('https://metalstorm.net/images/bands/1.jpg');
-    });
-
-    it('leaves imageUrl undefined for a Metal Storm category with no ms-link/data-image-url markup (e.g. Reviews)', () => {
-      const metalStormReviews: FeedSourceConfig = {
-        ...metalStormSource,
-        id: 'metal-storm-reviews',
-        category: 'Reviews',
-        feedUrl: 'https://metalstorm.net/rss/reviews.xml',
-      };
-
-      const mapped = mapFeedItem(
-        {
-          title: 'Album Review',
-          link: 'https://metalstorm.net/reviews/review.php?id=1',
-          content: '<i>A review with no images at all.</i> <a href="review.php?id=1">Read more…</a>',
-        },
-        metalStormReviews,
-      );
-
-      expect(mapped?.imageUrl).toBeUndefined();
-    });
-
-    it('rejects a protocol-relative data-image-url instead of resolving it to an external host', () => {
-      const mapped = mapFeedItem(
-        {
-          title: 'Suspicious Feed Item',
-          link: 'https://metalstorm.net/bands/news.php?id=3',
-          content: '<a class="ms-link" data-image-url="//evil.com/x.jpg">Band</a>',
-        },
-        metalStormSource,
+        source,
       );
 
       expect(mapped?.imageUrl).toBeUndefined();

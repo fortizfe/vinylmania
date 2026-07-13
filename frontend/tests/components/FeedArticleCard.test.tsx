@@ -124,9 +124,9 @@ describe('FeedArticleCard', () => {
     ];
     const nonPriorityArticle = {
       ...baseArticle,
-      id: 'ms-storm-1',
-      sourceId: 'metal-storm-reviews',
-      sourceName: 'Metal Storm',
+      id: 'sample-1',
+      sourceId: 'sample-source',
+      sourceName: 'Sample Source',
     };
 
     it('renders an identical card size/structure for every source, differing only in the badge/source text', () => {
@@ -142,7 +142,7 @@ describe('FeedArticleCard', () => {
       expect(screen.getByText(/Metal Injection/)).toBeInTheDocument();
       expect(screen.getByText(/MetalSucks/)).toBeInTheDocument();
       expect(screen.getByText(/Louder Sound/)).toBeInTheDocument();
-      expect(screen.getByText(/Metal Storm/)).toBeInTheDocument();
+      expect(screen.getByText(/Sample Source/)).toBeInTheDocument();
     });
   });
 });
