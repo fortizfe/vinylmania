@@ -36,7 +36,7 @@ function MoonArtwork() {
     <svg
       data-testid="theme-toggle-moon-artwork"
       viewBox="0 0 24 24"
-      className="h-4 w-4 text-slate-100"
+      className="h-4 w-4 text-stone-100"
       aria-hidden="true"
     >
       <path
@@ -65,7 +65,7 @@ export function ThemeToggle({ theme, onToggle, className }: ThemeToggleProps) {
       className={clsx(
         'relative inline-flex min-h-11 h-9 w-16 shrink-0 items-center overflow-hidden rounded-full border transition-colors duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
         isDark
-          ? 'border-slate-700 bg-linear-to-b from-slate-800 to-slate-950'
+          ? 'border-border-dark bg-linear-to-b from-surface-raised to-surface'
           : 'border-sky-300 bg-linear-to-b from-sky-300 to-sky-500',
         className,
       )}
@@ -96,7 +96,7 @@ export function ThemeToggle({ theme, onToggle, className }: ThemeToggleProps) {
       <span
         className={clsx(
           'relative z-10 flex h-7 w-7 items-center justify-center rounded-full shadow-md transition-transform duration-300 ease-in-out',
-          isDark ? 'translate-x-8 bg-slate-700' : 'translate-x-1 bg-white',
+          isDark ? 'translate-x-8 bg-stone-700' : 'translate-x-1 bg-white',
         )}
       >
         {isDark ? <MoonArtwork /> : <SunArtwork />}

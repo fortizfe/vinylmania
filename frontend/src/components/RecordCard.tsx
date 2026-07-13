@@ -15,7 +15,7 @@ export function RecordCard({ entry }: RecordCardProps) {
       <li>
         <Card
           padding="sm"
-          className="flex flex-col gap-1 text-gray-500 italic dark:text-gray-400"
+          className="flex flex-col gap-1 text-stone-500 italic dark:text-stone-400"
         >
           <p>Couldn&apos;t load catalog details for this record right now.</p>
           <Link to={`/app/library/records/${entry.id}`} className="text-sm underline">
@@ -43,17 +43,17 @@ export function RecordCard({ entry }: RecordCardProps) {
                 className="aspect-square w-full rounded-md object-cover"
               />
             ) : (
-              <div className="aspect-square w-full rounded-md bg-gray-100 dark:bg-gray-900" />
+              <div className="aspect-square w-full rounded-md bg-stone-100 dark:bg-stone-900" />
             )}
             <div className="absolute top-2 right-2">
               <ReleaseRatingBadge displayValue={rating.displayValue} band={rating.band} />
             </div>
           </div>
-          <span className="truncate font-semibold text-gray-900 dark:text-gray-100">
+          <span className="truncate font-semibold text-stone-900 dark:text-stone-100">
             {release.title}
           </span>
           {primaryArtist && (
-            <span className="truncate text-sm text-gray-500 dark:text-gray-400">
+            <span className="truncate text-sm text-stone-500 dark:text-stone-400">
               {primaryArtist}
             </span>
           )}

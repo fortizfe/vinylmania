@@ -17,7 +17,7 @@ createRoot(document.getElementById('root')!).render(
           <AuthProvider>
             <div
               data-testid="app-shell"
-              className="min-h-dvh bg-white font-sans text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100"
+              className="min-h-dvh bg-white font-sans text-stone-900 antialiased dark:bg-surface dark:text-stone-100"
             >
               <App />
             </div>

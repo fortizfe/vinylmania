@@ -62,7 +62,7 @@ export function CollapsibleFilterPanel({
   return (
     <Card padding="sm">
       <div className="mb-2 flex items-center justify-between gap-4">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
           Filters
         </span>
         <Button

@@ -39,7 +39,7 @@ export function LandingPage() {
   return (
     <div
       data-testid="landing-viewport"
-      className="flex min-h-dvh w-full flex-col bg-white dark:bg-landing-surface"
+      className="flex min-h-dvh w-full flex-col bg-white dark:bg-surface"
     >
       <LandingHeader onClick={signIn} loading={signingIn} error={error} />
       <main className="flex flex-1 flex-col items-center gap-16 p-6 text-center sm:gap-20 sm:p-12">

@@ -85,7 +85,7 @@ export function Modal({
         >
           <div className="mb-4 flex items-center justify-between gap-4">
             {title && (
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">
                 {title}
               </h2>
             )}

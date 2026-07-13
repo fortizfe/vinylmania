@@ -34,7 +34,7 @@ export function FeedArticleBoard({ categories, sourceStatuses }: FeedArticleBoar
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6">
-      <div className="sticky top-0 z-10 flex flex-col gap-2 bg-white py-2 dark:bg-gray-950">
+      <div className="sticky top-0 z-10 flex flex-col gap-2 bg-white py-2 dark:bg-surface">
         <FeedCategoryFilterBar
           categories={categoryNames}
           selectedCategory={selectedCategory}
@@ -47,7 +47,7 @@ export function FeedArticleBoard({ categories, sourceStatuses }: FeedArticleBoar
         />
       </div>
       {visibleArticles.length === 0 ? (
-        <p className="text-gray-500 dark:text-gray-400">
+        <p className="text-stone-500 dark:text-stone-400">
           No news right now — check back soon.
         </p>
       ) : (

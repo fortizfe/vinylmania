@@ -22,7 +22,7 @@ export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
       <div
         role="img"
         aria-label={`No cover image available for ${alt}`}
-        className="flex aspect-square w-full items-center justify-center rounded-md bg-gray-100 text-sm text-gray-400 dark:bg-gray-900 dark:text-gray-500"
+        className="flex aspect-square w-full items-center justify-center rounded-md bg-stone-100 text-sm text-stone-400 dark:bg-stone-900 dark:text-stone-500"
       >
         No cover image available
       </div>
@@ -50,7 +50,7 @@ export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
                 'aspect-square min-h-11 min-w-11 shrink-0 overflow-hidden rounded-md ring-2 transition',
                 index === selectedIndex
                   ? 'ring-primary'
-                  : 'ring-transparent hover:ring-gray-300 dark:hover:ring-gray-700',
+                  : 'ring-transparent hover:ring-stone-300 dark:hover:ring-stone-700',
               )}
             >
               <img src={image.url} alt="" className="h-full w-full object-cover" />

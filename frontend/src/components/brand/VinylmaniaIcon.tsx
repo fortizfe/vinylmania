@@ -19,7 +19,7 @@ export function VinylmaniaIcon({ size, className }: VinylmaniaIconProps) {
       focusable="false"
       className={clsx('shrink-0', className)}
     >
-      <circle cx="100" cy="100" r="85" className="fill-landing-surface dark:fill-brand-icon-dark-bg" />
+      <circle cx="100" cy="100" r="85" className="fill-surface dark:fill-brand-icon-dark-bg" />
       <circle
         cx="100"
         cy="100"
@@ -44,14 +44,14 @@ export function VinylmaniaIcon({ size, className }: VinylmaniaIconProps) {
         className="stroke-white/12 dark:stroke-white/14"
         strokeWidth="1.5"
       />
-      <circle cx="100" cy="100" r="34" className="fill-landing-accent dark:fill-primary" />
+      <circle cx="100" cy="100" r="34" className="fill-accent dark:fill-primary" />
       <text
         x="100"
         y="112"
         textAnchor="middle"
         fontFamily="Anton"
         fontSize="30"
-        className="fill-landing-surface dark:fill-white"
+        className="fill-surface dark:fill-white"
       >
         VM
       </text>

@@ -44,7 +44,7 @@ export function MasterReleaseDetailPage() {
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
         <BackLink to={backTo} />
         <Card>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-stone-500 dark:text-stone-400">
             Couldn&apos;t find that master release in the catalog.
           </p>
         </Card>

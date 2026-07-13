@@ -12,11 +12,11 @@ export function AppHeader() {
   const { signOut } = useAuth();
 
   return (
-    <header className="sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-900 dark:bg-gray-950 sm:px-6">
+    <header className="sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-stone-200 bg-white px-4 py-4 dark:border-border-dark dark:bg-surface-raised sm:px-6">
       <Link
         to="/app"
         aria-label="Vinylmania"
-        className="flex min-h-11 min-w-11 items-center justify-self-start gap-2 text-gray-900 no-underline dark:text-gray-100"
+        className="flex min-h-11 min-w-11 items-center justify-self-start gap-2 text-stone-900 no-underline dark:text-stone-100"
       >
         <VinylmaniaIcon size={28} className="h-7 w-7 md:h-9 md:w-9" />
         <VinylmaniaWordmark className="hidden text-xl md:inline-block" />

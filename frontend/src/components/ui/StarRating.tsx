@@ -31,8 +31,8 @@ export function StarRating({ value, onChange, disabled = false }: StarRatingProp
               'flex min-h-11 min-w-11 items-center justify-center rounded transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
               disabled
                 ? 'cursor-not-allowed opacity-40'
-                : 'cursor-pointer hover:text-amber-400',
-              filled ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600',
+                : 'cursor-pointer hover:text-accent',
+              filled ? 'text-accent' : 'text-stone-300 dark:text-stone-600',
             ].join(' ')}
           >
             <svg

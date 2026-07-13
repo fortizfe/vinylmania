@@ -83,7 +83,7 @@ describe('ReleaseRatingBadge', () => {
       render(<ReleaseRatingBadge displayValue="-" band="unrated" />);
       const badge = screen.getByText('-');
       expect(badge).toHaveClass('bg-rating-unrated');
-      expect(badge).toHaveClass('dark:bg-gray-700');
+      expect(badge).toHaveClass('dark:bg-stone-700');
     });
 
     it('exposes a "Rating not available" accessible label instead of the numeric label pattern', () => {

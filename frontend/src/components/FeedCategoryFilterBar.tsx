@@ -10,7 +10,7 @@ const baseButtonClassName =
   'flex min-h-11 min-w-11 items-center justify-center rounded-full px-3 py-1 text-sm font-medium transition-colors';
 const activeClassName = 'bg-primary text-white';
 const inactiveClassName =
-  'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800';
+  'bg-stone-100 text-stone-700 hover:bg-stone-200 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800';
 
 export function FeedCategoryFilterBar({
   categories,

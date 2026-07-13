@@ -27,7 +27,7 @@ export function MasterVersionsTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <h4 className="font-semibold text-gray-900 dark:text-gray-100">Versions</h4>
+      <h4 className="font-semibold text-stone-900 dark:text-stone-100">Versions</h4>
 
       {/* Mobile: a stacked card list avoids the horizontal scroll a table
           would force at narrow widths (FR-005/spec 035). */}
@@ -38,11 +38,11 @@ export function MasterVersionsTable({
               <Link
                 to={`/app/releases/${version.discogsId}`}
                 state={{ from: `/app/masters/${discogsId}?page=${page}` }}
-                className="flex min-h-11 items-center font-medium text-gray-900 no-underline hover:text-primary dark:text-gray-100"
+                className="flex min-h-11 items-center font-medium text-stone-900 no-underline hover:text-primary dark:text-stone-100"
               >
                 {version.title}
               </Link>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-stone-500 dark:text-stone-400">
                 {[version.format, version.year, version.label, version.country]
                   .filter(Boolean)
                   .join(' · ') || '—'}
@@ -56,7 +56,7 @@ export function MasterVersionsTable({
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="text-gray-500 dark:text-gray-400">
+            <tr className="text-stone-500 dark:text-stone-400">
               <th className="py-2 pr-4 font-medium">Title</th>
               <th className="py-2 pr-4 font-medium">Format</th>
               <th className="py-2 pr-4 font-medium">Year</th>
@@ -68,27 +68,27 @@ export function MasterVersionsTable({
             {results.map((version) => (
               <tr
                 key={version.discogsId}
-                className="border-t border-gray-200 dark:border-gray-900"
+                className="border-t border-stone-200 dark:border-stone-900"
               >
                 <td className="py-2 pr-4">
                   <Link
                     to={`/app/releases/${version.discogsId}`}
                     state={{ from: `/app/masters/${discogsId}?page=${page}` }}
-                    className="font-medium text-gray-900 no-underline hover:text-primary dark:text-gray-100"
+                    className="font-medium text-stone-900 no-underline hover:text-primary dark:text-stone-100"
                   >
                     {version.title}
                   </Link>
                 </td>
-                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">
+                <td className="py-2 pr-4 text-stone-500 dark:text-stone-400">
                   {version.format ?? '—'}
                 </td>
-                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">
+                <td className="py-2 pr-4 text-stone-500 dark:text-stone-400">
                   {version.year ?? '—'}
                 </td>
-                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">
+                <td className="py-2 pr-4 text-stone-500 dark:text-stone-400">
                   {version.label ?? '—'}
                 </td>
-                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">
+                <td className="py-2 pr-4 text-stone-500 dark:text-stone-400">
                   {version.country ?? '—'}
                 </td>
               </tr>

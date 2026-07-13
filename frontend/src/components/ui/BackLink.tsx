@@ -23,7 +23,7 @@ export function BackLink({ to, label = 'Back' }: BackLinkProps) {
   return (
     <Link
       to={to}
-      className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-gray-500 no-underline hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+      className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-stone-500 no-underline hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
     >
       <ChevronLeftIcon />
       {label}

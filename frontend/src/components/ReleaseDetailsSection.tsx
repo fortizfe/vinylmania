@@ -27,18 +27,18 @@ export function ReleaseDetailsSection({ release }: ReleaseDetailsSectionProps) {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="font-display text-lg leading-tight text-stone-900 dark:text-stone-100">
           {release.title}
         </h3>
         {release.artists.map((artist) => (
-          <p key={artist.discogsArtistId} className="text-gray-500 dark:text-gray-400">
+          <p key={artist.discogsArtistId} className="text-stone-500 dark:text-stone-400">
             {artist.name}
           </p>
         ))}
       </div>
 
       {hasMetaRow && (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
           {release.country && <span>{release.country}</span>}
           {release.releaseDate && <span>{release.releaseDate}</span>}
           {release.formats.map((format) => (

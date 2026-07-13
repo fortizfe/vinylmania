@@ -13,7 +13,7 @@ const BACKGROUND_CLASSES: Record<RatingBand, string> = {
   high: 'bg-rating-high',
   // Unrated/error placeholder (feature 019): adapts per theme, unlike the
   // fixed-color bands above — see research.md §2.
-  unrated: 'bg-rating-unrated dark:bg-gray-700',
+  unrated: 'bg-rating-unrated dark:bg-stone-700',
 };
 
 // Text color per band chosen alongside the background tokens in
@@ -21,9 +21,9 @@ const BACKGROUND_CLASSES: Record<RatingBand, string> = {
 // chosen in research.md §2 to meet the same bar (spec FR-005).
 const TEXT_CLASSES: Record<RatingBand, string> = {
   low: 'text-white',
-  medium: 'text-gray-900',
+  medium: 'text-stone-900',
   high: 'text-white',
-  unrated: 'text-gray-700 dark:text-gray-100',
+  unrated: 'text-stone-700 dark:text-stone-100',
 };
 
 // Distinct accessible label for the unrated/error placeholder (spec FR-006) —
