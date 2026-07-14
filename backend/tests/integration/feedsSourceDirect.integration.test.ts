@@ -1,5 +1,11 @@
+import RedisMock from 'ioredis-mock';
 import nock from 'nock';
 import request from 'supertest';
+
+jest.mock('ioredis', () => ({
+  __esModule: true,
+  default: RedisMock,
+}));
 
 import { invalidateCache } from '../../src/cache/cacheAside';
 import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
@@ -58,6 +64,16 @@ function rssXml(items: Array<{ title: string; link: string; pubDate: string }>):
 }
 
 describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', () => {
+  const originalRedisUrl = process.env.REDIS_URL;
+
+  beforeAll(() => {
+    process.env.REDIS_URL = 'redis://localhost:6379/0';
+  });
+
+  afterAll(() => {
+    process.env.REDIS_URL = originalRedisUrl;
+  });
+
   beforeEach(async () => {
     await invalidateCache('feeds:direct-prolific');
     await invalidateCache('feeds:direct-quiet');
