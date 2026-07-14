@@ -355,6 +355,45 @@ the download cost. `--with-deps` also installs the OS-level libraries
 Chromium needs on a bare `ubuntu-latest` runner, which a plain devDependency
 install can never provide regardless of caching.
 
+**Third addendum, found on the job's third real CI run** (after the browser
+install fix above got the suite executing end to end for the first time
+ever: 101/109 tests passed, none hung — the milestone this feature exists
+to reach): 8 individual test failures remained, falling into two distinct
+categories. **Category A — CI-only timing flakiness** (`dark-mode-contrast`:
+a near-invisible 1.07:1 contrast ratio consistent with a CSS-variable race
+right after a theme toggle; `library-filters`: the fake Google sign-in
+popup exceeding its 15s wait; a modal-height mismatch; a generic 30s
+timeout) — all plausibly explained by this job running the Firestore JVM,
+Auth emulator, and all three `webServer` dev processes concurrently with
+Chromium on a standard-size runner, genuinely heavier than a local dev
+machine. **Decision**: (1) make `helpers/fakeGoogleSignIn.ts`'s popup-wait
+timeout CI-aware (30s under `process.env.CI`, unchanged 15s locally) since
+that's the one failure with a confirmed, specific timeout value to widen;
+(2) enable Playwright's built-in `retries: process.env.CI ? 2 : 0` — a
+standard, widely-used mitigation for exactly this class of environment-only
+timing flakiness, and one that self-selects: a genuinely transient failure
+passes on retry, while a real deterministic bug fails identically every
+time, giving a clean signal instead of masking anything. **Category B — a
+pre-existing, deterministic mismatch, out of this feature's scope**: the
+multi-format filter test (`search-result-filters.spec.ts:395`) expects the
+URL to preserve click order (`format=Vinyl,CD`) but the app consistently
+produced `format=CD,Vinyl` — 14 retries of the assertion (Playwright's own
+polling within one `expect()` call, not a flaky pass/fail across runs) all
+returned the identical value, so this is not timing-related at all. Fixing
+it would require determining whether the test's order-sensitive assertion
+or the app's apparent canonical-order serialization is the intended
+behavior — a product/test-correctness question unrelated to hangs or
+timeouts, and outside what this feature's spec (bounding indefinite waits)
+committed to. Left open for separate triage rather than guessed at.
+
+**Alternatives considered** (for the Category A fixes): raising `timeout`/
+`globalTimeout` globally instead of targeting the specific confirmed
+timeout and adding retries — rejected: a blanket increase wouldn't have
+addressed the actual failure (a `page.waitForEvent('popup')` call with its
+own explicit, separate timeout, not gated by the per-test `timeout`) and
+would slow down every run's worst case, including the fully-deterministic
+runs where 15s was always enough.
+
 ## 12. Caching the Firestore emulator JAR in CI
 
 **Finding**: The emulator binary (`~/.cache/firebase/emulators/cloud-firestore-emulator-v1.19.8.jar`,
