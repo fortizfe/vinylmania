@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [0.25.1] - 2026-07-14
+
+### Fixed
+
+- eliminate silent test-suite hangs (backend + e2e Firebase emulator) (#30) ([49b6a60])
+
 ## [0.25.0] - 2026-07-14
 
 ### Added
