@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [0.26.0] - 2026-07-14
+
+### Added
+
+- cap gallery size, contain thumbnail scroll, add fullscreen viewer ([06ecac5])
+
 ## [0.25.1] - 2026-07-14
 
 ### Fixed
