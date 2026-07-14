@@ -81,4 +81,48 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
     expect(box?.width).toBeGreaterThanOrEqual(44);
     expect(box?.height).toBeGreaterThanOrEqual(44);
   });
+
+  test('lg-range desktop: the main image stays contained and the thumbnail column never exceeds it, even with many images (spec 043, US1)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1100, height: 900 });
+
+    const manyImagesRelease = {
+      ...releaseResponse,
+      images: Array.from({ length: 12 }, (_, i) => ({
+        url: `https://example.com/cover-${i}.jpg`,
+        imageType: i === 0 ? 'primary' : 'secondary',
+      })),
+    };
+    await page.route(`**/api/discogs/releases/${RELEASE_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(manyImagesRelease),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/releases/${RELEASE_ID}`);
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+
+    const mainImage = page.getByRole('img', { name: 'Stockholm' });
+    const thumbnailStrip = page
+      .getByRole('button', { name: /show image 1 of 12/i })
+      .locator('xpath=..');
+
+    const [mainImageBox, thumbnailStripBox] = await Promise.all([
+      mainImage.boundingBox(),
+      thumbnailStrip.boundingBox(),
+    ]);
+    expect(mainImageBox && thumbnailStripBox).toBeTruthy();
+    expect(mainImageBox!.width).toBeLessThanOrEqual(480);
+    expect(thumbnailStripBox!.height).toBeLessThanOrEqual(mainImageBox!.height + 1);
+
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+  });
 });

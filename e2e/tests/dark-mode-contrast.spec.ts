@@ -31,10 +31,35 @@ async function toRgb(page: Page, cssColor: string): Promise<Rgb> {
   }, cssColor);
 }
 
+/**
+ * `getComputedStyle(el)[property]` has been observed to transiently return
+ * an empty string right after a client-side route change (most likely a
+ * StrictMode-driven remount racing this read), which `toRgb`'s canvas
+ * conversion silently treats as opaque black — producing a false-negative
+ * "1.07:1" contrast failure even though the element is correctly styled
+ * and rendered (confirmed via CI screenshot pixel sampling, spec 043 PR
+ * #31). Retrying briefly resolves the race without masking a real empty
+ * computed style, which would keep failing past this short window.
+ */
+async function getResolvedComputedStyle(
+  locator: Locator,
+  property: 'color' | 'backgroundColor',
+): Promise<string> {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const value = await locator.evaluate(
+      (el, prop) => getComputedStyle(el)[prop as 'color' | 'backgroundColor'],
+      property,
+    );
+    if (value) return value;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`Computed ${property} never resolved to a non-empty value`);
+}
+
 async function assertReadableContrast(page: Page, locator: Locator, label: string) {
   const [textColor, backgroundColor] = await Promise.all([
-    locator.evaluate((el) => getComputedStyle(el).color),
-    page.getByTestId('app-shell').evaluate((el) => getComputedStyle(el).backgroundColor),
+    getResolvedComputedStyle(locator, 'color'),
+    getResolvedComputedStyle(page.getByTestId('app-shell'), 'backgroundColor'),
   ]);
 
   const [fg, bg] = await Promise.all([toRgb(page, textColor), toRgb(page, backgroundColor)]);

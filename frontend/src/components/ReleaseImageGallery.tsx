@@ -2,6 +2,7 @@ import { useState } from 'react';
 import clsx from 'clsx';
 
 import type { CatalogImage } from '../services/libraryApi';
+import { GalleryFullscreenViewer } from './GalleryFullscreenViewer';
 
 interface ReleaseImageGalleryProps {
   images: CatalogImage[];
@@ -15,6 +16,7 @@ function initialIndex(images: CatalogImage[]): number {
 
 export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(() => initialIndex(images));
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const selected = images[selectedIndex];
 
   if (!selected) {
@@ -30,15 +32,22 @@ export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
   }
 
   return (
-    <div className="flex gap-3 aspect-square">
-      <img
-        src={selected.url}
-        alt={alt}
-        className="aspect-square min-w-0 flex-1 rounded-md object-cover"
-      />
+    <div className="mx-auto flex aspect-square gap-3 lg:max-w-md">
+      <button
+        type="button"
+        onClick={() => setIsFullscreenOpen(true)}
+        aria-label={`View ${alt} fullscreen`}
+        className="aspect-square min-w-0 flex-1"
+      >
+        <img
+          src={selected.url}
+          alt={alt}
+          className="h-full w-full rounded-md object-cover"
+        />
+      </button>
 
       {images.length > 1 && (
-        <div className="scrollbar-hidden flex w-16 flex-col gap-2 overflow-y-auto">
+        <div className="scrollbar-hidden flex w-16 min-h-0 flex-col gap-2 overflow-y-auto">
           {images.map((image, index) => (
             <button
               key={image.url}
@@ -57,6 +66,16 @@ export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
             </button>
           ))}
         </div>
+      )}
+
+      {isFullscreenOpen && (
+        <GalleryFullscreenViewer
+          images={images}
+          selectedIndex={selectedIndex}
+          onSelect={setSelectedIndex}
+          alt={alt}
+          onClose={() => setIsFullscreenOpen(false)}
+        />
       )}
     </div>
   );
