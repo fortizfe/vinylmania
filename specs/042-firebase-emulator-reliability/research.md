@@ -444,6 +444,42 @@ nothing was recoverable after the job finished. **Decision**: added
 and `e2e/playwright-report/`, so the next failure of either can actually be
 inspected instead of guessed at.
 
+**Fifth addendum, found on the job's fifth real CI run** (after the three
+Fourth-addendum bug fixes: 107/109 passed, only the two flagged-as-separate
+failures remained): downloaded the newly-uploaded artifact
+(`gh run download <id> -n e2e-test-results`) and actually looked at
+`test-failed-1.png` for the modal-height failure instead of guessing from
+the log. The screenshot shows the "Style" selectable-list modal rendered
+centered with visible dark overlay both above (the "Search results" header
+peeking through) and below (part of the results grid) — it is genuinely
+not full-screen, not a rendering/measurement artifact. Cross-checked
+against `frontend/src/components/filters/SelectableListFilter.tsx` and
+`frontend/src/components/ui/Modal.tsx`: `Modal` already supports a
+full-screen `position="end"` variant (`h-dvh w-full`, used elsewhere for
+mobile sheets), but `SelectableListFilter` never passes a `position` prop
+at all, so it always renders `Modal`'s default `position="center"` variant
+— on every viewport, including mobile. This is confirmed non-environmental:
+the companion desktop test (`:900`, "distinct from the mobile full-screen
+modal") passes today only because *any* height under `900 * 0.8 = 720` px
+satisfies its assertion, which the always-centered modal trivially does —
+it isn't actually testing viewport-responsive behavior at all.
+
+**Decision**: this is real, unimplemented product behavior (FR-012 from
+spec 038 was apparently never wired up for this specific filter type), not
+a test bug, a CI environment difference, or anything related to spec 042's
+hang/timeout scope. Implementing the fix (deciding how `SelectableListFilter`
+should detect mobile vs. desktop — a CSS-only responsive `Modal` variant vs.
+a JS viewport hook, and confirming that choice doesn't regress the
+already-passing desktop test) is a product/design decision beyond what this
+feature should unilaterally make. **Both this and the format-order mismatch
+above were marked `test.fixme()`** (Playwright's standard "known broken,
+tracked, doesn't fail CI" mechanism — not `.skip()`, which would silently
+drop the coverage) with inline comments pointing back to this file, so
+`e2e-test` can be the required, blocking, green check the 2026-07-14 spec
+clarification (FR-013) calls for, while both real, separate bugs stay
+visible and tracked rather than either blocking CI indefinitely or being
+silently deleted.
+
 ## 12. Caching the Firestore emulator JAR in CI
 
 **Finding**: The emulator binary (`~/.cache/firebase/emulators/cloud-firestore-emulator-v1.19.8.jar`,
