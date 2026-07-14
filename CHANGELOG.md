@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [0.27.0] - 2026-07-14
+
+### Added
+
+- fix WebKit gallery containment bug and reflow detail pages to two columns ([0f45a31])
+
 ## [0.26.0] - 2026-07-14
 
 ### Added
