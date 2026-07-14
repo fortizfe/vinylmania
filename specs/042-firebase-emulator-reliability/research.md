@@ -394,6 +394,56 @@ own explicit, separate timeout, not gated by the per-test `timeout`) and
 would slow down every run's worst case, including the fully-deterministic
 runs where 15s was always enough.
 
+**Fourth addendum, found on the job's fourth real CI run** (with `retries:
+2` now enabled): every one of the 8 failures reproduced with the *identical*
+value on every retry (the same `1.0695804277530894` contrast ratio three
+times, the same `546` modal height three times, the same wrong URL three
+times, `library-filters` still timing out at exactly the new 30s three
+times). This **disproves** the third addendum's "CI-only timing flakiness"
+theory — nothing here is transient; every failure is 100% deterministic on
+this runner. Reading the actual application/test source (not the CI log
+alone) found three separate, genuine, pre-existing test bugs, none related
+to CI resource contention or to this feature's timeout/hang scope:
+
+1. **`dashboard-feed-grid.spec.ts` (3 of the 8 failures)**: clicking a
+   source filter button calls `useSourceFeed(selectedSource)`, which fetches
+   `GET /api/feeds/sources/:sourceId` — a separate endpoint from
+   `/api/feeds/dashboard` that these tests only ever mocked. This
+   distinction dates to feature 041 ("fix source filter... consultando su
+   feed directamente si hace falta"); the e2e test file was never updated
+   for the new endpoint, so the real, unmocked request went nowhere useful.
+   **Fix**: added `mockSourceFeedRoutes(page)`, a shared helper mocking
+   `**/api/feeds/sources/*` from the same article pool already used for
+   `buildDashboardResponse()`, wired into the 3 affected tests.
+2. **`library-filters.spec.ts`'s popup timeout**: the test loops over 2
+   viewports and calls `signInAsFakeGoogleUser` a *second* time inside the
+   loop, after already signing in during iteration 1. The loop's
+   `page.context().clearCookies()` at the end of each iteration does not
+   clear Firebase Auth's client-side IndexedDB session persistence, so the
+   second `page.goto('/')` hits an already-authenticated session — the
+   landing page (and its "Sign in with Google" button) either never renders
+   or redirects away mid-click, matching the observed "element was detached
+   from the DOM" exactly. **Fix**: moved the single sign-in above the loop;
+   the loop now only exercises viewport-resize + scroll-check, which never
+   needed a fresh session per iteration.
+3. **`search-results-responsive.spec.ts`'s "apply filters" timeout**: this
+   spec-035 file never expanded the collapsible filter panel introduced by
+   feature 038 before trying to interact with the "Apply filters" button
+   inside it — the button was never actionable, so `boundingBox()` polled
+   until the 30s test timeout. **Fix**: added the same `Filters` toggle
+   click (`expandFilters`'s one-line body, inlined since this file has only
+   one filter interaction) used by the other two spec-038-aware files.
+
+**Remaining, not fixed here**: the contrast-ratio failure (`fg` computed as
+an empty string — a genuine rendering question, not a code-logic one) and
+the modal-height mismatch (`546` vs an expected `>649.6`) both need visual
+evidence (a screenshot/trace) to diagnose responsibly rather than guessed
+at from log text alone — `e2e-test`'s CI job had no artifact-upload step, so
+nothing was recoverable after the job finished. **Decision**: added
+`actions/upload-artifact@v4` (`if: failure()`) uploading `e2e/test-results/`
+and `e2e/playwright-report/`, so the next failure of either can actually be
+inspected instead of guessed at.
+
 ## 12. Caching the Firestore emulator JAR in CI
 
 **Finding**: The emulator binary (`~/.cache/firebase/emulators/cloud-firestore-emulator-v1.19.8.jar`,

@@ -241,13 +241,22 @@ test.describe('Shared collapsible filters on My Library (feature 038, US2)', () 
       });
     });
 
+    // Sign in once before the loop, not per iteration: signInAsFakeGoogleUser
+    // relies on clicking a "Sign in with Google" button that only exists on
+    // the unauthenticated landing page. Re-navigating to `/` on the second
+    // iteration while already signed in (page.context().clearCookies() alone
+    // doesn't clear Firebase Auth's client-side IndexedDB persistence) either
+    // skips straight past the landing page or races a redirect away from it,
+    // which is what produced "element was detached from the DOM" here.
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
     for (const viewport of [
       { width: 375, height: 812 },
       { width: 1440, height: 900 },
     ]) {
       await page.setViewportSize(viewport);
-      await page.goto('/');
-      await signInAsFakeGoogleUser(page);
       await page.goto('/app/library');
       await expect(page.getByText('Stockholm')).toBeVisible();
 
@@ -258,7 +267,6 @@ test.describe('Shared collapsible filters on My Library (feature 038, US2)', () 
       expect(scrollWidth).toBeLessThanOrEqual(viewport.width);
 
       await page.keyboard.press('Escape');
-      await page.context().clearCookies();
     }
   });
 });

@@ -105,6 +105,16 @@ jobs:
         working-directory: e2e
         run: npm test
 
+      - name: Upload e2e failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: |
+            e2e/test-results/
+            e2e/playwright-report/
+          retention-days: 7
+
   release:
     name: Compute version & changelog
     needs: [backend-test, frontend-test, e2e-test]
