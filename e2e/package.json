@@ -5,7 +5,8 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "test": "npx firebase --config ../backend/firebase.json emulators:exec --only auth,firestore --project vinylmania-test \"playwright test\""
+    "pretest": "node ../scripts/check-emulator-ports.js",
+    "test": "node ../scripts/run-with-timeout.js 1080 -- npx firebase --config ../backend/firebase.json emulators:exec --only auth,firestore --project vinylmania-test \"playwright test\""
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",

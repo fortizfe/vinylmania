@@ -21,6 +21,15 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: 1,
+  // Explicit per-test ceiling (matches Playwright's own default, now
+  // documented rather than implicit) plus a whole-run ceiling that also
+  // covers the three `webServer` entries' startup — neither existed before,
+  // so a stalled run had no bound of its own short of the outer
+  // `run-with-timeout.js` wrapper in package.json's `test` script, which
+  // only starts counting once emulators:exec itself begins (spec 042,
+  // FR-007/FR-008).
+  timeout: 30_000,
+  globalTimeout: 900_000,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: FRONTEND_URL,
