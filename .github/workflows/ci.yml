@@ -9,6 +9,7 @@ jobs:
   backend-test:
     name: Backend tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
@@ -33,6 +34,7 @@ jobs:
   frontend-test:
     name: Frontend tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
 
@@ -50,11 +52,50 @@ jobs:
         working-directory: frontend
         run: npm test
 
+  e2e-test:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Cache Firebase emulator binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('e2e/package-lock.json') }}
+
+      - name: Install e2e dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: e2e
+        run: npm test
+
   release:
     name: Compute version & changelog
-    needs: [backend-test, frontend-test]
+    needs: [backend-test, frontend-test, e2e-test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     concurrency:
@@ -69,8 +110,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Run release script tests
-        run: node --test scripts/release/__tests__/*.test.js
+      - name: Run repo script tests
+        run: node --test scripts/__tests__/*.test.js scripts/release/__tests__/*.test.js
 
       - name: Configure release commit identity
         run: |
