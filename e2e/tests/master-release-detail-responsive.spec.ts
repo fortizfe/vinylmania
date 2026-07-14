@@ -102,4 +102,69 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
     expect(box?.width).toBeGreaterThanOrEqual(44);
     expect(box?.height).toBeGreaterThanOrEqual(44);
   });
+
+  test('lg-range desktop: the main image stays contained and the thumbnail column never exceeds it, even with many images (spec 043, US1)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1100, height: 900 });
+
+    const manyImagesMaster = {
+      ...masterResponse,
+      images: Array.from({ length: 12 }, (_, i) => ({
+        url: `https://example.com/cover-${i}.jpg`,
+        imageType: i === 0 ? 'primary' : 'secondary',
+      })),
+    };
+    await page.route(`**/api/discogs/masters/${MASTER_ID}/versions**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(versionsResponse()),
+      });
+    });
+    await page.route(`**/api/discogs/masters/${MASTER_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(manyImagesMaster),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/masters/${MASTER_ID}`);
+    await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
+
+    const mainImage = page.getByRole('img', { name: 'Hybrid Theory' });
+    const thumbnailStrip = page
+      .getByRole('button', { name: /show image 1 of 12/i })
+      .locator('xpath=..');
+
+    const [mainImageBox, thumbnailStripBox] = await Promise.all([
+      mainImage.boundingBox(),
+      thumbnailStrip.boundingBox(),
+    ]);
+    expect(mainImageBox && thumbnailStripBox).toBeTruthy();
+    expect(mainImageBox!.width).toBeLessThanOrEqual(480);
+    expect(thumbnailStripBox!.height).toBeLessThanOrEqual(mainImageBox!.height + 1);
+
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+  });
+
+  test('a single-image release opens a fullscreen viewer with no thumbnail strip, closable via Escape (spec 043, US2)', async ({
+    page,
+  }) => {
+    await goToMasterDetail(page);
+
+    await page.getByRole('button', { name: /view hybrid theory fullscreen/i }).click();
+    const fullscreenViewer = page.getByTestId('gallery-fullscreen-viewer');
+    await expect(fullscreenViewer).toBeVisible();
+    await expect(fullscreenViewer.getByRole('button', { name: /show image/i })).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await expect(fullscreenViewer).not.toBeVisible();
+  });
 });

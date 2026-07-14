@@ -127,4 +127,81 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     expect(removeBox?.width).toBeGreaterThanOrEqual(44);
     expect(removeBox?.height).toBeGreaterThanOrEqual(44);
   });
+
+  test('mobile: the thumbnail column never exceeds the main image height, even with many images (spec 043, US1)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const manyImagesEntry = buildEntry();
+    manyImagesEntry.release.images = Array.from({ length: 12 }, (_, i) => ({
+      url: `https://example.com/cover-${i}.jpg`,
+      imageType: i === 0 ? 'primary' : 'secondary',
+    }));
+    await page.route(`**/api/library/${ENTRY_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(manyImagesEntry),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/library/records/${ENTRY_ID}`);
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+
+    const mainImage = page.getByRole('img', { name: 'Stockholm' });
+    const thumbnailStrip = page
+      .getByRole('button', { name: /show image 1 of 12/i })
+      .locator('xpath=..');
+
+    const [mainImageBox, thumbnailStripBox] = await Promise.all([
+      mainImage.boundingBox(),
+      thumbnailStrip.boundingBox(),
+    ]);
+    expect(mainImageBox && thumbnailStripBox).toBeTruthy();
+    expect(thumbnailStripBox!.height).toBeLessThanOrEqual(mainImageBox!.height + 1);
+
+    const scrollableHeight = await thumbnailStrip.evaluate(
+      (el) => el.scrollHeight > el.clientHeight,
+    );
+    expect(scrollableHeight).toBe(true);
+
+    const hasVisibleScrollbar = await thumbnailStrip.evaluate(
+      (el) => el.offsetWidth - el.clientWidth > 0,
+    );
+    expect(hasVisibleScrollbar).toBe(false);
+  });
+
+  test('the no-cover placeholder does not open a fullscreen viewer, and a real image does, with the X closing it (spec 043, US2)', async ({
+    page,
+  }) => {
+    await goToRecordDetail(page);
+
+    // Default fixture has no images: clicking the placeholder opens nothing.
+    await page.getByText(/no cover image available/i).click();
+    await expect(page.getByTestId('gallery-fullscreen-viewer')).not.toBeVisible();
+
+    const oneImageEntry = buildEntry();
+    oneImageEntry.release.images = [
+      { url: 'https://example.com/cover-front.jpg', imageType: 'primary' },
+    ];
+    await page.route(`**/api/library/${ENTRY_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(oneImageEntry),
+      });
+    });
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+
+    await page.getByRole('button', { name: /view stockholm fullscreen/i }).click();
+    const fullscreenViewer = page.getByTestId('gallery-fullscreen-viewer');
+    await expect(fullscreenViewer).toBeVisible();
+
+    await page.getByTestId('gallery-fullscreen-close').click();
+    await expect(fullscreenViewer).not.toBeVisible();
+  });
 });

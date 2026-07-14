@@ -185,6 +185,50 @@ test.describe('Release detail page (feature 026, US2)', () => {
     await expect(mainImage).toHaveAttribute('src', 'https://example.com/cover-back.jpg');
   });
 
+  test('the main image opens a fullscreen viewer that navigates via thumbnails and closes via X, Escape, and the backdrop (spec 043, US2)', async ({
+    page,
+  }) => {
+    await stubSearchAndRelease(page);
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/releases/${RELEASE_ID}`);
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+
+    const fullscreenViewer = page.getByTestId('gallery-fullscreen-viewer');
+    const fullscreenImage = fullscreenViewer.getByRole('img', { name: 'Stockholm' });
+
+    // Open via click on the main (embedded) image.
+    await page.getByRole('button', { name: /view stockholm fullscreen/i }).click();
+    await expect(fullscreenViewer).toBeVisible();
+    await expect(fullscreenImage).toHaveAttribute('src', 'https://example.com/cover-front.jpg');
+
+    // Navigate via the thumbnail strip inside fullscreen; stays fullscreen.
+    await fullscreenViewer.getByRole('button', { name: /show image 2 of 2/i }).click();
+    await expect(fullscreenImage).toHaveAttribute('src', 'https://example.com/cover-back.jpg');
+    await expect(fullscreenViewer).toBeVisible();
+
+    // Escape closes it, preserving the selection made inside fullscreen.
+    await page.keyboard.press('Escape');
+    await expect(fullscreenViewer).not.toBeVisible();
+    await expect(page.getByRole('img', { name: 'Stockholm' })).toHaveAttribute(
+      'src',
+      'https://example.com/cover-back.jpg',
+    );
+
+    // Reopen and close via the "X".
+    await page.getByRole('button', { name: /view stockholm fullscreen/i }).click();
+    await expect(fullscreenViewer).toBeVisible();
+    await page.getByTestId('gallery-fullscreen-close').click();
+    await expect(fullscreenViewer).not.toBeVisible();
+
+    // Reopen and close by clicking the backdrop outside the image.
+    await page.getByRole('button', { name: /view stockholm fullscreen/i }).click();
+    await expect(fullscreenViewer).toBeVisible();
+    await fullscreenViewer.click({ position: { x: 5, y: 5 } });
+    await expect(fullscreenViewer).not.toBeVisible();
+  });
+
   test('on a mobile viewport, sections stack top to bottom', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await stubSearchAndRelease(page);
