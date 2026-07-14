@@ -8,6 +8,12 @@
 
 **Input**: User description: "Lee la definición del fichero @.hu/shared-image-gallery-fullscreen-viewer.md" — historia de usuario que pide corregir dos problemas de tamaño/scroll en la galería de imágenes compartida (`ReleaseImageGallery`, usada en `ReleaseDetailPage`, `MasterReleaseDetailPage` y `RecordDetailPage`) y añadir un visor a pantalla completa: (1) en escritorio la imagen principal ocupa casi toda la pantalla y debe tener un tamaño contenido; (2) la columna de miniaturas crece más alta que el visor cuando hay muchas imágenes y debe hacer scroll interno con la barra oculta; (3) al hacer click en la imagen principal debe abrirse un visor a pantalla completa, con las mismas miniaturas para navegar, cerrable con una "X" siempre visible o con Escape, que al cerrarse devuelve a la ficha con la imagen que estuviera seleccionada.
 
+## Clarifications
+
+### Session 2026-07-14
+
+- Q: En el visor a pantalla completa, ¿debe cerrar el visor un click en el fondo (fuera de la imagen), o solo debe cerrarlo la X o Escape? → A: El click en el fondo también cierra el visor, igual que el `Modal` genérico existente.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Contained viewer size and scrollable thumbnails on desktop and mobile (Priority: P1)
@@ -121,6 +127,9 @@ last-selected image.
     opens the same as with a click (the image must be keyboard-accessible,
     not just mouse/touch-accessible, matching how the normal viewer's
     thumbnails are already keyboard-accessible today).
+12. **Given** the fullscreen viewer is open, **When** the user clicks outside
+    the image (on the backdrop), **Then** the viewer closes, same as clicking
+    the "X" or pressing Escape.
 
 **Edge Cases (both stories)**:
 
@@ -173,6 +182,10 @@ last-selected image.
 - **FR-013**: Resizing the viewport (including orientation change on
   mobile) while the fullscreen viewer is open MUST NOT close the viewer and
   MUST NOT change the currently selected image.
+- **FR-014**: Clicking outside the image (on the backdrop) within the
+  fullscreen viewer MUST also close it, in addition to the "X" control and
+  the Escape key, consistent with the app's existing generic `Modal`
+  behavior.
 
 ### Key Entities
 
@@ -222,8 +235,5 @@ last-selected image.
   concrete mechanism is a planning-phase decision, since the current `Modal`
   wraps content in a padded, max-width `Card` rather than an edge-to-edge
   lightbox.
-- Clicking outside the image (on the backdrop) within the fullscreen viewer
-  also closes it, consistent with the app's existing generic `Modal`
-  behavior.
 - No zoom or pan over the enlarged image is required — only viewing it
   larger, fullscreen, and switching between images.

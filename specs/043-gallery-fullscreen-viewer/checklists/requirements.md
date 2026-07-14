@@ -34,9 +34,11 @@
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - No [NEEDS CLARIFICATION] markers were needed: the source user story
   (`.hu/shared-image-gallery-fullscreen-viewer.md`) already resolved the
-  scope, security/privacy (n/a), and UX decisions with explicit assumptions
-  (contained size left as a planning-phase decision bounded by "not almost
-  the entire screen"; thumbnail-strip-only navigation in fullscreen; `Modal`
-  reuse vs. dedicated container left open for planning; backdrop-click also
-  closes; no zoom/pan). All three are non-blocking implementation-detail or
-  low-impact decisions, not scope/security/UX-impacting ambiguities.
+  scope, security/privacy (n/a), and most UX decisions with explicit
+  assumptions (contained size left as a planning-phase decision bounded by
+  "not almost the entire screen"; thumbnail-strip-only navigation in
+  fullscreen; `Modal` reuse vs. dedicated container left open for planning;
+  no zoom/pan). The one open UX question the source HU explicitly flagged
+  (whether backdrop click closes the fullscreen viewer) was resolved via
+  `/speckit-clarify` on 2026-07-14 → backdrop click also closes (see
+  Clarifications section and FR-014 in spec.md).
