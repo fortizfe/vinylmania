@@ -317,6 +317,28 @@ listed in `.gitignore`), so the e2e CI job can start all three `webServer`
 entries without any additional secret/config provisioning — this closes the
 open question from the spec's User Story 3 edge cases.
 
+**Addendum, found on the job's first real CI run** (not caught during
+planning — this is a genuinely new finding, not something research could
+have surfaced by reading code alone, since it only manifests when the job
+actually executes): `e2e/helpers/discogsOauthStub.ts` is a `webServer` entry
+run directly as `node helpers/discogsOauthStub.ts` (see its own top-of-file
+comment), relying on Node's native TypeScript type stripping to execute a
+`.ts` file with no build step. That feature is stable and default only from
+Node v24.12.0 on the LTS line (confirmed via web research) — Node 20, which
+every other CI job already uses successfully, has no such support at all,
+so the stub crashed immediately with a `SyntaxError` on its first generic
+type annotation. **Decision**: pin the `e2e-test` job specifically to Node
+24 (`actions/setup-node@v5`, `node-version: 24`) rather than 20 — scoped to
+this one job, since `backend-test`/`frontend-test`/`release` have run
+correctly on Node 20 all along and there's no reason to touch a
+already-working configuration for them. **Alternatives considered**:
+introducing `ts-node`/`tsx` as a new e2e devDependency and changing the
+`webServer` command instead — rejected: it would reverse an existing,
+already-reviewed design decision from feature 015 (the file's own comment
+documents choosing native type stripping deliberately) inside an unrelated
+reliability PR, for no benefit over just matching CI's Node version to what
+local development already correctly relies on.
+
 ## 12. Caching the Firestore emulator JAR in CI
 
 **Finding**: The emulator binary (`~/.cache/firebase/emulators/cloud-firestore-emulator-v1.19.8.jar`,

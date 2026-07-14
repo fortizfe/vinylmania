@@ -59,9 +59,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Node 24 (not 20, unlike the other jobs): e2e/helpers/discogsOauthStub.ts
+      # is run directly as `node helpers/discogsOauthStub.ts`, relying on
+      # Node's native TypeScript type stripping (stable and default from
+      # v24.12.0 on the LTS line) — Node 20 has no such support at all,
+      # which is what actually broke this job's first CI run.
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
 
       - uses: actions/setup-java@v4
         with:
