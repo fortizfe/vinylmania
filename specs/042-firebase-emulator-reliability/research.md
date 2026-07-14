@@ -339,6 +339,22 @@ documents choosing native type stripping deliberately) inside an unrelated
 reliability PR, for no benefit over just matching CI's Node version to what
 local development already correctly relies on.
 
+**Second addendum, found on the job's second real CI run** (after the Node
+24 fix above got the stub running and all 109 tests discovered): every test
+failed uniformly with `browserType.launch: Executable doesn't exist at
+~/.cache/ms-playwright/...` — the `e2e-test` job's `npm ci` steps install
+`@playwright/test` as a library, but never ran the separate browser-binary
+download step. `e2e/README.md`'s own local setup instructions already
+documented this as a required one-time step (`npx playwright install
+chromium`) that simply had no CI equivalent yet. **Decision**: add `npx
+playwright install --with-deps chromium` after `e2e/`'s `npm ci`, plus an
+`actions/cache@v4` step for `~/.cache/ms-playwright` (keyed on
+`e2e/package-lock.json`, mirroring the Firestore-JAR caching in item 12
+below) so only the first run after a `@playwright/test` version bump pays
+the download cost. `--with-deps` also installs the OS-level libraries
+Chromium needs on a bare `ubuntu-latest` runner, which a plain devDependency
+install can never provide regardless of caching.
+
 ## 12. Caching the Firestore emulator JAR in CI
 
 **Finding**: The emulator binary (`~/.cache/firebase/emulators/cloud-firestore-emulator-v1.19.8.jar`,
