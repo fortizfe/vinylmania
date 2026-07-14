@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
@@ -58,6 +58,37 @@ function buildDashboardResponse() {
     ],
     generatedAt: '2026-07-08T00:00:00.000Z',
   };
+}
+
+// Clicking a source filter button queries GET /api/feeds/sources/:sourceId
+// directly (feature 041's fix so a filtered source shows everything it has
+// published, not just what already happened to be in the aggregated
+// dashboard payload) — a separate endpoint from /api/feeds/dashboard above,
+// so it needs its own mock or the request falls through to the real
+// backend/network. Reuses the same buildDashboardResponse() article pool so
+// a filtered source shows the identical articles a test already asserted on
+// via the aggregated view.
+async function mockSourceFeedRoutes(page: Page) {
+  const dashboard = buildDashboardResponse();
+  const allArticles = dashboard.categories.flatMap((group) => group.articles);
+
+  await page.route('**/api/feeds/sources/*', async (route) => {
+    const sourceId = decodeURIComponent(new URL(route.request().url()).pathname.split('/').pop() ?? '');
+    const sourceStatus = dashboard.sourceStatuses.find((source) => source.sourceId === sourceId);
+    const sourceArticles = allArticles.filter((article) => article.sourceId === sourceId);
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        sourceId,
+        sourceName: sourceStatus?.sourceName ?? sourceId,
+        status: sourceStatus?.status ?? 'ok',
+        articles: sourceArticles,
+        generatedAt: dashboard.generatedAt,
+      }),
+    });
+  });
 }
 
 // Fakes the /api/feeds/dashboard boundary at the browser network layer (same
@@ -169,6 +200,7 @@ test.describe('Dashboard responsive grid & new sources (feature 033)', () => {
         body: JSON.stringify(buildDashboardResponse()),
       });
     });
+    await mockSourceFeedRoutes(page);
 
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
@@ -195,6 +227,7 @@ test.describe('Dashboard responsive grid & new sources (feature 033)', () => {
         body: JSON.stringify(buildDashboardResponse()),
       });
     });
+    await mockSourceFeedRoutes(page);
 
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
@@ -222,6 +255,7 @@ test.describe('Dashboard responsive grid & new sources (feature 033)', () => {
         body: JSON.stringify(buildDashboardResponse()),
       });
     });
+    await mockSourceFeedRoutes(page);
 
     await page.goto('/');
     await signInAsFakeGoogleUser(page);

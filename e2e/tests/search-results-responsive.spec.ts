@@ -74,6 +74,11 @@ test.describe('Search results page responsive layout (spec 035, US1)', () => {
     );
     expect(hasHorizontalScroll).toBe(false);
 
+    // The filter panel collapses by default (feature 038) — this file
+    // predates that change and never expanded it, so "Apply filters" was
+    // never actionable and boundingBox() polled until the test timeout.
+    await page.getByRole('button', { name: /^filters$/i }).click();
+
     const applyButton = page.getByRole('button', { name: /apply filters/i });
     const applyBox = await applyButton.boundingBox();
     expect(applyBox?.width).toBeGreaterThanOrEqual(44);

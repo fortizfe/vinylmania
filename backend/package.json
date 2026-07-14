@@ -10,7 +10,8 @@
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "test": "firebase emulators:exec --only auth,firestore \"cross-env NODE_ENV=test jest\""
+    "pretest": "node ../scripts/check-emulator-ports.js",
+    "test": "node ../scripts/run-with-timeout.js 300 -- firebase emulators:exec --only auth,firestore \"cross-env NODE_ENV=test jest --detectOpenHandles --forceExit\""
   },
   "keywords": [],
   "author": "",

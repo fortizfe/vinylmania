@@ -19,8 +19,24 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: 0,
+  // CI-only retries (spec 042): a shared runner executing the Firestore JVM,
+  // Auth emulator, all three webServer processes, and Chromium concurrently
+  // is more prone to genuine timing flakiness (a slow popup, a CSS-variable
+  // race right after a theme toggle) than a local dev machine — retrying up
+  // to twice separates that class of flakiness from a real, deterministic
+  // failure, which would still fail on every retry. Local runs stay at 0
+  // retries so a real bug fails immediately instead of being masked.
+  retries: process.env.CI ? 2 : 0,
   workers: 1,
+  // Explicit per-test ceiling (matches Playwright's own default, now
+  // documented rather than implicit) plus a whole-run ceiling that also
+  // covers the three `webServer` entries' startup — neither existed before,
+  // so a stalled run had no bound of its own short of the outer
+  // `run-with-timeout.js` wrapper in package.json's `test` script, which
+  // only starts counting once emulators:exec itself begins (spec 042,
+  // FR-007/FR-008).
+  timeout: 30_000,
+  globalTimeout: 900_000,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: FRONTEND_URL,

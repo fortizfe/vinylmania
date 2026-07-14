@@ -49,6 +49,30 @@ down again once `playwright test` exits, whatever the result.
 Run it more than once in a row to check for flakiness; each run starts a
 fresh emulator instance, so no fixture data carries over between runs.
 
+### Fail-fast behavior
+
+`npm test` no longer relies solely on `emulators:exec` and Playwright's
+per-test timeout to bound the run (see
+[`specs/042-firebase-emulator-reliability`](../specs/042-firebase-emulator-reliability/),
+which fixed a real incident where a run stalled silently for 3+ minutes and
+even a manual `Ctrl+C` didn't shut down cleanly):
+
+- A `pretest` step checks the fixed Auth/Firestore emulator ports aren't
+  already held by a concurrent `backend`/`e2e` run, and fails fast if so.
+- The whole `emulators:exec ...` invocation is bounded by
+  `../scripts/run-with-timeout.js` — this covers emulator startup and the
+  three `webServer` processes starting up, which happens *before*
+  Playwright's own `globalTimeout` clock starts.
+- `playwright.config.ts` sets an explicit `timeout` (per test) and
+  `globalTimeout` (whole run).
+- Both the wrapper and a manual `Ctrl+C` escalate `SIGTERM` → `SIGKILL` on
+  the full process group after a short grace period, so Firebase CLI's own
+  shutdown routine can't hang the terminal indefinitely.
+
+**First run on a new machine**: pre-warm the Firestore emulator's binary
+cache once before relying on the bounded `npm test` — see the equivalent
+note in [`backend/README.md`](../backend/README.md#testing).
+
 ## What's covered
 
 - `tests/sign-in.spec.ts` — first-time sign-in reaches the authenticated

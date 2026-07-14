@@ -1,6 +1,13 @@
 const AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || 'localhost:9099';
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'vinylmania-test';
 
+// Bounds each direct emulator call independently of the surrounding test's
+// own timeout (spec 042, FR-004) — a non-responding emulator should fail
+// fast and identify which helper call stalled, not hang until the test's
+// generic timeout eventually fires. Overridable so tests can exercise the
+// abort path quickly instead of waiting for the real default.
+const FETCH_TIMEOUT_MS = Number(process.env.EMULATOR_FETCH_TIMEOUT_MS) || 5000;
+
 /**
  * Mints a real Firebase ID token from the Auth emulator for a test user.
  * Uses the emulator's email/password sign-up endpoint purely as a way to
@@ -35,6 +42,7 @@ export async function getTestIdToken(
       displayName: overrides.displayName,
       returnSecureToken: true,
     }),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!signUpRes.ok) {
@@ -48,11 +56,11 @@ export async function getTestIdToken(
 
 export async function clearEmulatorUsers(): Promise<void> {
   const url = `http://${AUTH_EMULATOR_HOST}/emulator/v1/projects/${PROJECT_ID}/accounts`;
-  await fetch(url, { method: 'DELETE' });
+  await fetch(url, { method: 'DELETE', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 }
 
 export async function clearEmulatorFirestore(): Promise<void> {
   const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST || 'localhost:8080';
   const url = `http://${firestoreHost}/emulator/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
-  await fetch(url, { method: 'DELETE' });
+  await fetch(url, { method: 'DELETE', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 }

@@ -10,7 +10,12 @@ interface SignInOptions {
   email?: string;
 }
 
-const DEFAULT_TIMEOUT = 15_000;
+// Doubled under CI (spec 042): this job runs the Firestore JVM, Auth
+// emulator, and all three webServer dev processes concurrently with
+// Chromium on a standard-size runner — real, first-CI-run evidence showed
+// the popup occasionally taking longer than 15s to appear under that load,
+// where local dev machines have comfortable headroom to spare.
+const DEFAULT_TIMEOUT = process.env.CI ? 30_000 : 15_000;
 
 /**
  * Drives the app's real "Sign in with Google" control through the Firebase
