@@ -48,6 +48,23 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      // Feature 044: the shared gallery's mobile/desktop containment bug
+      // (aspect-ratio + a flex child with min-height:0/overflow-y:auto not
+      // clamping the container's automatic block size) is WebKit-specific
+      // and invisible to the chromium project above — this is exactly how
+      // it shipped undetected in spec 043. Scoped via testMatch to only the
+      // three detail-page responsive specs (not the full suite) to keep CI
+      // runtime proportional to the actual coverage gap being closed
+      // (research.md Decision 2).
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+      testMatch: [
+        'release-detail-responsive.spec.ts',
+        'master-release-detail-responsive.spec.ts',
+        'record-detail-responsive.spec.ts',
+      ],
+    },
   ],
   // The Firebase emulators themselves are started by the `test` npm script
   // (`firebase emulators:exec` wraps this entire `playwright test` run) —

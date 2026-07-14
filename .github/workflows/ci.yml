@@ -89,9 +89,14 @@ jobs:
         working-directory: e2e
         run: npm ci
 
-      - name: Install Playwright browser
+      - name: Install Playwright browsers
         working-directory: e2e
-        run: npx playwright install --with-deps chromium
+        # webkit added alongside chromium (spec 044): the shared gallery's
+        # mobile/desktop containment bug is WebKit/Safari-specific and
+        # invisible to chromium, so playwright.config.ts now runs a webkit
+        # project (scoped to the three detail-page responsive specs) that
+        # needs its own browser binary installed here, same as chromium.
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Install backend dependencies
         working-directory: backend

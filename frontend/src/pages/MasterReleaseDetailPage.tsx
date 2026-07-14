@@ -67,23 +67,21 @@ export function MasterReleaseDetailPage() {
       <Card>
         <div
           data-testid="master-detail-content"
-          className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3"
+          className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2"
         >
-          <div data-testid="master-detail-gallery" className="lg:col-span-2 xl:col-span-1">
+          <div data-testid="master-detail-gallery">
             <ReleaseImageGallery images={master.images} alt={master.title} />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2 xl:col-span-2">
-            <div data-testid="master-detail-details">
-              <MasterReleaseDetailsSection master={master} />
-            </div>
-
-            <div data-testid="master-detail-tracklist">
-              <ReleaseTracklistSection tracklist={master.tracklist} />
-            </div>
+          <div data-testid="master-detail-details">
+            <MasterReleaseDetailsSection master={master} />
           </div>
 
-          <div data-testid="master-detail-versions" className="lg:col-span-2 xl:col-span-3">
+          <div data-testid="master-detail-tracklist" className="lg:col-span-2">
+            <ReleaseTracklistSection tracklist={master.tracklist} />
+          </div>
+
+          <div data-testid="master-detail-versions" className="lg:col-span-2">
             <MasterVersionsTable
               discogsId={parsedId}
               page={versionsPage}

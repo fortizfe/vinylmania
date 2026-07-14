@@ -54,33 +54,104 @@ async function goToMasterDetail(page: import('@playwright/test').Page) {
 }
 
 test.describe('Master release detail page responsive layout (spec 035, US1)', () => {
-  test('desktop: gallery/details/tracklist form a multi-panel composition wider than the lg-only cap (Scenario 8)', async ({
+  test('desktop: gallery and details form a two-column row from lg (1024px), tracklist and versions table render full-width below, and there is no distinct state before xl (spec 044, US2)', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await goToMasterDetail(page);
+    let signedIn = false;
+    async function checkComposition(width: number, height: number) {
+      await page.setViewportSize({ width, height });
+      if (!signedIn) {
+        await goToMasterDetail(page);
+        signedIn = true;
+      } else {
+        // Already authenticated from the first call — reload instead of
+        // re-running the sign-in flow (the Google popup only appears once
+        // per session).
+        await page.reload();
+        await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
+      }
+
+      const gallery = page.getByTestId('master-detail-gallery');
+      const details = page.getByTestId('master-detail-details');
+      const tracklist = page.getByTestId('master-detail-tracklist');
+      const versions = page.getByTestId('master-detail-versions');
+
+      const [galleryBox, detailsBox, tracklistBox, versionsBox] = await Promise.all([
+        gallery.boundingBox(),
+        details.boundingBox(),
+        tracklist.boundingBox(),
+        versions.boundingBox(),
+      ]);
+      expect(galleryBox && detailsBox && tracklistBox && versionsBox).toBeTruthy();
+
+      // Gallery and details share a row (two-column composition).
+      expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
+      expect(galleryBox!.x).toBeLessThan(detailsBox!.x);
+
+      // Tracklist and the versions table both render full-width below the
+      // gallery/details row, not beside it as extra panels (spec 044
+      // FR-005/FR-010), in their current visual order (tracklist first).
+      expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
+      expect(tracklistBox!.y).toBeGreaterThan(detailsBox!.y);
+      expect(versionsBox!.y).toBeGreaterThan(tracklistBox!.y);
+
+      // Desktop keeps the versions table (not the mobile card list).
+      await expect(page.locator('table')).toBeVisible();
+
+      const hasHorizontalScroll = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      );
+      expect(hasHorizontalScroll).toBe(false);
+
+      return { galleryBox: galleryBox! };
+    }
+
+    const lgRange = await checkComposition(1024, 900);
+    const xlRange = await checkComposition(1280, 900);
+
+    // No distinct intermediate state between lg and xl (spec FR-011).
+    expect(Math.abs(lgRange.galleryBox.x - xlRange.galleryBox.x)).toBeLessThan(4);
+  });
+
+  test('desktop: the no-cover placeholder stays contained within the gallery column of the two-column lg-range layout (spec 044, FR-014)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 900 });
+
+    const noImagesMaster = { ...masterResponse, images: [] };
+    await page.route(`**/api/discogs/masters/${MASTER_ID}/versions**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(versionsResponse()),
+      });
+    });
+    await page.route(`**/api/discogs/masters/${MASTER_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(noImagesMaster),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/masters/${MASTER_ID}`);
+    await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
 
     const gallery = page.getByTestId('master-detail-gallery');
     const details = page.getByTestId('master-detail-details');
-    const tracklist = page.getByTestId('master-detail-tracklist');
 
-    const [galleryBox, detailsBox, tracklistBox] = await Promise.all([
+    const [galleryBox, detailsBox] = await Promise.all([
       gallery.boundingBox(),
       details.boundingBox(),
-      tracklist.boundingBox(),
     ]);
-    expect(galleryBox && detailsBox && tracklistBox).toBeTruthy();
+    expect(galleryBox && detailsBox).toBeTruthy();
+
     expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
-    expect(galleryBox!.x).toBeLessThan(detailsBox!.x);
-    expect(detailsBox!.x).toBeLessThan(tracklistBox!.x);
+    expect(galleryBox!.x + galleryBox!.width).toBeLessThanOrEqual(detailsBox!.x + 1);
 
-    // Desktop keeps the versions table (not the mobile card list).
-    await expect(page.locator('table')).toBeVisible();
-
-    const hasHorizontalScroll = await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-    );
-    expect(hasHorizontalScroll).toBe(false);
+    await expect(page.getByText(/no cover image available/i)).toBeVisible();
   });
 
   test('mobile: no horizontal scroll in the versions area, card list instead of a table, and Previous/Next buttons meet 44x44px (Scenario 9)', async ({
@@ -147,6 +218,22 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
     expect(mainImageBox && thumbnailStripBox).toBeTruthy();
     expect(mainImageBox!.width).toBeLessThanOrEqual(480);
     expect(thumbnailStripBox!.height).toBeLessThanOrEqual(mainImageBox!.height + 1);
+
+    // Confirm the strip is actually clipped and scrolling internally, not
+    // simply growing in lockstep with the main image (spec 044, research.md
+    // Decision 1): under the WebKit bug this feature fixes, the whole
+    // gallery row — main image and thumbnail strip alike — grows together
+    // to fit every thumbnail, so the height-comparison assertion above
+    // alone would still pass even with the bug present.
+    const scrollableHeight = await thumbnailStrip.evaluate(
+      (el) => el.scrollHeight > el.clientHeight,
+    );
+    expect(scrollableHeight).toBe(true);
+
+    const hasVisibleScrollbar = await thumbnailStrip.evaluate(
+      (el) => el.offsetWidth - el.clientWidth > 0,
+    );
+    expect(hasVisibleScrollbar).toBe(false);
 
     const hasHorizontalScroll = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,

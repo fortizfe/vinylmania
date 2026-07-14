@@ -162,13 +162,14 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     const additionalInfoBox = await additionalInfo.boundingBox();
     expect(galleryBox && detailsBox && tracklistBox && additionalInfoBox).toBeTruthy();
 
-    // At the >=1280px desktop composition (spec 035), the gallery sits in
-    // its own column beside details+tracklist (same row) rather than above
-    // them, using the wide viewport's horizontal space instead of stacking.
+    // At the default desktop viewport (spec 044): the gallery and details
+    // form a two-column row (gallery left, details right), rather than
+    // stacking, with tracklist and additional-info rendering full-width
+    // below that row instead of beside it as extra panels.
     expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
     expect(detailsBox!.x).toBeGreaterThan(galleryBox!.x);
-    expect(detailsBox!.x).toBeLessThan(tracklistBox!.x);
-    expect(Math.abs(detailsBox!.y - tracklistBox!.y)).toBeLessThan(4);
+    expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
+    expect(tracklistBox!.y).toBeGreaterThan(detailsBox!.y);
     expect(additionalInfoBox!.y).toBeGreaterThanOrEqual(tracklistBox!.y + tracklistBox!.height);
 
     await expect(page.getByText(/Vinyl/)).toBeVisible();
