@@ -32,7 +32,7 @@ export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
   }
 
   return (
-    <div className="mx-auto flex aspect-square gap-3 lg:max-w-md">
+    <div className="mx-auto flex aspect-square gap-3 overflow-hidden lg:max-w-md">
       <button
         type="button"
         onClick={() => setIsFullscreenOpen(true)}

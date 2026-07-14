@@ -105,27 +105,22 @@ export function RecordDetailPage() {
       <Card>
         <div
           data-testid="record-detail-content"
-          className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3"
+          className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2"
         >
-          <div data-testid="record-detail-gallery" className="lg:col-span-2 xl:col-span-1">
+          <div data-testid="record-detail-gallery">
             <ReleaseImageGallery images={release.images} alt={release.title} />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2 xl:col-span-2">
-            <div data-testid="record-detail-details" className="flex flex-col gap-6">
-              <ReleaseDetailsSection release={release} />
-              {myCopySection}
-            </div>
-
-            <div data-testid="record-detail-tracklist">
-              <ReleaseTracklistSection tracklist={release.tracklist} />
-            </div>
+          <div data-testid="record-detail-details" className="flex flex-col gap-6">
+            <ReleaseDetailsSection release={release} />
+            {myCopySection}
           </div>
 
-          <div
-            data-testid="record-detail-additional-info"
-            className="lg:col-span-2 xl:col-span-3"
-          >
+          <div data-testid="record-detail-tracklist" className="lg:col-span-2">
+            <ReleaseTracklistSection tracklist={release.tracklist} />
+          </div>
+
+          <div data-testid="record-detail-additional-info" className="lg:col-span-2">
             <ReleaseAdditionalInfoSection
               notes={release.notes}
               identifiers={release.identifiers}

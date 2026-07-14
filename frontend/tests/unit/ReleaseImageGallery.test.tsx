@@ -30,6 +30,12 @@ describe('ReleaseImageGallery', () => {
     expect(container.firstElementChild?.className).toMatch(/max-w-md/);
   });
 
+  it('clips the root container so it cannot grow taller than its own width (WebKit aspect-ratio/overflow fix)', () => {
+    const { container } = render(<ReleaseImageGallery images={images} alt="Stockholm" />);
+
+    expect(container.firstElementChild?.className).toMatch(/overflow-hidden/);
+  });
+
   it('renders the thumbnail strip without a visible scrollbar', () => {
     render(<ReleaseImageGallery images={images} alt="Stockholm" />);
 

@@ -395,9 +395,17 @@ describe('Record detail flow (US3)', () => {
     const tracklist = screen.getByTestId('record-detail-tracklist');
     const additionalInfo = screen.getByTestId('record-detail-additional-info');
 
-    expect(gallery.className).toMatch(/lg:col-span-2/);
-    expect(details.parentElement?.className).toMatch(/lg:grid-cols-2/);
-    expect(details.parentElement).toBe(tracklist.parentElement);
+    // Gallery and details are the two natural lg columns of the flat grid
+    // (spec 044, contracts/DetailPageLayout.contract.md) — no col-span of
+    // their own, and both are direct children of `content`, alongside the
+    // full-width tracklist/additional-info rows.
+    expect(gallery.className).not.toMatch(/lg:col-span/);
+    expect(details.className).not.toMatch(/lg:col-span/);
+    expect(gallery.parentElement).toBe(content);
+    expect(details.parentElement).toBe(content);
+    expect(tracklist.parentElement).toBe(content);
+    expect(additionalInfo.parentElement).toBe(content);
+    expect(tracklist.className).toMatch(/lg:col-span-2/);
     expect(additionalInfo.className).toMatch(/lg:col-span-2/);
 
     [gallery, details, tracklist, additionalInfo].forEach((section) => {

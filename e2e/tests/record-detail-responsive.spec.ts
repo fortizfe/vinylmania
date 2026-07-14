@@ -56,33 +56,104 @@ async function goToRecordDetail(page: import('@playwright/test').Page) {
 }
 
 test.describe('Record detail page responsive layout (spec 035, US1)', () => {
-  test('desktop: gallery/details/tracklist/additional-info form a multi-panel composition wider than the lg-only cap (Scenario 8)', async ({
+  test('desktop: gallery and details form a two-column row from lg (1024px), tracklist/additional-info render full-width below, and there is no distinct state before xl (spec 044, US2)', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await goToRecordDetail(page);
+    let signedIn = false;
+    async function checkComposition(width: number, height: number) {
+      await page.setViewportSize({ width, height });
+      if (!signedIn) {
+        await goToRecordDetail(page);
+        signedIn = true;
+      } else {
+        // Already authenticated from the first call — reload instead of
+        // re-running the sign-in flow (the Google popup only appears once
+        // per session).
+        await page.reload();
+        await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+      }
+
+      const gallery = page.getByTestId('record-detail-gallery');
+      const details = page.getByTestId('record-detail-details');
+      const tracklist = page.getByTestId('record-detail-tracklist');
+      const additionalInfo = page.getByTestId('record-detail-additional-info');
+
+      const [galleryBox, detailsBox, tracklistBox, additionalInfoBox] = await Promise.all([
+        gallery.boundingBox(),
+        details.boundingBox(),
+        tracklist.boundingBox(),
+        additionalInfo.boundingBox(),
+      ]);
+      expect(galleryBox && detailsBox && tracklistBox && additionalInfoBox).toBeTruthy();
+
+      // Gallery and details share a row (two-column composition), not a
+      // 3-panel row with the tracklist beside them.
+      expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
+      expect(galleryBox!.x).toBeLessThan(detailsBox!.x);
+
+      // Tracklist and additional-info both render full-width below the
+      // gallery/details row (spec 044 FR-005/FR-010).
+      expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
+      expect(tracklistBox!.y).toBeGreaterThan(detailsBox!.y);
+      expect(additionalInfoBox!.y).toBeGreaterThan(tracklistBox!.y);
+
+      const hasHorizontalScroll = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      );
+      expect(hasHorizontalScroll).toBe(false);
+
+      return { galleryBox: galleryBox!, detailsBox: detailsBox! };
+    }
+
+    const lgRange = await checkComposition(1024, 900);
+    const xlRange = await checkComposition(1280, 900);
+
+    // No distinct intermediate state between lg and xl (spec FR-011).
+    expect(Math.abs(lgRange.galleryBox.x - xlRange.galleryBox.x)).toBeLessThan(4);
+
+    // Top-alignment / no-stretch (spec FR-011a, /speckit-clarify): this page
+    // has the tallest right-column content of the three (release details +
+    // MyCopySection), so its details column is taller than the gallery.
+    // Neither column should stretch to match the other's height — the
+    // gallery must stay at its own square-derived height, not the taller
+    // details column's height.
+    expect(lgRange.detailsBox.height).toBeGreaterThan(lgRange.galleryBox.height);
+    expect(lgRange.galleryBox.height).toBeLessThanOrEqual(lgRange.galleryBox.width + 1);
+  });
+
+  test('desktop: the no-cover placeholder stays contained within the gallery column of the two-column lg-range layout (spec 044, FR-014)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 900 });
+
+    const noImagesEntry = buildEntry();
+    noImagesEntry.release.images = [];
+    await page.route(`**/api/library/${ENTRY_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(noImagesEntry),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/library/records/${ENTRY_ID}`);
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
     const gallery = page.getByTestId('record-detail-gallery');
     const details = page.getByTestId('record-detail-details');
-    const tracklist = page.getByTestId('record-detail-tracklist');
 
-    const [galleryBox, detailsBox, tracklistBox] = await Promise.all([
+    const [galleryBox, detailsBox] = await Promise.all([
       gallery.boundingBox(),
       details.boundingBox(),
-      tracklist.boundingBox(),
     ]);
-    expect(galleryBox && detailsBox && tracklistBox).toBeTruthy();
+    expect(galleryBox && detailsBox).toBeTruthy();
 
-    // Gallery, details, and tracklist all share the same row (3-panel
-    // composition), not a 2-column layout with the gallery stacked above.
     expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
-    expect(galleryBox!.x).toBeLessThan(detailsBox!.x);
-    expect(detailsBox!.x).toBeLessThan(tracklistBox!.x);
+    expect(galleryBox!.x + galleryBox!.width).toBeLessThanOrEqual(detailsBox!.x + 1);
 
-    const hasHorizontalScroll = await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-    );
-    expect(hasHorizontalScroll).toBe(false);
+    await expect(page.getByText(/no cover image available/i)).toBeVisible();
   });
 
   test('mobile: single column, no horizontal scroll, and rating/condition/remove controls meet 44x44px (Scenario 9)', async ({

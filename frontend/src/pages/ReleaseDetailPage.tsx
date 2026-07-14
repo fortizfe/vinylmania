@@ -73,47 +73,42 @@ export function ReleaseDetailPage() {
       <Card>
         <div
           data-testid="release-detail-content"
-          className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3"
+          className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2"
         >
-          <div data-testid="release-detail-gallery" className="lg:col-span-2 xl:col-span-1">
+          <div data-testid="release-detail-gallery">
             <ReleaseImageGallery images={release.images} alt={release.title} />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2 xl:col-span-2">
-            <div data-testid="release-detail-details" className="flex flex-col gap-4">
-              <ReleaseDetailsSection release={release} />
-              <div className="flex flex-col gap-2">
-                <Button
-                  onClick={handleAdd}
-                  loading={createEntry.isPending}
-                  disabled={added}
-                >
-                  {added ? 'Added to library' : 'Add to library'}
-                </Button>
-                {gateError && (
-                  <p className="text-sm text-stone-500 dark:text-stone-400">
-                    {gateError === 'not-linked'
-                      ? 'You need to link your Discogs account before adding records to your library.'
-                      : 'Your Discogs link is no longer valid. Please re-link your account to add records.'}
-                  </p>
-                )}
-                {addError && (
-                  <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-                    {addError}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div data-testid="release-detail-tracklist">
-              <ReleaseTracklistSection tracklist={release.tracklist} />
+          <div data-testid="release-detail-details" className="flex flex-col gap-4">
+            <ReleaseDetailsSection release={release} />
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleAdd}
+                loading={createEntry.isPending}
+                disabled={added}
+              >
+                {added ? 'Added to library' : 'Add to library'}
+              </Button>
+              {gateError && (
+                <p className="text-sm text-stone-500 dark:text-stone-400">
+                  {gateError === 'not-linked'
+                    ? 'You need to link your Discogs account before adding records to your library.'
+                    : 'Your Discogs link is no longer valid. Please re-link your account to add records.'}
+                </p>
+              )}
+              {addError && (
+                <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+                  {addError}
+                </p>
+              )}
             </div>
           </div>
 
-          <div
-            data-testid="release-detail-additional-info"
-            className="lg:col-span-2 xl:col-span-3"
-          >
+          <div data-testid="release-detail-tracklist" className="lg:col-span-2">
+            <ReleaseTracklistSection tracklist={release.tracklist} />
+          </div>
+
+          <div data-testid="release-detail-additional-info" className="lg:col-span-2">
             <ReleaseAdditionalInfoSection
               notes={release.notes}
               identifiers={release.identifiers}
