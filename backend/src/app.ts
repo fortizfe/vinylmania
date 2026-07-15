@@ -6,7 +6,7 @@ import { authRouter } from './routes/auth';
 import { discogsRouter } from './routes/discogs';
 import { discogsOauthRouter } from './routes/discogsOauth';
 import { feedsRouter } from './routes/feeds';
-import { libraryRouter } from './routes/library';
+import { libraryRouter } from './adapters/library/libraryRoutes';
 
 export function createApp(): express.Express {
   const app = express();

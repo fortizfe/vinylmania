@@ -5,15 +5,15 @@ import {
   rawCollectionInstance,
   stubCollectionFields,
   stubCollectionPage,
-} from '../helpers/nock';
-import { createApp } from '../../src/app';
-import { getFirestoreDb } from '../../src/config/firebase-admin';
-import { createEntry, getEntry } from '../../src/library/libraryService';
+} from '../../helpers/nock';
+import { createApp } from '../../../src/app';
+import { getFirestoreDb } from '../../../src/config/firebase-admin';
+import { createEntry, getEntry } from '../../../src/adapters/library/firestoreLibraryRepository';
 import {
   clearEmulatorFirestore,
   clearEmulatorUsers,
   getTestIdToken,
-} from '../helpers/authEmulator';
+} from '../../helpers/authEmulator';
 
 const app = createApp();
 

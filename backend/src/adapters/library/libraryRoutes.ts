@@ -1,34 +1,37 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 
-import { logger } from '../config/logger';
+import { logger } from '../../config/logger';
 import {
   MEDIA_CONDITIONS,
   SLEEVE_CONDITIONS,
-} from '../discogs/collection/conditionGrading';
-import { getRelease } from '../discogs/discogsClient';
+} from '../../discogs/collection/conditionGrading';
 import {
   DiscogsAuthError,
-  DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
-} from '../discogs/discogsErrors';
-import { getFieldMap } from '../discogs/collection/collectionClient';
-import { requireAuth } from '../middleware/requireAuth';
-import { enrichEntries, enrichEntry } from '../library/libraryEnrichment';
-import * as libraryService from '../library/libraryService';
+} from '../../discogs/discogsErrors';
+import { requireAuth } from '../../middleware/requireAuth';
 import {
-  addToLibrary,
+  CatalogUnavailableForCreationError,
+  createCreateLibraryEntryUseCase,
+  ReleaseNotFoundForCreationError,
+} from '../../application/library/createLibraryEntry';
+import { createDeleteLibraryEntryUseCase } from '../../application/library/deleteLibraryEntry';
+import { createEnrichLibraryEntryUseCase } from '../../application/library/enrichLibraryEntry';
+import { createGetLibraryEntryUseCase } from '../../application/library/getLibraryEntry';
+import { createListLibraryEntriesUseCase } from '../../application/library/listLibraryEntries';
+import { createSyncLibraryUseCase } from '../../application/library/syncLibrary';
+import { createUpdateLibraryEntryUseCase } from '../../application/library/updateLibraryEntry';
+import {
   DiscogsNotLinkedError,
   FieldNotEditableError,
-  getCopyData,
-  removeFromLibrary,
-  requireConnection,
-  syncLibrary,
-  updateCopyData,
-} from '../library/librarySyncService';
-import type { EntryDiscogsData, LibraryEntry, LibraryFilters } from '../library/types';
-import type { Release } from '../discogs/types';
+} from '../../domain/library/libraryErrors';
+import type { EntryDiscogsData, LibraryEntry, LibraryFilters } from '../../domain/library/types';
+import { cacheAdapter } from './cacheAdapter';
+import { discogsCollectionAdapter } from './discogsCollectionAdapter';
+import { discogsConnectionAdapter } from './discogsConnectionAdapter';
+import { firestoreLibraryRepository } from './firestoreLibraryRepository';
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
@@ -59,10 +62,6 @@ function parseLibraryFilters(req: Request): LibraryFilters {
     }
   }
   return filters;
-}
-
-function hasActiveLibraryFilters(filters: LibraryFilters): boolean {
-  return Boolean(filters.genre?.length || filters.style?.length || filters.format?.length);
 }
 
 /** Public entry shape: legacy per-copy fields never leave the backend. */
@@ -148,6 +147,45 @@ function respondInternalError(
   });
 }
 
+// Composition root: one instance of each adapter/use case for the process lifetime.
+const { enrichEntry, enrichEntries } = createEnrichLibraryEntryUseCase({
+  repository: firestoreLibraryRepository,
+});
+const enrichLibraryEntry = { enrichEntry, enrichEntries };
+const { syncLibrary } = createSyncLibraryUseCase({
+  repository: firestoreLibraryRepository,
+  discogsCollection: discogsCollectionAdapter,
+  discogsConnection: discogsConnectionAdapter,
+  cache: cacheAdapter,
+});
+const { createLibraryEntry } = createCreateLibraryEntryUseCase({
+  repository: firestoreLibraryRepository,
+  discogsCollection: discogsCollectionAdapter,
+  discogsConnection: discogsConnectionAdapter,
+});
+const { getLibraryEntry } = createGetLibraryEntryUseCase({
+  repository: firestoreLibraryRepository,
+  discogsCollection: discogsCollectionAdapter,
+  discogsConnection: discogsConnectionAdapter,
+  enrichLibraryEntry,
+});
+const { listLibraryEntries } = createListLibraryEntriesUseCase({
+  repository: firestoreLibraryRepository,
+  enrichLibraryEntry,
+  syncLibrary,
+});
+const { updateLibraryEntry } = createUpdateLibraryEntryUseCase({
+  repository: firestoreLibraryRepository,
+  discogsCollection: discogsCollectionAdapter,
+  discogsConnection: discogsConnectionAdapter,
+  enrichLibraryEntry,
+});
+const { deleteLibraryEntry } = createDeleteLibraryEntryUseCase({
+  repository: firestoreLibraryRepository,
+  discogsCollection: discogsCollectionAdapter,
+  discogsConnection: discogsConnectionAdapter,
+});
+
 export const libraryRouter = Router();
 
 const createBodySchema = z
@@ -170,62 +208,34 @@ libraryRouter.post('/', requireAuth, async (req: Request, res: Response) => {
   const { discogsReleaseId } = parsed.data;
 
   try {
-    const connection = await requireConnection(uid);
-
-    // Catalog lookup first: keeps release_not_found/catalog_unavailable
-    // semantics and never adds unknown releases to the user's collection.
-    let release: Release;
-    try {
-      release = await getRelease(discogsReleaseId);
-    } catch (err) {
-      if (err instanceof DiscogsNotFoundError) {
-        logger.warn({ route: '/api/library', outcome: 'not_found', uid });
-        res.status(404).json({
-          error: 'release_not_found',
-          message: 'No release found in the catalog for that ID.',
-        });
-        return;
-      }
-      if (
-        err instanceof DiscogsRateLimitError ||
-        err instanceof DiscogsUnavailableError
-      ) {
-        logger.warn({
-          route: '/api/library',
-          outcome: 'unavailable',
-          uid,
-          message: err.message,
-        });
-        res.status(502).json({
-          error: 'catalog_unavailable',
-          message: 'The catalog service is temporarily unavailable. Please try again.',
-        });
-        return;
-      }
-      throw err;
-    }
-
-    const entry = await addToLibrary(connection, uid, discogsReleaseId);
-    const fieldMap = await getFieldMap(connection);
-    const discogs: EntryDiscogsData = {
-      instanceId: entry.discogsInstanceId!,
-      folderId: entry.discogsFolderId!,
-      rating: 0,
-      mediaCondition: null,
-      sleeveCondition: null,
-      notes: null,
-      editable: {
-        mediaCondition: fieldMap.mediaConditionFieldId !== null,
-        sleeveCondition: fieldMap.sleeveConditionFieldId !== null,
-        notes: fieldMap.notesFieldId !== null,
-      },
-    };
+    const { entry, release, discogs } = await createLibraryEntry(uid, discogsReleaseId);
 
     logger.info({ route: '/api/library', outcome: 'success', uid });
     res
       .status(201)
       .json(serializeEntry(entry, { catalogStatus: 'ok', release }, discogs));
   } catch (err) {
+    if (err instanceof ReleaseNotFoundForCreationError) {
+      logger.warn({ route: '/api/library', outcome: 'not_found', uid });
+      res.status(404).json({
+        error: 'release_not_found',
+        message: 'No release found in the catalog for that ID.',
+      });
+      return;
+    }
+    if (err instanceof CatalogUnavailableForCreationError) {
+      logger.warn({
+        route: '/api/library',
+        outcome: 'unavailable',
+        uid,
+        message: err.cause.message,
+      });
+      res.status(502).json({
+        error: 'catalog_unavailable',
+        message: 'The catalog service is temporarily unavailable. Please try again.',
+      });
+      return;
+    }
     if (respondCollectionError(res, '/api/library', uid, err)) {
       return;
     }
@@ -237,10 +247,8 @@ libraryRouter.get('/:id', requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
 
   try {
-    const connection = await requireConnection(uid);
-
-    const entry = await libraryService.getEntry(uid, req.params.id);
-    if (!entry) {
+    const result = await getLibraryEntry(uid, req.params.id);
+    if (!result) {
       logger.warn({ route: '/api/library/:id', outcome: 'not_found', uid });
       res.status(404).json({
         error: 'entry_not_found',
@@ -249,11 +257,7 @@ libraryRouter.get('/:id', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    const [enriched, discogs] = await Promise.all([
-      enrichEntry(uid, entry),
-      getCopyData(connection, entry),
-    ]);
-
+    const { entry, enriched, discogs } = result;
     logger.info({ route: '/api/library/:id', outcome: 'success', uid });
     res
       .status(200)
@@ -278,12 +282,9 @@ libraryRouter.get('/', requireAuth, async (req: Request, res: Response) => {
   const filters = parseLibraryFilters(req);
 
   try {
-    await syncLibrary(uid, { force: req.query.refresh === 'true' });
-
-    const { items, totalItems } = hasActiveLibraryFilters(filters)
-      ? await libraryService.listEntriesFiltered(uid, page, pageSize, filters)
-      : await libraryService.listEntries(uid, page, pageSize);
-    const enriched = await enrichEntries(uid, items);
+    const { enriched, totalItems } = await listLibraryEntries(uid, page, pageSize, filters, {
+      force: req.query.refresh === 'true',
+    });
     const serialized = enriched.map((item) =>
       serializeEntry(
         item,
@@ -333,10 +334,8 @@ libraryRouter.patch('/:id', requireAuth, async (req: Request, res: Response) => 
   }
 
   try {
-    const connection = await requireConnection(uid);
-
-    const entry = await libraryService.getEntry(uid, req.params.id);
-    if (!entry) {
+    const result = await updateLibraryEntry(uid, req.params.id, parsed.data);
+    if (!result) {
       logger.warn({ route: '/api/library/:id', outcome: 'not_found', uid });
       res.status(404).json({
         error: 'entry_not_found',
@@ -345,13 +344,7 @@ libraryRouter.patch('/:id', requireAuth, async (req: Request, res: Response) => 
       return;
     }
 
-    await updateCopyData(connection, entry, parsed.data);
-
-    const [enriched, discogs] = await Promise.all([
-      enrichEntry(uid, entry),
-      getCopyData(connection, entry),
-    ]);
-
+    const { entry, enriched, discogs } = result;
     logger.info({ route: '/api/library/:id', outcome: 'success', uid });
     res
       .status(200)
@@ -374,10 +367,8 @@ libraryRouter.delete('/:id', requireAuth, async (req: Request, res: Response) =>
   const uid = req.auth!.uid;
 
   try {
-    const connection = await requireConnection(uid);
-
-    const entry = await libraryService.getEntry(uid, req.params.id);
-    if (!entry) {
+    const result = await deleteLibraryEntry(uid, req.params.id);
+    if (result === null) {
       logger.warn({ route: '/api/library/:id', outcome: 'not_found', uid });
       res.status(404).json({
         error: 'entry_not_found',
@@ -385,8 +376,6 @@ libraryRouter.delete('/:id', requireAuth, async (req: Request, res: Response) =>
       });
       return;
     }
-
-    await removeFromLibrary(connection, uid, entry);
 
     logger.info({ route: '/api/library/:id', outcome: 'success', uid });
     res.status(204).send();

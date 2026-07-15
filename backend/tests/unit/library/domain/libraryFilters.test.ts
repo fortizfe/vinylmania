@@ -1,5 +1,5 @@
-import { matchesLibraryFilters } from '../../src/library/libraryService';
-import type { LibraryEntry } from '../../src/library/types';
+import { matchesLibraryFilters } from '../../../../src/domain/library/libraryFilters';
+import type { LibraryEntry } from '../../../../src/domain/library/types';
 
 function entry(overrides: Partial<LibraryEntry>): LibraryEntry {
   return {

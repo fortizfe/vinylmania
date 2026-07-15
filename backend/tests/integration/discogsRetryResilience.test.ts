@@ -14,11 +14,15 @@ import {
 
 import { createApp } from '../../src/app';
 import { getMasterRelease, getRelease } from '../../src/discogs/discogsClient';
-import { enrichEntry } from '../../src/library/libraryEnrichment';
-import type { LibraryEntry } from '../../src/library/types';
+import { firestoreLibraryRepository } from '../../src/adapters/library/firestoreLibraryRepository';
+import { createEnrichLibraryEntryUseCase } from '../../src/application/library/enrichLibraryEntry';
+import type { LibraryEntry } from '../../src/domain/library/types';
 import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
 
 const app = createApp();
+const { enrichEntry } = createEnrichLibraryEntryUseCase({
+  repository: firestoreLibraryRepository,
+});
 
 function rawRelease(id: number, overrides: Record<string, unknown> = {}) {
   return {

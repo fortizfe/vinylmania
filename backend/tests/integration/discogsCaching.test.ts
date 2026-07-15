@@ -8,8 +8,13 @@ jest.mock('ioredis', () => ({
 import { discogsScope } from '../helpers/nock';
 
 import { getRelease, searchCatalog } from '../../src/discogs/discogsClient';
-import { enrichEntries } from '../../src/library/libraryEnrichment';
-import type { LibraryEntry } from '../../src/library/types';
+import { firestoreLibraryRepository } from '../../src/adapters/library/firestoreLibraryRepository';
+import { createEnrichLibraryEntryUseCase } from '../../src/application/library/enrichLibraryEntry';
+import type { LibraryEntry } from '../../src/domain/library/types';
+
+const { enrichEntries } = createEnrichLibraryEntryUseCase({
+  repository: firestoreLibraryRepository,
+});
 
 describe('Discogs response caching (US2)', () => {
   const originalRedisUrl = process.env.REDIS_URL;

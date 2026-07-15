@@ -1,15 +1,15 @@
-import { getFirestoreDb } from '../../src/config/firebase-admin';
-import { createEntry } from '../../src/library/libraryService';
+import { getFirestoreDb } from '../../../../src/config/firebase-admin';
+import { createEntry } from '../../../../src/adapters/library/firestoreLibraryRepository';
 import {
   clearEmulatorFirestore,
   clearEmulatorUsers,
   getTestIdToken,
-} from '../helpers/authEmulator';
+} from '../../../helpers/authEmulator';
 
 // Exercises the real Discogs API (release ID 1, permanent and stable — see
 // specs/002-discogs-api-client/research.md §8) against the Firestore
 // emulator, without mocking either side.
-describe('Library service live integration: createEntry', () => {
+describe('Library repository adapter live integration: createEntry', () => {
   afterEach(async () => {
     await clearEmulatorUsers();
     await clearEmulatorFirestore();

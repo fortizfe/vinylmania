@@ -11,16 +11,16 @@ import {
   rawCollectionInstance,
   stubCollectionFields,
   stubCollectionPage,
-} from '../helpers/nock';
-import { createApp } from '../../src/app';
-import { getRedisClient } from '../../src/cache/redisClient';
-import { getFirestoreDb } from '../../src/config/firebase-admin';
-import { createEntry } from '../../src/library/libraryService';
+} from '../../helpers/nock';
+import { createApp } from '../../../src/app';
+import { getRedisClient } from '../../../src/cache/redisClient';
+import { getFirestoreDb } from '../../../src/config/firebase-admin';
+import { createEntry } from '../../../src/adapters/library/firestoreLibraryRepository';
 import {
   clearEmulatorFirestore,
   clearEmulatorUsers,
   getTestIdToken,
-} from '../helpers/authEmulator';
+} from '../../helpers/authEmulator';
 
 const app = createApp();
 
