@@ -7,7 +7,7 @@ import { createSyncLibraryUseCase } from '../../../../src/application/library/sy
 import type { LibraryRepositoryPort } from '../../../../src/ports/library/libraryRepositoryPort';
 import type { DiscogsCollectionPort } from '../../../../src/ports/library/discogsCollectionPort';
 import type { DiscogsConnectionPort } from '../../../../src/ports/library/discogsConnectionPort';
-import type { CachePort } from '../../../../src/ports/library/cachePort';
+import type { CachePort } from '../../../../src/ports/cache/cachePort';
 
 const UID = 'user-1';
 
@@ -101,6 +101,7 @@ function fakeCache(): jest.Mocked<CachePort> {
   return {
     has: jest.fn().mockResolvedValue(false),
     set: jest.fn().mockResolvedValue(undefined),
+    withCache: jest.fn().mockImplementation((_key, _ttl, fetcher) => fetcher()),
   };
 }
 

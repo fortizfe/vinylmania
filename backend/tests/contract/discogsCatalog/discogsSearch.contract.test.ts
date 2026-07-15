@@ -6,10 +6,10 @@ import {
   stubReleaseRating,
   stubReleaseRatingNeverResolves,
   stubReleaseRatingUnavailable,
-} from '../helpers/nock';
-import { createApp } from '../../src/app';
-import { MAX_ATTEMPTS } from '../../src/discogs/discogsRetry';
-import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+} from '../../helpers/nock';
+import { createApp } from '../../../src/app';
+import { MAX_ATTEMPTS } from '../../../src/discogs/discogsRetry';
+import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
 
 const app = createApp();
 

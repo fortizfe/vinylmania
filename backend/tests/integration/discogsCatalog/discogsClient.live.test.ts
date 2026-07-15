@@ -1,5 +1,5 @@
-import { getArtist, getRelease, searchCatalog } from '../../src/discogs/discogsClient';
-import { DiscogsNotFoundError } from '../../src/discogs/discogsErrors';
+import { getArtist, getRelease, searchCatalog } from '../../../src/adapters/discogsCatalog/discogsCatalogAdapter';
+import { DiscogsNotFoundError } from '../../../src/discogs/discogsErrors';
 
 // These tests call the real, public api.discogs.com for permanent, stable,
 // well-known IDs (see research.md §8) — deliberately small in number to

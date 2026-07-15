@@ -5,17 +5,28 @@ jest.mock('ioredis', () => ({
   default: RedisMock,
 }));
 
-import { discogsScope } from '../helpers/nock';
+import { discogsScope } from '../../helpers/nock';
 
 import {
   addReleaseToCollection,
   listAllInstances,
-} from '../../src/discogs/collection/collectionClient';
-import type { CollectionFieldMap } from '../../src/discogs/collection/collectionTypes';
-import { getDiscogsHttpClient, getRelease, searchCatalog } from '../../src/discogs/discogsClient';
-import { DiscogsRateLimitError } from '../../src/discogs/discogsErrors';
-import { MAX_WAIT_MS } from '../../src/discogs/discogsRateLimiter';
-import type { DiscogsConnection } from '../../src/discogs/oauth/types';
+} from '../../../src/discogs/collection/collectionClient';
+import type { CollectionFieldMap } from '../../../src/discogs/collection/collectionTypes';
+import { cacheAdapter } from '../../../src/adapters/cache/cacheAdapter';
+import {
+  discogsCatalogAdapter,
+  getDiscogsHttpClient,
+  getRelease,
+} from '../../../src/adapters/discogsCatalog/discogsCatalogAdapter';
+import { createSearchCatalogWithRatingsUseCase } from '../../../src/application/discogsCatalog/searchCatalogWithRatings';
+import { DiscogsRateLimitError } from '../../../src/discogs/discogsErrors';
+import { MAX_WAIT_MS } from '../../../src/discogs/discogsRateLimiter';
+import type { DiscogsConnection } from '../../../src/discogs/oauth/types';
+
+const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
+  discogsCatalog: discogsCatalogAdapter,
+  cache: cacheAdapter,
+});
 
 /**
  * End-to-end coverage of feature 040's User Story 1 (preventive throttle) —
@@ -316,7 +327,7 @@ describe('Discogs rate-limit smoothing — User Story 2 (bounded search-rating c
       const { getMaxInFlight, restore } = spyOnInFlightRequests();
       const before = Date.now();
       try {
-        const result = await searchCatalog('US2 Smoothing Bounded', { resultType: 'release' });
+        const result = await searchCatalogWithRatings('US2 Smoothing Bounded', { resultType: 'release' });
 
         expect(result.results).toHaveLength(eligibleCount);
         expect(getMaxInFlight()).toBeLessThanOrEqual(5);
@@ -342,12 +353,12 @@ describe('Discogs rate-limit smoothing — User Story 2 (bounded search-rating c
         .get('/releases/5100/rating')
         .reply(200, { release_id: 5100, rating: { average: 4.2, count: 20 } });
 
-      const first = await searchCatalog('US2 Smoothing Warm Cache', { resultType: 'release' });
+      const first = await searchCatalogWithRatings('US2 Smoothing Warm Cache', { resultType: 'release' });
       // Only the interceptors above are registered (nock.cleanAll() runs
       // afterEach) — a second real HTTP call here would hit no matching
       // interceptor and reject, so an equal second result proves the
       // cache (not a second Discogs round trip) served it.
-      const second = await searchCatalog('US2 Smoothing Warm Cache', { resultType: 'release' });
+      const second = await searchCatalogWithRatings('US2 Smoothing Warm Cache', { resultType: 'release' });
 
       expect(second).toEqual(first);
       expect(scope.isDone()).toBe(true);
@@ -371,7 +382,7 @@ describe('Discogs rate-limit smoothing — User Story 2 (bounded search-rating c
           .reply(200, { release_id: 5200 + i, rating: { average: 4, count: 10 } });
       }
 
-      const result = await searchCatalog('US2 Smoothing Fail Soft', { resultType: 'release' });
+      const result = await searchCatalogWithRatings('US2 Smoothing Fail Soft', { resultType: 'release' });
 
       expect(result.results).toHaveLength(eligibleCount);
       const failed = result.results.find((r) => r.discogsId === 5200);

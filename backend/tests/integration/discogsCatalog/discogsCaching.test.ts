@@ -5,15 +5,21 @@ jest.mock('ioredis', () => ({
   default: RedisMock,
 }));
 
-import { discogsScope } from '../helpers/nock';
+import { discogsScope } from '../../helpers/nock';
 
-import { getRelease, searchCatalog } from '../../src/discogs/discogsClient';
-import { firestoreLibraryRepository } from '../../src/adapters/library/firestoreLibraryRepository';
-import { createEnrichLibraryEntryUseCase } from '../../src/application/library/enrichLibraryEntry';
-import type { LibraryEntry } from '../../src/domain/library/types';
+import { cacheAdapter } from '../../../src/adapters/cache/cacheAdapter';
+import { discogsCatalogAdapter, getRelease } from '../../../src/adapters/discogsCatalog/discogsCatalogAdapter';
+import { firestoreLibraryRepository } from '../../../src/adapters/library/firestoreLibraryRepository';
+import { createSearchCatalogWithRatingsUseCase } from '../../../src/application/discogsCatalog/searchCatalogWithRatings';
+import { createEnrichLibraryEntryUseCase } from '../../../src/application/library/enrichLibraryEntry';
+import type { LibraryEntry } from '../../../src/domain/library/types';
 
 const { enrichEntries } = createEnrichLibraryEntryUseCase({
   repository: firestoreLibraryRepository,
+});
+const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
+  discogsCatalog: discogsCatalogAdapter,
+  cache: cacheAdapter,
 });
 
 describe('Discogs response caching (US2)', () => {
@@ -51,8 +57,8 @@ describe('Discogs response caching (US2)', () => {
     // afterEach) — a second outbound call here would hit no matching
     // interceptor and reject, so an equal second result proves the cache
     // (not a second HTTP call) served it.
-    const first = await searchCatalog('Stockholm', { resultType: 'release' });
-    const second = await searchCatalog('Stockholm', { resultType: 'release' });
+    const first = await searchCatalogWithRatings('Stockholm', { resultType: 'release' });
+    const second = await searchCatalogWithRatings('Stockholm', { resultType: 'release' });
 
     expect(second).toEqual(first);
   });

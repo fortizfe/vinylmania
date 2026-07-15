@@ -1,11 +1,11 @@
 import { logger } from '../../config/logger';
-import { getRelease } from '../../discogs/discogsClient';
+import { getRelease } from '../../adapters/discogsCatalog/discogsCatalogAdapter';
 import {
   DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
 } from '../../discogs/discogsErrors';
-import type { Release } from '../../discogs/types';
+import type { Release } from '../../domain/discogsCatalog/types';
 import type { EntryDiscogsData, LibraryEntry } from '../../domain/library/types';
 import type { DiscogsCollectionPort } from '../../ports/library/discogsCollectionPort';
 import type { DiscogsConnectionPort } from '../../ports/library/discogsConnectionPort';

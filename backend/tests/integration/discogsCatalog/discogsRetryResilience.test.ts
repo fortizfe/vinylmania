@@ -10,14 +10,14 @@ import {
   discogsScope,
   rawSearchResultItem,
   stubReleaseRatingUnavailable,
-} from '../helpers/nock';
+} from '../../helpers/nock';
 
-import { createApp } from '../../src/app';
-import { getMasterRelease, getRelease } from '../../src/discogs/discogsClient';
-import { firestoreLibraryRepository } from '../../src/adapters/library/firestoreLibraryRepository';
-import { createEnrichLibraryEntryUseCase } from '../../src/application/library/enrichLibraryEntry';
-import type { LibraryEntry } from '../../src/domain/library/types';
-import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import { createApp } from '../../../src/app';
+import { getMasterRelease, getRelease } from '../../../src/adapters/discogsCatalog/discogsCatalogAdapter';
+import { firestoreLibraryRepository } from '../../../src/adapters/library/firestoreLibraryRepository';
+import { createEnrichLibraryEntryUseCase } from '../../../src/application/library/enrichLibraryEntry';
+import type { LibraryEntry } from '../../../src/domain/library/types';
+import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
 
 const app = createApp();
 const { enrichEntry } = createEnrichLibraryEntryUseCase({

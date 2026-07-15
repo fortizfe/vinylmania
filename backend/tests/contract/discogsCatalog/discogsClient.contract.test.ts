@@ -1,20 +1,28 @@
-import { discogsScope } from '../helpers/nock';
+import { discogsScope } from '../../helpers/nock';
 
-import { logger } from '../../src/config/logger';
+import { logger } from '../../../src/config/logger';
 import {
+  discogsCatalogAdapter,
   getArtist,
   getDiscogsHttpClient,
   getRelease,
   searchCatalog,
-} from '../../src/discogs/discogsClient';
+} from '../../../src/adapters/discogsCatalog/discogsCatalogAdapter';
+import { cacheAdapter } from '../../../src/adapters/cache/cacheAdapter';
+import { createSearchCatalogWithRatingsUseCase } from '../../../src/application/discogsCatalog/searchCatalogWithRatings';
 import {
   DiscogsAuthError,
   DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
-} from '../../src/discogs/discogsErrors';
-import { MAX_WAIT_MS } from '../../src/discogs/discogsRateLimiter';
-import { MAX_ATTEMPTS } from '../../src/discogs/discogsRetry';
+} from '../../../src/discogs/discogsErrors';
+import { MAX_WAIT_MS } from '../../../src/discogs/discogsRateLimiter';
+import { MAX_ATTEMPTS } from '../../../src/discogs/discogsRetry';
+
+const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
+  discogsCatalog: discogsCatalogAdapter,
+  cache: cacheAdapter,
+});
 
 beforeAll(() => {
   // Deterministic behavior regardless of a local Redis: several tests
@@ -157,7 +165,7 @@ describe('Discogs client contract: searchCatalog', () => {
         .get('/releases/98765/rating')
         .reply(200, { release_id: 98765, rating: { average: 4.5, count: 812 } });
 
-      const result = await searchCatalog('Hybrid Theory', { resultType: 'release' });
+      const result = await searchCatalogWithRatings('Hybrid Theory', { resultType: 'release' });
 
       expect(result.results[0]).toMatchObject({
         resultType: 'master',
@@ -184,7 +192,7 @@ describe('Discogs client contract: searchCatalog', () => {
         });
       discogsScope().get('/masters/12346').reply(503, { message: 'unavailable' });
 
-      const result = await searchCatalog('Hybrid Theory Failure', {
+      const result = await searchCatalogWithRatings('Hybrid Theory Failure', {
         resultType: 'release',
       });
 
@@ -734,7 +742,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
 
       const { getMaxInFlight, restore } = spyOnInFlightRequests();
       try {
-        const result = await searchCatalog('Concurrency Bounded', {
+        const result = await searchCatalogWithRatings('Concurrency Bounded', {
           resultType: 'release',
         });
 
@@ -768,7 +776,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
 
       const { getMaxInFlight, restore } = spyOnInFlightRequests();
       try {
-        const result = await searchCatalog('Concurrency Unaffected', {
+        const result = await searchCatalogWithRatings('Concurrency Unaffected', {
           resultType: 'release',
         });
 
@@ -799,7 +807,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
           .reply(200, { release_id: 3200 + i, rating: { average: 4, count: 10 } });
       }
 
-      const result = await searchCatalog('Concurrency Fail Soft', {
+      const result = await searchCatalogWithRatings('Concurrency Fail Soft', {
         resultType: 'release',
       });
 

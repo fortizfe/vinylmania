@@ -5,21 +5,38 @@ import axios, {
   isAxiosError,
 } from 'axios';
 
-import { withCache } from '../cache/cacheAside';
-import { logger } from '../config/logger';
-import { mapWithConcurrency } from '../shared/concurrency';
+import { logger } from '../../config/logger';
 import {
   recordExhaustedFailure,
   recordSuccess,
   shouldShortCircuit,
-} from './discogsCircuitBreaker';
+} from '../../discogs/discogsCircuitBreaker';
 import {
   DiscogsAuthError,
   DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
-} from './discogsErrors';
-import { acquireSlot, recordRateLimitHeaders } from './discogsRateLimiter';
+} from '../../discogs/discogsErrors';
+import { acquireSlot, recordRateLimitHeaders } from '../../discogs/discogsRateLimiter';
+import {
+  backoffDelayMs,
+  classifyForRetry,
+  MAX_ATTEMPTS,
+  PER_ATTEMPT_TIMEOUT_MS,
+} from '../../discogs/discogsRetry';
+import type {
+  Artist,
+  CatalogSearchResponse,
+  MasterRelease,
+  MasterReleaseVersionsPage,
+  Release,
+  CommunityRating,
+} from '../../domain/discogsCatalog/types';
+import type {
+  DiscogsCatalogPort,
+  SearchCatalogOptions,
+} from '../../ports/discogsCatalog/discogsCatalogPort';
+import { cacheAdapter } from '../cache/cacheAdapter';
 import {
   mapArtist,
   mapMasterRelease,
@@ -28,23 +45,8 @@ import {
   mapReleaseRating,
   mapSearchResult,
 } from './discogsMapper';
-import {
-  backoffDelayMs,
-  classifyForRetry,
-  MAX_ATTEMPTS,
-  PER_ATTEMPT_TIMEOUT_MS,
-} from './discogsRetry';
-import type {
-  Artist,
-  CatalogSearchResponse,
-  CatalogSearchResult,
-  CommunityRating,
-  MasterRelease,
-  MasterReleaseVersionsPage,
-  Release,
-} from './types';
 
-export { DiscogsError } from './discogsErrors';
+export { DiscogsError } from '../../discogs/discogsErrors';
 
 const DEFAULT_DISCOGS_BASE_URL = 'https://api.discogs.com';
 
@@ -214,28 +216,12 @@ export function getDiscogsHttpClient(): AxiosInstance {
   return sharedClient;
 }
 
-export interface SearchCatalogOptions {
-  resultType?: 'release' | 'artist';
-  page?: number;
-  perPage?: number;
-  /** Free-text filter on genre (spec FR-002, feature 021). */
-  genre?: string;
-  /** Free-text filter on style (spec FR-002, feature 021). */
-  style?: string;
-  /** Filter on format; may be a single value or a comma-joined multi-value string (spec FR-002/FR-011, feature 021/022). */
-  format?: string;
-}
-
 /** Trims a filter value; blank/whitespace-only values are treated as unset (spec FR-010). */
 function normalizeFilterValue(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed || undefined;
 }
 
-// Discogs catalog data changes rarely, so search results (which can shift
-// as the catalog grows) get a shorter TTL than individual release/artist
-// lookups (which are effectively immutable once published).
-const SEARCH_CACHE_TTL_SECONDS = 30 * 60;
 const RELEASE_CACHE_TTL_SECONDS = 6 * 60 * 60;
 const ARTIST_CACHE_TTL_SECONDS = 6 * 60 * 60;
 const RATING_CACHE_TTL_SECONDS = 30 * 60;
@@ -245,17 +231,11 @@ const RATING_CACHE_TTL_SECONDS = 30 * 60;
 // never blocked or perceptibly delayed by rating enrichment.
 const RATING_LOOKUP_TIMEOUT_MS = 2_000;
 
-// Spec FR-009/FR-010 (feature 040, US2): bounds how many rating/master
-// lookups a single search's enrichment fan-out can have in flight at once,
-// matching libraryEnrichment.ts's existing ENRICHMENT_CONCURRENCY — the
-// single largest known source of Discogs request bursts.
-const SEARCH_RATING_CONCURRENCY = 5;
-
 /** Fetches (and caches) one release's community rating; rejects if the lookup fails or times out. */
 export async function getReleaseRating(
   discogsReleaseId: number,
 ): Promise<CommunityRating> {
-  return withCache(
+  return cacheAdapter.withCache(
     `discogs:rating:${discogsReleaseId}`,
     RATING_CACHE_TTL_SECONDS,
     async () => {
@@ -281,10 +261,14 @@ const DEFAULT_MASTER_VERSIONS_PER_PAGE = 10;
 
 /** Fetches (and caches) one master release's detail (feature 026, US3). */
 export async function getMasterRelease(masterId: number): Promise<MasterRelease> {
-  return withCache(`discogs:master:${masterId}`, MASTER_CACHE_TTL_SECONDS, async () => {
-    const response = await getDiscogsHttpClient().get(`/masters/${masterId}`);
-    return mapMasterRelease(response.data);
-  });
+  return cacheAdapter.withCache(
+    `discogs:master:${masterId}`,
+    MASTER_CACHE_TTL_SECONDS,
+    async () => {
+      const response = await getDiscogsHttpClient().get(`/masters/${masterId}`);
+      return mapMasterRelease(response.data);
+    },
+  );
 }
 
 /**
@@ -297,7 +281,7 @@ export async function getMasterReleaseVersions(
   perPage = DEFAULT_MASTER_VERSIONS_PER_PAGE,
 ): Promise<MasterReleaseVersionsPage> {
   const cacheKey = `discogs:master-versions:${masterId}:${page}:${perPage}`;
-  return withCache(cacheKey, MASTER_VERSIONS_CACHE_TTL_SECONDS, async () => {
+  return cacheAdapter.withCache(cacheKey, MASTER_VERSIONS_CACHE_TTL_SECONDS, async () => {
     const response = await getDiscogsHttpClient().get(`/masters/${masterId}/versions`, {
       params: { page, per_page: perPage },
     });
@@ -319,41 +303,10 @@ export async function getMasterReleaseVersions(
 }
 
 /**
- * Enriches one release- or master-type search result with its community
- * rating (a master's rating is that of its main/key release — Discogs has
- * no master-level rating endpoint, spec Clarifications). Any failure (not
- * found, rate-limited, unavailable, or a lookup exceeding the 2-second
- * timeout) degrades to omitting `communityRating` rather than failing the
- * search response (spec FR-008/SC-006, feature 026 FR-002).
+ * Raw catalog search — no rating enrichment, no caching (research.md
+ * Decision 2). The enriched, cached search lives in
+ * application/discogsCatalog/searchCatalogWithRatings.ts.
  */
-async function enrichWithRating(
-  result: CatalogSearchResult,
-): Promise<CatalogSearchResult> {
-  if (result.resultType !== 'release' && result.resultType !== 'master') {
-    return result;
-  }
-
-  try {
-    const releaseId =
-      result.resultType === 'master'
-        ? (await getMasterRelease(result.discogsId)).mainReleaseId
-        : result.discogsId;
-    const rating = await getReleaseRating(releaseId);
-    if (rating.count <= 0) {
-      return result;
-    }
-    return { ...result, communityRating: rating };
-  } catch (err) {
-    logger.warn({
-      route: 'discogs:rating',
-      outcome: 'omitted',
-      meta: { discogsReleaseId: result.discogsId, resultType: result.resultType },
-      message: err instanceof Error ? err.message : 'unknown error',
-    });
-    return result;
-  }
-}
-
 export async function searchCatalog(
   query: string,
   options: SearchCatalogOptions = {},
@@ -368,9 +321,6 @@ export async function searchCatalog(
   const genre = normalizeFilterValue(options.genre);
   const style = normalizeFilterValue(options.style);
   const format = normalizeFilterValue(options.format);
-  // Cache-aside key includes every filter segment (empty when unset) so
-  // filtered and unfiltered searches for the same query/page never collide.
-  const cacheKey = `discogs:search:${resultType}:${query}:${page}:${perPage}:${genre ?? ''}:${style ?? ''}:${format ?? ''}`;
 
   // A "release" search also wants Discogs' "master" hits (feature 026, US1):
   // Discogs indexes each catalog work once, as a master hit when it has
@@ -383,60 +333,53 @@ export async function searchCatalog(
   const discogsType = resultType === 'release' ? undefined : options.resultType;
   const KEPT_RAW_TYPES_FOR_RELEASE_SEARCH = new Set(['release', 'master']);
 
-  return withCache(cacheKey, SEARCH_CACHE_TTL_SECONDS, async () => {
-    const response = await getDiscogsHttpClient().get('/database/search', {
-      params: {
-        q: query,
-        type: discogsType,
-        page,
-        per_page: perPage,
-        ...(genre ? { genre } : {}),
-        ...(style ? { style } : {}),
-        ...(format ? { format } : {}),
-      },
-    });
-
-    const { pagination, results } = response.data as {
-      pagination: { page: number; pages: number; items: number; per_page: number };
-      results: unknown[];
-    };
-
-    // Defensive filter: only map the raw hit types this search actually
-    // wants, so an unexpected/unfiltered type from Discogs (e.g. `label`)
-    // degrades to "not included" rather than crashing the whole response.
-    const wantedResults =
-      resultType === 'release'
-        ? results.filter(
-            (r) =>
-              typeof r === 'object' &&
-              r !== null &&
-              KEPT_RAW_TYPES_FOR_RELEASE_SEARCH.has(
-                (r as { type?: unknown }).type as string,
-              ),
-          )
-        : results;
-
-    const mappedResults = wantedResults.map(mapSearchResult);
-    const enrichedResults = await mapWithConcurrency(
-      mappedResults,
-      SEARCH_RATING_CONCURRENCY,
-      enrichWithRating,
-    );
-
-    return {
-      results: enrichedResults,
-      pagination: {
-        page: pagination.page,
-        pages: pagination.pages,
-        items: pagination.items,
-        perPage: pagination.per_page,
-      },
-    };
+  const response = await getDiscogsHttpClient().get('/database/search', {
+    params: {
+      q: query,
+      type: discogsType,
+      page,
+      per_page: perPage,
+      ...(genre ? { genre } : {}),
+      ...(style ? { style } : {}),
+      ...(format ? { format } : {}),
+    },
   });
+
+  const { pagination, results } = response.data as {
+    pagination: { page: number; pages: number; items: number; per_page: number };
+    results: unknown[];
+  };
+
+  // Defensive filter: only map the raw hit types this search actually
+  // wants, so an unexpected/unfiltered type from Discogs (e.g. `label`)
+  // degrades to "not included" rather than crashing the whole response.
+  const wantedResults =
+    resultType === 'release'
+      ? results.filter(
+          (r) =>
+            typeof r === 'object' &&
+            r !== null &&
+            KEPT_RAW_TYPES_FOR_RELEASE_SEARCH.has(
+              (r as { type?: unknown }).type as string,
+            ),
+        )
+      : results;
+
+  const mappedResults = wantedResults.map(mapSearchResult);
+
+  return {
+    results: mappedResults,
+    pagination: {
+      page: pagination.page,
+      pages: pagination.pages,
+      items: pagination.items,
+      perPage: pagination.per_page,
+    },
+  };
 }
 
 export async function getRelease(discogsReleaseId: number): Promise<Release> {
-  return withCache(
+  return cacheAdapter.withCache(
     `discogs:release:${discogsReleaseId}`,
     RELEASE_CACHE_TTL_SECONDS,
     async () => {
@@ -447,7 +390,7 @@ export async function getRelease(discogsReleaseId: number): Promise<Release> {
 }
 
 export async function getArtist(discogsArtistId: number): Promise<Artist> {
-  return withCache(
+  return cacheAdapter.withCache(
     `discogs:artist:${discogsArtistId}`,
     ARTIST_CACHE_TTL_SECONDS,
     async () => {
@@ -456,3 +399,12 @@ export async function getArtist(discogsArtistId: number): Promise<Artist> {
     },
   );
 }
+
+export const discogsCatalogAdapter: DiscogsCatalogPort = {
+  getRelease,
+  getArtist,
+  getMasterRelease,
+  getMasterReleaseVersions,
+  getReleaseRating,
+  searchCatalog,
+};

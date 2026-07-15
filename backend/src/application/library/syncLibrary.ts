@@ -8,7 +8,7 @@ import { mapLegacyCondition } from '../../discogs/collection/conditionGrading';
 import type { DiscogsConnection } from '../../discogs/oauth/types';
 import { DiscogsNotLinkedError, FieldNotEditableError } from '../../domain/library/libraryErrors';
 import type { LibraryEntry } from '../../domain/library/types';
-import type { CachePort } from '../../ports/library/cachePort';
+import type { CachePort } from '../../ports/cache/cachePort';
 import type { DiscogsCollectionPort } from '../../ports/library/discogsCollectionPort';
 import type { DiscogsConnectionPort } from '../../ports/library/discogsConnectionPort';
 import type { LibraryRepositoryPort } from '../../ports/library/libraryRepositoryPort';

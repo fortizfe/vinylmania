@@ -14,4 +14,15 @@ export interface CachePort {
    * and MUST NOT need to (parity with today's `setMarker`).
    */
   set(key: string, value: string, ttlSeconds: number): Promise<void>;
+
+  /**
+   * Read-through cache-aside: serves `key` from the cache when present,
+   * otherwise calls `fetcher()`, caches its resolved value for `ttlSeconds`,
+   * and returns it. Concurrent calls for the same key while a fetch is in
+   * flight are coalesced into that one fetch rather than each starting their
+   * own. Fail-soft: any cache error (or no cache backend configured) falls
+   * back to calling `fetcher()` directly — a cache outage MUST NOT fail the
+   * caller's request.
+   */
+  withCache<T>(key: string, ttlSeconds: number, fetcher: () => Promise<T>): Promise<T>;
 }

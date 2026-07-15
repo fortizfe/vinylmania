@@ -1,9 +1,9 @@
 import request from 'supertest';
 
-import { discogsScope } from '../helpers/nock';
-import { createApp } from '../../src/app';
-import { MAX_ATTEMPTS } from '../../src/discogs/discogsRetry';
-import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import { discogsScope } from '../../helpers/nock';
+import { createApp } from '../../../src/app';
+import { MAX_ATTEMPTS } from '../../../src/discogs/discogsRetry';
+import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
 
 const app = createApp();
 

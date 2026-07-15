@@ -1,5 +1,6 @@
+import { withCache as withCacheAside } from '../../cache/cacheAside';
 import { getRedisClient } from '../../cache/redisClient';
-import type { CachePort } from '../../ports/library/cachePort';
+import type { CachePort } from '../../ports/cache/cachePort';
 
 // Fail-soft in both directions, exactly like today's isMarkerFresh/setMarker:
 // without Redis every caller gets a miss/no-op (correct, just more work for
@@ -28,4 +29,12 @@ async function set(key: string, value: string, ttlSeconds: number): Promise<void
   }
 }
 
-export const cacheAdapter: CachePort = { has, set };
+function withCache<T>(
+  key: string,
+  ttlSeconds: number,
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  return withCacheAside(key, ttlSeconds, fetcher);
+}
+
+export const cacheAdapter: CachePort = { has, set, withCache };

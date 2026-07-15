@@ -1,18 +1,25 @@
 import { Router, type Request, type Response } from 'express';
 
-import { logger } from '../config/logger';
-import {
-  getMasterRelease,
-  getMasterReleaseVersions,
-  getRelease,
-  searchCatalog,
-} from '../discogs/discogsClient';
+import { logger } from '../../config/logger';
+import { createSearchCatalogWithRatingsUseCase } from '../../application/discogsCatalog/searchCatalogWithRatings';
 import {
   DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
-} from '../discogs/discogsErrors';
-import { requireAuth } from '../middleware/requireAuth';
+} from '../../discogs/discogsErrors';
+import { requireAuth } from '../../middleware/requireAuth';
+import { cacheAdapter } from '../cache/cacheAdapter';
+import {
+  discogsCatalogAdapter,
+  getMasterRelease,
+  getMasterReleaseVersions,
+  getRelease,
+} from './discogsCatalogAdapter';
+
+const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
+  discogsCatalog: discogsCatalogAdapter,
+  cache: cacheAdapter,
+});
 
 const DEFAULT_PER_PAGE = 50;
 
@@ -48,7 +55,7 @@ discogsRouter.get('/search', requireAuth, async (req: Request, res: Response) =>
   const filters = parseFilterParams(req);
 
   try {
-    const result = await searchCatalog(query, { resultType, page, perPage, ...filters });
+    const result = await searchCatalogWithRatings(query, { resultType, page, perPage, ...filters });
     const releaseResults = result.results.filter((r) => r.resultType === 'release');
     const masterResults = result.results.filter((r) => r.resultType === 'master');
     const enrichedCount = [...releaseResults, ...masterResults].filter(

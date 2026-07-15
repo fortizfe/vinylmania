@@ -16,7 +16,7 @@ import {
   setRating,
 } from '../../src/discogs/collection/collectionClient';
 import type { CollectionFieldMap } from '../../src/discogs/collection/collectionTypes';
-import { getRelease } from '../../src/discogs/discogsClient';
+import { getRelease } from '../../src/adapters/discogsCatalog/discogsCatalogAdapter';
 import {
   DiscogsAuthError,
   DiscogsNotFoundError,

@@ -3,7 +3,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 
 import { logger } from './config/logger';
 import { authRouter } from './routes/auth';
-import { discogsRouter } from './routes/discogs';
+import { discogsRouter } from './adapters/discogsCatalog/discogsRoutes';
 import { discogsOauthRouter } from './routes/discogsOauth';
 import { feedsRouter } from './routes/feeds';
 import { libraryRouter } from './adapters/library/libraryRoutes';

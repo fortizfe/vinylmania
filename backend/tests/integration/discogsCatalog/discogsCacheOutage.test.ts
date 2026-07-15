@@ -11,11 +11,11 @@ import {
   rawSearchResultItem,
   stubReleaseRating,
   stubReleaseRatingNeverResolves,
-} from '../helpers/nock';
+} from '../../helpers/nock';
 
-import { createApp } from '../../src/app';
-import { getRedisClient } from '../../src/cache/redisClient';
-import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import { createApp } from '../../../src/app';
+import { getRedisClient } from '../../../src/cache/redisClient';
+import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
 
 const app = createApp();
 

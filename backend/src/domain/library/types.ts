@@ -1,4 +1,4 @@
-import type { Release } from '../../discogs/types';
+import type { Release } from '../discogsCatalog/types';
 
 /**
  * A record the user owns, mirrored in Firestore from their Discogs

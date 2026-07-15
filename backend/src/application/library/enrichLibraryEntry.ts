@@ -1,5 +1,5 @@
 import { logger } from '../../config/logger';
-import { getRelease } from '../../discogs/discogsClient';
+import { getRelease } from '../../adapters/discogsCatalog/discogsCatalogAdapter';
 import { DiscogsError } from '../../discogs/discogsErrors';
 import type { LibraryRepositoryPort } from '../../ports/library/libraryRepositoryPort';
 import { mapWithConcurrency } from '../../shared/concurrency';

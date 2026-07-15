@@ -1,6 +1,6 @@
 import { z, type ZodType } from 'zod';
 
-import { DiscogsValidationError } from './discogsErrors';
+import { DiscogsValidationError } from '../../discogs/discogsErrors';
 import type {
   Artist,
   CatalogSearchResult,
@@ -10,7 +10,7 @@ import type {
   MasterReleaseVersion,
   Release,
   ReleaseIdentifier,
-} from './types';
+} from '../../domain/discogsCatalog/types';
 
 function parseOrThrow<T>(schema: ZodType<T>, raw: unknown): T {
   const result = schema.safeParse(raw);

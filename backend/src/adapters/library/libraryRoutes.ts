@@ -28,7 +28,7 @@ import {
   FieldNotEditableError,
 } from '../../domain/library/libraryErrors';
 import type { EntryDiscogsData, LibraryEntry, LibraryFilters } from '../../domain/library/types';
-import { cacheAdapter } from './cacheAdapter';
+import { cacheAdapter } from '../cache/cacheAdapter';
 import { discogsCollectionAdapter } from './discogsCollectionAdapter';
 import { discogsConnectionAdapter } from './discogsConnectionAdapter';
 import { firestoreLibraryRepository } from './firestoreLibraryRepository';

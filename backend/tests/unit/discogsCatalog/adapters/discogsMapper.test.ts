@@ -4,7 +4,7 @@ import {
   mapMasterReleaseVersion,
   mapRelease,
   mapSearchResult,
-} from '../../src/discogs/discogsMapper';
+} from '../../../../src/adapters/discogsCatalog/discogsMapper';
 
 describe('mapSearchResult', () => {
   it('maps a full release search result', () => {
