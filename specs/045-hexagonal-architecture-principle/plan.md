@@ -60,7 +60,7 @@ Principle) + revisión de 2 plantillas (`plan-template.md`, `spec-template.md`).
 
 | Principio | Aplica a esta historia | Evaluación |
 |---|---|---|
-| I. Test-First (NON-NEGOTIABLE) | No — no se introduce código de producto ni lógica ejecutable | PASS (fuera de alcance por naturaleza documental) |
+| I. Test-First (NON-NEGOTIABLE) | Sí — aplica incluso a cambios documentales: se exige una verificación previa a la implementación que falle antes del cambio y pase después | PASS — `quickstart.md` actúa como el "test" exigido por el Principio I: sus 6 pasos fallan hoy (el Principio VIII no existe, versión 2.4.0) y deben pasar tras T013. Ver Complexity Tracking para la justificación de por qué un test documental sustituye a un test de código. |
 | II. Discogs Integration-First & Modularity | No — no toca integración Discogs | PASS (no aplica) |
 | III. Simplicity, YAGNI & KISS | Sí — el principio nuevo debe ser mínimo y no inventar mecanismos no solicitados | PASS — se limita a codificar decisiones ya tomadas (capas, regla de dependencia, convención de carpetas, patrón de errores existente), sin añadir alcance extra |
 | IV. SOLID Design | Indirectamente — el principio *exige* SOLID/DIP en el backend futuro | PASS — el nuevo principio es una extensión operativa del IV existente (dependency inversion vía puertos), no una contradicción |
@@ -113,4 +113,6 @@ modifica esta historia).
 
 ## Complexity Tracking
 
-*Sin violaciones de Constitution Check — tabla no aplica.*
+| Adaptación | Por qué es necesaria | Alternativa más simple descartada porque |
+|---|---|---|
+| Principio I (Test-First) satisfecho mediante `quickstart.md` en vez de un test automatizado de código | Esta historia no produce código ejecutable — edita `.specify/memory/constitution.md`, un fichero Markdown de gobernanza; no existe ningún framework de test que pueda ejecutar contra prosa normativa | Escribir un test automatizado que parsee `constitution.md` (regex sobre secciones/versión) fue descartado: añadiría tooling nuevo solo para esta historia, violando el Principio III (YAGNI) por una ganancia marginal sobre la verificación manual ya exigida por `quickstart.md` |

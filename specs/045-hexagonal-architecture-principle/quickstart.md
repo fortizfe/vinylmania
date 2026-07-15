@@ -75,8 +75,17 @@ fichero resultante y comprobar, uno a uno, los criterios de aceptación del spec
    ✅ ("sin cambios necesarios") o con la actualización real aplicada — no deben
    quedar sin mencionar.
 
+7. **Sin cambios en `backend/src` (FR-012)**
+
+   ```bash
+   git diff --stat main -- backend/src
+   ```
+
+   Esperado: salida vacía — esta historia es puramente documental y no debe tocar
+   ningún fichero de `backend/src`.
+
 ## Resultado esperado
 
-Todos los pasos 1-6 pasan sin necesidad de ejecutar tests automatizados ni levantar
+Todos los pasos 1-7 pasan sin necesidad de ejecutar tests automatizados ni levantar
 el backend: la historia se considera completa cuando `constitution.md` (y, si aplica,
 las plantillas) reflejan exactamente lo verificado arriba.

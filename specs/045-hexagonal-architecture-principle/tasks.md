@@ -133,7 +133,9 @@ historia de este feature) es completa y verificable de forma independiente.
   contra el `.specify/memory/constitution.md` final y registrar el resultado de cada
   paso (versión/fecha, Sync Impact Report, existencia y formato del Principio VIII,
   prueba de clasificación sin ambigüedad sobre los 5 ficheros de ejemplo, cláusula de
-  alcance, plantillas revisadas).
+  alcance, plantillas revisadas). Añadir un séptimo chequeo (FR-012): ejecutar
+  `git diff --stat main -- backend/src` (o equivalente) y confirmar que no devuelve
+  ningún fichero modificado.
 - [ ] T014 Si algún paso de T013 falla o queda ambiguo, corregir la redacción
   correspondiente del Principio VIII en `.specify/memory/constitution.md` y repetir
   T013 hasta que los 6 pasos pasen.

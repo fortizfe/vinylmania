@@ -175,9 +175,9 @@ del backend cumple o no la arquitectura Hexagonal.
   discogs oauth+collection, feeds, auth/users) pueden comenzar su planificación citando
   el nuevo principio como única referencia normativa, sin requerir clarificaciones
   adicionales sobre qué cuenta como "puerto", "adaptador", "dominio" o "aplicación".
-- **SC-004**: Cero ambigüedad reportada en revisión: al presentar el nuevo principio a
-  un segundo revisor, este no identifica ningún fichero real de `backend/src` cuya capa
-  de pertenencia quede indeterminada por el texto del principio.
+- **SC-004**: Cero ambigüedad remanente: al ejecutar la prueba de clasificación de
+  `quickstart.md` (paso 4) sobre los 5 ficheros de ejemplo, ninguna clasificación
+  queda dudosa o requiere inferencia más allá del texto del principio.
 
 ## Assumptions
 
