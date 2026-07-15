@@ -8,6 +8,14 @@
 
 **Input**: User description: "Historia 1 de la HU `.hu/backend-hexagonal-architecture-refactor.md`: Como Product Owner de Vinylmania, quiero que exista una definición explícita y obligatoria (capas, regla de dependencia, convención de carpetas, y cómo encajan los errores de dominio ya existentes) de qué significa 'Hexagonal Architecture' para este backend, ratificada como nuevo Core Principle en `.specify/memory/constitution.md`, para que sea la referencia única que gobierna tanto la migración del backend (historias de dominio futuras) como cualquier desarrollo backend futuro."
 
+## Clarifications
+
+### Session 2026-07-15
+
+- Q: FR-005: convención de carpetas para las capas hexagonales en backend/src — ¿capas globales o anidadas por dominio? → A: Capas globales a nivel de backend/src (`src/domain/`, `src/application/`, `src/ports/`, `src/adapters/`), con subcarpetas por dominio dentro de cada una.
+- Q: `config/logger.ts` no importa ningún SDK externo — ¿cómo lo trata el nuevo principio? → A: No requiere excepción explícita; al no depender de infraestructura externa, ya cumple la regla de dependencia tal cual queda redactada.
+- Q: `shared/concurrency.ts` (`mapWithConcurrency`) es una utilidad pura sin dependencias — ¿en qué capa vive? → A: Utilidad transversal fuera de la separación de capas (carpeta neutral, consumible por cualquier capa).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - La constitution fija de forma inequívoca qué es "Hexagonal Architecture" para este backend (Priority: P1)
@@ -81,12 +89,14 @@ del backend cumple o no la arquitectura Hexagonal.
 - El principio aplica solo a `backend/`; la constitution ya distingue Frontend/Backend
   en su sección "Technology Stack" — debe quedar explícito que esto no afecta a
   `frontend/` ni a `e2e/`.
-- `config/logger.ts` no importa ningún SDK externo (solo `console`) — el principio debe
-  decidir si se declara explícitamente como excepción/"shared kernel" transversal o si
-  simplemente no aplica por no depender de infraestructura alguna.
+- `config/logger.ts` no importa ningún SDK externo (solo `console`) — no requiere una
+  excepción explícita: al no depender de infraestructura externa, ya cumple la regla
+  de dependencia tal cual queda redactada, sin necesidad de mencionarlo como caso
+  especial.
 - `shared/concurrency.ts` (`mapWithConcurrency`) es una utilidad pura sin dependencias
-  externas — el principio debe aclarar si vive dentro de la capa de dominio o se
-  mantiene como utilidad transversal fuera de la separación de capas.
+  externas — se mantiene como utilidad transversal fuera de la separación de capas
+  (carpeta neutral, consumible por cualquier capa), no como parte de la capa de
+  dominio.
 
 ## Requirements *(mandatory)*
 
@@ -107,10 +117,11 @@ del backend cumple o no la arquitectura Hexagonal.
   "driving" cuya responsabilidad es traducir peticiones/respuestas HTTP hacia y desde
   casos de uso de la capa de aplicación, y que NO DEBEN contener orquestación de lógica
   de negocio.
-- **FR-005**: El nuevo principio DEBE establecer una convención de carpetas/ubicación
-  para las capas (dominio, aplicación, puertos, adaptadores) dentro de `backend/src`,
-  suficientemente concreta para que un desarrollador sepa dónde colocar un fichero
-  nuevo sin ambigüedad.
+- **FR-005**: El nuevo principio DEBE fijar una convención de carpetas por capas
+  globales a nivel de `backend/src` (`src/domain/`, `src/application/`, `src/ports/`,
+  `src/adapters/`), con una subcarpeta por dominio dentro de cada una (p. ej.
+  `src/domain/library/`, `src/adapters/library/`), suficientemente concreta para que
+  un desarrollador sepa sin ambigüedad dónde colocar un fichero nuevo.
 - **FR-006**: El nuevo principio DEBE citar explícitamente el patrón ya existente de
   errores de dominio separados de su traducción a HTTP (jerarquía de errores tipados
   lanzados por el dominio, funciones de traducción a códigos HTTP que solo viven en las
@@ -118,11 +129,14 @@ del backend cumple o no la arquitectura Hexagonal.
   preservar y generalizar en vez de sustituir.
 - **FR-007**: El nuevo principio DEBE declarar explícitamente su alcance: aplica solo a
   `backend/`, no a `frontend/` ni a `e2e/`.
-- **FR-008**: El nuevo principio DEBE resolver explícitamente el estatus de los
-  módulos transversales sin dependencias de infraestructura (p. ej. el logger y las
-  utilidades puras de concurrencia): si se tratan como excepción/"shared kernel"
-  declarado, o si quedan fuera del alcance de la regla de dependencia por no depender
-  de infraestructura alguna.
+- **FR-008**: El nuevo principio DEBE dejar constancia de que los módulos
+  transversales sin dependencias de infraestructura (el logger y las utilidades puras
+  de concurrencia) quedan fuera del alcance de la regla de dependencia por no
+  depender de infraestructura alguna, sin requerir una excepción "shared kernel"
+  declarada expresamente: el logger no se menciona como caso especial (ya cumple la
+  regla tal cual), y las utilidades puras de concurrencia (p. ej.
+  `shared/concurrency.ts`) se mantienen como utilidad transversal fuera de la
+  separación de capas, consumible desde cualquier capa.
 - **FR-009**: El campo de versión de la constitution DEBE actualizarse de 2.4.0 a
   2.5.0 (bump MINOR, conforme a la política de versionado ya documentada en el propio
   fichero), y el campo `Last Amended` DEBE reflejar la fecha real de la amendment.
