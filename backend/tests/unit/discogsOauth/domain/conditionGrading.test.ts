@@ -4,7 +4,7 @@ import {
   isMediaCondition,
   isSleeveCondition,
   mapLegacyCondition,
-} from '../../src/discogs/collection/conditionGrading';
+} from '../../../../src/domain/discogsOauth/conditionGrading';
 
 describe('grading sets', () => {
   it('exposes the eight Discogs media grading values in grading order', () => {

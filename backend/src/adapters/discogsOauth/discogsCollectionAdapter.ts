@@ -4,51 +4,42 @@ import axios, {
   isAxiosError,
 } from 'axios';
 
-import { withCache } from '../../cache/cacheAside';
+import { cacheAdapter } from '../cache/cacheAdapter';
 import { logger } from '../../config/logger';
 import {
   recordExhaustedFailure,
   recordSuccess,
   shouldShortCircuit,
-} from '../discogsCircuitBreaker';
+} from '../../discogs/discogsCircuitBreaker';
 import {
   DiscogsAuthError,
   DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
-} from '../discogsErrors';
-import { acquireSlot, recordRateLimitHeaders } from '../discogsRateLimiter';
+} from '../../discogs/discogsErrors';
+import { acquireSlot, recordRateLimitHeaders } from '../../discogs/discogsRateLimiter';
+import { backoffDelayMs, classifyForRetry, MAX_ATTEMPTS } from '../../discogs/discogsRetry';
 import {
-  backoffDelayMs,
-  classifyForRetry,
-  MAX_ATTEMPTS,
-} from '../discogsRetry';
-import { getOauthApiBaseUrl } from '../oauth/oauthHttpClient';
-import {
-  buildProtectedResourceHeader,
-  type ConsumerCredentials,
-} from '../oauth/oauthSignature';
-import type { DiscogsConnection } from '../oauth/types';
-import type {
-  CollectionFieldMap,
-  CollectionInstance,
-  InstanceRef,
-} from './collectionTypes';
+  fieldsCacheKey,
+  type CollectionFieldMap,
+  type CollectionInstance,
+  type InstanceRef,
+} from '../../domain/discogsOauth/collectionTypes';
+import type { DiscogsConnection } from '../../domain/discogsOauth/types';
+import type { DiscogsCollectionPort } from '../../ports/discogsOauth/discogsCollectionPort';
+import { getOauthApiBaseUrl } from './oauthHttpClient';
+import { buildProtectedResourceHeader, type ConsumerCredentials } from './oauthSignature';
 
 /**
  * OAuth-signed client for the authenticated Discogs User Collection
- * endpoints. Unlike the app-token catalog client (discogsClient.ts) these
- * calls act as the linked user and can fail with revoked credentials, so
- * 401/403 map to DiscogsAuthError. The base URL is env-overridable (same
+ * endpoints. Unlike the app-token catalog client (discogsCatalogAdapter.ts)
+ * these calls act as the linked user and can fail with revoked credentials,
+ * so 401/403 map to DiscogsAuthError. The base URL is env-overridable (same
  * DISCOGS_OAUTH_BASE_URL the OAuth flow uses) so tests and e2e target stubs.
  */
 
 const COLLECTION_PAGE_SIZE = 100;
 const FIELDS_CACHE_TTL_SECONDS = 24 * 60 * 60;
-
-export function fieldsCacheKey(uid: string): string {
-  return `discogs:fields:${uid}`;
-}
 
 function getCredentials(): ConsumerCredentials {
   const consumerKey = process.env.DISCOGS_CONSUMER_KEY;
@@ -61,7 +52,7 @@ function getCredentials(): ConsumerCredentials {
 
 /**
  * Extra, non-axios properties carried on a request config across a retry
- * sequence (feature 040, US3 — mirrors discogsClient.ts's feature 029
+ * sequence (feature 040, US3 — mirrors discogsCatalogAdapter.ts's feature 029
  * pattern). `__attempt` tracks which attempt this is (1 = the original
  * request); `__skipRetry` opts a specific call (the non-idempotent
  * `addReleaseToCollection`) out of retry only — the circuit breaker still
@@ -97,7 +88,7 @@ function createClient(connection: DiscogsConnection): AxiosInstance {
   });
 
   instance.interceptors.request.use(async (config: ResilienceConfig) => {
-    // Reusing feature 029's shared breaker (also used by discogsClient.ts)
+    // Reusing feature 029's shared breaker (also used by discogsCatalogAdapter.ts)
     // — checked first so a breaker-rejected request never pays a throttle
     // delay (contracts/collection-client-resilience.md).
     if (shouldShortCircuit()) {
@@ -248,22 +239,26 @@ function mapInstance(raw: RawInstance, fieldMap: CollectionFieldMap): Collection
 export async function getFieldMap(
   connection: DiscogsConnection,
 ): Promise<CollectionFieldMap> {
-  return withCache(fieldsCacheKey(connection.uid), FIELDS_CACHE_TTL_SECONDS, async () => {
-    const response = await createClient(connection).get(
-      `/users/${encodeURIComponent(connection.discogsUsername)}/collection/fields`,
-    );
-    const fields =
-      (response.data as { fields?: Array<{ id: number; name: string }> }).fields ?? [];
+  return cacheAdapter.withCache(
+    fieldsCacheKey(connection.uid),
+    FIELDS_CACHE_TTL_SECONDS,
+    async () => {
+      const response = await createClient(connection).get(
+        `/users/${encodeURIComponent(connection.discogsUsername)}/collection/fields`,
+      );
+      const fields =
+        (response.data as { fields?: Array<{ id: number; name: string }> }).fields ?? [];
 
-    const byName = (name: string): number | null =>
-      fields.find((field) => field.name === name)?.id ?? null;
+      const byName = (name: string): number | null =>
+        fields.find((field) => field.name === name)?.id ?? null;
 
-    return {
-      mediaConditionFieldId: byName('Media Condition'),
-      sleeveConditionFieldId: byName('Sleeve Condition'),
-      notesFieldId: byName('Notes'),
-    };
-  });
+      return {
+        mediaConditionFieldId: byName('Media Condition'),
+        sleeveConditionFieldId: byName('Sleeve Condition'),
+        notesFieldId: byName('Notes'),
+      };
+    },
+  );
 }
 
 /** Walks every page of folder 0 (the "All" folder) of the user's collection. */
@@ -356,3 +351,13 @@ export async function setFieldValue(
     { value },
   );
 }
+
+export const discogsCollectionAdapter: DiscogsCollectionPort = {
+  getFieldMap,
+  listAllInstances,
+  getInstancesForRelease,
+  addReleaseToCollection,
+  deleteInstance,
+  setRating,
+  setFieldValue,
+};

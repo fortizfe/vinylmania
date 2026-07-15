@@ -3,14 +3,14 @@ import type {
   CollectionFieldMap,
   CollectionInstance,
   InstanceRef,
-} from '../../discogs/collection/collectionTypes';
-import { mapLegacyCondition } from '../../discogs/collection/conditionGrading';
-import type { DiscogsConnection } from '../../discogs/oauth/types';
+} from '../../domain/discogsOauth/collectionTypes';
+import { mapLegacyCondition } from '../../domain/discogsOauth/conditionGrading';
+import type { DiscogsConnection } from '../../domain/discogsOauth/types';
 import { DiscogsNotLinkedError, FieldNotEditableError } from '../../domain/library/libraryErrors';
 import type { LibraryEntry } from '../../domain/library/types';
 import type { CachePort } from '../../ports/cache/cachePort';
-import type { DiscogsCollectionPort } from '../../ports/library/discogsCollectionPort';
-import type { DiscogsConnectionPort } from '../../ports/library/discogsConnectionPort';
+import type { DiscogsCollectionPort } from '../../ports/discogsOauth/discogsCollectionPort';
+import type { DiscogsConnectionPort } from '../../ports/discogsOauth/discogsConnectionPort';
 import type { LibraryRepositoryPort } from '../../ports/library/libraryRepositoryPort';
 
 const ROUTE = 'librarySync';

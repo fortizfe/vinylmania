@@ -1,13 +1,13 @@
 import request from 'supertest';
 
-import { createApp } from '../../src/app';
-import { getFirestoreDb } from '../../src/config/firebase-admin';
+import { createApp } from '../../../src/app';
+import { getFirestoreDb } from '../../../src/config/firebase-admin';
 import {
   clearEmulatorFirestore,
   clearEmulatorUsers,
   getTestIdToken,
-} from '../helpers/authEmulator';
-import { discogsScope } from '../helpers/nock';
+} from '../../helpers/authEmulator';
+import { discogsScope } from '../../helpers/nock';
 
 const app = createApp();
 

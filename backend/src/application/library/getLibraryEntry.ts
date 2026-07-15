@@ -1,5 +1,5 @@
-import type { DiscogsCollectionPort } from '../../ports/library/discogsCollectionPort';
-import type { DiscogsConnectionPort } from '../../ports/library/discogsConnectionPort';
+import type { DiscogsCollectionPort } from '../../ports/discogsOauth/discogsCollectionPort';
+import type { DiscogsConnectionPort } from '../../ports/discogsOauth/discogsConnectionPort';
 import type { LibraryRepositoryPort } from '../../ports/library/libraryRepositoryPort';
 import { getCopyData } from './discogsCopyData';
 import type { EnrichLibraryEntryUseCase } from './enrichLibraryEntry';

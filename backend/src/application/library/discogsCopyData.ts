@@ -2,11 +2,11 @@ import type {
   CollectionFieldMap,
   CollectionInstance,
   InstanceRef,
-} from '../../discogs/collection/collectionTypes';
+} from '../../domain/discogsOauth/collectionTypes';
 import { DiscogsNotFoundError } from '../../discogs/discogsErrors';
-import type { DiscogsConnection } from '../../discogs/oauth/types';
+import type { DiscogsConnection } from '../../domain/discogsOauth/types';
 import type { EntryDiscogsData, LibraryEntry } from '../../domain/library/types';
-import type { DiscogsCollectionPort } from '../../ports/library/discogsCollectionPort';
+import type { DiscogsCollectionPort } from '../../ports/discogsOauth/discogsCollectionPort';
 
 export async function resolveManagedRef(
   discogsCollection: DiscogsCollectionPort,

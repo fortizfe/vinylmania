@@ -1,7 +1,7 @@
 import axios, { isAxiosError, type AxiosInstance } from 'axios';
 
 import { logger } from '../../config/logger';
-import { DiscogsRateLimitError, DiscogsUnavailableError } from '../discogsErrors';
+import { DiscogsRateLimitError, DiscogsUnavailableError } from '../../discogs/discogsErrors';
 
 /**
  * Dedicated HTTP client for Discogs' OAuth endpoints. Token exchanges are

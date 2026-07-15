@@ -5,7 +5,7 @@ import { logger } from '../../config/logger';
 import {
   MEDIA_CONDITIONS,
   SLEEVE_CONDITIONS,
-} from '../../discogs/collection/conditionGrading';
+} from '../../domain/discogsOauth/conditionGrading';
 import {
   DiscogsAuthError,
   DiscogsRateLimitError,
@@ -29,8 +29,8 @@ import {
 } from '../../domain/library/libraryErrors';
 import type { EntryDiscogsData, LibraryEntry, LibraryFilters } from '../../domain/library/types';
 import { cacheAdapter } from '../cache/cacheAdapter';
-import { discogsCollectionAdapter } from './discogsCollectionAdapter';
-import { discogsConnectionAdapter } from './discogsConnectionAdapter';
+import { discogsCollectionAdapter } from '../discogsOauth/discogsCollectionAdapter';
+import { discogsConnectionAdapter } from '../discogsOauth/discogsConnectionAdapter';
 import { firestoreLibraryRepository } from './firestoreLibraryRepository';
 
 const DEFAULT_PAGE_SIZE = 20;

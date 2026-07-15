@@ -25,4 +25,12 @@ export interface CachePort {
    * caller's request.
    */
   withCache<T>(key: string, ttlSeconds: number, fetcher: () => Promise<T>): Promise<T>;
+
+  /**
+   * Fail-soft: MUST NOT reject. Deletes `key` if present; a cache outage or
+   * absent backend is silently swallowed — the caller has no way to observe
+   * it and MUST NOT need to, matching `has`/`set`'s existing fail-soft
+   * contract.
+   */
+  invalidate(key: string): Promise<void>;
 }

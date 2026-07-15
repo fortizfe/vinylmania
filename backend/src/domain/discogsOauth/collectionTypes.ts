@@ -32,3 +32,13 @@ export interface CollectionFieldMap {
   sleeveConditionFieldId: number | null;
   notesFieldId: number | null;
 }
+
+/**
+ * A pure key-naming function, deliberately kept outside either the
+ * connection or collection adapter so both can depend on it without
+ * ordering: `disconnectConnection` (linking-flow) invalidates it,
+ * `getFieldMap` (collection) reads/writes it.
+ */
+export function fieldsCacheKey(uid: string): string {
+  return `discogs:fields:${uid}`;
+}

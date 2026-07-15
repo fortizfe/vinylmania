@@ -3,9 +3,9 @@ import {
   rawCollectionInstance,
   stubCollectionFields,
   stubCollectionPage,
-} from '../helpers/nock';
+} from '../../helpers/nock';
 
-import { logger } from '../../src/config/logger';
+import { logger } from '../../../src/config/logger';
 import {
   addReleaseToCollection,
   deleteInstance,
@@ -14,18 +14,18 @@ import {
   listAllInstances,
   setFieldValue,
   setRating,
-} from '../../src/discogs/collection/collectionClient';
-import type { CollectionFieldMap } from '../../src/discogs/collection/collectionTypes';
-import { getRelease } from '../../src/adapters/discogsCatalog/discogsCatalogAdapter';
+} from '../../../src/adapters/discogsOauth/discogsCollectionAdapter';
+import type { CollectionFieldMap } from '../../../src/domain/discogsOauth/collectionTypes';
+import { getRelease } from '../../../src/adapters/discogsCatalog/discogsCatalogAdapter';
 import {
   DiscogsAuthError,
   DiscogsNotFoundError,
   DiscogsRateLimitError,
   DiscogsUnavailableError,
-} from '../../src/discogs/discogsErrors';
-import { MAX_WAIT_MS } from '../../src/discogs/discogsRateLimiter';
-import { MAX_ATTEMPTS } from '../../src/discogs/discogsRetry';
-import type { DiscogsConnection } from '../../src/discogs/oauth/types';
+} from '../../../src/discogs/discogsErrors';
+import { MAX_WAIT_MS } from '../../../src/discogs/discogsRateLimiter';
+import { MAX_ATTEMPTS } from '../../../src/discogs/discogsRetry';
+import type { DiscogsConnection } from '../../../src/domain/discogsOauth/types';
 
 const connection: DiscogsConnection = {
   uid: 'user-1',

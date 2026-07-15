@@ -3,7 +3,7 @@ import {
   buildIdentityHeader,
   buildProtectedResourceHeader,
   buildRequestTokenHeader,
-} from '../../src/discogs/oauth/oauthSignature';
+} from '../../../../src/adapters/discogsOauth/oauthSignature';
 
 const CREDENTIALS = { consumerKey: 'test-key', consumerSecret: 'test-secret' };
 

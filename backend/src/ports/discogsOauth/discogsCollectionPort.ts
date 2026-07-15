@@ -2,8 +2,8 @@ import type {
   CollectionFieldMap,
   CollectionInstance,
   InstanceRef,
-} from '../../discogs/collection/collectionTypes';
-import type { DiscogsConnection } from '../../discogs/oauth/types';
+} from '../../domain/discogsOauth/collectionTypes';
+import type { DiscogsConnection } from '../../domain/discogsOauth/types';
 
 export interface DiscogsCollectionPort {
   getFieldMap(connection: DiscogsConnection): Promise<CollectionFieldMap>;

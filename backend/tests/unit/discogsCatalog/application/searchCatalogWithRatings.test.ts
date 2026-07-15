@@ -20,6 +20,7 @@ function fakeCache(): jest.Mocked<CachePort> {
     set: jest.fn().mockResolvedValue(undefined),
     // Passthrough: this test is about enrichment, not caching mechanics.
     withCache: jest.fn().mockImplementation((_key, _ttl, fetcher) => fetcher()),
+    invalidate: jest.fn().mockResolvedValue(undefined),
   };
 }
 

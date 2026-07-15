@@ -1,12 +1,12 @@
-import type { CollectionInstance } from '../../../../src/discogs/collection/collectionTypes';
-import type { DiscogsConnection } from '../../../../src/discogs/oauth/types';
+import type { CollectionInstance } from '../../../../src/domain/discogsOauth/collectionTypes';
+import type { DiscogsConnection } from '../../../../src/domain/discogsOauth/types';
 import type { LibraryEntry } from '../../../../src/domain/library/types';
 import { DiscogsNotLinkedError } from '../../../../src/domain/library/libraryErrors';
 import { DiscogsUnavailableError } from '../../../../src/discogs/discogsErrors';
 import { createSyncLibraryUseCase } from '../../../../src/application/library/syncLibrary';
 import type { LibraryRepositoryPort } from '../../../../src/ports/library/libraryRepositoryPort';
-import type { DiscogsCollectionPort } from '../../../../src/ports/library/discogsCollectionPort';
-import type { DiscogsConnectionPort } from '../../../../src/ports/library/discogsConnectionPort';
+import type { DiscogsCollectionPort } from '../../../../src/ports/discogsOauth/discogsCollectionPort';
+import type { DiscogsConnectionPort } from '../../../../src/ports/discogsOauth/discogsConnectionPort';
 import type { CachePort } from '../../../../src/ports/cache/cachePort';
 
 const UID = 'user-1';
@@ -89,7 +89,14 @@ function fakeDiscogsCollection(): jest.Mocked<DiscogsCollectionPort> {
 
 function fakeDiscogsConnection(): jest.Mocked<DiscogsConnectionPort> {
   return {
+    createPendingRequest: jest.fn(),
+    getPendingRequest: jest.fn(),
+    deletePendingRequest: jest.fn(),
+    exchangeAccessToken: jest.fn(),
+    fetchIdentity: jest.fn(),
+    saveConnection: jest.fn(),
     getConnection: jest.fn().mockResolvedValue(connection()),
+    deleteConnection: jest.fn(),
     markInitialLibrarySync: jest.fn().mockResolvedValue(undefined),
   };
 }
@@ -102,6 +109,7 @@ function fakeCache(): jest.Mocked<CachePort> {
     has: jest.fn().mockResolvedValue(false),
     set: jest.fn().mockResolvedValue(undefined),
     withCache: jest.fn().mockImplementation((_key, _ttl, fetcher) => fetcher()),
+    invalidate: jest.fn().mockResolvedValue(undefined),
   };
 }
 

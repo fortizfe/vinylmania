@@ -1,4 +1,4 @@
-import { withCache as withCacheAside } from '../../cache/cacheAside';
+import { invalidateCache, withCache as withCacheAside } from '../../cache/cacheAside';
 import { getRedisClient } from '../../cache/redisClient';
 import type { CachePort } from '../../ports/cache/cachePort';
 
@@ -37,4 +37,8 @@ function withCache<T>(
   return withCacheAside(key, ttlSeconds, fetcher);
 }
 
-export const cacheAdapter: CachePort = { has, set, withCache };
+function invalidate(key: string): Promise<void> {
+  return invalidateCache(key);
+}
+
+export const cacheAdapter: CachePort = { has, set, withCache, invalidate };

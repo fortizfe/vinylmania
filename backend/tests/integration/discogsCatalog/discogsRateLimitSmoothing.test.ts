@@ -10,8 +10,8 @@ import { discogsScope } from '../../helpers/nock';
 import {
   addReleaseToCollection,
   listAllInstances,
-} from '../../../src/discogs/collection/collectionClient';
-import type { CollectionFieldMap } from '../../../src/discogs/collection/collectionTypes';
+} from '../../../src/adapters/discogsOauth/discogsCollectionAdapter';
+import type { CollectionFieldMap } from '../../../src/domain/discogsOauth/collectionTypes';
 import { cacheAdapter } from '../../../src/adapters/cache/cacheAdapter';
 import {
   discogsCatalogAdapter,
@@ -21,7 +21,7 @@ import {
 import { createSearchCatalogWithRatingsUseCase } from '../../../src/application/discogsCatalog/searchCatalogWithRatings';
 import { DiscogsRateLimitError } from '../../../src/discogs/discogsErrors';
 import { MAX_WAIT_MS } from '../../../src/discogs/discogsRateLimiter';
-import type { DiscogsConnection } from '../../../src/discogs/oauth/types';
+import type { DiscogsConnection } from '../../../src/domain/discogsOauth/types';
 
 const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
   discogsCatalog: discogsCatalogAdapter,

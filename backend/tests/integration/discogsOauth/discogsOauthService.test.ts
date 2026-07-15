@@ -1,18 +1,25 @@
-import { getFirestoreDb } from '../../src/config/firebase-admin';
-import { logger } from '../../src/config/logger';
+import { getFirestoreDb } from '../../../src/config/firebase-admin';
+import { logger } from '../../../src/config/logger';
 import {
   DiscogsRateLimitError,
   DiscogsUnavailableError,
-} from '../../src/discogs/discogsErrors';
-import {
-  completeLink,
-  DiscogsOauthFlowError,
-  disconnect,
-  getConnection,
-  startLink,
-} from '../../src/discogs/oauth/discogsOauthService';
-import { clearEmulatorFirestore } from '../helpers/authEmulator';
-import { discogsScope } from '../helpers/nock';
+} from '../../../src/discogs/discogsErrors';
+import { cacheAdapter } from '../../../src/adapters/cache/cacheAdapter';
+import { discogsConnectionAdapter } from '../../../src/adapters/discogsOauth/discogsConnectionAdapter';
+import { createCompleteLinkUseCase } from '../../../src/application/discogsOauth/completeLink';
+import { createDisconnectConnectionUseCase } from '../../../src/application/discogsOauth/disconnectConnection';
+import { createStartLinkUseCase } from '../../../src/application/discogsOauth/startLink';
+import { DiscogsOauthFlowError } from '../../../src/domain/discogsOauth/discogsOauthErrors';
+import { clearEmulatorFirestore } from '../../helpers/authEmulator';
+import { discogsScope } from '../../helpers/nock';
+
+const { getConnection } = discogsConnectionAdapter;
+const startLink = createStartLinkUseCase({ discogsConnection: discogsConnectionAdapter });
+const completeLink = createCompleteLinkUseCase({ discogsConnection: discogsConnectionAdapter });
+const disconnectConnection = createDisconnectConnectionUseCase({
+  discogsConnection: discogsConnectionAdapter,
+  cache: cacheAdapter,
+});
 
 const REQUEST_TOKEN_BODY =
   'oauth_token=req-tok&oauth_token_secret=req-sec&oauth_callback_confirmed=true';
@@ -198,7 +205,7 @@ describe('discogsOauthService', () => {
         linkedAt: new Date(),
       });
 
-      await disconnect('user-a');
+      await disconnectConnection('user-a');
 
       expect((await connectionDoc('user-a').get()).exists).toBe(false);
       expect(infoSpy).toHaveBeenCalledWith(
@@ -207,7 +214,7 @@ describe('discogsOauthService', () => {
     });
 
     it('is idempotent when nothing is stored', async () => {
-      await expect(disconnect('user-none')).resolves.toBeUndefined();
+      await expect(disconnectConnection('user-none')).resolves.toBeUndefined();
     });
   });
 

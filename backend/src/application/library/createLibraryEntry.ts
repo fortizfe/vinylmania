@@ -7,8 +7,8 @@ import {
 } from '../../discogs/discogsErrors';
 import type { Release } from '../../domain/discogsCatalog/types';
 import type { EntryDiscogsData, LibraryEntry } from '../../domain/library/types';
-import type { DiscogsCollectionPort } from '../../ports/library/discogsCollectionPort';
-import type { DiscogsConnectionPort } from '../../ports/library/discogsConnectionPort';
+import type { DiscogsCollectionPort } from '../../ports/discogsOauth/discogsCollectionPort';
+import type { DiscogsConnectionPort } from '../../ports/discogsOauth/discogsConnectionPort';
 import type { LibraryRepositoryPort } from '../../ports/library/libraryRepositoryPort';
 import { requireConnection } from './syncLibrary';
 

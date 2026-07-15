@@ -1,7 +1,7 @@
-import type { InstanceRef } from '../../discogs/collection/collectionTypes';
+import type { InstanceRef } from '../../domain/discogsOauth/collectionTypes';
 import { FieldNotEditableError } from '../../domain/library/libraryErrors';
-import type { DiscogsCollectionPort } from '../../ports/library/discogsCollectionPort';
-import type { DiscogsConnectionPort } from '../../ports/library/discogsConnectionPort';
+import type { DiscogsCollectionPort } from '../../ports/discogsOauth/discogsCollectionPort';
+import type { DiscogsConnectionPort } from '../../ports/discogsOauth/discogsConnectionPort';
 import type { LibraryRepositoryPort } from '../../ports/library/libraryRepositoryPort';
 import { getCopyData, resolveManagedRef } from './discogsCopyData';
 import type { EnrichLibraryEntryUseCase } from './enrichLibraryEntry';

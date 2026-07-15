@@ -1,17 +1,16 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 
-import { logger } from '../config/logger';
-import { DiscogsError } from '../discogs/discogsErrors';
-import {
-  completeLink,
-  disconnect,
-  DiscogsOauthFlowError,
-  getConnection,
-  getStatus,
-  startLink,
-} from '../discogs/oauth/discogsOauthService';
-import { requireAuth } from '../middleware/requireAuth';
+import { logger } from '../../config/logger';
+import { DiscogsError } from '../../discogs/discogsErrors';
+import { DiscogsOauthFlowError } from '../../domain/discogsOauth/discogsOauthErrors';
+import { requireAuth } from '../../middleware/requireAuth';
+import { createCompleteLinkUseCase } from '../../application/discogsOauth/completeLink';
+import { createDisconnectConnectionUseCase } from '../../application/discogsOauth/disconnectConnection';
+import { createGetConnectionStatusUseCase } from '../../application/discogsOauth/getConnectionStatus';
+import { createStartLinkUseCase } from '../../application/discogsOauth/startLink';
+import { cacheAdapter } from '../cache/cacheAdapter';
+import { discogsConnectionAdapter } from './discogsConnectionAdapter';
 
 export const discogsOauthRouter = Router();
 
@@ -25,6 +24,18 @@ const ALREADY_CONNECTED = {
 const completeBodySchema = z.object({
   oauthToken: z.string().min(1),
   oauthVerifier: z.string().min(1),
+});
+
+const startLink = createStartLinkUseCase({ discogsConnection: discogsConnectionAdapter });
+const completeLink = createCompleteLinkUseCase({
+  discogsConnection: discogsConnectionAdapter,
+});
+const getConnectionStatus = createGetConnectionStatusUseCase({
+  discogsConnection: discogsConnectionAdapter,
+});
+const disconnectConnection = createDisconnectConnectionUseCase({
+  discogsConnection: discogsConnectionAdapter,
+  cache: cacheAdapter,
 });
 
 function handleFailure(
@@ -85,10 +96,6 @@ function handleFailure(
 discogsOauthRouter.post('/request', async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   try {
-    if (await getConnection(uid)) {
-      res.status(409).json(ALREADY_CONNECTED);
-      return;
-    }
     const { authorizeUrl } = await startLink(uid);
     res.status(200).json({ authorizeUrl });
   } catch (err) {
@@ -109,10 +116,6 @@ discogsOauthRouter.post('/complete', async (req: Request, res: Response) => {
   }
 
   try {
-    if (await getConnection(uid)) {
-      res.status(409).json(ALREADY_CONNECTED);
-      return;
-    }
     const status = await completeLink(
       uid,
       parsed.data.oauthToken,
@@ -127,7 +130,7 @@ discogsOauthRouter.post('/complete', async (req: Request, res: Response) => {
 discogsOauthRouter.delete('/connection', async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   try {
-    await disconnect(uid);
+    await disconnectConnection(uid);
     res.status(204).send();
   } catch (err) {
     handleFailure(res, '/api/discogs/oauth/connection', uid, err);
@@ -137,7 +140,7 @@ discogsOauthRouter.delete('/connection', async (req: Request, res: Response) => 
 discogsOauthRouter.get('/status', async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   try {
-    res.status(200).json(await getStatus(uid));
+    res.status(200).json(await getConnectionStatus(uid));
   } catch (err) {
     handleFailure(res, '/api/discogs/oauth/status', uid, err);
   }
