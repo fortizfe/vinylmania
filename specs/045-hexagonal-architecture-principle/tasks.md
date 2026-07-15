@@ -38,7 +38,7 @@ crea código bajo `backend/src` (ver plan.md § Structure Decision).
 **Purpose**: Confirmar el estado base antes de editar la constitution, para que el
 diff resultante sea auditable frente al Sync Impact Report existente.
 
-- [ ] T001 Verificar el estado base de `.specify/memory/constitution.md`: versión
+- [X] T001 Verificar el estado base de `.specify/memory/constitution.md`: versión
   actual `2.4.0`, 7 Core Principles (I-VII), y que el comentario Sync Impact Report
   documenta el cambio `2.3.0 → 2.4.0` (sin editar el fichero todavía; solo confirmar
   baseline antes de T002).
@@ -67,7 +67,7 @@ ficheros de ejemplo listados allí.
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] Redactar el encabezado y el cuerpo central del nuevo
+- [X] T002 [US1] Redactar el encabezado y el cuerpo central del nuevo
   `### VIII. Hexagonal Architecture (Ports & Adapters)` en
   `.specify/memory/constitution.md` (insertado inmediatamente después del Principio
   VII, antes de `## Additional Constraints`): fijar en lenguaje MUST las cuatro capas
@@ -75,46 +75,46 @@ ficheros de ejemplo listados allí.
   dominio y aplicación NO DEBEN importar `firebase-admin`, `axios`, `ioredis` ni
   `rss-parser` directamente; solo los adaptadores pueden hacerlo (ver data-model.md §
   Entidad: Capa).
-- [ ] T003 [US1] Añadir al cuerpo del Principio VIII (mismo bloque de
+- [X] T003 [US1] Añadir al cuerpo del Principio VIII (mismo bloque de
   `.specify/memory/constitution.md`) la cláusula sobre adaptadores "driving": las
   rutas Express traducen HTTP ↔ casos de uso de aplicación y NO DEBEN contener
   orquestación de lógica de negocio (depende de T002; mismo fichero, no paralelizable).
-- [ ] T004 [US1] Añadir al cuerpo del Principio VIII la convención de carpetas por
+- [X] T004 [US1] Añadir al cuerpo del Principio VIII la convención de carpetas por
   capas globales (`src/domain/`, `src/application/`, `src/ports/`, `src/adapters/`,
   con subcarpeta por dominio dentro de cada una) en
   `.specify/memory/constitution.md` (depende de T002).
-- [ ] T005 [US1] Añadir al cuerpo del Principio VIII la cláusula sobre módulos
+- [X] T005 [US1] Añadir al cuerpo del Principio VIII la cláusula sobre módulos
   transversales sin dependencias de infraestructura (`config/logger.ts`,
   `shared/concurrency.ts`/`mapWithConcurrency`): quedan fuera de la regla de
   dependencia sin necesitar una excepción "shared kernel" declarada, en
   `.specify/memory/constitution.md` (depende de T002).
-- [ ] T006 [US1] Añadir al cuerpo del Principio VIII la cláusula de alcance
+- [X] T006 [US1] Añadir al cuerpo del Principio VIII la cláusula de alcance
   explícito: aplica solo a `backend/`, no a `frontend/` ni a `e2e/`, en
   `.specify/memory/constitution.md` (depende de T002).
-- [ ] T007 [US1] Redactar el párrafo `**Rationale**:` del Principio VIII en
+- [X] T007 [US1] Redactar el párrafo `**Rationale**:` del Principio VIII en
   `.specify/memory/constitution.md`, citando explícitamente el patrón de errores de
   dominio ya existente (`DiscogsError` con `code` tipado, `DiscogsNotLinkedError`,
   `FieldNotEditableError`, `DiscogsOauthFlowError`, y las funciones de traducción
   `respondCollectionError`/`handleFailure` que solo viven en las rutas) como el
   mecanismo de manejo de errores ya conforme, a preservar y generalizar (depende de
   T002-T006; ver data-model.md § Entidad: Patrón de Error de Dominio).
-- [ ] T008 [US1] Bump de versión en `.specify/memory/constitution.md`: actualizar
+- [X] T008 [US1] Bump de versión en `.specify/memory/constitution.md`: actualizar
   `**Version**: 2.4.0` → `2.5.0` y `**Last Amended**` a la fecha real de la amendment
   (depende de T002-T007 estando ya redactados).
-- [ ] T009 [US1] Reemplazar el comentario "Sync Impact Report" al inicio de
+- [X] T009 [US1] Reemplazar el comentario "Sync Impact Report" al inicio de
   `.specify/memory/constitution.md` por uno nuevo que documente `Version change:
   2.4.0 → 2.5.0`, `Modified principles: none`, `Added sections: Principio VIII
   (Hexagonal Architecture)`, dejando pendientes de marcar las entradas de
   `Templates requiring updates` hasta T012 (depende de T008).
-- [ ] T010 [P] [US1] Revisar `.specify/templates/plan-template.md` frente al
+- [X] T010 [P] [US1] Revisar `.specify/templates/plan-template.md` frente al
   Principio VIII: si necesita un gate explícito de "¿esta feature de backend respeta
   el Principio VIII?", añadirlo (siguiendo el patrón ya usado ad-hoc en
   `specs/045-hexagonal-architecture-principle/plan.md` § Constitution Check); si no
   lo necesita, no modificar el fichero.
-- [ ] T011 [P] [US1] Revisar `.specify/templates/spec-template.md` frente al
+- [X] T011 [P] [US1] Revisar `.specify/templates/spec-template.md` frente al
   Principio VIII: aplicar el mismo criterio que T010 (añadir gate si aplica, o dejar
   sin cambios).
-- [ ] T012 [US1] Completar la fila `Templates requiring updates` del Sync Impact
+- [X] T012 [US1] Completar la fila `Templates requiring updates` del Sync Impact
   Report en `.specify/memory/constitution.md` con el resultado real de T010 y T011
   (✅ "sin cambios necesarios" o la descripción del gate añadido a cada plantilla)
   (depende de T009, T010, T011).
@@ -129,14 +129,14 @@ historia de este feature) es completa y verificable de forma independiente.
 
 **Purpose**: Validación final end-to-end de la historia completa.
 
-- [ ] T013 Ejecutar los 6 pasos de `specs/045-hexagonal-architecture-principle/quickstart.md`
+- [X] T013 Ejecutar los 6 pasos de `specs/045-hexagonal-architecture-principle/quickstart.md`
   contra el `.specify/memory/constitution.md` final y registrar el resultado de cada
   paso (versión/fecha, Sync Impact Report, existencia y formato del Principio VIII,
   prueba de clasificación sin ambigüedad sobre los 5 ficheros de ejemplo, cláusula de
   alcance, plantillas revisadas). Añadir un séptimo chequeo (FR-012): ejecutar
   `git diff --stat main -- backend/src` (o equivalente) y confirmar que no devuelve
   ningún fichero modificado.
-- [ ] T014 Si algún paso de T013 falla o queda ambiguo, corregir la redacción
+- [X] T014 Si algún paso de T013 falla o queda ambiguo, corregir la redacción
   correspondiente del Principio VIII en `.specify/memory/constitution.md` y repetir
   T013 hasta que los 6 pasos pasen.
 
