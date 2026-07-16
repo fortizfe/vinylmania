@@ -2,11 +2,11 @@ import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 
 import { logger } from './config/logger';
-import { authRouter } from './routes/auth';
-import { discogsRouter } from './routes/discogs';
-import { discogsOauthRouter } from './routes/discogsOauth';
-import { feedsRouter } from './routes/feeds';
-import { libraryRouter } from './routes/library';
+import { authRouter } from './adapters/users/authRoutes';
+import { discogsRouter } from './adapters/discogsCatalog/discogsRoutes';
+import { discogsOauthRouter } from './adapters/discogsOauth/discogsRoutes';
+import { feedsRouter } from './adapters/feeds/feedsRoutes';
+import { libraryRouter } from './adapters/library/libraryRoutes';
 
 export function createApp(): express.Express {
   const app = express();

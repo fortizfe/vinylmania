@@ -1,35 +1,32 @@
 <!--
 Sync Impact Report
-Version change: 2.3.0 → 2.4.0
+Version change: 2.4.0 → 2.5.0
 Modified principles: none (existing principles I-VII unchanged)
-Added sections: none
-Changed sections:
-  - UI Design System & Styling: "Visual lightness" replaced with "Visual
-    lightness & brand personality" — the palette requirement flips from a
-    reduced gray/slate + single accent to a warm-neutral (stone) family
-    plus a mandatory dual accent (--color-primary indigo as the sole
-    primary-action color, --color-accent amber for secondary emphasis); the
-    typography rule now carries a scoped exception allowing the brand
-    display typeface (--font-display, Anton) on page headers, pillar
-    headers, and single-record showcase titles (never body text, labels,
-    data values, or repeated per-item titles). "Theme-variable dark mode"
-    gains an appended clause requiring the near-black --color-surface/
-    --color-surface-raised tokens (not generic gray-950/900) for dark
-    mode's primary/elevated surfaces, plus a no-CLS rule for headings using
-    --font-display. "Skeleton loading states" example utilities updated
-    from bg-gray-200/dark:bg-gray-800 to bg-stone-200/dark:bg-surface-raised
-    to match the palette rebuild — the loading-state requirement itself
-    (mirror exact shape/dimensions, no generic spinners) is unchanged. Every
-    other "UI Design System & Styling" bullet (CSS-first configuration,
-    card-based layout, reusable atomic components, no layout shift, dual
-    responsive layout, minimum touch target size, v4-current utility
-    naming, no custom CSS without justification) is textually unchanged.
-Removed sections: none (rules replaced/amended in place, not deleted)
+Added sections:
+  - New Core Principle VIII: "Hexagonal Architecture (Ports & Adapters) —
+    Backend". Fixes the four mandatory backend layers (Domain, Application,
+    Ports, Adapters), the dependency rule (Domain/Application MUST NOT import
+    `firebase-admin`/`axios`/`ioredis`/`rss-parser` directly), the driving-adapter
+    role of Express routes, the global-layer folder convention
+    (`backend/src/{domain,application,ports,adapters}/<domain>/`), the
+    transversal-module carve-out (logger, pure concurrency utilities), the
+    explicit backend-only scope (excludes frontend/e2e), and cites the
+    existing `DiscogsError`/`respondCollectionError`/`handleFailure` pattern
+    as the mandatory model for domain-error handling to generalize, not
+    replace.
+Changed sections: none
+Removed sections: none
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (no palette/typography-specific references; no change needed)
-  ✅ .specify/templates/spec-template.md (no palette/typography-specific references; no change needed)
-  ✅ .specify/templates/tasks-template.md (no palette/typography-specific references; no change needed)
-  ✅ .specify/templates/checklist-template.md (generic checklist template; no conflicting gate)
+  ✅ .specify/templates/plan-template.md (Constitution Check is a generic
+     "[Gates determined based on constitution file]" placeholder re-evaluated
+     per feature against whatever principles exist; no principle — including
+     I-VII — is hardcoded into it, so Principle VIII needs no template change)
+  ✅ .specify/templates/spec-template.md (no architecture/layer-specific
+     section exists for any principle; no change needed)
+  ✅ .specify/templates/tasks-template.md (no palette/typography/architecture-
+     specific references; no change needed)
+  ✅ .specify/templates/checklist-template.md (generic checklist template; no
+     conflicting gate)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
 Follow-up TODOs: none
 -->
@@ -124,6 +121,46 @@ their data boundaries (user-state vs. external content vs. Discogs catalog) and
 resilience expectations explicit as the app adds more feeds and rating surfaces. A
 rock/metal default reflects the project's actual focus (see existing news sources like
 Metal Injection and Metal Storm) while keeping the door open to other genres.
+
+### VIII. Hexagonal Architecture (Ports & Adapters) — Backend
+All `backend/` code MUST be organized into four layers: **Domain** (business rules,
+entities, and domain-specific errors, with no knowledge of HTTP or any SDK), **Application**
+(use cases that orchestrate domain logic and ports, with no knowledge of concrete
+infrastructure), **Ports** (interfaces that declare an infrastructure contract without
+implementing it), and **Adapters** (concrete implementations of a port, or translators
+between an external protocol and the application layer). Domain and Application code
+MUST NOT import infrastructure SDKs directly (`firebase-admin`, `axios`, `ioredis`,
+`rss-parser`, or any equivalent future SDK) — only Adapters MAY import them. Express
+routes and Express middleware (e.g. authentication middleware) are both **driving**
+adapters: their sole responsibility is translating an HTTP request into an application
+use-case invocation (or, for middleware, into a port call that enriches the request)
+and translating the result — or a thrown domain error — back into an HTTP response or
+the next middleware step; neither routes nor middleware MUST contain business
+orchestration logic, and neither MUST import an infrastructure SDK directly — they MUST
+depend on a port instead. The four layers MUST live under global, backend-wide folders —
+`backend/src/domain/`, `backend/src/application/`, `backend/src/ports/`, and
+`backend/src/adapters/` — each containing one subfolder per business domain (e.g.
+`backend/src/domain/library/`, `backend/src/adapters/library/`). Modules with no
+infrastructure dependency (e.g. the logger, or pure algorithmic utilities such as a
+concurrency helper) are transversal: they already satisfy the dependency rule as
+written and MAY be consumed from any layer without a dedicated "shared kernel"
+exception or a port. This principle governs `backend/` only; it does not apply to
+`frontend/` or `e2e/`, which are governed by their own principles and stack rules
+elsewhere in this document.
+**Rationale**: A backend where business rules import infrastructure SDKs directly
+cannot be unit-tested without real Firestore/Discogs/Redis/RSS access, and cannot swap
+an implementation (e.g. a cache backend) without touching domain code — both violate
+Principle I (Test-First) and Principle IV (SOLID's Dependency Inversion) in practice,
+even though nothing today enforces it explicitly. The project already has a working,
+conformant example of this separation for error handling: the `DiscogsError` hierarchy
+(with a typed `code`: `not_found`/`rate_limited`/`unavailable`/`validation_error`/
+`auth_failed`) and sibling errors like `DiscogsNotLinkedError`, `FieldNotEditableError`,
+and `DiscogsOauthFlowError` are thrown by domain logic with no knowledge of HTTP, while
+only the routes (via functions such as `respondCollectionError`/`handleFailure`)
+translate them into status codes. This principle codifies that existing pattern as the
+mandatory model for every backend domain, rather than inventing a new error-handling
+mechanism, so that future backend work — migrated or new — is consistent by default
+instead of by convention alone.
 
 ## Additional Constraints (Web Application Standards)
 
@@ -338,4 +375,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 2.4.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-13
+**Version**: 2.5.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-15
