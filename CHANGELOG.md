@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [0.28.0] - 2026-07-16
+
+### Added
+
+- Hexagonal Architecture (Ports & Adapters) migration ([ad156a9])
+
 ## [0.27.0] - 2026-07-14
 
 ### Added
