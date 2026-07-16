@@ -25,8 +25,9 @@ other — see "Known limitations" at the end.
 
 - Push access to `fortizfe/vinylmania` on GitHub
 - A Vercel account with permission to import that repository
-- Access to the project's Firebase console and Discogs developer account, to
-  obtain the real credential values referenced below
+- Access to the project's Firebase console, Discogs developer account, and
+  Google Cloud Console project, to obtain the real credential values
+  referenced below
 
 ## Step 1 — Create the backend project
 
@@ -51,6 +52,14 @@ following, scoped to **Production**:
 | `DISCOGS_USER_AGENT` | Required `User-Agent` header for Discogs API requests | Any descriptive string you choose, e.g. `Vinylmania/1.0 +https://vinylmania-frontend.vercel.app` |
 | `FRONTEND_ORIGIN` | CORS allow-list — must exactly match the frontend's URL (no trailing slash) | Not known yet — set a temporary placeholder now (e.g. `https://localhost`) and come back to fix it in Step 5 |
 | `REDIS_URL` | Connection string for the Redis instance backing the Discogs response cache | Your managed Redis provider's connection string (e.g. `redis://` or `rediss://`). The backend falls back to uncached direct fetches if this is unset or unreachable, so it's safe to add later, but caching won't be active until it's set. |
+| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth 2.0 client id for the backend-mediated login flow | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → **Create Credentials → OAuth client ID** → Application type **Web application**. Add the frontend's `/login/callback` URL (from Step 3, e.g. `https://<your-frontend-project>.vercel.app/login/callback`) under **Authorized redirect URIs**. |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth 2.0 client secret | Same OAuth client as above — shown once when the client is created, or re-viewable/regenerable from the client's detail page. |
+| `GOOGLE_OAUTH_CALLBACK_URL` | Must exactly match the redirect URI registered on the OAuth client above | The frontend's `/login/callback` URL — not known until Step 3, same placeholder-then-fix-in-Step-5 treatment as `FRONTEND_ORIGIN`. |
+
+Without all three `GOOGLE_OAUTH_*` variables set, `GET /api/auth/google/authorize`
+fails with a `500 internal_error` (logged server-side as "GOOGLE_OAUTH_CLIENT_ID
+/ GOOGLE_OAUTH_CLIENT_SECRET / GOOGLE_OAUTH_CALLBACK_URL are not configured") —
+if "Sign in with Google" shows an internal error, check these three first.
 
 After adding these, trigger a redeploy (Vercel does this automatically on the
 next push to `main`, or use **Deployments → Redeploy**).
@@ -77,26 +86,31 @@ the following, scoped to **Production**:
 | Variable | What it's for | Where the real value comes from |
 |---|---|---|
 | `VITE_API_BASE_URL` | Base URL every backend request is sent to | The backend project's URL from Step 1 (no trailing slash) |
-| `VITE_FIREBASE_API_KEY` | Firebase client SDK config | Firebase Console → Project Settings → General → your web app's config object |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase client SDK config | Same as above |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase client SDK config | Same as above |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase client SDK config | Same as above |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase client SDK config | Same as above |
-| `VITE_FIREBASE_APP_ID` | Firebase client SDK config | Same as above |
 
-Firebase's client-side config values are not secret (they're protected by
-Firebase security rules, not by being hidden) but are still kept as
-environment variables here for per-environment flexibility.
+That's the only one. The frontend no longer talks to Firebase or Google
+directly at all — login is a full-page redirect to the backend's
+`/api/auth/google/authorize`, mediated entirely server-side (see
+[specs/051-frontend-backend-only-network](../specs/051-frontend-backend-only-network/)).
+There is nothing Firebase-related to configure on this project; any
+`VITE_FIREBASE_*` variable left over from before that migration is dead and
+can be removed.
 
-Redeploy the frontend after adding these (Vite bakes environment variables in
+Redeploy the frontend after adding this (Vite bakes environment variables in
 at build time, so a plain "restart" isn't enough — it needs a rebuild).
 
 ## Step 5 — Close the loop: point the backend at the real frontend URL
 
 Now that the frontend's real URL exists (Step 3), go back to the **backend**
-project's environment variables and update `FRONTEND_ORIGIN` to that exact URL
-(no trailing slash; comma-separate if you ever need more than one allowed
-origin). Redeploy the backend once more.
+project's environment variables and update:
+
+- `FRONTEND_ORIGIN` to that exact URL (no trailing slash; comma-separate if
+  you ever need more than one allowed origin)
+- `GOOGLE_OAUTH_CALLBACK_URL` to `<frontend URL>/login/callback` — and make
+  sure that exact URL is also registered as an **Authorized redirect URI**
+  on the Google OAuth client from Step 2 (Google rejects the exchange if it
+  doesn't match exactly)
+
+Redeploy the backend once more.
 
 ## Step 6 — Verify the full setup
 
