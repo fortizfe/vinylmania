@@ -2,7 +2,7 @@ import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 
 import { logger } from './config/logger';
-import { authRouter } from './routes/auth';
+import { authRouter } from './adapters/users/authRoutes';
 import { discogsRouter } from './adapters/discogsCatalog/discogsRoutes';
 import { discogsOauthRouter } from './adapters/discogsOauth/discogsRoutes';
 import { feedsRouter } from './adapters/feeds/feedsRoutes';
