@@ -16,11 +16,29 @@ test.describe('Sign-in journey (US1)', () => {
     });
 
     // Reaching /app with the Dashboard rendered — which AuthenticatedLayout
-    // only renders once a real session has been established via
-    // POST /api/auth/session — is the authenticated-state signal here.
+    // only renders once a real session has been established via the
+    // backend-mediated POST /api/auth/google/complete exchange, driven by
+    // LoginCallbackPage after the redirect chain returns from the Google
+    // stub — is the authenticated-state signal here.
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByTestId('dashboard-page')).toBeVisible();
     await expect(page.getByRole('button', { name: /sign out/i })).toBeVisible();
+  });
+
+  test('returns to the landing page with no session when the user denies access on the Google stub (FR-014)', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('landing-viewport')).toBeVisible();
+
+    await page.getByRole('button', { name: /sign in with google/i }).click();
+    await page.waitForSelector('#deny');
+    await page.locator('#deny').click();
+
+    await expect(page).toHaveURL('/');
+    await expect(page.getByTestId('landing-viewport')).toBeVisible();
+    await expect(page.getByRole('button', { name: /sign in with google/i })).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(/cancelled/i);
   });
 
   test('keeps the sign-in header visible after scrolling past the pillar sections (US2)', async ({

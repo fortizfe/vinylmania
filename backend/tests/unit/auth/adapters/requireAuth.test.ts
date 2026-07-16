@@ -6,7 +6,7 @@ import type { AuthVerifierPort } from '../../../../src/ports/auth/authVerifierPo
 
 function fakeAuthVerifier(overrides: Partial<jest.Mocked<AuthVerifierPort>> = {}): jest.Mocked<AuthVerifierPort> {
   return {
-    verifyIdToken: jest.fn(),
+    verifySession: jest.fn(),
     ...overrides,
   };
 }
@@ -42,7 +42,7 @@ describe('createRequireAuth', () => {
 
     await requireAuth(req, res, next);
 
-    expect(authVerifier.verifyIdToken).not.toHaveBeenCalled();
+    expect(authVerifier.verifySession).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'unauthorized' }));
     expect(next).not.toHaveBeenCalled();
@@ -57,14 +57,14 @@ describe('createRequireAuth', () => {
 
     await requireAuth(req, res, next);
 
-    expect(authVerifier.verifyIdToken).not.toHaveBeenCalled();
+    expect(authVerifier.verifySession).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
   });
 
   it('sets req.auth and calls next() when the port resolves', async () => {
     const authVerifier = fakeAuthVerifier({
-      verifyIdToken: jest.fn().mockResolvedValue(authenticatedUser),
+      verifySession: jest.fn().mockResolvedValue(authenticatedUser),
     });
     const requireAuth = createRequireAuth({ authVerifier });
     const req = mockReq('Bearer valid-token');
@@ -73,7 +73,7 @@ describe('createRequireAuth', () => {
 
     await requireAuth(req, res, next);
 
-    expect(authVerifier.verifyIdToken).toHaveBeenCalledWith('valid-token');
+    expect(authVerifier.verifySession).toHaveBeenCalledWith('valid-token');
     expect(req.auth).toEqual(authenticatedUser);
     expect(next).toHaveBeenCalledTimes(1);
     expect(res.status).not.toHaveBeenCalled();
@@ -81,7 +81,7 @@ describe('createRequireAuth', () => {
 
   it('responds 401 with the existing error body when the port rejects', async () => {
     const authVerifier = fakeAuthVerifier({
-      verifyIdToken: jest.fn().mockRejectedValue(new Error('invalid token')),
+      verifySession: jest.fn().mockRejectedValue(new Error('invalid token')),
     });
     const requireAuth = createRequireAuth({ authVerifier });
     const req = mockReq('Bearer invalid-token');

@@ -3,7 +3,8 @@ import request from 'supertest';
 import { discogsScope } from '../../helpers/nock';
 import { createApp } from '../../../src/app';
 import { MAX_ATTEMPTS } from '../../../src/discogs/discogsRetry';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 const app = createApp();
 
@@ -38,12 +39,12 @@ describe('Discogs release preview API contract: GET /api/discogs/releases/:disco
   });
 
   it('returns the full release for an authenticated caller', async () => {
-    const { idToken } = await getTestIdToken('preview-user');
+    const { sessionToken } = await createTestSession('preview-user');
     discogsScope().get('/releases/1').reply(200, rawRelease);
 
     const res = await request(app)
       .get('/api/discogs/releases/1')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
@@ -68,19 +69,19 @@ describe('Discogs release preview API contract: GET /api/discogs/releases/:disco
   });
 
   it('returns 404 release_not_found when the release does not exist', async () => {
-    const { idToken } = await getTestIdToken('preview-notfound-user');
+    const { sessionToken } = await createTestSession('preview-notfound-user');
     discogsScope().get('/releases/999999999').reply(404, { message: 'not found' });
 
     const res = await request(app)
       .get('/api/discogs/releases/999999999')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('release_not_found');
   });
 
   it('returns 502 catalog_unavailable when Discogs is rate-limited', async () => {
-    const { idToken } = await getTestIdToken('preview-ratelimit-user');
+    const { sessionToken } = await createTestSession('preview-ratelimit-user');
     discogsScope()
       .get('/releases/1')
       .times(MAX_ATTEMPTS)
@@ -88,7 +89,7 @@ describe('Discogs release preview API contract: GET /api/discogs/releases/:disco
 
     const res = await request(app)
       .get('/api/discogs/releases/1')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(502);
     expect(res.body.error).toBe('catalog_unavailable');

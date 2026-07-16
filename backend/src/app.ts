@@ -6,6 +6,7 @@ import { authRouter } from './adapters/users/authRoutes';
 import { discogsRouter } from './adapters/discogsCatalog/discogsRoutes';
 import { discogsOauthRouter } from './adapters/discogsOauth/discogsRoutes';
 import { feedsRouter } from './adapters/feeds/feedsRoutes';
+import { googleAuthRouter } from './adapters/googleAuth/googleAuthRoutes';
 import { libraryRouter } from './adapters/library/libraryRoutes';
 
 export function createApp(): express.Express {
@@ -23,6 +24,9 @@ export function createApp(): express.Express {
   });
 
   app.use('/api/auth', authRouter);
+  // Public (no requireAuth) — there is no session yet at this point in the
+  // login flow itself.
+  app.use('/api/auth/google', googleAuthRouter);
   // Mounted before /api/discogs so the more specific OAuth path wins.
   app.use('/api/discogs/oauth', discogsOauthRouter);
   app.use('/api/discogs', discogsRouter);

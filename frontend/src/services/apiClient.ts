@@ -1,4 +1,4 @@
-import { firebaseAuth } from './firebaseClient';
+import { clearSessionToken, getSessionToken } from './sessionStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -14,22 +14,35 @@ export class ApiError extends Error {
   }
 }
 
+type UnauthorizedHandler = () => void;
+
+let onUnauthorized: UnauthorizedHandler | null = null;
+
+/** Registered by AuthContext so a 401 from any request can clear the signed-in user. */
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  onUnauthorized = handler;
+}
+
 export async function authorizedFetch(
   path: string,
   options: RequestInit = {},
 ): Promise<Response> {
-  const user = firebaseAuth.currentUser;
-  const idToken = await user?.getIdToken();
+  const token = getSessionToken();
 
   const headers = new Headers(options.headers);
-  if (idToken) {
-    headers.set('Authorization', `Bearer ${idToken}`);
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
   if (options.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+
+  if (response.status === 401) {
+    clearSessionToken();
+    onUnauthorized?.();
+  }
 
   if (!response.ok) {
     const body = await response

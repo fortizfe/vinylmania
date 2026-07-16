@@ -20,6 +20,34 @@ Configuration is loaded from `backend/.env` (gitignored — never commit real va
 | `DISCOGS_OAUTH_CALLBACK_URL` | yes | Absolute URL of the frontend callback route, e.g. `http://localhost:5173/app/profile/discogs/callback` |
 | `DISCOGS_OAUTH_BASE_URL` | test only | Overrides `https://api.discogs.com` for OAuth token/identity endpoints (e2e stub) |
 | `DISCOGS_AUTHORIZE_BASE_URL` | test only | Overrides `https://www.discogs.com/oauth/authorize` (e2e stub) |
+| `GOOGLE_OAUTH_CLIENT_ID` | yes | Google OAuth 2.0 client id (login) |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | yes | Google OAuth 2.0 client secret (login) |
+| `GOOGLE_OAUTH_CALLBACK_URL` | yes | Absolute URL of the frontend login callback route, e.g. `http://localhost:5173/login/callback` |
+| `GOOGLE_OAUTH_BASE_URL` | test only | Overrides `https://accounts.google.com` for the authorize endpoint (e2e stub) |
+| `GOOGLE_TOKEN_BASE_URL` | test only | Overrides `https://oauth2.googleapis.com` for the token endpoint (e2e stub) |
+| `GOOGLE_USERINFO_BASE_URL` | test only | Overrides `https://openidconnect.googleapis.com` for the userinfo endpoint (e2e stub) |
+
+## Firestore TTL policies
+
+Two collections hold ephemeral, self-expiring documents and rely on
+[Firestore TTL](https://firebase.google.com/docs/firestore/ttl) for
+cleanup rather than a cron job. These policies are a one-time manual step
+per Firebase project (not managed by `firebase.json`/`firestore.rules`,
+and not created automatically by this repo):
+
+```bash
+gcloud firestore fields ttl-policies create \
+  --collection-group=sessions --field=expiresAt --project=<FIREBASE_PROJECT_ID>
+
+gcloud firestore fields ttl-policies create \
+  --collection-group=pendingGoogleLogins --field=expiresAt --project=<FIREBASE_PROJECT_ID>
+```
+
+Until the policy is created, expired `sessions`/`pendingGoogleLogins`
+documents are still correctly rejected by application-level `expiresAt`
+checks (see `specs/051-frontend-backend-only-network/data-model.md`) — the
+TTL policy only affects when Firestore physically deletes the stale
+documents, not correctness.
 
 ## Testing
 

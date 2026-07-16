@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
 
 import { requireAuth } from '../../../../src/adapters/auth/requireAuth';
-import { clearEmulatorUsers, getTestIdToken } from '../../../helpers/authEmulator';
+import { clearEmulatorFirestore, clearEmulatorUsers, getTestIdToken } from '../../../helpers/authEmulator';
+import { createTestSession } from '../../../helpers/testSession';
 
 function mockRes() {
   const res = {} as Response;
@@ -16,14 +17,18 @@ function mockReq(authorizationHeader?: string): Request {
   } as unknown as Request;
 }
 
-describe('requireAuth middleware (Auth emulator)', () => {
+describe('requireAuth middleware (Firestore emulator)', () => {
+  afterEach(async () => {
+    await clearEmulatorFirestore();
+  });
+
   afterAll(async () => {
     await clearEmulatorUsers();
   });
 
-  it('calls next() and attaches req.auth for a valid token', async () => {
-    const { idToken, uid } = await getTestIdToken('valid-user');
-    const req = mockReq(`Bearer ${idToken}`);
+  it('calls next() and attaches req.auth for a valid session token', async () => {
+    const { sessionToken, uid } = await createTestSession('valid-user');
+    const req = mockReq(`Bearer ${sessionToken}`);
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
@@ -60,8 +65,8 @@ describe('requireAuth middleware (Auth emulator)', () => {
   });
 
   it('responds 401 when the Authorization header has no Bearer scheme', async () => {
-    const { idToken } = await getTestIdToken('no-scheme-user');
-    const req = mockReq(idToken);
+    const { sessionToken } = await createTestSession('no-scheme-user');
+    const req = mockReq(sessionToken);
     const res = mockRes();
     const next = jest.fn() as NextFunction;
 
@@ -69,5 +74,24 @@ describe('requireAuth middleware (Auth emulator)', () => {
 
     expect(next).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  // FR-019 / quickstart.md Scenario 7: once the backend verifies its own
+  // sessions instead of Firebase ID tokens, a token that used to be valid
+  // (minted via the retained `getTestIdToken`) MUST be rejected — treated
+  // as an ordinary expired session, with no dual-verification path.
+  it('responds 401 for a legacy Firebase ID token (no dual-verification window)', async () => {
+    const { idToken } = await getTestIdToken('legacy-token-user');
+    const req = mockReq(`Bearer ${idToken}`);
+    const res = mockRes();
+    const next = jest.fn() as NextFunction;
+
+    await requireAuth(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: 'unauthorized' }),
+    );
   });
 });

@@ -3,7 +3,8 @@ import request from 'supertest';
 
 import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
 import { FEED_SOURCES } from '../../../src/domain/feeds/feedSources';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 import { createApp } from '../../../src/app';
 
 const app = createApp();
@@ -49,7 +50,7 @@ describe('Feeds dashboard with the expanded real catalog (spec 041 FR-005, FR-00
   });
 
   it('aggregates articles from every new source and isolates one failing new source from the rest (FR-007)', async () => {
-    const { idToken } = await getTestIdToken('feeds-expanded-sources-user');
+    const { sessionToken } = await createTestSession('feeds-expanded-sources-user');
 
     for (const source of FEED_SOURCES) {
       const url = new URL(source.feedUrl);
@@ -73,7 +74,7 @@ describe('Feeds dashboard with the expanded real catalog (spec 041 FR-005, FR-00
 
     const res = await request(app)
       .get('/api/feeds/dashboard')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
 

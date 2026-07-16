@@ -8,7 +8,8 @@ jest.mock('ioredis', () => ({
 }));
 
 import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 // A low-frequency source sharing a category with a prolific one, so the
 // general dashboard view's per-category top-10 cutoff excludes its articles
@@ -86,7 +87,7 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
   });
 
   it("returns the quiet source's article via the direct endpoint even though it doesn't survive the general view's top-10 cutoff (Acceptance Scenario 1, FR-008)", async () => {
-    const { idToken } = await getTestIdToken('feeds-source-direct-user');
+    const { sessionToken } = await createTestSession('feeds-source-direct-user');
 
     // 10 recent items from the prolific source fill the News category's cap
     // entirely, all newer than the quiet source's single article.
@@ -118,7 +119,7 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
 
     const dashboardRes = await request(app)
       .get('/api/feeds/dashboard')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     const newsCategory = dashboardRes.body.categories.find(
       (c: { category: string }) => c.category === 'News',
     );
@@ -129,7 +130,7 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
 
     const directRes = await request(app)
       .get('/api/feeds/sources/direct-quiet')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(directRes.status).toBe(200);
     expect(directRes.body.status).toBe('ok');
@@ -138,7 +139,7 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
   });
 
   it('returns the same, non-duplicated articles for a source that already appears in the general view (Acceptance Scenario 2, FR-009)', async () => {
-    const { idToken } = await getTestIdToken('feeds-source-direct-user-2');
+    const { sessionToken } = await createTestSession('feeds-source-direct-user-2');
 
     nock('https://direct-prolific.test')
       .get('/rss')
@@ -157,7 +158,7 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
 
     const dashboardRes = await request(app)
       .get('/api/feeds/dashboard')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     const newsCategory = dashboardRes.body.categories.find(
       (c: { category: string }) => c.category === 'News',
     );
@@ -167,7 +168,7 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
 
     const directRes = await request(app)
       .get('/api/feeds/sources/direct-prolific')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(directRes.status).toBe(200);
     expect(directRes.body.status).toBe('ok');
@@ -176,21 +177,21 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
   });
 
   it('returns status "unavailable" for a source that fails, distinct from a reachable source with zero items (FR-010, edge case)', async () => {
-    const { idToken } = await getTestIdToken('feeds-source-direct-user-3');
+    const { sessionToken } = await createTestSession('feeds-source-direct-user-3');
 
     nock('https://direct-flaky.test').get('/rss').reply(500);
     nock('https://direct-quiet.test').get('/rss').reply(200, rssXml([]));
 
     const flakyRes = await request(app)
       .get('/api/feeds/sources/direct-flaky')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(flakyRes.status).toBe(200);
     expect(flakyRes.body.status).toBe('unavailable');
     expect(flakyRes.body.articles).toEqual([]);
 
     const quietRes = await request(app)
       .get('/api/feeds/sources/direct-quiet')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(quietRes.status).toBe(200);
     expect(quietRes.body.status).toBe('ok');
     expect(quietRes.body.articles).toEqual([]);

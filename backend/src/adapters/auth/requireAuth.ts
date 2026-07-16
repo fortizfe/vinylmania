@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 
 import { logger } from '../../config/logger';
 import type { AuthVerifierPort } from '../../ports/auth/authVerifierPort';
-import { firebaseAuthVerifierAdapter } from './firebaseAuthVerifierAdapter';
+import { sessionAuthVerifierAdapter } from './sessionAuthVerifierAdapter';
 
 const BEARER_PREFIX = 'Bearer ';
 
@@ -30,7 +30,7 @@ export function createRequireAuth(deps: { authVerifier: AuthVerifierPort }) {
     const token = header.slice(BEARER_PREFIX.length);
 
     try {
-      req.auth = await deps.authVerifier.verifyIdToken(token);
+      req.auth = await deps.authVerifier.verifySession(token);
       logger.info({ route: req.path, outcome: 'verified', uid: req.auth.uid });
       next();
     } catch (err) {
@@ -47,4 +47,4 @@ export function createRequireAuth(deps: { authVerifier: AuthVerifierPort }) {
   };
 }
 
-export const requireAuth = createRequireAuth({ authVerifier: firebaseAuthVerifierAdapter });
+export const requireAuth = createRequireAuth({ authVerifier: sessionAuthVerifierAdapter });

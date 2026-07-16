@@ -16,11 +16,8 @@ import { createApp } from '../../../src/app';
 import { getRedisClient } from '../../../src/adapters/cache/redisClient';
 import { getFirestoreDb } from '../../../src/config/firebase-admin';
 import { createEntry } from '../../../src/adapters/library/firestoreLibraryRepository';
-import {
-  clearEmulatorFirestore,
-  clearEmulatorUsers,
-  getTestIdToken,
-} from '../../helpers/authEmulator';
+import { clearEmulatorFirestore, clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 const app = createApp();
 
@@ -68,7 +65,7 @@ async function linkDiscogs(uid: string): Promise<string> {
 
 describe('library sync-on-read throttle (FR-014)', () => {
   it('syncs on the first load, then serves the mirror without contacting Discogs within the TTL', async () => {
-    const { idToken, uid } = await getTestIdToken('throttle-user');
+    const { sessionToken, uid } = await createTestSession('throttle-user');
     const username = await linkDiscogs(uid);
 
     stubCollectionFields(username);
@@ -77,7 +74,7 @@ describe('library sync-on-read throttle (FR-014)', () => {
 
     const first = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(first.status).toBe(200);
     expect(first.body.totalItems).toBe(1);
 
@@ -87,13 +84,13 @@ describe('library sync-on-read throttle (FR-014)', () => {
     // No collection stubs remain: a second sync attempt would fail loudly.
     const second = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(second.status).toBe(200);
     expect(second.body.totalItems).toBe(1);
   });
 
   it('refresh=true bypasses a fresh marker and picks up discogs.com-side changes', async () => {
-    const { idToken, uid } = await getTestIdToken('refresh-bypass-user');
+    const { sessionToken, uid } = await createTestSession('refresh-bypass-user');
     const username = await linkDiscogs(uid);
 
     stubCollectionFields(username);
@@ -102,7 +99,7 @@ describe('library sync-on-read throttle (FR-014)', () => {
 
     const first = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(first.body.totalItems).toBe(1);
 
     // A record was added directly on discogs.com; the marker is still fresh.
@@ -114,19 +111,19 @@ describe('library sync-on-read throttle (FR-014)', () => {
 
     const withoutRefresh = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(withoutRefresh.body.totalItems).toBe(1);
 
     const refreshed = await request(app)
       .get('/api/library')
       .query({ refresh: 'true' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(refreshed.status).toBe(200);
     expect(refreshed.body.totalItems).toBe(2);
   });
 
   it('does not set the marker on a failed sync, so the next load retries', async () => {
-    const { idToken, uid } = await getTestIdToken('retry-user');
+    const { sessionToken, uid } = await createTestSession('retry-user');
     const username = await linkDiscogs(uid);
     await createEntry(uid, {
       discogsReleaseId: 1,
@@ -142,7 +139,7 @@ describe('library sync-on-read throttle (FR-014)', () => {
 
     const failed = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(failed.status).toBe(503);
     expect(await getRedisClient()!.get(`discogs:libsync:${uid}`)).toBeNull();
 
@@ -152,7 +149,7 @@ describe('library sync-on-read throttle (FR-014)', () => {
 
     const recovered = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(recovered.status).toBe(200);
     expect(recovered.body.totalItems).toBe(1);
   });

@@ -7,5 +7,18 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if false;
     }
+
+    // Own-backend session records (feature 051) — issued/verified/revoked
+    // exclusively by the backend's Admin SDK. No client ever reads or
+    // writes these directly.
+    match /sessions/{sessionId} {
+      allow read, write: if false;
+    }
+
+    // Anti-forgery `state` records for an in-flight Google login (feature
+    // 051) — same access model as /sessions above.
+    match /pendingGoogleLogins/{state} {
+      allow read, write: if false;
+    }
   }
 }

@@ -17,7 +17,8 @@ import { getMasterRelease, getRelease } from '../../../src/adapters/discogsCatal
 import { firestoreLibraryRepository } from '../../../src/adapters/library/firestoreLibraryRepository';
 import { createEnrichLibraryEntryUseCase } from '../../../src/application/library/enrichLibraryEntry';
 import type { LibraryEntry } from '../../../src/domain/library/types';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 const app = createApp();
 const { enrichEntry } = createEnrichLibraryEntryUseCase({
@@ -66,8 +67,8 @@ function rawMasterVersionsPage() {
 }
 
 async function authHeader(uidHint: string): Promise<[string, string]> {
-  const { idToken } = await getTestIdToken(uidHint);
-  return ['Authorization', `Bearer ${idToken}`];
+  const { sessionToken } = await createTestSession(uidHint);
+  return ['Authorization', `Bearer ${sessionToken}`];
 }
 
 // getRedisClient() memoizes its result on first call. Set REDIS_URL here,

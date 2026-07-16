@@ -2,11 +2,8 @@ import request from 'supertest';
 
 import { createApp } from '../../../src/app';
 import { getFirestoreDb } from '../../../src/config/firebase-admin';
-import {
-  clearEmulatorFirestore,
-  clearEmulatorUsers,
-  getTestIdToken,
-} from '../../helpers/authEmulator';
+import { clearEmulatorFirestore, clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 import { discogsScope } from '../../helpers/nock';
 
 const app = createApp();
@@ -46,14 +43,14 @@ describe('Discogs OAuth API contract', () => {
 
   describe('POST /api/discogs/oauth/request', () => {
     it('returns 200 with an authorizeUrl containing the request token', async () => {
-      const { idToken } = await getTestIdToken('oauth-request-ok');
+      const { sessionToken } = await createTestSession('oauth-request-ok');
       discogsScope()
         .get('/oauth/request_token')
         .reply(200, REQUEST_TOKEN_BODY, URLENCODED);
 
       const res = await request(app)
         .post('/api/discogs/oauth/request')
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(Object.keys(res.body)).toEqual(['authorizeUrl']);
@@ -68,12 +65,12 @@ describe('Discogs OAuth API contract', () => {
     });
 
     it('returns 409 already_connected when a connection exists', async () => {
-      const { idToken, uid } = await getTestIdToken('oauth-request-conflict');
+      const { sessionToken, uid } = await createTestSession('oauth-request-conflict');
       await seedConnection(uid);
 
       const res = await request(app)
         .post('/api/discogs/oauth/request')
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(409);
       expect(res.body.error).toBe('already_connected');
@@ -82,7 +79,7 @@ describe('Discogs OAuth API contract', () => {
 
   describe('POST /api/discogs/oauth/complete', () => {
     it('returns 200 with the ConnectionStatus DTO on the happy path', async () => {
-      const { idToken } = await getTestIdToken('oauth-complete-ok');
+      const { sessionToken } = await createTestSession('oauth-complete-ok');
       discogsScope()
         .get('/oauth/request_token')
         .reply(200, REQUEST_TOKEN_BODY, URLENCODED);
@@ -93,11 +90,11 @@ describe('Discogs OAuth API contract', () => {
 
       await request(app)
         .post('/api/discogs/oauth/request')
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       const res = await request(app)
         .post('/api/discogs/oauth/complete')
-        .set('Authorization', `Bearer ${idToken}`)
+        .set('Authorization', `Bearer ${sessionToken}`)
         .send({ oauthToken: 'req-tok', oauthVerifier: 'the-verifier' });
 
       expect(res.status).toBe(200);
@@ -112,11 +109,11 @@ describe('Discogs OAuth API contract', () => {
     });
 
     it('returns 400 validation_error on a malformed body', async () => {
-      const { idToken } = await getTestIdToken('oauth-complete-badbody');
+      const { sessionToken } = await createTestSession('oauth-complete-badbody');
 
       const res = await request(app)
         .post('/api/discogs/oauth/complete')
-        .set('Authorization', `Bearer ${idToken}`)
+        .set('Authorization', `Bearer ${sessionToken}`)
         .send({ oauthToken: '' });
 
       expect(res.status).toBe(400);
@@ -133,12 +130,12 @@ describe('Discogs OAuth API contract', () => {
     });
 
     it('returns 409 already_connected when a connection exists', async () => {
-      const { idToken, uid } = await getTestIdToken('oauth-complete-conflict');
+      const { sessionToken, uid } = await createTestSession('oauth-complete-conflict');
       await seedConnection(uid);
 
       const res = await request(app)
         .post('/api/discogs/oauth/complete')
-        .set('Authorization', `Bearer ${idToken}`)
+        .set('Authorization', `Bearer ${sessionToken}`)
         .send({ oauthToken: 'req-tok', oauthVerifier: 'v' });
 
       expect(res.status).toBe(409);
@@ -148,35 +145,35 @@ describe('Discogs OAuth API contract', () => {
 
   describe('failure mapping (US3)', () => {
     it('maps a Discogs 429 to 429 discogs_rate_limited on /request', async () => {
-      const { idToken } = await getTestIdToken('oauth-request-429');
+      const { sessionToken } = await createTestSession('oauth-request-429');
       discogsScope().get('/oauth/request_token').reply(429, 'slow down');
 
       const res = await request(app)
         .post('/api/discogs/oauth/request')
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(429);
       expect(res.body.error).toBe('discogs_rate_limited');
     });
 
     it('maps a Discogs outage to 503 discogs_unavailable on /request', async () => {
-      const { idToken } = await getTestIdToken('oauth-request-503');
+      const { sessionToken } = await createTestSession('oauth-request-503');
       discogsScope().get('/oauth/request_token').reply(500, 'boom');
 
       const res = await request(app)
         .post('/api/discogs/oauth/request')
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(503);
       expect(res.body.error).toBe('discogs_unavailable');
     });
 
     it('answers 400 invalid_request for an unknown/tampered token on /complete', async () => {
-      const { idToken } = await getTestIdToken('oauth-complete-tampered');
+      const { sessionToken } = await createTestSession('oauth-complete-tampered');
 
       const res = await request(app)
         .post('/api/discogs/oauth/complete')
-        .set('Authorization', `Bearer ${idToken}`)
+        .set('Authorization', `Bearer ${sessionToken}`)
         .send({ oauthToken: 'forged-token', oauthVerifier: 'forged-verifier' });
 
       expect(res.status).toBe(400);
@@ -184,7 +181,7 @@ describe('Discogs OAuth API contract', () => {
     });
 
     it('answers 400 expired_request when the pending attempt is past its window on /complete', async () => {
-      const { idToken, uid } = await getTestIdToken('oauth-complete-expired');
+      const { sessionToken, uid } = await createTestSession('oauth-complete-expired');
       await getFirestoreDb()
         .collection('discogsOAuthRequests')
         .doc('old-tok')
@@ -197,7 +194,7 @@ describe('Discogs OAuth API contract', () => {
 
       const res = await request(app)
         .post('/api/discogs/oauth/complete')
-        .set('Authorization', `Bearer ${idToken}`)
+        .set('Authorization', `Bearer ${sessionToken}`)
         .send({ oauthToken: 'old-tok', oauthVerifier: 'v' });
 
       expect(res.status).toBe(400);
@@ -207,12 +204,12 @@ describe('Discogs OAuth API contract', () => {
 
   describe('DELETE /api/discogs/oauth/connection', () => {
     it('returns 204 and removes the stored connection', async () => {
-      const { idToken, uid } = await getTestIdToken('oauth-disconnect-ok');
+      const { sessionToken, uid } = await createTestSession('oauth-disconnect-ok');
       await seedConnection(uid);
 
       const res = await request(app)
         .delete('/api/discogs/oauth/connection')
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(204);
       const snapshot = await getFirestoreDb()
@@ -223,11 +220,11 @@ describe('Discogs OAuth API contract', () => {
     });
 
     it('returns 204 when no connection exists (idempotent)', async () => {
-      const { idToken } = await getTestIdToken('oauth-disconnect-idempotent');
+      const { sessionToken } = await createTestSession('oauth-disconnect-idempotent');
 
       const res = await request(app)
         .delete('/api/discogs/oauth/connection')
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(204);
     });
@@ -242,23 +239,23 @@ describe('Discogs OAuth API contract', () => {
 
   describe('GET /api/discogs/oauth/status', () => {
     it('returns connected:false with no other keys when nothing is stored', async () => {
-      const { idToken } = await getTestIdToken('oauth-status-empty');
+      const { sessionToken } = await createTestSession('oauth-status-empty');
 
       const res = await request(app)
         .get('/api/discogs/oauth/status')
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ connected: false });
     });
 
     it('returns EXACTLY the ConnectionStatus DTO keys when connected — never token fields', async () => {
-      const { idToken, uid } = await getTestIdToken('oauth-status-connected');
+      const { sessionToken, uid } = await createTestSession('oauth-status-connected');
       await seedConnection(uid);
 
       const res = await request(app)
         .get('/api/discogs/oauth/status')
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(Object.keys(res.body).sort()).toEqual([

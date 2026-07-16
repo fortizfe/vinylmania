@@ -9,7 +9,8 @@ import {
 } from '../../helpers/nock';
 import { createApp } from '../../../src/app';
 import { MAX_ATTEMPTS } from '../../../src/discogs/discogsRetry';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 const app = createApp();
 
@@ -26,7 +27,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   });
 
   it('returns mapped release results for an authenticated caller', async () => {
-    const { idToken } = await getTestIdToken('search-user');
+    const { sessionToken } = await createTestSession('search-user');
 
     discogsScope()
       .get('/database/search')
@@ -50,7 +51,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     const res = await request(app)
       .get('/api/discogs/search')
       .query({ q: 'Stockholm', type: 'release' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual([
@@ -67,7 +68,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   });
 
   it('splits the artist out of a raw "Artist - Title" search result title', async () => {
-    const { idToken } = await getTestIdToken('search-artist-split-user');
+    const { sessionToken } = await createTestSession('search-artist-split-user');
 
     // Distinct query string from other tests in this file — the search
     // response is cache-keyed by query+page+perPage, and this machine may
@@ -94,7 +95,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     const res = await request(app)
       .get('/api/discogs/search')
       .query({ q: 'Kind Of Blue', type: 'release' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.body.results[0]).toEqual({
       discogsId: 2,
@@ -106,7 +107,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   });
 
   it('keeps the full title with no artist when no "Artist - Title" separator is present', async () => {
-    const { idToken } = await getTestIdToken('search-no-artist-user');
+    const { sessionToken } = await createTestSession('search-no-artist-user');
 
     discogsScope()
       .get('/database/search')
@@ -128,7 +129,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     const res = await request(app)
       .get('/api/discogs/search')
       .query({ q: 'Untitled', type: 'release' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.body.results[0]).toEqual({
       discogsId: 3,
@@ -139,7 +140,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
   describe('master release grouping (feature 026, US1)', () => {
     it('does not restrict the outbound Discogs type param, and includes master hits in the response', async () => {
-      const { idToken } = await getTestIdToken('search-master-user');
+      const { sessionToken } = await createTestSession('search-master-user');
 
       discogsScope()
         .get('/database/search')
@@ -163,7 +164,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'Linkin Park', type: 'release' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.results[0]).toMatchObject({
@@ -175,7 +176,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     });
 
     it('drops label/other hits Discogs returns unfiltered instead of failing the whole response', async () => {
-      const { idToken } = await getTestIdToken('search-unfiltered-types-user');
+      const { sessionToken } = await createTestSession('search-unfiltered-types-user');
 
       discogsScope()
         .get('/database/search')
@@ -211,7 +212,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'Warner', type: 'release' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.results).toHaveLength(1);
@@ -221,7 +222,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
   describe('masters-first ordering (feature 027, US3)', () => {
     it('orders master results ahead of release results within the same page, preserving relative order within each group', async () => {
-      const { idToken } = await getTestIdToken('search-masters-first-user');
+      const { sessionToken } = await createTestSession('search-masters-first-user');
 
       discogsScope()
         .get('/database/search')
@@ -267,7 +268,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'MastersFirstOrderingTest', type: 'release' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.results.map((r: { discogsId: number }) => r.discogsId)).toEqual([
@@ -282,7 +283,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     });
 
     it('leaves an all-release response order unchanged (no masters present)', async () => {
-      const { idToken } = await getTestIdToken('search-masters-first-none-user');
+      const { sessionToken } = await createTestSession('search-masters-first-none-user');
 
       discogsScope()
         .get('/database/search')
@@ -312,7 +313,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'AllReleasesOrderingTest', type: 'release' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.results.map((r: { discogsId: number }) => r.discogsId)).toEqual([
@@ -322,7 +323,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   });
 
   it('forwards page and perPage query params to the catalog search', async () => {
-    const { idToken } = await getTestIdToken('search-pagination-user');
+    const { sessionToken } = await createTestSession('search-pagination-user');
 
     discogsScope()
       .get('/database/search')
@@ -335,14 +336,14 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     const res = await request(app)
       .get('/api/discogs/search')
       .query({ q: 'love', type: 'release', page: '2', perPage: '10' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.pagination).toEqual({ page: 2, pages: 5, items: 47, perPage: 10 });
   });
 
   it('defaults to page 1 when an invalid page value is sent', async () => {
-    const { idToken } = await getTestIdToken('search-invalid-page-user');
+    const { sessionToken } = await createTestSession('search-invalid-page-user');
 
     discogsScope()
       .get('/database/search')
@@ -355,7 +356,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     const res = await request(app)
       .get('/api/discogs/search')
       .query({ q: 'love', type: 'release', page: 'not-a-number' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.pagination.page).toBe(1);
@@ -370,7 +371,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
   });
 
   it('returns 502 catalog_unavailable when Discogs is rate-limited', async () => {
-    const { idToken } = await getTestIdToken('search-ratelimit-user');
+    const { sessionToken } = await createTestSession('search-ratelimit-user');
 
     discogsScope()
       .get('/database/search')
@@ -381,14 +382,14 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     const res = await request(app)
       .get('/api/discogs/search')
       .query({ q: 'x', type: 'release' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(502);
     expect(res.body.error).toBe('catalog_unavailable');
   });
 
   it('returns 502 catalog_unavailable when Discogs is unreachable', async () => {
-    const { idToken } = await getTestIdToken('search-network-user');
+    const { sessionToken } = await createTestSession('search-network-user');
 
     discogsScope()
       .get('/database/search')
@@ -399,7 +400,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     const res = await request(app)
       .get('/api/discogs/search')
       .query({ q: 'x', type: 'release' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(502);
     expect(res.body.error).toBe('catalog_unavailable');
@@ -413,7 +414,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     // response instead of hitting each test's own nock stub.
 
     it('includes an additive communityRating for a release with a valid rating', async () => {
-      const { idToken } = await getTestIdToken('search-rating-user');
+      const { sessionToken } = await createTestSession('search-rating-user');
 
       discogsScope()
         .get('/database/search')
@@ -427,14 +428,14 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'RatingEnrichmentValid', type: 'release' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.results[0].communityRating).toEqual({ average: 4.19, count: 47 });
     });
 
     it('omits communityRating when the release has no votes (count 0)', async () => {
-      const { idToken } = await getTestIdToken('search-rating-unvoted-user');
+      const { sessionToken } = await createTestSession('search-rating-unvoted-user');
 
       discogsScope()
         .get('/database/search')
@@ -448,14 +449,14 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'RatingEnrichmentUnvoted', type: 'release' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.results[0].communityRating).toBeUndefined();
     });
 
     it('omits communityRating and still returns 200 when a per-release rating lookup fails', async () => {
-      const { idToken } = await getTestIdToken('search-rating-failure-user');
+      const { sessionToken } = await createTestSession('search-rating-failure-user');
 
       discogsScope()
         .get('/database/search')
@@ -469,7 +470,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'RatingEnrichmentFailure', type: 'release' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.results[0].communityRating).toBeUndefined();
@@ -477,7 +478,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
     });
 
     it('omits communityRating when a rating lookup exceeds the 2-second timeout (SC-006), without delaying the response', async () => {
-      const { idToken } = await getTestIdToken('search-rating-timeout-user');
+      const { sessionToken } = await createTestSession('search-rating-timeout-user');
 
       discogsScope()
         .get('/database/search')
@@ -492,7 +493,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'RatingEnrichmentTimeout', type: 'release' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
       const elapsedMs = Date.now() - startedAt;
 
       expect(res.status).toBe(200);
@@ -505,7 +506,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
   describe('artist/genre/style/format filter params (feature 021)', () => {
     it('forwards genre/style/format filter params to the outbound Discogs search request', async () => {
-      const { idToken } = await getTestIdToken('search-filters-user');
+      const { sessionToken } = await createTestSession('search-filters-user');
 
       discogsScope()
         .get('/database/search')
@@ -531,13 +532,13 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
           style: 'Grunge',
           format: 'Vinyl',
         })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
     });
 
     it('trims filter values and omits blank/whitespace-only ones from the outbound Discogs request', async () => {
-      const { idToken } = await getTestIdToken('search-filters-blank-user');
+      const { sessionToken } = await createTestSession('search-filters-blank-user');
 
       discogsScope()
         .get('/database/search')
@@ -564,7 +565,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
           artist: '',
           style: '   ',
         })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
     });
@@ -572,7 +573,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
   describe('multiple filters combined (feature 021, US2)', () => {
     it('forwards several filter params together, unchanged, to the outbound Discogs search request', async () => {
-      const { idToken } = await getTestIdToken('search-filters-combo-user');
+      const { sessionToken } = await createTestSession('search-filters-combo-user');
 
       discogsScope()
         .get('/database/search')
@@ -591,7 +592,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'FilterComboTest', type: 'release', genre: 'Rock', format: 'Vinyl' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
     });
@@ -599,7 +600,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
   describe('multi-value format passthrough (feature 022, US1)', () => {
     it('forwards a comma-joined format value verbatim, in a single outbound request (FR-011)', async () => {
-      const { idToken } = await getTestIdToken('search-filters-multiformat-user');
+      const { sessionToken } = await createTestSession('search-filters-multiformat-user');
 
       const scope = discogsScope()
         .get('/database/search')
@@ -617,7 +618,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'FilterMultiFormatTest', type: 'release', format: 'Vinyl,CD' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(scope.isDone()).toBe(true);
@@ -626,7 +627,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
   describe('multi-value genre/style passthrough (feature 038, US1)', () => {
     it('forwards a comma-joined genre value verbatim, in a single outbound request (research.md Decision 1)', async () => {
-      const { idToken } = await getTestIdToken('search-filters-multigenre-user');
+      const { sessionToken } = await createTestSession('search-filters-multigenre-user');
 
       const scope = discogsScope()
         .get('/database/search')
@@ -644,14 +645,14 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'FilterMultiGenreTest', type: 'release', genre: 'Rock,Electronic' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(scope.isDone()).toBe(true);
     });
 
     it('forwards a comma-joined style value verbatim, in a single outbound request (research.md Decision 1)', async () => {
-      const { idToken } = await getTestIdToken('search-filters-multistyle-user');
+      const { sessionToken } = await createTestSession('search-filters-multistyle-user');
 
       const scope = discogsScope()
         .get('/database/search')
@@ -669,14 +670,14 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'FilterMultiStyleTest', type: 'release', style: 'Grunge,Shoegaze' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(scope.isDone()).toBe(true);
     });
 
     it('forwards comma-joined genre, style, and format together, unchanged, in a single outbound request', async () => {
-      const { idToken } = await getTestIdToken('search-filters-multicombo-user');
+      const { sessionToken } = await createTestSession('search-filters-multicombo-user');
 
       const scope = discogsScope()
         .get('/database/search')
@@ -702,7 +703,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
           style: 'Grunge,Shoegaze',
           format: 'Vinyl,CD',
         })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(scope.isDone()).toBe(true);
@@ -711,7 +712,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
 
   describe('Artist filter removed (feature 022, US2)', () => {
     it('does NOT forward artist to the outbound Discogs search request, even when present on the incoming request (FR-009)', async () => {
-      const { idToken } = await getTestIdToken('search-artist-removed-user');
+      const { sessionToken } = await createTestSession('search-artist-removed-user');
 
       const scope = discogsScope()
         .get('/database/search')
@@ -734,7 +735,7 @@ describe('Discogs search API contract: GET /api/discogs/search', () => {
           artist: 'Nirvana',
           genre: 'Rock',
         })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(scope.isDone()).toBe(true);
