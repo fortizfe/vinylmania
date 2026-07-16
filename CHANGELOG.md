@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.0.0] - 2026-07-16
+
+### Added
+
+- replace Firebase Auth client SDK with backend-mediated Google login ([080cb92])
+
 ## [0.28.0] - 2026-07-16
 
 ### Added
