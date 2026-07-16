@@ -1,30 +1,36 @@
 <!--
 Sync Impact Report
-Version change: 2.4.0 → 2.5.0
-Modified principles: none (existing principles I-VII unchanged)
+Version change: 2.5.0 → 2.6.0
+Modified principles: none (existing principles I-VIII unchanged)
 Added sections:
-  - New Core Principle VIII: "Hexagonal Architecture (Ports & Adapters) —
-    Backend". Fixes the four mandatory backend layers (Domain, Application,
-    Ports, Adapters), the dependency rule (Domain/Application MUST NOT import
-    `firebase-admin`/`axios`/`ioredis`/`rss-parser` directly), the driving-adapter
-    role of Express routes, the global-layer folder convention
-    (`backend/src/{domain,application,ports,adapters}/<domain>/`), the
-    transversal-module carve-out (logger, pure concurrency utilities), the
-    explicit backend-only scope (excludes frontend/e2e), and cites the
-    existing `DiscogsError`/`respondCollectionError`/`handleFailure` pattern
-    as the mandatory model for domain-error handling to generalize, not
-    replace.
+  - New Core Principle IX: "Frontend Network Requests — Backend-Only".
+    Requires that all JS-initiated frontend requests (fetch/XHR/WebSocket/
+    third-party SDK) target the Vinylmania backend exclusively, and that no
+    third-party SDK (Firebase, Discogs, or future equivalents) be used from
+    `frontend/` to make data requests. Explicitly carves out two cases from
+    its scope: (1) a full-page navigation to an external identity/OAuth
+    provider's authorization page is not a "request" under this principle,
+    since it is inevitable in any redirect-based OAuth flow and outside the
+    app's own JS code's control; (2) static resource loading via native
+    HTML attributes (`<img src>`, `<link>`) is out of scope, since the
+    principle governs data/API requests initiated by JS, not passive
+    resource loading. Explicitly exempts `e2e/` test doubles, which exist
+    to simulate the external third parties this principle restricts
+    production code from calling directly. Governs `frontend/` only; does
+    not restate, contradict, or narrow Principle VIII (backend-only) or
+    Principle II (Discogs integration, which already assumes the
+    integration lives in `backend/` without saying so explicitly).
 Changed sections: none
 Removed sections: none
 Templates requiring updates:
   ✅ .specify/templates/plan-template.md (Constitution Check is a generic
      "[Gates determined based on constitution file]" placeholder re-evaluated
      per feature against whatever principles exist; no principle — including
-     I-VII — is hardcoded into it, so Principle VIII needs no template change)
-  ✅ .specify/templates/spec-template.md (no architecture/layer-specific
-     section exists for any principle; no change needed)
-  ✅ .specify/templates/tasks-template.md (no palette/typography/architecture-
-     specific references; no change needed)
+     I-VIII — is hardcoded into it, so Principle IX needs no template change)
+  ✅ .specify/templates/spec-template.md (no network-origin-specific section
+     exists for any principle; no change needed)
+  ✅ .specify/templates/tasks-template.md (no network-origin-specific
+     references; no change needed)
   ✅ .specify/templates/checklist-template.md (generic checklist template; no
      conflicting gate)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
@@ -161,6 +167,38 @@ translate them into status codes. This principle codifies that existing pattern 
 mandatory model for every backend domain, rather than inventing a new error-handling
 mechanism, so that future backend work — migrated or new — is consistent by default
 instead of by convention alone.
+
+### IX. Frontend Network Requests — Backend-Only
+All code under `frontend/` that initiates a network request via JavaScript (`fetch`,
+`XMLHttpRequest`, `WebSocket`, or any SDK) MUST direct that request exclusively to
+Vinylmania's own backend. No SDK belonging to an external provider (Firebase, Discogs,
+or any future equivalent) MUST be used from `frontend/` to make data requests — that
+provider's integration MUST live in `backend/` instead, consistent with Principle VIII.
+A full-page navigation (`window.location`, `<a href>`) to an external identity or OAuth
+provider's authorization page is explicitly NOT a "request" in the sense of this
+principle: it is an unavoidable step of any redirect-based OAuth flow and is outside the
+control of the application's own JS code, so this principle MUST NOT be read as
+prohibiting the login/account-link mechanism itself. Loading static resources via native
+HTML attributes not initiated by JS (e.g. `<img src>` pointing at an external CDN, or a
+`<link>` to an external font) is out of scope of this principle, which governs
+data/API requests initiated by JavaScript, not passive resource loading. This principle
+governs `frontend/` only; it does not restate, contradict, or narrow Principle VIII
+(which already governs `backend/`) or Principle II (Discogs integration, which already
+assumes the integration lives in `backend/` without saying so explicitly). `e2e/` test
+doubles that stand in for these external providers (e.g. an OAuth provider stub) are
+exempt from this principle, since their entire purpose is to simulate the external third
+parties this principle restricts production frontend code from calling directly.
+**Rationale**: A frontend that talks directly to third-party services (an identity
+provider's SDK, a catalog API) duplicates integration logic the backend already owns,
+scatters credentials and rate-limit handling across two codebases, and makes it
+impossible to enforce Principle II's Discogs-integration rules or Principle VIII's
+hexagonal-architecture rules uniformly — both principles already assume backend-only
+external integration without saying so explicitly, and this principle closes that gap.
+The OAuth-redirect and static-resource carve-outs exist because a literal reading of
+"no requests but the backend" would otherwise appear to forbid the project's own
+established, backend-mediated login/account-link pattern (a full-page redirect, never a
+popup or SDK call) and the routine loading of cover art and brand typography — neither
+of which the audit that produced this principle found to be a violation in practice.
 
 ## Additional Constraints (Web Application Standards)
 
@@ -375,4 +413,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 2.5.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-15
+**Version**: 2.6.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-16

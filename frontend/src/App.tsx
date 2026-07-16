@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { DiscogsCallbackPage } from './pages/DiscogsCallbackPage';
 import { LandingPage } from './pages/LandingPage';
 import { LibraryListPage } from './pages/LibraryListPage';
+import { LoginCallbackPage } from './pages/LoginCallbackPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RecordDetailPage } from './pages/RecordDetailPage';
 import { MasterReleaseDetailPage } from './pages/MasterReleaseDetailPage';
@@ -40,6 +41,7 @@ function App() {
       <VinylmaniaGrungeFilter />
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/login/callback" element={<LoginCallbackPage />} />
         <Route
           path="/app"
           element={

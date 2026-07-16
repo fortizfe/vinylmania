@@ -7,13 +7,10 @@ import {
   useMemo,
   useState,
 } from 'react';
-import {
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut as firebaseSignOut,
-} from 'firebase/auth';
 
-import { firebaseAuth, googleAuthProvider } from '../services/firebaseClient';
+import { authorizedFetch, setUnauthorizedHandler } from '../services/apiClient';
+import { completeGoogleLogin, type CompleteGoogleLoginInput } from '../services/googleAuthApi';
+import { clearSessionToken, getSessionToken, setSessionToken } from '../services/sessionStore';
 
 export interface UserProfile {
   uid: string;
@@ -23,111 +20,107 @@ export interface UserProfile {
   themePreference?: 'light' | 'dark';
 }
 
+export type LoginOutcome = 'success' | 'denied' | 'expired' | 'error';
+
 interface AuthContextValue {
   user: UserProfile | null;
-  /** Whether the initial silent auth check (on page load) is still in flight. */
+  /** Whether the initial silent session check (on page load) is still in flight. */
   loading: boolean;
-  /** Whether a sign-in popup flow is currently in progress. */
-  signingIn: boolean;
   error: string | null;
-  signIn: () => Promise<void>;
+  /** Full-page navigation to the backend's Google authorize URL — never a fetch/SDK call. */
+  signIn: () => void;
   signOut: () => Promise<void>;
+  /** Called by LoginCallbackPage once the browser returns from Google. */
+  completeSignIn: (input: CompleteGoogleLoginInput) => Promise<LoginOutcome>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
-function friendlyErrorMessage(err: unknown): string {
-  const code = (err as { code?: string })?.code ?? '';
-
-  switch (code) {
-    case 'auth/popup-closed-by-user':
-    case 'auth/cancelled-popup-request':
+function friendlyOutcomeMessage(outcome: 'denied' | 'expired' | 'error'): string {
+  switch (outcome) {
+    case 'denied':
       return 'Sign-in was cancelled. You can try again whenever you are ready.';
-    case 'auth/popup-blocked':
-      return 'Your browser blocked the sign-in popup. Please allow popups for this site and try again.';
-    case 'auth/network-request-failed':
-      return 'We could not reach the sign-in service. Check your connection and try again.';
+    case 'expired':
+      return 'This sign-in attempt expired. Please try again.';
     default:
       return 'Something went wrong while signing in. Please try again.';
   }
 }
 
-async function establishSession(idToken: string): Promise<UserProfile> {
-  const res = await fetch(`${API_BASE_URL}/api/auth/session`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${idToken}` },
-  });
-
-  if (!res.ok) {
-    throw new Error('session_failed');
-  }
-
-  return res.json();
-}
-
-async function fetchExistingSession(idToken: string): Promise<UserProfile | null> {
-  const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
-    headers: { Authorization: `Bearer ${idToken}` },
-  });
-
-  if (!res.ok) {
+async function fetchExistingSession(): Promise<UserProfile | null> {
+  try {
+    const res = await authorizedFetch('/api/auth/me');
+    return res.json();
+  } catch {
     return null;
   }
-
-  return res.json();
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        setUser(null);
+    setUnauthorizedHandler(() => setUser(null));
+
+    let cancelled = false;
+    (async () => {
+      if (!getSessionToken()) {
         setLoading(false);
         return;
       }
-
-      try {
-        const idToken = await firebaseUser.getIdToken();
-        const profile = await fetchExistingSession(idToken);
+      const profile = await fetchExistingSession();
+      if (!cancelled) {
         setUser(profile);
-      } finally {
         setLoading(false);
       }
-    });
+    })();
 
-    return unsubscribe;
+    return () => {
+      cancelled = true;
+      setUnauthorizedHandler(null);
+    };
   }, []);
 
-  const signIn = useCallback(async () => {
-    setError(null);
-    setSigningIn(true);
-    try {
-      const result = await signInWithPopup(firebaseAuth, googleAuthProvider);
-      const idToken = await result.user.getIdToken();
-      const profile = await establishSession(idToken);
-      setUser(profile);
-    } catch (err) {
-      setError(friendlyErrorMessage(err));
-    } finally {
-      setSigningIn(false);
-    }
+  const signIn = useCallback(() => {
+    window.location.assign(`${API_BASE_URL}/api/auth/google/authorize`);
   }, []);
 
   const signOut = useCallback(async () => {
-    await firebaseSignOut(firebaseAuth);
-    setUser(null);
+    try {
+      await authorizedFetch('/api/auth/session', { method: 'DELETE' });
+    } finally {
+      clearSessionToken();
+      setUser(null);
+    }
+  }, []);
+
+  const completeSignIn = useCallback(async (input: CompleteGoogleLoginInput): Promise<LoginOutcome> => {
+    if (input.error) {
+      setError(friendlyOutcomeMessage('denied'));
+      return 'denied';
+    }
+
+    try {
+      const { sessionToken, user: profile } = await completeGoogleLogin(input);
+      setSessionToken(sessionToken);
+      setUser(profile);
+      setError(null);
+      return 'success';
+    } catch (err) {
+      const code = (err as { code?: string } | null)?.code;
+      const outcome: 'expired' | 'error' = code === 'expired_state' ? 'expired' : 'error';
+      setError(friendlyOutcomeMessage(outcome));
+      return outcome;
+    }
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, signingIn, error, signIn, signOut }),
-    [user, loading, signingIn, error, signIn, signOut],
+    () => ({ user, loading, error, signIn, signOut, completeSignIn }),
+    [user, loading, error, signIn, signOut, completeSignIn],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

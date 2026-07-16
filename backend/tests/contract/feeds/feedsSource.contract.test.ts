@@ -3,7 +3,8 @@ import request from 'supertest';
 
 import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
 import type { FeedSourceConfig } from '../../../src/domain/feeds/types';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 const CONTRACT_SOURCE: FeedSourceConfig = {
   id: 'contract-source-h',
@@ -75,7 +76,7 @@ describe('Feeds source API contract: GET /api/feeds/sources/:sourceId', () => {
   });
 
   it('returns 200 with every article for a reachable source', async () => {
-    const { idToken } = await getTestIdToken('feeds-source-contract-user');
+    const { sessionToken } = await createTestSession('feeds-source-contract-user');
 
     nock('https://contract-feed-h.test')
       .get('/rss')
@@ -92,7 +93,7 @@ describe('Feeds source API contract: GET /api/feeds/sources/:sourceId', () => {
 
     const res = await request(app)
       .get('/api/feeds/sources/contract-source-h')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
@@ -106,13 +107,13 @@ describe('Feeds source API contract: GET /api/feeds/sources/:sourceId', () => {
   });
 
   it('returns 200 with status "unavailable" and no articles for a failing/timed-out source', async () => {
-    const { idToken } = await getTestIdToken('feeds-source-contract-user-2');
+    const { sessionToken } = await createTestSession('feeds-source-contract-user-2');
 
     nock('https://contract-feed-h.test').get('/rss').reply(500);
 
     const res = await request(app)
       .get('/api/feeds/sources/contract-source-h')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
@@ -124,22 +125,22 @@ describe('Feeds source API contract: GET /api/feeds/sources/:sourceId', () => {
   });
 
   it('returns 404 source_not_found for an unknown sourceId', async () => {
-    const { idToken } = await getTestIdToken('feeds-source-contract-user-3');
+    const { sessionToken } = await createTestSession('feeds-source-contract-user-3');
 
     const res = await request(app)
       .get('/api/feeds/sources/does-not-exist')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(404);
     expect(res.body).toMatchObject({ error: 'source_not_found' });
   });
 
   it('returns 404 source_not_found for a disabled sourceId', async () => {
-    const { idToken } = await getTestIdToken('feeds-source-contract-user-4');
+    const { sessionToken } = await createTestSession('feeds-source-contract-user-4');
 
     const res = await request(app)
       .get('/api/feeds/sources/contract-source-disabled')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(404);
     expect(res.body).toMatchObject({ error: 'source_not_found' });

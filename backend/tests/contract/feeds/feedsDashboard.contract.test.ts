@@ -3,7 +3,8 @@ import request from 'supertest';
 
 import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
 import type { FeedSourceConfig } from '../../../src/domain/feeds/types';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 const CONTRACT_SOURCE_A: FeedSourceConfig = {
   id: 'contract-source-a',
@@ -122,7 +123,7 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
   });
 
   it('returns 200 with the categories/sourceStatuses shape for an authenticated caller', async () => {
-    const { idToken } = await getTestIdToken('feeds-contract-user');
+    const { sessionToken } = await createTestSession('feeds-contract-user');
 
     nock('https://contract-feed-a.test')
       .get('/rss')
@@ -168,7 +169,7 @@ describe('Feeds dashboard API contract: GET /api/feeds/dashboard', () => {
 
     const res = await request(app)
       .get('/api/feeds/dashboard')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.sourceStatuses).toEqual(

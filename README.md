@@ -9,7 +9,10 @@ discover releases via Discogs, and keep up with the scene, all in one place.
 
 - **Frontend**: React + TypeScript (Vite) — [frontend/](frontend/)
 - **Backend**: Express.js + TypeScript — [backend/](backend/)
-- **Auth & data**: Firebase Authentication (Google sign-in) + Firestore
+- **Auth & data**: Google sign-in mediated entirely by the backend (a
+  full-page OAuth 2.0 redirect, never a client-side SDK — see
+  [specs/051-frontend-backend-only-network/quickstart.md](specs/051-frontend-backend-only-network/quickstart.md)),
+  backed by Firebase Admin for identity/user records + Firestore
 - **Vinyl catalog data**: [Discogs API](https://www.discogs.com/developers/) client — [backend/src/discogs/](backend/src/discogs/), setup guide at [specs/002-discogs-api-client/quickstart.md](specs/002-discogs-api-client/quickstart.md)
 - **Caching**: [TanStack Query](https://tanstack.com/query) for frontend state caching and Redis (via ioredis) for backend Discogs response caching — see [specs/011-tanstack-redis-caching/quickstart.md](specs/011-tanstack-redis-caching/quickstart.md)
 - **Resilience**: automatic retry-with-backoff and a circuit breaker on the backend's Discogs catalog client, absorbing transient rate-limit/outage hiccups — see [specs/029-discogs-retry-resilience/quickstart.md](specs/029-discogs-retry-resilience/quickstart.md)
@@ -21,9 +24,13 @@ project's governing principles and required stack.
 ## Local setup
 
 Start with feature 001's guide for Firebase console settings and environment
-variables, then run both projects locally:
+variables, then run both projects locally. Login itself has since moved to a
+backend-mediated Google OAuth 2.0 flow (feature 051) — see that feature's
+quickstart for the current `GOOGLE_OAUTH_*` environment variables, which
+supersede feature 001's client-side Firebase Auth config:
 
 ➡️ [specs/001-landing-google-login/quickstart.md](specs/001-landing-google-login/quickstart.md)
+➡️ [specs/051-frontend-backend-only-network/quickstart.md](specs/051-frontend-backend-only-network/quickstart.md)
 
 ## Manage your library
 

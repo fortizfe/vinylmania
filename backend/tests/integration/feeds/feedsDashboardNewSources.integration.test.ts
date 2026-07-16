@@ -2,7 +2,8 @@ import nock from 'nock';
 import request from 'supertest';
 
 import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 // A dedicated fixture set (own file, mirroring this project's existing
 // per-file FEED_SOURCES convention) covering feature 033 US3: MetalSucks and
@@ -70,7 +71,7 @@ describe('Feeds dashboard: MetalSucks and Louder Sound (feature 033, US3)', () =
   });
 
   it('merges MetalSucks and Louder Sound articles into the existing "News" category, capped at 10 combined (spec FR-008, FR-009, FR-010)', async () => {
-    const { idToken } = await getTestIdToken('feeds-new-sources-user');
+    const { sessionToken } = await createTestSession('feeds-new-sources-user');
 
     nock('https://ns-metal-injection.test')
       .get('/rss')
@@ -111,7 +112,7 @@ describe('Feeds dashboard: MetalSucks and Louder Sound (feature 033, US3)', () =
 
     const res = await request(app)
       .get('/api/feeds/dashboard')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
 
@@ -144,7 +145,7 @@ describe('Feeds dashboard: MetalSucks and Louder Sound (feature 033, US3)', () =
   });
 
   it('keeps the rest of the dashboard when MetalSucks fails, marking only it unavailable (spec FR-011, SC-006)', async () => {
-    const { idToken } = await getTestIdToken('feeds-new-sources-partial-user');
+    const { sessionToken } = await createTestSession('feeds-new-sources-partial-user');
 
     nock('https://ns-metal-injection.test')
       .get('/rss')
@@ -174,7 +175,7 @@ describe('Feeds dashboard: MetalSucks and Louder Sound (feature 033, US3)', () =
 
     const res = await request(app)
       .get('/api/feeds/dashboard')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
 
@@ -210,7 +211,7 @@ describe('Feeds dashboard: MetalSucks and Louder Sound (feature 033, US3)', () =
   });
 
   it('returns zero items from MetalSucks without blocking the rest of the dashboard (edge case: zero available items)', async () => {
-    const { idToken } = await getTestIdToken('feeds-new-sources-empty-user');
+    const { sessionToken } = await createTestSession('feeds-new-sources-empty-user');
 
     nock('https://ns-metal-injection.test')
       .get('/rss')
@@ -240,7 +241,7 @@ describe('Feeds dashboard: MetalSucks and Louder Sound (feature 033, US3)', () =
 
     const res = await request(app)
       .get('/api/feeds/dashboard')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     const newsCategory = res.body.categories.find(

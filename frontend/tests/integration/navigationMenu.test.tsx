@@ -6,29 +6,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from '../../src/App';
 import { AuthProvider } from '../../src/auth/AuthContext';
+import { setSessionToken } from '../../src/services/sessionStore';
 import { ThemeProvider } from '../../src/theme/ThemeContext';
 import { createTestQueryClient } from '../testUtils';
 
-const mockOnAuthStateChanged = vi.fn();
-
-vi.mock('firebase/auth', () => ({
-  signInWithPopup: vi.fn(),
-  signOut: vi.fn(),
-  onAuthStateChanged: (...args: unknown[]) => mockOnAuthStateChanged(...args),
-}));
-
-vi.mock('../../src/services/firebaseClient', () => ({
-  firebaseAuth: {},
-  googleAuthProvider: {},
-}));
-
 const originalFetch = global.fetch;
 
+const PROFILE = {
+  uid: 'abc123',
+  displayName: 'Jane Doe',
+  email: 'jane@example.com',
+  photoURL: 'https://example.com/photo.png',
+};
+
 function renderAuthenticatedApp(initialEntry: string) {
-  mockOnAuthStateChanged.mockImplementation((_auth, callback) => {
-    callback({ getIdToken: async () => 'fake-id-token' });
-    return () => undefined;
-  });
+  setSessionToken('existing-session-token');
   global.fetch = vi.fn().mockImplementation((input: string) => {
     if (input.includes('/api/library')) {
       return Promise.resolve({
@@ -36,15 +28,7 @@ function renderAuthenticatedApp(initialEntry: string) {
         json: async () => ({ items: [], page: 1, pageSize: 20, totalItems: 0 }),
       });
     }
-    return Promise.resolve({
-      ok: true,
-      json: async () => ({
-        uid: 'abc123',
-        displayName: 'Jane Doe',
-        email: 'jane@example.com',
-        photoURL: 'https://example.com/photo.png',
-      }),
-    });
+    return Promise.resolve({ ok: true, status: 200, json: async () => PROFILE });
   }) as unknown as typeof fetch;
 
   return render(
@@ -62,11 +46,12 @@ function renderAuthenticatedApp(initialEntry: string) {
 
 describe('Navigation menu (US2)', () => {
   beforeEach(() => {
-    mockOnAuthStateChanged.mockReset();
+    localStorage.clear();
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
+    localStorage.clear();
   });
 
   it('navigates to library, wishlist, and profile from the menu', async () => {
@@ -101,11 +86,6 @@ describe('Navigation menu (US2)', () => {
   });
 
   it('never shows a menu trigger on the landing page', async () => {
-    mockOnAuthStateChanged.mockImplementation((_auth, callback) => {
-      callback(null);
-      return () => undefined;
-    });
-
     render(
       <ThemeProvider>
         <QueryClientProvider client={createTestQueryClient()}>

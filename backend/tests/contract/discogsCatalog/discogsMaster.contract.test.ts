@@ -3,7 +3,8 @@ import request from 'supertest';
 import { discogsScope } from '../../helpers/nock';
 import { createApp } from '../../../src/app';
 import { MAX_ATTEMPTS } from '../../../src/discogs/discogsRetry';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 const app = createApp();
 
@@ -35,13 +36,13 @@ describe('Discogs master API contract: GET /api/discogs/masters/:discogsId', () 
   });
 
   it('returns the mapped master release for an authenticated caller', async () => {
-    const { idToken } = await getTestIdToken('master-detail-user');
+    const { sessionToken } = await createTestSession('master-detail-user');
 
     discogsScope().get('/masters/1660109').reply(200, rawMaster);
 
     const res = await request(app)
       .get('/api/discogs/masters/1660109')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
@@ -66,20 +67,20 @@ describe('Discogs master API contract: GET /api/discogs/masters/:discogsId', () 
   });
 
   it('returns 404 master_not_found when Discogs has no master for that ID', async () => {
-    const { idToken } = await getTestIdToken('master-detail-notfound-user');
+    const { sessionToken } = await createTestSession('master-detail-notfound-user');
 
     discogsScope().get('/masters/999999999').reply(404, { message: 'Master not found' });
 
     const res = await request(app)
       .get('/api/discogs/masters/999999999')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('master_not_found');
   });
 
   it('returns 502 catalog_unavailable when Discogs is rate-limited', async () => {
-    const { idToken } = await getTestIdToken('master-detail-ratelimit-user');
+    const { sessionToken } = await createTestSession('master-detail-ratelimit-user');
 
     discogsScope()
       .get('/masters/1660109')
@@ -88,7 +89,7 @@ describe('Discogs master API contract: GET /api/discogs/masters/:discogsId', () 
 
     const res = await request(app)
       .get('/api/discogs/masters/1660109')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(502);
     expect(res.body.error).toBe('catalog_unavailable');
@@ -107,7 +108,7 @@ describe('Discogs master versions API contract: GET /api/discogs/masters/:discog
   });
 
   it('returns a paginated version list, defaulting to 10 per page (spec FR-009)', async () => {
-    const { idToken } = await getTestIdToken('master-versions-user');
+    const { sessionToken } = await createTestSession('master-versions-user');
 
     discogsScope()
       .get('/masters/1660109/versions')
@@ -130,7 +131,7 @@ describe('Discogs master versions API contract: GET /api/discogs/masters/:discog
 
     const res = await request(app)
       .get('/api/discogs/masters/1660109/versions')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
@@ -150,7 +151,7 @@ describe('Discogs master versions API contract: GET /api/discogs/masters/:discog
   });
 
   it('forwards the requested page to the catalog', async () => {
-    const { idToken } = await getTestIdToken('master-versions-page-user');
+    const { sessionToken } = await createTestSession('master-versions-page-user');
 
     discogsScope()
       .get('/masters/1660109/versions')
@@ -163,14 +164,14 @@ describe('Discogs master versions API contract: GET /api/discogs/masters/:discog
     const res = await request(app)
       .get('/api/discogs/masters/1660109/versions')
       .query({ page: '2' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.pagination.page).toBe(2);
   });
 
   it('returns 404 master_not_found when Discogs has no master for that ID', async () => {
-    const { idToken } = await getTestIdToken('master-versions-notfound-user');
+    const { sessionToken } = await createTestSession('master-versions-notfound-user');
 
     discogsScope()
       .get('/masters/999999999/versions')
@@ -179,7 +180,7 @@ describe('Discogs master versions API contract: GET /api/discogs/masters/:discog
 
     const res = await request(app)
       .get('/api/discogs/masters/999999999/versions')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('master_not_found');

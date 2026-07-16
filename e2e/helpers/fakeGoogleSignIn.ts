@@ -10,20 +10,19 @@ interface SignInOptions {
   email?: string;
 }
 
-// Doubled under CI (spec 042): this job runs the Firestore JVM, Auth
-// emulator, and all three webServer dev processes concurrently with
-// Chromium on a standard-size runner — real, first-CI-run evidence showed
-// the popup occasionally taking longer than 15s to appear under that load,
-// where local dev machines have comfortable headroom to spare.
+// Doubled under CI (spec 042): a shared runner running the Firestore
+// emulator alongside all webServer dev processes and Chromium has less
+// headroom than a local dev machine for the redirect chain (backend →
+// google stub → frontend callback) to settle.
 const DEFAULT_TIMEOUT = process.env.CI ? 30_000 : 15_000;
 
 /**
- * Drives the app's real "Sign in with Google" control through the Firebase
- * Auth emulator's fake identity-provider popup (never real Google), per
- * contracts/e2e-sign-in-helper.md. The popup's DOM (#add-account-button,
- * #email-input, #display-name-input, #sign-in) is the Auth Emulator's own
- * fixture UI, not something this project controls, but its ids have been
- * stable across firebase-tools releases.
+ * Drives the app's real "Sign in with Google" control through a full-page
+ * redirect chain — backend `/api/auth/google/authorize` → the local Google
+ * OAuth stub (`googleOauthStub.ts`, never real Google) → the frontend's
+ * `/login/callback` — per `contracts/google-login-api.md`. Replaces the
+ * previous popup-based flow (`signInWithPopup` against the Firebase Auth
+ * Emulator) now that the frontend no longer uses a client-side SDK.
  */
 export async function signInAsFakeGoogleUser(
   page: Page,
@@ -35,35 +34,23 @@ export async function signInAsFakeGoogleUser(
     email: options.email ?? `e2e-user-${unique}@example.com`,
   };
 
-  let popup;
   try {
-    const popupPromise = page.waitForEvent('popup', { timeout: DEFAULT_TIMEOUT });
     await page.getByRole('button', { name: /sign in with google/i }).click();
-    popup = await popupPromise;
-  } catch (cause) {
-    throw new Error('signInAsFakeGoogleUser: the fake Google popup never appeared', {
-      cause,
-    });
-  }
-
-  try {
-    await popup.waitForLoadState('domcontentloaded');
-    await popup.locator('#add-account-button button').click();
-    await popup.locator('#email-input').fill(identity.email);
-    await popup.locator('#display-name-input').fill(identity.displayName);
-    await popup.locator('#sign-in').click();
+    await page.waitForSelector('#approve', { timeout: DEFAULT_TIMEOUT });
   } catch (cause) {
     throw new Error(
-      'signInAsFakeGoogleUser: could not complete the fake-account form in the emulator popup',
+      'signInAsFakeGoogleUser: the redirect to the Google stub authorize page never landed',
       { cause },
     );
   }
 
   try {
-    await popup.waitForEvent('close', { timeout: DEFAULT_TIMEOUT });
+    await page.locator('#email-input').fill(identity.email);
+    await page.locator('#display-name-input').fill(identity.displayName);
+    await page.locator('#approve').click();
   } catch (cause) {
     throw new Error(
-      'signInAsFakeGoogleUser: the fake Google popup never closed after submitting',
+      'signInAsFakeGoogleUser: could not complete the stub authorize form',
       { cause },
     );
   }

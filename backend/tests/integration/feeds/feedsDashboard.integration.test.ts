@@ -2,7 +2,8 @@ import nock from 'nock';
 import request from 'supertest';
 
 import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 jest.mock('../../../src/domain/feeds/feedSources', () => ({
   FEED_SOURCES: [
@@ -55,7 +56,7 @@ describe('Feeds dashboard graceful degradation (spec FR-007, FR-011)', () => {
   });
 
   it('returns 200 with the healthy source’s articles when the other source returns a Cloudflare-style 403 challenge', async () => {
-    const { idToken } = await getTestIdToken('feeds-integration-partial-user');
+    const { sessionToken } = await createTestSession('feeds-integration-partial-user');
 
     nock('https://integration-feed-a.test')
       .get('/rss')
@@ -75,7 +76,7 @@ describe('Feeds dashboard graceful degradation (spec FR-007, FR-011)', () => {
 
     const res = await request(app)
       .get('/api/feeds/dashboard')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.sourceStatuses).toEqual(
@@ -101,7 +102,7 @@ describe('Feeds dashboard graceful degradation (spec FR-007, FR-011)', () => {
   });
 
   it('returns 200 with empty categories and every source unavailable when all sources fail (FR-011)', async () => {
-    const { idToken } = await getTestIdToken('feeds-integration-alldown-user');
+    const { sessionToken } = await createTestSession('feeds-integration-alldown-user');
 
     nock('https://integration-feed-a.test').get('/rss').reply(500);
     nock('https://integration-feed-b.test')
@@ -112,7 +113,7 @@ describe('Feeds dashboard graceful degradation (spec FR-007, FR-011)', () => {
 
     const res = await request(app)
       .get('/api/feeds/dashboard')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.categories).toEqual([]);

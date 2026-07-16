@@ -38,7 +38,12 @@ export type LogOutcome =
   | 'preference_save_failed'
   // Discogs rate-limit smoothing (feature 040)
   | 'throttled'
-  | 'throttle_unavailable';
+  | 'throttle_unavailable'
+  // Google login & own-backend session lifecycle (feature 051)
+  | 'login_started'
+  | 'login_completed'
+  | 'login_failed'
+  | 'logged_out';
 
 export interface LogEvent {
   route: string;

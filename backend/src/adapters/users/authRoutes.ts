@@ -2,31 +2,31 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 
 import { createUserProfileUseCases } from '../../application/users/userProfileUseCases';
+import { createLogoutSessionUseCase } from '../../application/auth/logoutSession';
 import { logger } from '../../config/logger';
+import { firestoreSessionStoreAdapter } from '../auth/firestoreSessionStoreAdapter';
 import { requireAuth } from '../auth/requireAuth';
 import { firestoreUserRepository } from './firestoreUserRepository';
 
 export const authRouter = Router();
 
+const BEARER_PREFIX = 'Bearer ';
+
 const preferencesBodySchema = z.object({
   themePreference: z.enum(['light', 'dark']),
 });
 
-const { createOrRefreshSession, getUserProfile, updateThemePreference } = createUserProfileUseCases({
+const { getUserProfile, updateThemePreference } = createUserProfileUseCases({
   userRepository: firestoreUserRepository,
 });
+const logoutSession = createLogoutSessionUseCase({ sessionStore: firestoreSessionStoreAdapter });
 
-authRouter.post('/session', requireAuth, async (req: Request, res: Response) => {
+authRouter.delete('/session', requireAuth, async (req: Request, res: Response) => {
   try {
-    const auth = req.auth!;
-    const user = await createOrRefreshSession({
-      uid: auth.uid,
-      email: auth.email,
-      displayName: auth.name ?? auth.email,
-      photoURL: auth.picture,
-    });
-    logger.info({ route: '/api/auth/session', outcome: 'verified', uid: auth.uid });
-    res.status(200).json(user);
+    const header = req.headers.authorization ?? '';
+    const sessionToken = header.startsWith(BEARER_PREFIX) ? header.slice(BEARER_PREFIX.length) : '';
+    await logoutSession(sessionToken);
+    res.status(204).send();
   } catch (err) {
     logger.error({
       route: '/api/auth/session',

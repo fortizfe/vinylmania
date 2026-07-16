@@ -9,11 +9,8 @@ import {
 import { createApp } from '../../../src/app';
 import { getFirestoreDb } from '../../../src/config/firebase-admin';
 import { createEntry, getEntry } from '../../../src/adapters/library/firestoreLibraryRepository';
-import {
-  clearEmulatorFirestore,
-  clearEmulatorUsers,
-  getTestIdToken,
-} from '../../helpers/authEmulator';
+import { clearEmulatorFirestore, clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 const app = createApp();
 
@@ -117,11 +114,11 @@ describe('Library API contract: unlinked users are gated (FR-003)', () => {
   ])(
     '%s returns 409 discogs_not_linked without a connection',
     async (_name, makeRequest) => {
-      const { idToken } = await getTestIdToken(
+      const { sessionToken } = await createTestSession(
         `unlinked-${Math.random().toString(36).slice(2)}`,
       );
 
-      const res = await makeRequest().set('Authorization', `Bearer ${idToken}`);
+      const res = await makeRequest().set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(409);
       expect(res.body.error).toBe('discogs_not_linked');
@@ -137,7 +134,7 @@ describe('Library API contract: unlinked users are gated (FR-003)', () => {
 
 describe('Library API contract: GET /api/library (sync-on-read)', () => {
   it('mirrors Discogs-only instances into the library (US1)', async () => {
-    const { idToken, uid } = await getTestIdToken('sync-mirror-user');
+    const { sessionToken, uid } = await createTestSession('sync-mirror-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
 
     stubCollectionFields(username);
@@ -151,7 +148,7 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
 
     const res = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.totalItems).toBe(1);
@@ -166,7 +163,7 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
   });
 
   it('first sync pushes Firestore-only entries to Discogs and migrates legacy data (FR-002, FR-010)', async () => {
-    const { idToken, uid } = await getTestIdToken('first-sync-user');
+    const { sessionToken, uid } = await createTestSession('first-sync-user');
     const username = await linkDiscogs(uid);
     const entryId = await seedLegacyEntry(uid, {
       discogsReleaseId: 1,
@@ -193,7 +190,7 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
 
     const res = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.totalItems).toBe(1);
@@ -220,7 +217,7 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
   });
 
   it('after the first sync, records deleted on Discogs disappear and are not re-added (clarification #1)', async () => {
-    const { idToken, uid } = await getTestIdToken('mirror-delete-user');
+    const { sessionToken, uid } = await createTestSession('mirror-delete-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     await createSyncedEntry(uid, 1, 11);
 
@@ -229,7 +226,7 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
 
     const res = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.totalItems).toBe(0);
@@ -237,7 +234,7 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
   });
 
   it('accepts refresh=true and still serves the synced library', async () => {
-    const { idToken, uid } = await getTestIdToken('refresh-user');
+    const { sessionToken, uid } = await createTestSession('refresh-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
 
     stubCollectionFields(username);
@@ -246,14 +243,14 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
     const res = await request(app)
       .get('/api/library')
       .query({ refresh: 'true' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.items).toEqual([]);
   });
 
   it('returns 401 discogs_link_invalid when Discogs rejects the stored credentials (FR-012)', async () => {
-    const { idToken, uid } = await getTestIdToken('revoked-user');
+    const { sessionToken, uid } = await createTestSession('revoked-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
 
     discogsScope()
@@ -262,14 +259,14 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
 
     const res = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('discogs_link_invalid');
   });
 
   it('returns 503 discogs_unavailable and leaves the mirror intact on a mid-pass failure (FR-011)', async () => {
-    const { idToken, uid } = await getTestIdToken('sync-failure-user');
+    const { sessionToken, uid } = await createTestSession('sync-failure-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const existing = await createSyncedEntry(uid, 1, 11);
 
@@ -281,7 +278,7 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
 
     const res = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(503);
     expect(res.body.error).toBe('discogs_unavailable');
@@ -291,7 +288,7 @@ describe('Library API contract: GET /api/library (sync-on-read)', () => {
 
 describe('Library API contract: GET /api/library genre/style/format filtering (feature 038, US2)', () => {
   it('returns items enriched with persisted genre/style/format fields', async () => {
-    const { idToken, uid } = await getTestIdToken('filter-fields-user');
+    const { sessionToken, uid } = await createTestSession('filter-fields-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
 
     stubCollectionFields(username);
@@ -302,7 +299,7 @@ describe('Library API contract: GET /api/library genre/style/format filtering (f
 
     const res = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.items[0]).toMatchObject({
@@ -313,7 +310,7 @@ describe('Library API contract: GET /api/library genre/style/format filtering (f
   });
 
   it('returns only entries matching an active genre filter, with pagination computed over the filtered subset (FR-017)', async () => {
-    const { idToken, uid } = await getTestIdToken('filter-genre-user');
+    const { sessionToken, uid } = await createTestSession('filter-genre-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
 
     const instances = [
@@ -330,7 +327,7 @@ describe('Library API contract: GET /api/library genre/style/format filtering (f
     // First, unfiltered sync/enrichment populates genre/style/format for both.
     const unfiltered = await request(app)
       .get('/api/library')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(unfiltered.body.totalItems).toBe(2);
 
     stubCollectionFields(username);
@@ -339,7 +336,7 @@ describe('Library API contract: GET /api/library genre/style/format filtering (f
     const filtered = await request(app)
       .get('/api/library')
       .query({ genre: 'Electronic' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(filtered.status).toBe(200);
     expect(filtered.body.totalItems).toBe(1);
@@ -348,7 +345,7 @@ describe('Library API contract: GET /api/library genre/style/format filtering (f
   });
 
   it('combines multiple genre values with OR and different fields with AND (FR-015)', async () => {
-    const { idToken, uid } = await getTestIdToken('filter-combo-user');
+    const { sessionToken, uid } = await createTestSession('filter-combo-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const instances = [
       rawCollectionInstance(1, { instanceId: 11, dateAdded: '2026-02-03T00:00:00-08:00' }),
@@ -359,14 +356,14 @@ describe('Library API contract: GET /api/library genre/style/format filtering (f
     stubCollectionPage(username, instances);
     discogsScope().get('/releases/1').reply(200, rawRelease);
     discogsScope().get('/releases/2').reply(200, rawReleaseJazz);
-    await request(app).get('/api/library').set('Authorization', `Bearer ${idToken}`);
+    await request(app).get('/api/library').set('Authorization', `Bearer ${sessionToken}`);
 
     stubCollectionFields(username);
     stubCollectionPage(username, instances);
     const orMatch = await request(app)
       .get('/api/library')
       .query({ genre: 'Electronic,Jazz' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(orMatch.body.totalItems).toBe(2);
 
     stubCollectionFields(username);
@@ -374,13 +371,13 @@ describe('Library API contract: GET /api/library genre/style/format filtering (f
     const andMismatch = await request(app)
       .get('/api/library')
       .query({ genre: 'Electronic', style: 'Modal' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(andMismatch.body.totalItems).toBe(0);
     expect(andMismatch.body.items).toEqual([]);
   });
 
   it('a never-enriched entry does not match any active filter until its next successful sync (FR-019)', async () => {
-    const { idToken, uid } = await getTestIdToken('filter-never-enriched-user');
+    const { sessionToken, uid } = await createTestSession('filter-never-enriched-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     // A pre-existing entry with no genre/style/format yet (never enriched).
     await createSyncedEntry(uid, 1, 11);
@@ -394,14 +391,14 @@ describe('Library API contract: GET /api/library genre/style/format filtering (f
     const filteredBefore = await request(app)
       .get('/api/library')
       .query({ genre: 'Electronic' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(filteredBefore.body.totalItems).toBe(0);
 
     // An unfiltered load enriches (and persists) the entry's catalog fields.
     stubCollectionFields(username);
     stubCollectionPage(username, instances);
     discogsScope().get('/releases/1').reply(200, rawRelease);
-    await request(app).get('/api/library').set('Authorization', `Bearer ${idToken}`);
+    await request(app).get('/api/library').set('Authorization', `Bearer ${sessionToken}`);
 
     stubCollectionFields(username);
     stubCollectionPage(username, instances);
@@ -410,14 +407,14 @@ describe('Library API contract: GET /api/library genre/style/format filtering (f
     const filteredAfter = await request(app)
       .get('/api/library')
       .query({ genre: 'Electronic' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
     expect(filteredAfter.body.totalItems).toBe(1);
   });
 });
 
 describe('Library API contract: GET /api/library/:id (per-copy data)', () => {
   it('returns the enriched entry with its Discogs per-copy data (US2)', async () => {
-    const { idToken, uid } = await getTestIdToken('detail-user');
+    const { sessionToken, uid } = await createTestSession('detail-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
@@ -441,7 +438,7 @@ describe('Library API contract: GET /api/library/:id (per-copy data)', () => {
 
     const res = await request(app)
       .get(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.discogs).toEqual({
@@ -458,7 +455,7 @@ describe('Library API contract: GET /api/library/:id (per-copy data)', () => {
   });
 
   it('marks controls not editable when the user deleted a Discogs custom field', async () => {
-    const { idToken, uid } = await getTestIdToken('detail-nofields-user');
+    const { sessionToken, uid } = await createTestSession('detail-nofields-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
@@ -475,7 +472,7 @@ describe('Library API contract: GET /api/library/:id (per-copy data)', () => {
 
     const res = await request(app)
       .get(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.discogs.editable).toEqual({
@@ -486,27 +483,27 @@ describe('Library API contract: GET /api/library/:id (per-copy data)', () => {
   });
 
   it('returns 404 entry_not_found for an entry that does not exist', async () => {
-    const { idToken, uid } = await getTestIdToken('detail-missing-user');
+    const { sessionToken, uid } = await createTestSession('detail-missing-user');
     await linkDiscogs(uid);
 
     const res = await request(app)
       .get('/api/library/does-not-exist')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('entry_not_found');
   });
 
   it('returns 404 entry_not_found for an entry belonging to a different collector', async () => {
-    const owner = await getTestIdToken('detail-owner-user');
-    const other = await getTestIdToken('detail-other-user');
+    const owner = await createTestSession('detail-owner-user');
+    const other = await createTestSession('detail-other-user');
     await linkDiscogs(owner.uid);
     await linkDiscogs(other.uid);
     const entry = await createSyncedEntry(owner.uid, 1, 11);
 
     const res = await request(app)
       .get(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${other.idToken}`);
+      .set('Authorization', `Bearer ${other.sessionToken}`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('entry_not_found');
@@ -515,7 +512,7 @@ describe('Library API contract: GET /api/library/:id (per-copy data)', () => {
 
 describe('Library API contract: POST /api/library (write-through add, US3)', () => {
   it('adds to the Discogs collection first, then mirrors the entry', async () => {
-    const { idToken, uid } = await getTestIdToken('add-user');
+    const { sessionToken, uid } = await createTestSession('add-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
 
     discogsScope().get('/releases/1').reply(200, rawRelease);
@@ -526,7 +523,7 @@ describe('Library API contract: POST /api/library (write-through add, US3)', () 
 
     const res = await request(app)
       .post('/api/library')
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ discogsReleaseId: 1 });
 
     expect(res.status).toBe(201);
@@ -544,12 +541,12 @@ describe('Library API contract: POST /api/library (write-through add, US3)', () 
   });
 
   it('rejects legacy condition/notes keys with 400 invalid_request (breaking change)', async () => {
-    const { idToken, uid } = await getTestIdToken('add-legacy-body-user');
+    const { sessionToken, uid } = await createTestSession('add-legacy-body-user');
     await linkDiscogs(uid);
 
     const res = await request(app)
       .post('/api/library')
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ discogsReleaseId: 1, condition: 'Mint', notes: 'nope' });
 
     expect(res.status).toBe(400);
@@ -557,13 +554,13 @@ describe('Library API contract: POST /api/library (write-through add, US3)', () 
   });
 
   it('returns 404 release_not_found and adds nothing when the release does not exist', async () => {
-    const { idToken, uid } = await getTestIdToken('add-notfound-user');
+    const { sessionToken, uid } = await createTestSession('add-notfound-user');
     await linkDiscogs(uid);
     discogsScope().get('/releases/999999999').reply(404, { message: 'not found' });
 
     const res = await request(app)
       .post('/api/library')
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ discogsReleaseId: 999999999 });
 
     expect(res.status).toBe(404);
@@ -571,7 +568,7 @@ describe('Library API contract: POST /api/library (write-through add, US3)', () 
   });
 
   it('does not mirror the record when the Discogs add fails (FR-004)', async () => {
-    const { idToken, uid } = await getTestIdToken('add-discogs-fail-user');
+    const { sessionToken, uid } = await createTestSession('add-discogs-fail-user');
     const username = await linkDiscogs(uid);
 
     discogsScope().get('/releases/1').reply(200, rawRelease);
@@ -581,7 +578,7 @@ describe('Library API contract: POST /api/library (write-through add, US3)', () 
 
     const res = await request(app)
       .post('/api/library')
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ discogsReleaseId: 1 });
 
     expect(res.status).toBe(503);
@@ -596,7 +593,7 @@ describe('Library API contract: POST /api/library (write-through add, US3)', () 
   });
 
   it('returns 401 discogs_link_invalid when the Discogs add is rejected as unauthorized', async () => {
-    const { idToken, uid } = await getTestIdToken('add-revoked-user');
+    const { sessionToken, uid } = await createTestSession('add-revoked-user');
     const username = await linkDiscogs(uid);
 
     discogsScope().get('/releases/1').reply(200, rawRelease);
@@ -606,7 +603,7 @@ describe('Library API contract: POST /api/library (write-through add, US3)', () 
 
     const res = await request(app)
       .post('/api/library')
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ discogsReleaseId: 1 });
 
     expect(res.status).toBe(401);
@@ -616,7 +613,7 @@ describe('Library API contract: POST /api/library (write-through add, US3)', () 
 
 describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', () => {
   it('persists a rating change through the instance endpoint', async () => {
-    const { idToken, uid } = await getTestIdToken('patch-rating-user');
+    const { sessionToken, uid } = await createTestSession('patch-rating-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
@@ -636,7 +633,7 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
 
     const res = await request(app)
       .patch(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ rating: 4 });
 
     expect(res.status).toBe(200);
@@ -645,7 +642,7 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
   });
 
   it('persists a sleeve-condition change through the fields endpoint', async () => {
-    const { idToken, uid } = await getTestIdToken('patch-sleeve-user');
+    const { sessionToken, uid } = await createTestSession('patch-sleeve-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
@@ -669,7 +666,7 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
 
     const res = await request(app)
       .patch(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ sleeveCondition: 'Generic' });
 
     expect(res.status).toBe(200);
@@ -678,13 +675,13 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
   });
 
   it('rejects a condition outside the Discogs grading set with 400 (FR-008)', async () => {
-    const { idToken, uid } = await getTestIdToken('patch-bad-condition-user');
+    const { sessionToken, uid } = await createTestSession('patch-bad-condition-user');
     await linkDiscogs(uid);
     const entry = await createSyncedEntry(uid, 1, 11);
 
     const res = await request(app)
       .patch(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ mediaCondition: 'Almost New' });
 
     expect(res.status).toBe(400);
@@ -692,13 +689,13 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
   });
 
   it('rejects an out-of-range rating with 400', async () => {
-    const { idToken, uid } = await getTestIdToken('patch-bad-rating-user');
+    const { sessionToken, uid } = await createTestSession('patch-bad-rating-user');
     await linkDiscogs(uid);
     const entry = await createSyncedEntry(uid, 1, 11);
 
     const res = await request(app)
       .patch(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ rating: 9 });
 
     expect(res.status).toBe(400);
@@ -706,13 +703,13 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
   });
 
   it('rejects legacy condition/unknown keys with 400 (breaking change)', async () => {
-    const { idToken, uid } = await getTestIdToken('patch-legacy-body-user');
+    const { sessionToken, uid } = await createTestSession('patch-legacy-body-user');
     await linkDiscogs(uid);
     const entry = await createSyncedEntry(uid, 1, 11);
 
     const res = await request(app)
       .patch(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ condition: 'Mint' });
 
     expect(res.status).toBe(400);
@@ -720,7 +717,7 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
   });
 
   it('rejects editing a field the user deleted on discogs.com with 400', async () => {
-    const { idToken, uid } = await getTestIdToken('patch-nofield-user');
+    const { sessionToken, uid } = await createTestSession('patch-nofield-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
@@ -730,7 +727,7 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
 
     const res = await request(app)
       .patch(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ mediaCondition: 'Good (G)' });
 
     expect(res.status).toBe(400);
@@ -738,7 +735,7 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
   });
 
   it('returns 401 discogs_link_invalid when the Discogs write is rejected as unauthorized', async () => {
-    const { idToken, uid } = await getTestIdToken('patch-revoked-user');
+    const { sessionToken, uid } = await createTestSession('patch-revoked-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
@@ -750,7 +747,7 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
 
     const res = await request(app)
       .patch(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ rating: 2 });
 
     expect(res.status).toBe(401);
@@ -758,12 +755,12 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
   });
 
   it('returns 404 entry_not_found for an entry that does not exist', async () => {
-    const { idToken, uid } = await getTestIdToken('patch-missing-user');
+    const { sessionToken, uid } = await createTestSession('patch-missing-user');
     await linkDiscogs(uid);
 
     const res = await request(app)
       .patch('/api/library/does-not-exist')
-      .set('Authorization', `Bearer ${idToken}`)
+      .set('Authorization', `Bearer ${sessionToken}`)
       .send({ rating: 3 });
 
     expect(res.status).toBe(404);
@@ -773,7 +770,7 @@ describe('Library API contract: PATCH /api/library/:id (per-copy edits, US2)', (
 
 describe('Library API contract: DELETE /api/library/:id (write-through remove, US4)', () => {
   it('removes the Discogs instance first, then the mirror entry', async () => {
-    const { idToken, uid } = await getTestIdToken('delete-user');
+    const { sessionToken, uid } = await createTestSession('delete-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
@@ -783,7 +780,7 @@ describe('Library API contract: DELETE /api/library/:id (write-through remove, U
 
     const res = await request(app)
       .delete(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(204);
     expect(discogsDelete.isDone()).toBe(true);
@@ -791,7 +788,7 @@ describe('Library API contract: DELETE /api/library/:id (write-through remove, U
   });
 
   it('still removes the mirror entry when Discogs reports the instance already gone', async () => {
-    const { idToken, uid } = await getTestIdToken('delete-converged-user');
+    const { sessionToken, uid } = await createTestSession('delete-converged-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
@@ -801,14 +798,14 @@ describe('Library API contract: DELETE /api/library/:id (write-through remove, U
 
     const res = await request(app)
       .delete(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(204);
     await expect(getEntry(uid, entry.id)).resolves.toBeNull();
   });
 
   it('keeps the entry and returns 503 when the Discogs removal fails (FR-005)', async () => {
-    const { idToken, uid } = await getTestIdToken('delete-fail-user');
+    const { sessionToken, uid } = await createTestSession('delete-fail-user');
     const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
     const entry = await createSyncedEntry(uid, 1, 11);
 
@@ -818,7 +815,7 @@ describe('Library API contract: DELETE /api/library/:id (write-through remove, U
 
     const res = await request(app)
       .delete(`/api/library/${entry.id}`)
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(503);
     expect(res.body.error).toBe('discogs_unavailable');
@@ -826,12 +823,12 @@ describe('Library API contract: DELETE /api/library/:id (write-through remove, U
   });
 
   it('returns 404 entry_not_found for an entry that does not exist', async () => {
-    const { idToken, uid } = await getTestIdToken('delete-missing-user');
+    const { sessionToken, uid } = await createTestSession('delete-missing-user');
     await linkDiscogs(uid);
 
     const res = await request(app)
       .delete('/api/library/does-not-exist')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('entry_not_found');

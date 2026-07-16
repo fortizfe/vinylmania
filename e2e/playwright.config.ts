@@ -3,15 +3,17 @@ import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 
-// Single source of truth for the fake Firebase project the frontend and
-// backend both point at during e2e runs (feature 001's vinylmania-test
-// project, already used by the backend's Jest suite).
+// Single source of truth for the fake Firebase project the backend points
+// at during e2e runs (feature 001's vinylmania-test project, already used
+// by the backend's Jest suite). The frontend no longer reads this at all
+// (feature 051 removed its Firebase client SDK usage entirely).
 dotenv.config({ path: path.resolve(__dirname, '../frontend/.env.test') });
 
 const FRONTEND_URL = 'http://localhost:5173';
 const BACKEND_URL = 'http://localhost:3001';
 const DISCOGS_STUB_URL = 'http://localhost:4571';
-const FIREBASE_PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID ?? 'vinylmania-test';
+const GOOGLE_STUB_URL = 'http://localhost:4572';
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID ?? 'vinylmania-test';
 const AUTH_EMULATOR_HOST = 'localhost:9099';
 const FIRESTORE_EMULATOR_HOST = 'localhost:8080';
 
@@ -88,6 +90,15 @@ export default defineConfig({
       timeout: 15_000,
     },
     {
+      // Local Google OAuth stub (feature 051) — keeps e2e hermetic; the
+      // backend below is pointed at it instead of the real Google hosts.
+      command: 'node helpers/googleOauthStub.ts',
+      cwd: __dirname,
+      url: `${GOOGLE_STUB_URL}/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 15_000,
+    },
+    {
       command: 'npm run dev',
       cwd: path.resolve(__dirname, '../backend'),
       url: `${BACKEND_URL}/health`,
@@ -107,23 +118,26 @@ export default defineConfig({
         DISCOGS_CONSUMER_KEY: 'e2e-fake-consumer-key',
         DISCOGS_CONSUMER_SECRET: 'e2e-fake-consumer-secret',
         DISCOGS_OAUTH_CALLBACK_URL: `${FRONTEND_URL}/app/profile/discogs/callback`,
+        // Feature 051: Google login, targeting the stub above with fake
+        // client credentials (never a real client id/secret).
+        GOOGLE_OAUTH_BASE_URL: GOOGLE_STUB_URL,
+        GOOGLE_TOKEN_BASE_URL: GOOGLE_STUB_URL,
+        GOOGLE_USERINFO_BASE_URL: GOOGLE_STUB_URL,
+        GOOGLE_OAUTH_CLIENT_ID: 'e2e-fake-client-id',
+        GOOGLE_OAUTH_CLIENT_SECRET: 'e2e-fake-client-secret',
+        GOOGLE_OAUTH_CALLBACK_URL: `${FRONTEND_URL}/login/callback`,
       },
     },
     {
+      // No env needed: the frontend no longer talks to Firebase/Google
+      // directly at all (feature 051) — every network request it makes
+      // goes to its own backend, per the Frontend Network Requests —
+      // Backend-Only constitution principle.
       command: 'npm run dev',
       cwd: path.resolve(__dirname, '../frontend'),
       url: FRONTEND_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
-      env: {
-        VITE_USE_FIREBASE_EMULATOR: 'true',
-        VITE_FIREBASE_API_KEY: process.env.VITE_FIREBASE_API_KEY ?? '',
-        VITE_FIREBASE_AUTH_DOMAIN: process.env.VITE_FIREBASE_AUTH_DOMAIN ?? '',
-        VITE_FIREBASE_PROJECT_ID: FIREBASE_PROJECT_ID,
-        VITE_FIREBASE_STORAGE_BUCKET: process.env.VITE_FIREBASE_STORAGE_BUCKET ?? '',
-        VITE_FIREBASE_MESSAGING_SENDER_ID: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '',
-        VITE_FIREBASE_APP_ID: process.env.VITE_FIREBASE_APP_ID ?? '',
-      },
     },
   ],
 });

@@ -15,7 +15,8 @@ import {
 
 import { createApp } from '../../../src/app';
 import { getRedisClient } from '../../../src/adapters/cache/redisClient';
-import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { createTestSession } from '../../helpers/testSession';
 
 const app = createApp();
 
@@ -39,7 +40,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
       .spyOn(getRedisClient()!, 'get')
       .mockRejectedValueOnce(new Error('connection reset'));
 
-    const { idToken } = await getTestIdToken('outage-search-user');
+    const { sessionToken } = await createTestSession('outage-search-user');
 
     discogsScope()
       .get('/database/search')
@@ -63,7 +64,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
     const res = await request(app)
       .get('/api/discogs/search')
       .query({ q: 'Stockholm', type: 'release' })
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual([
@@ -83,7 +84,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
       .spyOn(getRedisClient()!, 'get')
       .mockRejectedValueOnce(new Error('connection reset'));
 
-    const { idToken } = await getTestIdToken('outage-release-user');
+    const { sessionToken } = await createTestSession('outage-release-user');
 
     discogsScope().get('/releases/901').reply(200, {
       id: 901,
@@ -100,7 +101,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
 
     const res = await request(app)
       .get('/api/discogs/releases/901')
-      .set('Authorization', `Bearer ${idToken}`);
+      .set('Authorization', `Bearer ${sessionToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.title).toBe('Stockholm');
@@ -112,7 +113,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
         .spyOn(getRedisClient()!, 'get')
         .mockRejectedValue(new Error('connection reset'));
 
-      const { idToken } = await getTestIdToken('outage-rating-user');
+      const { sessionToken } = await createTestSession('outage-rating-user');
 
       discogsScope()
         .get('/database/search')
@@ -126,7 +127,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'Stockholm', type: 'release' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.results[0].communityRating).toEqual({ average: 4.19, count: 47 });
@@ -137,7 +138,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
         .spyOn(getRedisClient()!, 'get')
         .mockRejectedValue(new Error('connection reset'));
 
-      const { idToken } = await getTestIdToken('outage-rating-timeout-user');
+      const { sessionToken } = await createTestSession('outage-rating-timeout-user');
 
       discogsScope()
         .get('/database/search')
@@ -151,7 +152,7 @@ describe('Discogs routes stay available during a Redis outage (US2, SC-005)', ()
       const res = await request(app)
         .get('/api/discogs/search')
         .query({ q: 'Stockholm', type: 'release' })
-        .set('Authorization', `Bearer ${idToken}`);
+        .set('Authorization', `Bearer ${sessionToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.results[0].communityRating).toBeUndefined();

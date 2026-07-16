@@ -3,23 +3,17 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider, useAuth } from '../../src/auth/AuthContext';
-
-const mockSignInWithPopup = vi.fn();
-const mockSignOut = vi.fn();
-const mockOnAuthStateChanged = vi.fn();
-
-vi.mock('firebase/auth', () => ({
-  signInWithPopup: (...args: unknown[]) => mockSignInWithPopup(...args),
-  signOut: (...args: unknown[]) => mockSignOut(...args),
-  onAuthStateChanged: (...args: unknown[]) => mockOnAuthStateChanged(...args),
-}));
-
-vi.mock('../../src/services/firebaseClient', () => ({
-  firebaseAuth: {},
-  googleAuthProvider: {},
-}));
+import { clearSessionToken, getSessionToken, setSessionToken } from '../../src/services/sessionStore';
 
 const originalFetch = global.fetch;
+const originalAssign = window.location.assign;
+
+const PROFILE = {
+  uid: 'abc123',
+  displayName: 'Jane Doe',
+  email: 'jane@example.com',
+  photoURL: 'https://example.com/photo.png',
+};
 
 function TestConsumer() {
   const { user, loading, error, signIn, signOut } = useAuth();
@@ -38,73 +32,70 @@ function TestConsumer() {
 
 describe('AuthContext', () => {
   beforeEach(() => {
-    mockSignInWithPopup.mockReset();
-    mockSignOut.mockReset();
-    mockOnAuthStateChanged.mockReset().mockImplementation((_auth, callback) => {
-      callback(null);
-      return () => undefined;
+    localStorage.clear();
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, assign: vi.fn() },
+      writable: true,
     });
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        uid: 'abc123',
-        displayName: 'Jane Doe',
-        email: 'jane@example.com',
-        photoURL: 'https://example.com/photo.png',
-      }),
-    }) as unknown as typeof fetch;
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
+    window.location.assign = originalAssign;
+    clearSessionToken();
   });
 
-  it('starts signed out', async () => {
+  it('has no firebase/auth import (no SDK listener) — starts signed out with no stored session', async () => {
     render(
       <AuthProvider>
         <TestConsumer />
       </AuthProvider>,
     );
 
-    await waitFor(() =>
-      expect(screen.getByTestId('user')).toHaveTextContent('anonymous'),
-    );
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
   });
 
-  it('signs the user in via Google popup and calls the session endpoint', async () => {
-    mockSignInWithPopup.mockResolvedValue({
-      user: {
-        uid: 'abc123',
-        displayName: 'Jane Doe',
-        email: 'jane@example.com',
-        photoURL: 'https://example.com/photo.png',
-        getIdToken: async () => 'fake-id-token',
-      },
-    });
-
+  it('signIn() performs a full-page navigation to the backend authorize URL, not a fetch/SDK call', async () => {
     render(
       <AuthProvider>
         <TestConsumer />
       </AuthProvider>,
     );
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
 
     const user = userEvent.setup();
-    await act(async () => {
-      await user.click(screen.getByText('sign-in'));
-    });
+    await user.click(screen.getByText('sign-in'));
+
+    expect(window.location.assign).toHaveBeenCalledWith(
+      expect.stringContaining('/api/auth/google/authorize'),
+    );
+  });
+
+  it('silently restores an existing session from a stored token on mount', async () => {
+    setSessionToken('existing-token');
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => PROFILE,
+    }) as unknown as typeof fetch;
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>,
+    );
 
     await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('Jane Doe'));
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/auth/session'),
+      expect.stringContaining('/api/auth/me'),
       expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({ Authorization: 'Bearer fake-id-token' }),
+        headers: expect.any(Headers),
       }),
     );
   });
 
-  it('surfaces a friendly error when the popup is cancelled', async () => {
-    mockSignInWithPopup.mockRejectedValue({ code: 'auth/popup-closed-by-user' });
+  it('does not call the backend at all on mount when no session token is stored', async () => {
+    global.fetch = vi.fn();
 
     render(
       <AuthProvider>
@@ -112,46 +103,76 @@ describe('AuthContext', () => {
       </AuthProvider>,
     );
 
-    const user = userEvent.setup();
-    await act(async () => {
-      await user.click(screen.getByText('sign-in'));
-    });
-
-    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
-    expect(screen.getByTestId('user')).toHaveTextContent('anonymous');
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('clears the signed-in user when signOut is called', async () => {
-    mockSignInWithPopup.mockResolvedValue({
-      user: {
-        uid: 'abc123',
-        displayName: 'Jane Doe',
-        email: 'jane@example.com',
-        photoURL: 'https://example.com/photo.png',
-        getIdToken: async () => 'fake-id-token',
-      },
-    });
-    mockSignOut.mockResolvedValue(undefined);
+  it('signOut() calls DELETE /api/auth/session, clears the stored token, and clears the user', async () => {
+    setSessionToken('existing-token');
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => PROFILE })
+      .mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) }) as unknown as typeof fetch;
 
     render(
       <AuthProvider>
         <TestConsumer />
       </AuthProvider>,
     );
-
-    const user = userEvent.setup();
-    await act(async () => {
-      await user.click(screen.getByText('sign-in'));
-    });
     await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('Jane Doe'));
 
+    const user = userEvent.setup();
     await act(async () => {
       await user.click(screen.getByText('sign-out'));
     });
 
-    expect(mockSignOut).toHaveBeenCalledTimes(1);
-    await waitFor(() =>
-      expect(screen.getByTestId('user')).toHaveTextContent('anonymous'),
+    expect(global.fetch).toHaveBeenLastCalledWith(
+      expect.stringContaining('/api/auth/session'),
+      expect.objectContaining({ method: 'DELETE' }),
     );
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
+    expect(getSessionToken()).toBeNull();
+  });
+
+  it('a registered 401 handler (from apiClient) clears the signed-in user', async () => {
+    setSessionToken('existing-token');
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => PROFILE })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'unauthorized', message: 'Sign-in required or session expired.' }),
+      }) as unknown as typeof fetch;
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('Jane Doe'));
+
+    const { authorizedFetch } = await import('../../src/services/apiClient');
+    await act(async () => {
+      await authorizedFetch('/api/library').catch(() => undefined);
+    });
+
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
+  });
+
+  it('exposes no signingIn state — that UX now lives on the login callback page, not AuthContext', () => {
+    let ctxValue: Record<string, unknown> | undefined;
+    function Probe() {
+      ctxValue = useAuth() as unknown as Record<string, unknown>;
+      return null;
+    }
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    );
+
+    expect(ctxValue).toBeDefined();
+    expect(ctxValue).not.toHaveProperty('signingIn');
   });
 });
