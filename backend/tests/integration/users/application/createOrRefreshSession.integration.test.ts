@@ -1,10 +1,15 @@
-import { getFirestoreDb } from '../../src/config/firebase-admin';
-import { getOrCreateUser } from '../../src/services/userService';
+import { firestoreUserRepository } from '../../../../src/adapters/users/firestoreUserRepository';
+import { createUserProfileUseCases } from '../../../../src/application/users/userProfileUseCases';
+import { getFirestoreDb } from '../../../../src/config/firebase-admin';
 import {
   clearEmulatorFirestore,
   clearEmulatorUsers,
   getTestIdToken,
-} from '../helpers/authEmulator';
+} from '../../../helpers/authEmulator';
+
+const { createOrRefreshSession } = createUserProfileUseCases({
+  userRepository: firestoreUserRepository,
+});
 
 describe('User get-or-create (Firestore emulator)', () => {
   afterEach(async () => {
@@ -15,7 +20,7 @@ describe('User get-or-create (Firestore emulator)', () => {
   it('creates a new users/{uid} document on first sign-in', async () => {
     const { uid } = await getTestIdToken('first-timer', { displayName: 'Jane Doe' });
 
-    const user = await getOrCreateUser({
+    const user = await createOrRefreshSession({
       uid,
       email: 'jane@example.com',
       displayName: 'Jane Doe',
@@ -33,7 +38,7 @@ describe('User get-or-create (Firestore emulator)', () => {
   it('reuses the existing document and updates lastSignInAt on a later sign-in', async () => {
     const { uid } = await getTestIdToken('returning-user', { displayName: 'Jane Doe' });
 
-    const first = await getOrCreateUser({
+    const first = await createOrRefreshSession({
       uid,
       email: 'jane@example.com',
       displayName: 'Jane Doe',
@@ -42,7 +47,7 @@ describe('User get-or-create (Firestore emulator)', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    const second = await getOrCreateUser({
+    const second = await createOrRefreshSession({
       uid,
       email: 'jane@example.com',
       displayName: 'Jane Doe',

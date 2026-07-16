@@ -13,7 +13,7 @@ import {
   stubCollectionPage,
 } from '../../helpers/nock';
 import { createApp } from '../../../src/app';
-import { getRedisClient } from '../../../src/cache/redisClient';
+import { getRedisClient } from '../../../src/adapters/cache/redisClient';
 import { getFirestoreDb } from '../../../src/config/firebase-admin';
 import { createEntry } from '../../../src/adapters/library/firestoreLibraryRepository';
 import {

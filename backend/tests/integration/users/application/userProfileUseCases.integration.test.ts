@@ -1,11 +1,16 @@
+import { firestoreUserRepository } from '../../../../src/adapters/users/firestoreUserRepository';
+import { createUserProfileUseCases } from '../../../../src/application/users/userProfileUseCases';
 import {
   clearEmulatorFirestore,
   clearEmulatorUsers,
   getTestIdToken,
-} from '../helpers/authEmulator';
-import { getOrCreateUser, getUser, updateThemePreference } from '../../src/services/userService';
+} from '../../../helpers/authEmulator';
 
-describe('userService — theme preference', () => {
+const { createOrRefreshSession, getUserProfile, updateThemePreference } = createUserProfileUseCases({
+  userRepository: firestoreUserRepository,
+});
+
+describe('userProfileUseCases — theme preference (Firestore emulator)', () => {
   afterEach(async () => {
     await clearEmulatorUsers();
     await clearEmulatorFirestore();
@@ -13,9 +18,9 @@ describe('userService — theme preference', () => {
 
   it('omits themePreference entirely when it was never set', async () => {
     const { uid } = await getTestIdToken('theme-unset', { displayName: 'Jane Doe' });
-    await getOrCreateUser({ uid, email: 'theme-unset@example.com', displayName: 'Jane Doe' });
+    await createOrRefreshSession({ uid, email: 'theme-unset@example.com', displayName: 'Jane Doe' });
 
-    const user = await getUser(uid);
+    const user = await getUserProfile(uid);
 
     expect(user).not.toBeNull();
     expect(user).not.toHaveProperty('themePreference');
@@ -23,7 +28,7 @@ describe('userService — theme preference', () => {
 
   it('updateThemePreference writes only the themePreference field and returns the updated profile', async () => {
     const { uid } = await getTestIdToken('theme-write', { displayName: 'Jane Doe' });
-    await getOrCreateUser({ uid, email: 'theme-write@example.com', displayName: 'Jane Doe' });
+    await createOrRefreshSession({ uid, email: 'theme-write@example.com', displayName: 'Jane Doe' });
 
     const updated = await updateThemePreference(uid, 'dark');
 
@@ -31,17 +36,17 @@ describe('userService — theme preference', () => {
     expect(updated.displayName).toBe('Jane Doe');
     expect(updated.email).toBe('theme-write@example.com');
 
-    const reFetched = await getUser(uid);
+    const reFetched = await getUserProfile(uid);
     expect(reFetched?.themePreference).toBe('dark');
   });
 
-  it('getOrCreateUser preserves an existing themePreference across a normal sign-in update (FR-012)', async () => {
+  it('createOrRefreshSession preserves an existing themePreference across a normal sign-in update (research.md Decision 5)', async () => {
     const { uid } = await getTestIdToken('theme-preserve', { displayName: 'Jane Doe' });
-    await getOrCreateUser({ uid, email: 'theme-preserve@example.com', displayName: 'Jane Doe' });
+    await createOrRefreshSession({ uid, email: 'theme-preserve@example.com', displayName: 'Jane Doe' });
     await updateThemePreference(uid, 'dark');
 
     // Simulates a normal subsequent sign-in, which refreshes lastSignInAt.
-    const resigned = await getOrCreateUser({
+    const resigned = await createOrRefreshSession({
       uid,
       email: 'theme-preserve@example.com',
       displayName: 'Jane Doe',

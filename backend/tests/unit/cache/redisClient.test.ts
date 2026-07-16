@@ -22,7 +22,7 @@ describe('getRedisClient', () => {
   it('constructs a client using process.env.REDIS_URL', async () => {
     process.env.REDIS_URL = 'redis://localhost:6379/0';
 
-    const { getRedisClient } = await import('../../../src/cache/redisClient');
+    const { getRedisClient } = await import('../../../src/adapters/cache/redisClient');
     getRedisClient();
 
     expect(RedisMock).toHaveBeenCalledWith('redis://localhost:6379/0', expect.anything());
@@ -31,7 +31,7 @@ describe('getRedisClient', () => {
   it('reuses the same client instance across repeated calls', async () => {
     process.env.REDIS_URL = 'redis://localhost:6379/0';
 
-    const { getRedisClient } = await import('../../../src/cache/redisClient');
+    const { getRedisClient } = await import('../../../src/adapters/cache/redisClient');
     const first = getRedisClient();
     const second = getRedisClient();
 
@@ -42,7 +42,7 @@ describe('getRedisClient', () => {
   it('returns null and constructs no client when REDIS_URL is not set', async () => {
     delete process.env.REDIS_URL;
 
-    const { getRedisClient } = await import('../../../src/cache/redisClient');
+    const { getRedisClient } = await import('../../../src/adapters/cache/redisClient');
 
     expect(getRedisClient()).toBeNull();
     expect(RedisMock).not.toHaveBeenCalled();

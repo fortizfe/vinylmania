@@ -1,5 +1,5 @@
-import { invalidateCache, withCache as withCacheAside } from '../../cache/cacheAside';
-import { getRedisClient } from '../../cache/redisClient';
+import { invalidateCache, withCache as withCacheAside } from './cacheAside';
+import { getRedisClient } from './redisClient';
 import type { CachePort } from '../../ports/cache/cachePort';
 
 // Fail-soft in both directions, exactly like today's isMarkerFresh/setMarker:

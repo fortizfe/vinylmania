@@ -1,4 +1,4 @@
-import { logger } from '../config/logger';
+import { logger } from '../../config/logger';
 import { getRedisClient } from './redisClient';
 
 function errorMessage(err: unknown): string {

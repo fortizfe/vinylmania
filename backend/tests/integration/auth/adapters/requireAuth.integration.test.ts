@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import { requireAuth } from '../../src/middleware/requireAuth';
-import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import { requireAuth } from '../../../../src/adapters/auth/requireAuth';
+import { clearEmulatorUsers, getTestIdToken } from '../../../helpers/authEmulator';
 
 function mockRes() {
   const res = {} as Response;
@@ -16,7 +16,7 @@ function mockReq(authorizationHeader?: string): Request {
   } as unknown as Request;
 }
 
-describe('requireAuth middleware', () => {
+describe('requireAuth middleware (Auth emulator)', () => {
   afterAll(async () => {
     await clearEmulatorUsers();
   });

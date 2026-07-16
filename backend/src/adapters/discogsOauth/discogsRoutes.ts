@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { logger } from '../../config/logger';
 import { DiscogsError } from '../../discogs/discogsErrors';
 import { DiscogsOauthFlowError } from '../../domain/discogsOauth/discogsOauthErrors';
-import { requireAuth } from '../../middleware/requireAuth';
+import { requireAuth } from '../auth/requireAuth';
 import { createCompleteLinkUseCase } from '../../application/discogsOauth/completeLink';
 import { createDisconnectConnectionUseCase } from '../../application/discogsOauth/disconnectConnection';
 import { createGetConnectionStatusUseCase } from '../../application/discogsOauth/getConnectionStatus';

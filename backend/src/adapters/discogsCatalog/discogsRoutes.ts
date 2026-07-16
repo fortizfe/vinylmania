@@ -7,7 +7,7 @@ import {
   DiscogsRateLimitError,
   DiscogsUnavailableError,
 } from '../../discogs/discogsErrors';
-import { requireAuth } from '../../middleware/requireAuth';
+import { requireAuth } from '../auth/requireAuth';
 import { cacheAdapter } from '../cache/cacheAdapter';
 import {
   discogsCatalogAdapter,

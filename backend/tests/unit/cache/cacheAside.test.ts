@@ -18,8 +18,8 @@ describe('withCache', () => {
   });
 
   it('returns the cached value on a hit and never calls the fetcher', async () => {
-    const { withCache } = await import('../../../src/cache/cacheAside');
-    const { getRedisClient } = await import('../../../src/cache/redisClient');
+    const { withCache } = await import('../../../src/adapters/cache/cacheAside');
+    const { getRedisClient } = await import('../../../src/adapters/cache/redisClient');
 
     await getRedisClient()!.set('key:1', JSON.stringify({ value: 'cached' }));
 
@@ -31,8 +31,8 @@ describe('withCache', () => {
   });
 
   it('calls the fetcher on a miss and stores the result with the given TTL', async () => {
-    const { withCache } = await import('../../../src/cache/cacheAside');
-    const { getRedisClient } = await import('../../../src/cache/redisClient');
+    const { withCache } = await import('../../../src/adapters/cache/cacheAside');
+    const { getRedisClient } = await import('../../../src/adapters/cache/redisClient');
 
     const fetcher = jest.fn().mockResolvedValue({ value: 'fresh' });
     const result = await withCache('key:2', 60, fetcher);
@@ -49,8 +49,8 @@ describe('withCache', () => {
   });
 
   it('falls back to the fetcher without throwing when Redis errors on read', async () => {
-    const { withCache } = await import('../../../src/cache/cacheAside');
-    const { getRedisClient } = await import('../../../src/cache/redisClient');
+    const { withCache } = await import('../../../src/adapters/cache/cacheAside');
+    const { getRedisClient } = await import('../../../src/adapters/cache/redisClient');
 
     jest
       .spyOn(getRedisClient()!, 'get')
@@ -64,8 +64,8 @@ describe('withCache', () => {
   });
 
   it('falls back to the fetcher result without throwing when Redis errors on write', async () => {
-    const { withCache } = await import('../../../src/cache/cacheAside');
-    const { getRedisClient } = await import('../../../src/cache/redisClient');
+    const { withCache } = await import('../../../src/adapters/cache/cacheAside');
+    const { getRedisClient } = await import('../../../src/adapters/cache/redisClient');
 
     jest
       .spyOn(getRedisClient()!, 'set')
@@ -78,8 +78,8 @@ describe('withCache', () => {
   });
 
   it('propagates a fetcher error unchanged and caches nothing', async () => {
-    const { withCache } = await import('../../../src/cache/cacheAside');
-    const { getRedisClient } = await import('../../../src/cache/redisClient');
+    const { withCache } = await import('../../../src/adapters/cache/cacheAside');
+    const { getRedisClient } = await import('../../../src/adapters/cache/redisClient');
 
     const fetcher = jest.fn().mockRejectedValue(new Error('upstream failure'));
 
@@ -90,7 +90,7 @@ describe('withCache', () => {
   it('calls the fetcher directly without touching Redis when REDIS_URL is unset', async () => {
     delete process.env.REDIS_URL;
 
-    const { withCache } = await import('../../../src/cache/cacheAside');
+    const { withCache } = await import('../../../src/adapters/cache/cacheAside');
     const fetcher = jest.fn().mockResolvedValue({ value: 'fresh' });
 
     const result = await withCache('key:6', 60, fetcher);
@@ -113,8 +113,8 @@ describe('invalidateCache', () => {
   });
 
   it('deletes the key so the next read misses', async () => {
-    const { invalidateCache } = await import('../../../src/cache/cacheAside');
-    const { getRedisClient } = await import('../../../src/cache/redisClient');
+    const { invalidateCache } = await import('../../../src/adapters/cache/cacheAside');
+    const { getRedisClient } = await import('../../../src/adapters/cache/redisClient');
 
     const client = getRedisClient()!;
     await client.set('key:inv', JSON.stringify({ value: 'stale' }));
@@ -125,8 +125,8 @@ describe('invalidateCache', () => {
   });
 
   it('does not throw when Redis errors on delete', async () => {
-    const { invalidateCache } = await import('../../../src/cache/cacheAside');
-    const { getRedisClient } = await import('../../../src/cache/redisClient');
+    const { invalidateCache } = await import('../../../src/adapters/cache/cacheAside');
+    const { getRedisClient } = await import('../../../src/adapters/cache/redisClient');
 
     jest
       .spyOn(getRedisClient()!, 'del')
@@ -138,7 +138,7 @@ describe('invalidateCache', () => {
   it('is a no-op when REDIS_URL is unset', async () => {
     delete process.env.REDIS_URL;
 
-    const { invalidateCache } = await import('../../../src/cache/cacheAside');
+    const { invalidateCache } = await import('../../../src/adapters/cache/cacheAside');
 
     await expect(invalidateCache('key:inv-none')).resolves.toBeUndefined();
   });

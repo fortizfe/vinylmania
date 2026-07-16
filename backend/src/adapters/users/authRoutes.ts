@@ -1,9 +1,10 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 
-import { logger } from '../config/logger';
-import { requireAuth } from '../middleware/requireAuth';
-import { getOrCreateUser, getUser, updateThemePreference } from '../services/userService';
+import { createUserProfileUseCases } from '../../application/users/userProfileUseCases';
+import { logger } from '../../config/logger';
+import { requireAuth } from '../auth/requireAuth';
+import { firestoreUserRepository } from './firestoreUserRepository';
 
 export const authRouter = Router();
 
@@ -11,10 +12,14 @@ const preferencesBodySchema = z.object({
   themePreference: z.enum(['light', 'dark']),
 });
 
+const { createOrRefreshSession, getUserProfile, updateThemePreference } = createUserProfileUseCases({
+  userRepository: firestoreUserRepository,
+});
+
 authRouter.post('/session', requireAuth, async (req: Request, res: Response) => {
   try {
     const auth = req.auth!;
-    const user = await getOrCreateUser({
+    const user = await createOrRefreshSession({
       uid: auth.uid,
       email: auth.email,
       displayName: auth.name ?? auth.email,
@@ -73,7 +78,7 @@ authRouter.patch('/preferences', requireAuth, async (req: Request, res: Response
 authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
   try {
     const auth = req.auth!;
-    const user = await getUser(auth.uid);
+    const user = await getUserProfile(auth.uid);
 
     if (!user) {
       logger.warn({ route: '/api/auth/me', outcome: 'unauthorized', uid: auth.uid });

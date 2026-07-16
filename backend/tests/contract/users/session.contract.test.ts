@@ -1,11 +1,11 @@
 import request from 'supertest';
 
-import { createApp } from '../../src/app';
+import { createApp } from '../../../src/app';
 import {
   clearEmulatorFirestore,
   clearEmulatorUsers,
   getTestIdToken,
-} from '../helpers/authEmulator';
+} from '../../helpers/authEmulator';
 
 const app = createApp();
 

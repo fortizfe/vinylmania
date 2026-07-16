@@ -11,7 +11,7 @@ import {
   DiscogsRateLimitError,
   DiscogsUnavailableError,
 } from '../../discogs/discogsErrors';
-import { requireAuth } from '../../middleware/requireAuth';
+import { requireAuth } from '../auth/requireAuth';
 import {
   CatalogUnavailableForCreationError,
   createCreateLibraryEntryUseCase,

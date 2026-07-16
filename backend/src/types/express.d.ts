@@ -1,9 +1,4 @@
-export interface AuthenticatedUser {
-  uid: string;
-  email: string;
-  name?: string;
-  picture?: string;
-}
+import type { AuthenticatedUser } from '../domain/auth/types';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
