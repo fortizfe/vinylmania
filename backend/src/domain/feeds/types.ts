@@ -48,3 +48,21 @@ export interface SourceFeedResponse {
   articles: Article[];
   generatedAt: string;
 }
+
+/**
+ * A parsed feed item's fields, owned by this domain rather than by whatever
+ * RSS/Atom parsing library the feed source port's adapter happens to use
+ * (spec 049 FR-012). Produced by the adapter from the library's own output;
+ * consumed by `feedMapper.mapFeedItem`.
+ */
+export interface RawFeedItem {
+  title?: string;
+  link?: string;
+  guid?: string;
+  isoDate?: string;
+  pubDate?: string;
+  content?: string;
+  contentSnippet?: string;
+  summary?: string;
+  enclosureUrl?: string;
+}

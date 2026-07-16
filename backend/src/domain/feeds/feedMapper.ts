@@ -1,6 +1,4 @@
-import type Parser from 'rss-parser';
-
-import type { Article, FeedSourceConfig } from './types';
+import type { Article, FeedSourceConfig, RawFeedItem } from './types';
 
 const EXCERPT_MAX_LENGTH = 200;
 const SAFE_IMAGE_URL_PATTERN = /^https?:\/\//i;
@@ -38,8 +36,8 @@ function truncate(text: string, maxLength: number): string {
 }
 
 /** Only http(s) image URLs are ever accepted — rejects javascript:/data: URIs from a hostile feed. */
-function extractImageUrl(item: Parser.Item): string | undefined {
-  const enclosureUrl = item.enclosure?.url;
+function extractImageUrl(item: RawFeedItem): string | undefined {
+  const enclosureUrl = item.enclosureUrl;
   if (enclosureUrl && SAFE_IMAGE_URL_PATTERN.test(enclosureUrl)) {
     return enclosureUrl;
   }
@@ -54,7 +52,7 @@ function extractImageUrl(item: Parser.Item): string | undefined {
   return undefined;
 }
 
-function resolvePublishedAt(item: Parser.Item): string {
+function resolvePublishedAt(item: RawFeedItem): string {
   if (item.isoDate) {
     return item.isoDate;
   }
@@ -69,7 +67,7 @@ function resolvePublishedAt(item: Parser.Item): string {
 
 /** Maps one raw parsed feed item to an Article, or drops it (returns undefined) when unusable. */
 export function mapFeedItem(
-  item: Parser.Item,
+  item: RawFeedItem,
   source: FeedSourceConfig,
 ): Article | undefined {
   const title = cleanText(item.title);

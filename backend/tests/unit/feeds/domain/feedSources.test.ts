@@ -1,4 +1,4 @@
-import { FEED_SOURCES } from '../../src/feeds/feedSources';
+import { FEED_SOURCES } from '../../../../src/domain/feeds/feedSources';
 
 function findSource(id: string) {
   const source = FEED_SOURCES.find((s) => s.id === id);

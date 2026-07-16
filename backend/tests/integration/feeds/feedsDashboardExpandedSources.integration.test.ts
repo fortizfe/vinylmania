@@ -1,10 +1,10 @@
 import nock from 'nock';
 import request from 'supertest';
 
-import { invalidateCache } from '../../src/cache/cacheAside';
-import { FEED_SOURCES } from '../../src/feeds/feedSources';
-import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
-import { createApp } from '../../src/app';
+import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
+import { FEED_SOURCES } from '../../../src/domain/feeds/feedSources';
+import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
+import { createApp } from '../../../src/app';
 
 const app = createApp();
 

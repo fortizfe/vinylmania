@@ -1,8 +1,15 @@
 import { Router, type Request, type Response } from 'express';
 
-import { logger } from '../config/logger';
-import { getDashboard, getSourceArticles } from '../feeds/feedAggregator';
-import { requireAuth } from '../middleware/requireAuth';
+import { createFeedsAggregationUseCase } from '../../application/feeds/getFeedsDashboard';
+import { logger } from '../../config/logger';
+import { requireAuth } from '../auth/requireAuth';
+import { cacheAdapter } from '../cache/cacheAdapter';
+import { feedSourceAdapter } from './feedSourceAdapter';
+
+const { getDashboard, getSourceArticles } = createFeedsAggregationUseCase({
+  feedSource: feedSourceAdapter,
+  cache: cacheAdapter,
+});
 
 export const feedsRouter = Router();
 

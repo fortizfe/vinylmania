@@ -7,14 +7,14 @@ jest.mock('ioredis', () => ({
   default: RedisMock,
 }));
 
-import { invalidateCache } from '../../src/cache/cacheAside';
-import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
+import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
 
 // A low-frequency source sharing a category with a prolific one, so the
 // general dashboard view's per-category top-10 cutoff excludes its articles
 // — this is exactly the scenario the direct per-source endpoint must fix
 // (spec 041 US3, FR-008, FR-009).
-jest.mock('../../src/feeds/feedSources', () => ({
+jest.mock('../../../src/domain/feeds/feedSources', () => ({
   FEED_SOURCES: [
     {
       id: 'direct-prolific',
@@ -44,7 +44,7 @@ jest.mock('../../src/feeds/feedSources', () => ({
 }));
 
 // Imported after the mock above so the route/aggregator pick up the fixture sources.
-import { createApp } from '../../src/app';
+import { createApp } from '../../../src/app';
 
 const app = createApp();
 

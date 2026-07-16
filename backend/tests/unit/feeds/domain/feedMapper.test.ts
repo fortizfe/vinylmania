@@ -1,5 +1,5 @@
-import { mapFeedItem } from '../../src/feeds/feedMapper';
-import type { FeedSourceConfig } from '../../src/feeds/types';
+import { mapFeedItem } from '../../../../src/domain/feeds/feedMapper';
+import type { FeedSourceConfig } from '../../../../src/domain/feeds/types';
 
 const source: FeedSourceConfig = {
   id: 'metal-injection',
@@ -68,7 +68,7 @@ describe('mapFeedItem', () => {
       {
         title: 'T',
         link: 'https://example.com/enc',
-        enclosure: { url: 'https://cdn.example.com/enclosure.jpg' },
+        enclosureUrl: 'https://cdn.example.com/enclosure.jpg',
         content: '<img src="https://cdn.example.com/inline.jpg" />',
       },
       source,

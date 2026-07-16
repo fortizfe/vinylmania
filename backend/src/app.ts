@@ -5,7 +5,7 @@ import { logger } from './config/logger';
 import { authRouter } from './routes/auth';
 import { discogsRouter } from './adapters/discogsCatalog/discogsRoutes';
 import { discogsOauthRouter } from './adapters/discogsOauth/discogsRoutes';
-import { feedsRouter } from './routes/feeds';
+import { feedsRouter } from './adapters/feeds/feedsRoutes';
 import { libraryRouter } from './adapters/library/libraryRoutes';
 
 export function createApp(): express.Express {

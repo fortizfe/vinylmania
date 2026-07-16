@@ -1,14 +1,14 @@
 import nock from 'nock';
 import request from 'supertest';
 
-import { invalidateCache } from '../../src/cache/cacheAside';
-import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
+import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
 
 // A dedicated fixture set (own file, mirroring this project's existing
 // per-file FEED_SOURCES convention) covering feature 033 US3: MetalSucks and
 // Louder Sound merge into the existing "News" category alongside Metal
 // Injection, and degrade gracefully per-source like every other feed.
-jest.mock('../../src/feeds/feedSources', () => ({
+jest.mock('../../../src/domain/feeds/feedSources', () => ({
   FEED_SOURCES: [
     {
       id: 'metal-injection',
@@ -38,7 +38,7 @@ jest.mock('../../src/feeds/feedSources', () => ({
 }));
 
 // Imported after the mock above so the route/aggregator pick up the fixture sources.
-import { createApp } from '../../src/app';
+import { createApp } from '../../../src/app';
 
 const app = createApp();
 

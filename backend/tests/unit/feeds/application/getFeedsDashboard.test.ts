@@ -1,6 +1,9 @@
-import type { FeedSourceConfig } from '../../src/feeds/types';
+import { createFeedsAggregationUseCase } from '../../../../src/application/feeds/getFeedsDashboard';
+import type { CachePort } from '../../../../src/ports/cache/cachePort';
+import type { FeedSourcePort } from '../../../../src/ports/feeds/feedSourcePort';
+import type { FeedSourceConfig, RawFeedItem } from '../../../../src/domain/feeds/types';
 
-const mockFeedSources: FeedSourceConfig[] = [
+const testFeedSources: FeedSourceConfig[] = [
   {
     id: 'agg-test-a',
     name: 'Source A',
@@ -27,52 +30,56 @@ const mockFeedSources: FeedSourceConfig[] = [
   },
 ];
 
-jest.mock('../../src/feeds/feedSources', () => ({ FEED_SOURCES: mockFeedSources }));
-jest.mock('../../src/feeds/feedClient');
-
-import { invalidateCache } from '../../src/cache/cacheAside';
-import { fetchFeed } from '../../src/feeds/feedClient';
-import { getDashboard, getSourceArticles } from '../../src/feeds/feedAggregator';
-
-const mockedFetchFeed = jest.mocked(fetchFeed);
-
-interface RawItem {
-  title: string;
-  link: string;
-  pubDate?: string;
+function fakeCache(): jest.Mocked<CachePort> {
+  return {
+    has: jest.fn().mockResolvedValue(false),
+    set: jest.fn().mockResolvedValue(undefined),
+    // Passthrough: these tests are about aggregation, not caching mechanics.
+    withCache: jest.fn().mockImplementation((_key, _ttl, fetcher) => fetcher()),
+    invalidate: jest.fn().mockResolvedValue(undefined),
+  };
 }
 
-function feedOutput(items: RawItem[]) {
-  return { items } as unknown as Awaited<ReturnType<typeof fetchFeed>>;
+function fakeFeedSource(): jest.Mocked<FeedSourcePort> {
+  return {
+    fetchFeed: jest.fn<Promise<RawFeedItem[]>, [string, number?]>(),
+  };
 }
 
 describe('getDashboard', () => {
-  beforeEach(async () => {
-    await invalidateCache('feeds:agg-test-a');
-    await invalidateCache('feeds:agg-test-b');
-    await invalidateCache('feeds:agg-test-disabled');
-    mockedFetchFeed.mockReset();
+  let feedSource: jest.Mocked<FeedSourcePort>;
+  let cache: jest.Mocked<CachePort>;
+  let getDashboard: ReturnType<typeof createFeedsAggregationUseCase>['getDashboard'];
+
+  beforeEach(() => {
+    feedSource = fakeFeedSource();
+    cache = fakeCache();
+    ({ getDashboard } = createFeedsAggregationUseCase({
+      feedSource,
+      cache,
+      feedSources: testFeedSources,
+    }));
   });
 
   it('fans out across every enabled source, merging their articles and marking each ok', async () => {
-    mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
-      if (feedUrl === mockFeedSources[0].feedUrl) {
-        return feedOutput([
+    feedSource.fetchFeed.mockImplementation(async (feedUrl: string) => {
+      if (feedUrl === testFeedSources[0].feedUrl) {
+        return [
           {
             title: 'A1',
             link: 'https://source-a.test/1',
             pubDate: 'Mon, 01 Jan 2026 00:00:00 GMT',
           },
-        ]);
+        ];
       }
-      if (feedUrl === mockFeedSources[1].feedUrl) {
-        return feedOutput([
+      if (feedUrl === testFeedSources[1].feedUrl) {
+        return [
           {
             title: 'B1',
             link: 'https://source-b.test/1',
             pubDate: 'Tue, 02 Jan 2026 00:00:00 GMT',
           },
-        ]);
+        ];
       }
       throw new Error(`unexpected feed url ${feedUrl}`);
     });
@@ -89,20 +96,18 @@ describe('getDashboard', () => {
     expect(
       result.sourceStatuses.find((s) => s.sourceId === 'agg-test-disabled'),
     ).toBeUndefined();
-    expect(mockedFetchFeed).toHaveBeenCalledTimes(2);
+    expect(feedSource.fetchFeed).toHaveBeenCalledTimes(2);
 
     const newsCategory = result.categories.find((c) => c.category === 'News');
     expect(newsCategory?.articles.map((a) => a.title).sort()).toEqual(['A1', 'B1']);
   });
 
   it("isolates one failing source into sourceStatuses without discarding the healthy source's articles", async () => {
-    mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
-      if (feedUrl === mockFeedSources[0].feedUrl) {
-        return feedOutput([
-          { title: 'Healthy Article', link: 'https://source-a.test/2' },
-        ]);
+    feedSource.fetchFeed.mockImplementation(async (feedUrl: string) => {
+      if (feedUrl === testFeedSources[0].feedUrl) {
+        return [{ title: 'Healthy Article', link: 'https://source-a.test/2' }];
       }
-      if (feedUrl === mockFeedSources[1].feedUrl) {
+      if (feedUrl === testFeedSources[1].feedUrl) {
         throw new Error('simulated Cloudflare 403 challenge');
       }
       throw new Error(`unexpected feed url ${feedUrl}`);
@@ -128,11 +133,11 @@ describe('getDashboard', () => {
   });
 
   it('propagates each source\'s priority flag onto its sourceStatuses entry (data-model.md, spec FR-010 supporting)', async () => {
-    mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
-      if (feedUrl === mockFeedSources[0].feedUrl) {
-        return feedOutput([{ title: 'A1', link: 'https://source-a.test/1' }]);
+    feedSource.fetchFeed.mockImplementation(async (feedUrl: string) => {
+      if (feedUrl === testFeedSources[0].feedUrl) {
+        return [{ title: 'A1', link: 'https://source-a.test/1' }];
       }
-      if (feedUrl === mockFeedSources[1].feedUrl) {
+      if (feedUrl === testFeedSources[1].feedUrl) {
         throw new Error('simulated failure');
       }
       throw new Error(`unexpected feed url ${feedUrl}`);
@@ -148,19 +153,19 @@ describe('getDashboard', () => {
 
   describe('category grouping, sorting, and cap (spec 024 FR-012, superseded by 025 FR-006)', () => {
     it('sorts each category by most-recent first and caps it to the top 10 articles', async () => {
-      const twelveItems: RawItem[] = Array.from({ length: 12 }).map((_, index) => ({
+      const twelveItems: RawFeedItem[] = Array.from({ length: 12 }).map((_, index) => ({
         title: `Article ${index}`,
         link: `https://source-a.test/${index}`,
         // index 0 is oldest, index 11 is newest
         pubDate: new Date(Date.UTC(2026, 0, index + 1)).toUTCString(),
       }));
 
-      mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
-        if (feedUrl === mockFeedSources[0].feedUrl) {
-          return feedOutput(twelveItems);
+      feedSource.fetchFeed.mockImplementation(async (feedUrl: string) => {
+        if (feedUrl === testFeedSources[0].feedUrl) {
+          return twelveItems;
         }
-        if (feedUrl === mockFeedSources[1].feedUrl) {
-          return feedOutput([]);
+        if (feedUrl === testFeedSources[1].feedUrl) {
+          return [];
         }
         throw new Error(`unexpected feed url ${feedUrl}`);
       });
@@ -184,10 +189,10 @@ describe('getDashboard', () => {
     });
 
     it('merges articles from two sources sharing the same category label, capped at 10 combined rather than 10 per source (feature 025 FR-004, SC-005)', async () => {
-      // Both mockFeedSources[0] and [1] are configured with category "News" —
+      // Both testFeedSources[0] and [1] are configured with category "News" —
       // 7 items each (14 total) must collapse into one "News" entry capped
       // at 10 combined, sorted by recency across both sources' items.
-      function itemsFor(prefix: string, count: number, startDay: number): RawItem[] {
+      function itemsFor(prefix: string, count: number, startDay: number): RawFeedItem[] {
         return Array.from({ length: count }).map((_, index) => ({
           title: `${prefix}-${index}`,
           link: `https://${prefix}.test/${index}`,
@@ -195,14 +200,14 @@ describe('getDashboard', () => {
         }));
       }
 
-      mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
-        if (feedUrl === mockFeedSources[0].feedUrl) {
+      feedSource.fetchFeed.mockImplementation(async (feedUrl: string) => {
+        if (feedUrl === testFeedSources[0].feedUrl) {
           // Days 1-7
-          return feedOutput(itemsFor('source-a', 7, 1));
+          return itemsFor('source-a', 7, 1);
         }
-        if (feedUrl === mockFeedSources[1].feedUrl) {
+        if (feedUrl === testFeedSources[1].feedUrl) {
           // Days 8-14 (all newer than Source A's items)
-          return feedOutput(itemsFor('source-b', 7, 8));
+          return itemsFor('source-b', 7, 8);
         }
         throw new Error(`unexpected feed url ${feedUrl}`);
       });
@@ -228,14 +233,12 @@ describe('getDashboard', () => {
     });
 
     it('omits a category from the response when it ends up with zero articles', async () => {
-      mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
-        if (feedUrl === mockFeedSources[0].feedUrl) {
-          return feedOutput([
-            { title: 'Only Article', link: 'https://source-a.test/only' },
-          ]);
+      feedSource.fetchFeed.mockImplementation(async (feedUrl: string) => {
+        if (feedUrl === testFeedSources[0].feedUrl) {
+          return [{ title: 'Only Article', link: 'https://source-a.test/only' }];
         }
-        if (feedUrl === mockFeedSources[1].feedUrl) {
-          return feedOutput([]);
+        if (feedUrl === testFeedSources[1].feedUrl) {
+          return [];
         }
         throw new Error(`unexpected feed url ${feedUrl}`);
       });
@@ -248,22 +251,29 @@ describe('getDashboard', () => {
 });
 
 describe('getSourceArticles (spec 041 FR-008, FR-009, FR-010)', () => {
-  beforeEach(async () => {
-    await invalidateCache('feeds:agg-test-a');
-    await invalidateCache('feeds:agg-test-b');
-    await invalidateCache('feeds:agg-test-disabled');
-    mockedFetchFeed.mockReset();
+  let feedSource: jest.Mocked<FeedSourcePort>;
+  let cache: jest.Mocked<CachePort>;
+  let getSourceArticles: ReturnType<typeof createFeedsAggregationUseCase>['getSourceArticles'];
+
+  beforeEach(() => {
+    feedSource = fakeFeedSource();
+    cache = fakeCache();
+    ({ getSourceArticles } = createFeedsAggregationUseCase({
+      feedSource,
+      cache,
+      feedSources: testFeedSources,
+    }));
   });
 
   it('returns every article for a known source uncapped, sorted most-recent-first', async () => {
-    const twelveItems: RawItem[] = Array.from({ length: 12 }).map((_, index) => ({
+    const twelveItems: RawFeedItem[] = Array.from({ length: 12 }).map((_, index) => ({
       title: `Article ${index}`,
       link: `https://source-a.test/${index}`,
       pubDate: new Date(Date.UTC(2026, 0, index + 1)).toUTCString(),
     }));
-    mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
-      if (feedUrl === mockFeedSources[0].feedUrl) {
-        return feedOutput(twelveItems);
+    feedSource.fetchFeed.mockImplementation(async (feedUrl: string) => {
+      if (feedUrl === testFeedSources[0].feedUrl) {
+        return twelveItems;
       }
       throw new Error(`unexpected feed url ${feedUrl}`);
     });
@@ -286,12 +296,12 @@ describe('getSourceArticles (spec 041 FR-008, FR-009, FR-010)', () => {
   it('returns null for a disabled sourceId', async () => {
     const result = await getSourceArticles('agg-test-disabled');
     expect(result).toBeNull();
-    expect(mockedFetchFeed).not.toHaveBeenCalled();
+    expect(feedSource.fetchFeed).not.toHaveBeenCalled();
   });
 
   it('returns status "unavailable" with an empty article list when the underlying fetch throws', async () => {
-    mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
-      if (feedUrl === mockFeedSources[0].feedUrl) {
+    feedSource.fetchFeed.mockImplementation(async (feedUrl: string) => {
+      if (feedUrl === testFeedSources[0].feedUrl) {
         throw new Error('simulated timeout');
       }
       throw new Error(`unexpected feed url ${feedUrl}`);
@@ -309,9 +319,9 @@ describe('getSourceArticles (spec 041 FR-008, FR-009, FR-010)', () => {
   });
 
   it('returns status "ok" with an empty article list when the feed responds with zero items', async () => {
-    mockedFetchFeed.mockImplementation(async (feedUrl: string) => {
-      if (feedUrl === mockFeedSources[0].feedUrl) {
-        return feedOutput([]);
+    feedSource.fetchFeed.mockImplementation(async (feedUrl: string) => {
+      if (feedUrl === testFeedSources[0].feedUrl) {
+        return [];
       }
       throw new Error(`unexpected feed url ${feedUrl}`);
     });

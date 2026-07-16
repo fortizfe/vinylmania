@@ -1,10 +1,10 @@
 import nock from 'nock';
 import request from 'supertest';
 
-import { invalidateCache } from '../../src/cache/cacheAside';
-import { clearEmulatorUsers, getTestIdToken } from '../helpers/authEmulator';
+import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
+import { clearEmulatorUsers, getTestIdToken } from '../../helpers/authEmulator';
 
-jest.mock('../../src/feeds/feedSources', () => ({
+jest.mock('../../../src/domain/feeds/feedSources', () => ({
   FEED_SOURCES: [
     {
       id: 'integration-source-a',
@@ -24,7 +24,7 @@ jest.mock('../../src/feeds/feedSources', () => ({
 }));
 
 // Imported after the mock above so the route/aggregator pick up the fixture sources.
-import { createApp } from '../../src/app';
+import { createApp } from '../../../src/app';
 
 const app = createApp();
 

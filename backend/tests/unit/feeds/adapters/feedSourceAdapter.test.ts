@@ -1,6 +1,6 @@
 import nock from 'nock';
 
-import { fetchFeed } from '../../src/feeds/feedClient';
+import { fetchFeed } from '../../../../src/adapters/feeds/feedSourceAdapter';
 
 const FEED_ORIGIN = 'https://feed-client-test.example';
 
@@ -27,9 +27,9 @@ describe('fetchFeed', () => {
 
     const feed = await fetchFeed(`${FEED_ORIGIN}/rss`);
 
-    expect(feed.items).toHaveLength(1);
-    expect(feed.items[0].title).toBe('Item One');
-    expect(feed.items[0].link).toBe('https://example.com/1');
+    expect(feed).toHaveLength(1);
+    expect(feed[0].title).toBe('Item One');
+    expect(feed[0].link).toBe('https://example.com/1');
   });
 
   it('rejects when the source responds with a server error', async () => {
