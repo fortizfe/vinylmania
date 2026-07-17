@@ -108,6 +108,12 @@ test.describe('List mode (feature 052, US3)', () => {
   test('shows all six fields per row, and infinite scroll keeps working', async ({
     page,
   }) => {
+    // A full first batch (not just one row): list rows are far shorter than
+    // grid cards, so a single row leaves the infinite-scroll sentinel
+    // already inside the viewport, auto-fetching page 2 before the
+    // "before scroll" assertions below even run.
+    const firstBatch = Array.from({ length: 20 }, (_, i) => buildListResult(i));
+
     await page.route('**/api/discogs/search*', async (route) => {
       const url = new URL(route.request().url());
       const requestedPage = url.searchParams.get('page');
@@ -116,8 +122,8 @@ test.describe('List mode (feature 052, US3)', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            results: [buildListResult(2)],
-            pagination: { page: 2, pages: 2, items: 2, perPage: 1 },
+            results: [buildListResult(20)],
+            pagination: { page: 2, pages: 2, items: 21, perPage: 20 },
           }),
         });
         return;
@@ -126,8 +132,8 @@ test.describe('List mode (feature 052, US3)', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          results: [buildListResult(1)],
-          pagination: { page: 1, pages: 2, items: 2, perPage: 1 },
+          results: firstBatch,
+          pagination: { page: 1, pages: 2, items: 21, perPage: 20 },
         }),
       });
     });
@@ -138,17 +144,22 @@ test.describe('List mode (feature 052, US3)', () => {
     await expect(page.getByTestId('search-results-grid')).toBeVisible();
 
     await page.getByTestId('view-mode-list').click();
-    await expect(page.getByTestId('search-results-list')).toBeVisible();
+    const list = page.getByTestId('search-results-list');
+    await expect(list).toBeVisible();
 
-    await expect(page.getByText('Result 1')).toBeVisible();
-    await expect(page.getByText('Test Artist')).toBeVisible();
-    await expect(page.getByText('Vinyl')).toBeVisible();
-    await expect(page.getByText('Sweden')).toBeVisible();
-    await expect(page.getByText('1999')).toBeVisible();
-    await expect(page.getByText('Svek')).toBeVisible();
+    // Scoped to the list container and `.first()`: a bare page-wide text
+    // match also hits the "VINYLMANIA" header wordmark (substring match),
+    // and every row here shares the same artist/format/country/year/label.
+    await expect(list.getByText('Result 0')).toBeVisible();
+    await expect(list.getByText('Test Artist').first()).toBeVisible();
+    await expect(list.getByText('Vinyl').first()).toBeVisible();
+    await expect(list.getByText('Sweden').first()).toBeVisible();
+    await expect(list.getByText('1999').first()).toBeVisible();
+    await expect(list.getByText('Svek').first()).toBeVisible();
+    await expect(list.getByText('Result 20')).not.toBeVisible();
 
     await page.mouse.wheel(0, 20_000);
-    await expect(page.getByText('Result 2')).toBeVisible();
+    await expect(list.getByText('Result 20')).toBeVisible();
     await expect(page.getByText(/no more results/i)).toBeVisible();
   });
 
@@ -173,9 +184,10 @@ test.describe('List mode (feature 052, US3)', () => {
     await expect(page.getByTestId('search-results-grid')).toBeVisible();
 
     await page.getByTestId('view-mode-list').click();
-    await expect(page.getByTestId('search-results-list')).toBeVisible();
-    await expect(page.getByText('Result 1')).toBeVisible();
-    await expect(page.getByText('Test Artist')).toBeVisible();
+    const list = page.getByTestId('search-results-list');
+    await expect(list).toBeVisible();
+    await expect(list.getByText('Result 1')).toBeVisible();
+    await expect(list.getByText('Test Artist')).toBeVisible();
 
     const hasHorizontalScroll = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,

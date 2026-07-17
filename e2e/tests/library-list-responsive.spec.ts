@@ -162,14 +162,18 @@ test.describe('List mode (feature 052, US2)', () => {
     await expect(page.getByTestId('library-record-grid')).toBeVisible();
 
     await page.getByTestId('view-mode-list').click();
-    await expect(page.getByTestId('library-record-list')).toBeVisible();
+    const list = page.getByTestId('library-record-list');
+    await expect(list).toBeVisible();
 
-    await expect(page.getByText('Stockholm')).toBeVisible();
-    await expect(page.getByText('The Persuader')).toBeVisible();
-    await expect(page.getByText('Vinyl')).toBeVisible();
-    await expect(page.getByText('Sweden')).toBeVisible();
-    await expect(page.getByText('1999')).toBeVisible();
-    await expect(page.getByText('Svek')).toBeVisible();
+    // Scoped to the list container: a bare page-wide `getByText('Vinyl')`
+    // also matches the always-present "VINYLMANIA" header wordmark
+    // (Playwright's default text match is a case-insensitive substring).
+    await expect(list.getByText('Stockholm')).toBeVisible();
+    await expect(list.getByText('The Persuader')).toBeVisible();
+    await expect(list.getByText('Vinyl')).toBeVisible();
+    await expect(list.getByText('Sweden')).toBeVisible();
+    await expect(list.getByText('1999')).toBeVisible();
+    await expect(list.getByText('Svek')).toBeVisible();
 
     await expect(page.getByRole('button', { name: 'Next' })).toBeEnabled();
   });
@@ -192,9 +196,10 @@ test.describe('List mode (feature 052, US2)', () => {
     await expect(page.getByTestId('library-record-grid')).toBeVisible();
 
     await page.getByTestId('view-mode-list').click();
-    await expect(page.getByTestId('library-record-list')).toBeVisible();
-    await expect(page.getByText('Stockholm')).toBeVisible();
-    await expect(page.getByText('The Persuader')).toBeVisible();
+    const list = page.getByTestId('library-record-list');
+    await expect(list).toBeVisible();
+    await expect(list.getByText('Stockholm')).toBeVisible();
+    await expect(list.getByText('The Persuader')).toBeVisible();
 
     const hasHorizontalScroll = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
