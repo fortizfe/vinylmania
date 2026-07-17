@@ -90,3 +90,96 @@ test.describe('Search results page responsive layout (spec 035, US1)', () => {
     expect(firstAddBox?.height).toBeGreaterThanOrEqual(44);
   });
 });
+
+test.describe('List mode (feature 052, US3)', () => {
+  function buildListResult(id: number) {
+    return {
+      discogsId: id,
+      resultType: 'release',
+      title: `Result ${id}`,
+      artist: 'Test Artist',
+      year: 1999,
+      formats: ['Vinyl'],
+      country: 'Sweden',
+      labels: ['Svek'],
+    };
+  }
+
+  test('shows all six fields per row, and infinite scroll keeps working', async ({
+    page,
+  }) => {
+    await page.route('**/api/discogs/search*', async (route) => {
+      const url = new URL(route.request().url());
+      const requestedPage = url.searchParams.get('page');
+      if (requestedPage === '2') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: [buildListResult(2)],
+            pagination: { page: 2, pages: 2, items: 2, perPage: 1 },
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [buildListResult(1)],
+          pagination: { page: 1, pages: 2, items: 2, perPage: 1 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/search?q=rock');
+    await expect(page.getByTestId('search-results-grid')).toBeVisible();
+
+    await page.getByTestId('view-mode-list').click();
+    await expect(page.getByTestId('search-results-list')).toBeVisible();
+
+    await expect(page.getByText('Result 1')).toBeVisible();
+    await expect(page.getByText('Test Artist')).toBeVisible();
+    await expect(page.getByText('Vinyl')).toBeVisible();
+    await expect(page.getByText('Sweden')).toBeVisible();
+    await expect(page.getByText('1999')).toBeVisible();
+    await expect(page.getByText('Svek')).toBeVisible();
+
+    await page.mouse.wheel(0, 20_000);
+    await expect(page.getByText('Result 2')).toBeVisible();
+    await expect(page.getByText(/no more results/i)).toBeVisible();
+  });
+
+  test('mobile: list mode has no horizontal scroll and title/artist remain legible', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.route('**/api/discogs/search*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [buildListResult(1)],
+          pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/search?q=rock');
+    await expect(page.getByTestId('search-results-grid')).toBeVisible();
+
+    await page.getByTestId('view-mode-list').click();
+    await expect(page.getByTestId('search-results-list')).toBeVisible();
+    await expect(page.getByText('Result 1')).toBeVisible();
+    await expect(page.getByText('Test Artist')).toBeVisible();
+
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+  });
+});

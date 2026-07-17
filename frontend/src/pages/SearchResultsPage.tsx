@@ -4,13 +4,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiltersControl } from '../components/FiltersControl';
 import { SearchResultCard } from '../components/SearchResultCard';
 import { SearchResultCardSkeleton } from '../components/SearchResultCardSkeleton';
+import { SearchResultListRow } from '../components/SearchResultListRow';
+import { SearchResultListRowSkeleton } from '../components/SearchResultListRowSkeleton';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { ViewModeToggle } from '../components/ui/ViewModeToggle';
 import {
   buildSearchPath,
   type SearchFilters,
   useSearchQueryParams,
 } from '../hooks/useSearchQueryParams';
+import { useViewModePreference } from '../hooks/useViewModePreference';
 import { useCatalogSearchInfinite } from '../queries/discogsQueries';
 import { useCreateLibraryEntry } from '../queries/libraryQueries';
 import { ApiError } from '../services/apiClient';
@@ -19,6 +23,7 @@ const SKELETON_COUNT = 8;
 const PAGE_SIZE = 20;
 const resultsGridClasses =
   'grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
+const resultsListClasses = 'flex list-none flex-col gap-3 p-0';
 
 const FILTER_LABELS: Record<keyof SearchFilters, string> = {
   genre: 'Genre',
@@ -49,6 +54,7 @@ export function SearchResultsPage() {
   const [addError, setAddError] = useState<string | null>(null);
   const [gateError, setGateError] = useState<'not-linked' | 'relink' | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const { mode, setMode } = useViewModePreference('vinylmania:view-mode:search');
 
   const searchQuery = useCatalogSearchInfinite(query, 'release', PAGE_SIZE, filters);
   const { hasNextPage, isFetchingNextPage, fetchNextPage, data, isLoading, isError } =
@@ -117,9 +123,12 @@ export function SearchResultsPage() {
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
-      <h1 className="font-display text-2xl leading-tight text-stone-900 dark:text-stone-100">
-        Search results
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-2xl leading-tight text-stone-900 dark:text-stone-100">
+          Search results
+        </h1>
+        <ViewModeToggle mode={mode} onChange={setMode} screen="search" />
+      </div>
 
       <FiltersControl filters={filters} onApply={applyFilters} onClear={clearFilters} />
 
@@ -160,37 +169,66 @@ export function SearchResultsPage() {
       )}
 
       {loading && (
-        <ul className={resultsGridClasses} data-testid="search-results-skeleton">
-          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
-            <li key={index}>
-              <SearchResultCardSkeleton />
-            </li>
-          ))}
+        <ul
+          className={mode === 'list' ? resultsListClasses : resultsGridClasses}
+          data-testid="search-results-skeleton"
+        >
+          {Array.from({ length: SKELETON_COUNT }, (_, index) =>
+            mode === 'list' ? (
+              <SearchResultListRowSkeleton key={index} />
+            ) : (
+              <li key={index}>
+                <SearchResultCardSkeleton />
+              </li>
+            ),
+          )}
         </ul>
       )}
 
       {!loading && results.length > 0 && (
         <>
-          <ul className={resultsGridClasses} data-testid="search-results-grid">
-            {results.map((result) => (
-              <li key={result.discogsId}>
-                <SearchResultCard
+          {mode === 'list' ? (
+            <ul className={resultsListClasses} data-testid="search-results-list">
+              {results.map((result) => (
+                <SearchResultListRow
+                  key={result.discogsId}
                   result={result}
                   searchPath={currentSearchPath}
                   onAdd={() => handleAdd(result.discogsId)}
                   adding={addingId === result.discogsId}
                   added={addedIds.has(result.discogsId)}
                 />
-              </li>
-            ))}
-          </ul>
-          {isFetchingNextPage && (
-            <ul className={resultsGridClasses} data-testid="search-results-loading-more">
-              {Array.from({ length: SKELETON_COUNT }, (_, index) => (
-                <li key={index}>
-                  <SearchResultCardSkeleton />
+              ))}
+            </ul>
+          ) : (
+            <ul className={resultsGridClasses} data-testid="search-results-grid">
+              {results.map((result) => (
+                <li key={result.discogsId}>
+                  <SearchResultCard
+                    result={result}
+                    searchPath={currentSearchPath}
+                    onAdd={() => handleAdd(result.discogsId)}
+                    adding={addingId === result.discogsId}
+                    added={addedIds.has(result.discogsId)}
+                  />
                 </li>
               ))}
+            </ul>
+          )}
+          {isFetchingNextPage && (
+            <ul
+              className={mode === 'list' ? resultsListClasses : resultsGridClasses}
+              data-testid="search-results-loading-more"
+            >
+              {Array.from({ length: SKELETON_COUNT }, (_, index) =>
+                mode === 'list' ? (
+                  <SearchResultListRowSkeleton key={index} />
+                ) : (
+                  <li key={index}>
+                    <SearchResultCardSkeleton />
+                  </li>
+                ),
+              )}
             </ul>
           )}
 

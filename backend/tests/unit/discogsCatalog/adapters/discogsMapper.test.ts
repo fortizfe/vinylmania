@@ -87,6 +87,77 @@ describe('mapSearchResult', () => {
       artist: 'The Persuader',
     });
   });
+
+  describe('country/labels (feature 052, US3)', () => {
+    it('includes country and labels on a release result when Discogs provides them', () => {
+      const mapped = mapSearchResult({
+        id: 1,
+        type: 'release',
+        title: 'The Persuader - Stockholm',
+        year: '1999',
+        format: ['Vinyl'],
+        country: 'Sweden',
+        label: ['Svek', 'Other Label'],
+        thumb: '',
+        cover_image: 'https://example.com/cover.jpg',
+        resource_url: 'https://api.discogs.com/releases/1',
+      });
+
+      expect(mapped).toEqual({
+        discogsId: 1,
+        resultType: 'release',
+        title: 'Stockholm',
+        artist: 'The Persuader',
+        year: 1999,
+        formats: ['Vinyl'],
+        thumbnailUrl: 'https://example.com/cover.jpg',
+        country: 'Sweden',
+        labels: ['Svek', 'Other Label'],
+      });
+    });
+
+    it('omits country and labels entirely (not null/[]) when Discogs provides neither', () => {
+      const mapped = mapSearchResult({
+        id: 1,
+        type: 'release',
+        title: 'The Persuader - Stockholm',
+        thumb: '',
+        cover_image: '',
+        resource_url: 'https://api.discogs.com/releases/1',
+      });
+
+      expect(mapped).toEqual({
+        discogsId: 1,
+        resultType: 'release',
+        title: 'Stockholm',
+        artist: 'The Persuader',
+      });
+      expect(mapped).not.toHaveProperty('country');
+      expect(mapped).not.toHaveProperty('labels');
+    });
+
+    it('includes country and labels on a master result too when Discogs provides them, matching the existing year/formats treatment', () => {
+      const mapped = mapSearchResult({
+        id: 1660109,
+        type: 'master',
+        title: 'The Persuader - Stockholm',
+        country: 'Sweden',
+        label: ['Svek'],
+        thumb: '',
+        cover_image: '',
+        resource_url: 'https://api.discogs.com/masters/1660109',
+      });
+
+      expect(mapped).toEqual({
+        discogsId: 1660109,
+        resultType: 'master',
+        title: 'Stockholm',
+        artist: 'The Persuader',
+        country: 'Sweden',
+        labels: ['Svek'],
+      });
+    });
+  });
 });
 
 describe('mapRelease', () => {

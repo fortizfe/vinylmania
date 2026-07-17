@@ -13,6 +13,10 @@ export interface CatalogSearchResult {
   formats?: string[];
   /** Additive enrichment (feature 017); present only when a valid, votable rating exists. */
   communityRating?: CommunityRating;
+  /** Additive enrichment (feature 052); present when Discogs provides a value. */
+  country?: string;
+  /** Additive enrichment (feature 052); present when Discogs provides at least one label. */
+  labels?: string[];
 }
 
 export interface CatalogSearchResponse {

@@ -28,6 +28,8 @@ const rawSearchResultSchema = z.object({
   cover_image: z.string().optional(),
   year: z.union([z.string(), z.number()]).optional(),
   format: z.array(z.string()).optional(),
+  country: z.string().optional(),
+  label: z.array(z.string()).optional(),
 });
 
 const ARTIST_TITLE_SEPARATOR = ' - ';
@@ -53,6 +55,7 @@ export function mapSearchResult(raw: unknown): CatalogSearchResult {
   const thumbnailUrl = parsed.cover_image || parsed.thumb || undefined;
   const year = parsed.year === undefined ? undefined : Number(parsed.year);
   const formats = parsed.format && parsed.format.length > 0 ? parsed.format : undefined;
+  const labels = parsed.label && parsed.label.length > 0 ? parsed.label : undefined;
   // Master hits share the release-style "Artist - Title" combined title
   // format, so they get the same split (feature 026, US1 — grouped cards
   // must show an `artist` field just like standalone release cards).
@@ -69,6 +72,8 @@ export function mapSearchResult(raw: unknown): CatalogSearchResult {
     ...(thumbnailUrl ? { thumbnailUrl } : {}),
     ...(year !== undefined && !Number.isNaN(year) ? { year } : {}),
     ...(formats ? { formats } : {}),
+    ...(parsed.country ? { country: parsed.country } : {}),
+    ...(labels ? { labels } : {}),
   };
 }
 

@@ -210,7 +210,10 @@ describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
         });
       }
       return Promise.resolve({
-        items: [releaseEntry('entry-1', 'Rock Only'), releaseEntry('entry-2', 'Jazz Only')],
+        items: [
+          releaseEntry('entry-1', 'Rock Only'),
+          releaseEntry('entry-2', 'Jazz Only'),
+        ],
         page: 1,
         pageSize: 20,
         totalItems: 2,
@@ -269,13 +272,102 @@ describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
     );
 
     renderPage(['/app/library?genre=Rock']);
-    await waitFor(() => expect(screen.getByText(/rock result page 1/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/rock result page 1/i)).toBeInTheDocument(),
+    );
     expect(mockList).toHaveBeenLastCalledWith(1, 20, false, { genre: ['Rock'] });
 
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /^next$/i }));
 
-    await waitFor(() => expect(screen.getByText(/rock result page 2/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/rock result page 2/i)).toBeInTheDocument(),
+    );
     expect(mockList).toHaveBeenLastCalledWith(2, 20, false, { genre: ['Rock'] });
+  });
+});
+
+describe('View mode toggle (feature 052, US1)', () => {
+  beforeEach(() => {
+    mockList.mockReset();
+    window.localStorage.clear();
+  });
+
+  it('renders the toggle in the header row beside Refresh', async () => {
+    mockList.mockResolvedValue({ items: [], page: 1, pageSize: 20, totalItems: 0 });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText(/no records yet/i)).toBeInTheDocument());
+    expect(screen.getByTestId('view-mode-toggle')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+  });
+
+  it('switches from grid to list without losing already-loaded records or changing refresh behavior', async () => {
+    mockList.mockResolvedValue({
+      items: [
+        {
+          id: 'entry-1',
+          discogsReleaseId: 1,
+          addedAt: '2026-07-03T00:00:00.000Z',
+          catalogStatus: 'ok',
+          release: {
+            discogsId: 1,
+            title: 'Stockholm',
+            artists: [],
+            labels: [],
+            formats: [],
+            genres: [],
+            styles: [],
+            tracklist: [],
+            images: [],
+            discogsUrl: 'https://www.discogs.com/release/1',
+          },
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      totalItems: 1,
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+    expect(screen.getByTestId('library-record-grid')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId('view-mode-list'));
+
+    expect(screen.queryByTestId('library-record-grid')).not.toBeInTheDocument();
+    expect(screen.getByTestId('library-record-list')).toBeInTheDocument();
+    expect(screen.getByText('Stockholm')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+  });
+
+  it('renders row-shaped skeletons instead of grid-card skeletons while loading in list mode', async () => {
+    let resolveList!: (value: {
+      items: unknown[];
+      page: number;
+      pageSize: number;
+      totalItems: number;
+    }) => void;
+    mockList.mockReturnValue(
+      new Promise((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getAllByTestId('record-card-skeleton').length).toBeGreaterThan(0),
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId('view-mode-list'));
+
+    expect(screen.getAllByTestId('record-list-row-skeleton').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('record-card-skeleton')).not.toBeInTheDocument();
+
+    resolveList({ items: [], page: 1, pageSize: 20, totalItems: 0 });
+    await waitFor(() => expect(screen.getByText(/no records yet/i)).toBeInTheDocument());
   });
 });
