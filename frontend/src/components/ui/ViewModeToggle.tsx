@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, ReactElement } from 'react';
 import clsx from 'clsx';
 
 import type { ViewMode } from '../../hooks/useViewModePreference';
@@ -39,7 +39,7 @@ function ListIcon() {
   );
 }
 
-const OPTIONS: { mode: ViewMode; label: string; icon: () => JSX.Element }[] = [
+const OPTIONS: { mode: ViewMode; label: string; icon: () => ReactElement }[] = [
   { mode: 'grid', label: 'Grid view', icon: GridIcon },
   { mode: 'list', label: 'List view', icon: ListIcon },
 ];
