@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.1.0] - 2026-07-17
+
+### Added
+
+- add grid/list view-mode toggle ([1c1a7a4])
+
 ## [1.0.0] - 2026-07-16
 
 ### Added
