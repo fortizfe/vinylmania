@@ -115,3 +115,95 @@ test.describe('Library page responsive layout (spec 035, US1)', () => {
     expect(hasHorizontalScroll).toBe(false);
   });
 });
+
+test.describe('List mode (feature 052, US2)', () => {
+  function buildListResponse() {
+    return {
+      items: [
+        {
+          id: 'entry-1',
+          discogsReleaseId: 1,
+          addedAt: '2026-07-03T00:00:00.000Z',
+          catalogStatus: 'ok',
+          release: {
+            discogsId: 1,
+            title: 'Stockholm',
+            year: 1999,
+            country: 'Sweden',
+            artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+            labels: [{ discogsLabelId: 1, name: 'Svek' }],
+            formats: [{ name: 'Vinyl', descriptions: [] }],
+            genres: [],
+            styles: [],
+            tracklist: [],
+            images: [],
+            discogsUrl: 'https://www.discogs.com/release/1',
+          },
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      totalItems: 25,
+    };
+  }
+
+  test('shows all six fields per row and pagination still works', async ({ page }) => {
+    await page.route('**/api/library*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildListResponse()),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByTestId('library-record-grid')).toBeVisible();
+
+    await page.getByTestId('view-mode-list').click();
+    const list = page.getByTestId('library-record-list');
+    await expect(list).toBeVisible();
+
+    // Scoped to the list container: a bare page-wide `getByText('Vinyl')`
+    // also matches the always-present "VINYLMANIA" header wordmark
+    // (Playwright's default text match is a case-insensitive substring).
+    await expect(list.getByText('Stockholm')).toBeVisible();
+    await expect(list.getByText('The Persuader')).toBeVisible();
+    await expect(list.getByText('Vinyl')).toBeVisible();
+    await expect(list.getByText('Sweden')).toBeVisible();
+    await expect(list.getByText('1999')).toBeVisible();
+    await expect(list.getByText('Svek')).toBeVisible();
+
+    await expect(page.getByRole('button', { name: 'Next' })).toBeEnabled();
+  });
+
+  test('mobile: list mode has no horizontal scroll and title/artist remain legible', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.route('**/api/library*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildListResponse()),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByTestId('library-record-grid')).toBeVisible();
+
+    await page.getByTestId('view-mode-list').click();
+    const list = page.getByTestId('library-record-list');
+    await expect(list).toBeVisible();
+    await expect(list.getByText('Stockholm')).toBeVisible();
+    await expect(list.getByText('The Persuader')).toBeVisible();
+
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+  });
+});

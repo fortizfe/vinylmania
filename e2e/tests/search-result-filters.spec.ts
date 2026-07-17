@@ -47,7 +47,9 @@ async function expandFilters(page: Page) {
 // API (spec 021-search-result-filters).
 
 test.describe('Search result filters (feature 021, US1)', () => {
-  test('applying a single Genre filter narrows the results (quickstart Scenario 1)', async ({ page }) => {
+  test('applying a single Genre filter narrows the results (quickstart Scenario 1)', async ({
+    page,
+  }) => {
     await page.route('**/api/discogs/search*', async (route) => {
       const url = new URL(route.request().url());
       const genre = url.searchParams.get('genre');
@@ -57,7 +59,13 @@ test.describe('Search result filters (feature 021, US1)', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             results: [
-              { discogsId: 501, resultType: 'release', title: 'Nevermind', artist: 'Nirvana', year: 1991 },
+              {
+                discogsId: 501,
+                resultType: 'release',
+                title: 'Nevermind',
+                artist: 'Nirvana',
+                year: 1991,
+              },
             ],
             pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
           }),
@@ -69,8 +77,20 @@ test.describe('Search result filters (feature 021, US1)', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           results: [
-            { discogsId: 501, resultType: 'release', title: 'Nevermind', artist: 'Nirvana', year: 1991 },
-            { discogsId: 502, resultType: 'release', title: 'Unplugged in New York', artist: 'Nirvana', year: 1994 },
+            {
+              discogsId: 501,
+              resultType: 'release',
+              title: 'Nevermind',
+              artist: 'Nirvana',
+              year: 1991,
+            },
+            {
+              discogsId: 502,
+              resultType: 'release',
+              title: 'Unplugged in New York',
+              artist: 'Nirvana',
+              year: 1994,
+            },
           ],
           pagination: { page: 1, pages: 1, items: 2, perPage: 20 },
         }),
@@ -111,7 +131,9 @@ test.describe('Search result filters (feature 021, US2)', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            results: [{ discogsId: 601, resultType: 'release', title: 'Vinyl Rock Only' }],
+            results: [
+              { discogsId: 601, resultType: 'release', title: 'Vinyl Rock Only' },
+            ],
             pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
           }),
         });
@@ -188,7 +210,9 @@ test.describe('Search result filters (feature 021, US3)', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            results: [{ discogsId: 701, resultType: 'release', title: 'Unfiltered Result' }],
+            results: [
+              { discogsId: 701, resultType: 'release', title: 'Unfiltered Result' },
+            ],
             pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
           }),
         });
@@ -200,7 +224,13 @@ test.describe('Search result filters (feature 021, US3)', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            results: [{ discogsId: 703, resultType: 'release', title: 'Page Two Filtered Result' }],
+            results: [
+              {
+                discogsId: 703,
+                resultType: 'release',
+                title: 'Page Two Filtered Result',
+              },
+            ],
             pagination: { page: 2, pages: 2, items: 2, perPage: 20 },
           }),
         });
@@ -211,7 +241,9 @@ test.describe('Search result filters (feature 021, US3)', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          results: [{ discogsId: 702, resultType: 'release', title: 'Page One Filtered Result' }],
+          results: [
+            { discogsId: 702, resultType: 'release', title: 'Page One Filtered Result' },
+          ],
           pagination: { page: 1, pages: 2, items: 2, perPage: 20 },
         }),
       });
@@ -308,7 +340,9 @@ test.describe('Search results organization (feature 027)', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            results: [{ discogsId: 2999, resultType: 'release', title: 'Next Batch Result' }],
+            results: [
+              { discogsId: 2999, resultType: 'release', title: 'Next Batch Result' },
+            ],
             pagination: { page: 2, pages: 2, items: 21, perPage: 20 },
           }),
         });
@@ -415,7 +449,9 @@ test.describe('Search result filters (feature 022, US1)', () => {
             // Verified against live Discogs (feature 022, T014): a comma-joined
             // format value is AND-matched — only a release genuinely available
             // in both formats simultaneously (e.g. a box set) qualifies.
-            results: [{ discogsId: 801, resultType: 'release', title: 'Vinyl+CD Box Set' }],
+            results: [
+              { discogsId: 801, resultType: 'release', title: 'Vinyl+CD Box Set' },
+            ],
             pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
           }),
         });
@@ -515,13 +551,23 @@ test.describe('Search result filters (feature 022, US2)', () => {
 });
 
 test.describe('Search result filters (feature 023, US1)', () => {
-  test('Format leads the filter bar and its label updates live, before Apply is clicked', async ({ page }) => {
+  test('Format leads the filter bar and its label updates live, before Apply is clicked', async ({
+    page,
+  }) => {
     await page.route('**/api/discogs/search*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          results: [{ discogsId: 901, resultType: 'release', title: 'Nevermind', artist: 'Nirvana', year: 1991 }],
+          results: [
+            {
+              discogsId: 901,
+              resultType: 'release',
+              title: 'Nevermind',
+              artist: 'Nirvana',
+              year: 1991,
+            },
+          ],
           pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
         }),
       });
@@ -731,7 +777,9 @@ test.describe('Search results UI polish (feature 028)', () => {
 });
 
 test.describe('Search result filters (feature 023, US3)', () => {
-  test('Apply and Clear are icon-only but remain operable by their accessible name', async ({ page }) => {
+  test('Apply and Clear are icon-only but remain operable by their accessible name', async ({
+    page,
+  }) => {
     await page.route('**/api/discogs/search*', async (route) => {
       const url = new URL(route.request().url());
       const genre = url.searchParams.get('genre');
@@ -739,12 +787,13 @@ test.describe('Search result filters (feature 023, US3)', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          results: genre === 'Rock'
-            ? [{ discogsId: 951, resultType: 'release', title: 'Nevermind' }]
-            : [
-                { discogsId: 951, resultType: 'release', title: 'Nevermind' },
-                { discogsId: 952, resultType: 'release', title: 'Other Result' },
-              ],
+          results:
+            genre === 'Rock'
+              ? [{ discogsId: 951, resultType: 'release', title: 'Nevermind' }]
+              : [
+                  { discogsId: 951, resultType: 'release', title: 'Nevermind' },
+                  { discogsId: 952, resultType: 'release', title: 'Other Result' },
+                ],
           pagination: { page: 1, pages: 1, items: genre === 'Rock' ? 1 : 2, perPage: 20 },
         }),
       });
@@ -782,7 +831,13 @@ test.describe('Shared collapsible filters with selectable lists (feature 038, US
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          results: [{ discogsId: 9001, resultType: 'release', title: 'Collapsible Filters Result' }],
+          results: [
+            {
+              discogsId: 9001,
+              resultType: 'release',
+              title: 'Collapsible Filters Result',
+            },
+          ],
           pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
         }),
       });
@@ -936,5 +991,113 @@ test.describe('Shared collapsible filters with selectable lists (feature 038, US
 
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(1440);
+  });
+});
+
+test.describe('Filters behave identically in list mode (feature 052, US3)', () => {
+  test('applying a Genre filter narrows the list rows the same way it narrows the grid', async ({
+    page,
+  }) => {
+    await page.route('**/api/discogs/search*', async (route) => {
+      const url = new URL(route.request().url());
+      const genre = url.searchParams.get('genre');
+      const results =
+        genre === 'Rock'
+          ? [
+              {
+                discogsId: 501,
+                resultType: 'release',
+                title: 'Nevermind',
+                artist: 'Nirvana',
+              },
+            ]
+          : [
+              {
+                discogsId: 501,
+                resultType: 'release',
+                title: 'Nevermind',
+                artist: 'Nirvana',
+              },
+              {
+                discogsId: 502,
+                resultType: 'release',
+                title: 'Ok Computer',
+                artist: 'Radiohead',
+              },
+            ];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results,
+          pagination: { page: 1, pages: 1, items: results.length, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.getByLabel(/search discogs/i).fill('rock');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+    await expect(page.getByText('Ok Computer')).toBeVisible();
+
+    await page.getByTestId('view-mode-list').click();
+    await expect(page.getByTestId('search-results-list')).toBeVisible();
+
+    await expandFilters(page);
+    await selectGenreOption(page, 'Rock');
+    await page.getByRole('button', { name: /apply filters/i }).click();
+
+    await expect(page.getByText('Nevermind')).toBeVisible();
+    await expect(page.getByText('Ok Computer')).toHaveCount(0);
+  });
+
+  test('the filters-aware empty state is unchanged in list mode', async ({ page }) => {
+    await page.route('**/api/discogs/search*', async (route) => {
+      const url = new URL(route.request().url());
+      const genre = url.searchParams.get('genre');
+      const results = genre
+        ? []
+        : [
+            {
+              discogsId: 501,
+              resultType: 'release',
+              title: 'Nevermind',
+              artist: 'Nirvana',
+            },
+          ];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results,
+          pagination: {
+            page: 1,
+            pages: results.length,
+            items: results.length,
+            perPage: 20,
+          },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.getByLabel(/search discogs/i).fill('nirvana');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+    await expect(page.getByText('Nevermind')).toBeVisible();
+
+    await page.getByTestId('view-mode-list').click();
+    await expect(page.getByTestId('search-results-list')).toBeVisible();
+
+    await expandFilters(page);
+    await selectGenreOption(page, 'Rock');
+    await page.getByRole('button', { name: /apply filters/i }).click();
+
+    await expect(
+      page.getByText(/no results found for the active filters/i),
+    ).toBeVisible();
   });
 });

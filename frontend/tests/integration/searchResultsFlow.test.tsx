@@ -752,4 +752,76 @@ describe('Search results flow (US2)', () => {
       });
     });
   });
+
+  describe('View mode toggle (feature 052, US1)', () => {
+    beforeEach(() => {
+      window.localStorage.clear();
+    });
+
+    it('renders the toggle top-right next to the page title', async () => {
+      mockSearch.mockResolvedValue({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=Stockholm']);
+
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+      expect(screen.getByTestId('view-mode-toggle')).toBeInTheDocument();
+    });
+
+    it('switches from grid to list and back without losing already-loaded results or firing a new request', async () => {
+      mockSearch.mockResolvedValue({
+        results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+        pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+      });
+
+      renderPage(['/app/search?q=Stockholm']);
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+      expect(screen.getByTestId('search-results-grid')).toBeInTheDocument();
+
+      const callCountBeforeToggle = mockSearch.mock.calls.length;
+      const user = userEvent.setup();
+      await user.click(screen.getByTestId('view-mode-list'));
+
+      expect(screen.queryByTestId('search-results-grid')).not.toBeInTheDocument();
+      expect(screen.getByTestId('search-results-list')).toBeInTheDocument();
+      expect(screen.getByText('Stockholm')).toBeInTheDocument();
+      expect(mockSearch.mock.calls.length).toBe(callCountBeforeToggle);
+
+      await user.click(screen.getByTestId('view-mode-grid'));
+      expect(screen.getByTestId('search-results-grid')).toBeInTheDocument();
+      expect(screen.queryByTestId('search-results-list')).not.toBeInTheDocument();
+    });
+
+    it('renders row-shaped skeletons instead of grid-card skeletons while loading in list mode', async () => {
+      let resolveSearch!: (value: unknown) => void;
+      mockSearch.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveSearch = resolve;
+        }),
+      );
+
+      renderPage(['/app/search?q=Stockholm']);
+      await waitFor(() =>
+        expect(screen.getByTestId('search-results-skeleton')).toBeInTheDocument(),
+      );
+
+      const user = userEvent.setup();
+      await user.click(screen.getByTestId('view-mode-list'));
+
+      expect(
+        screen.getAllByTestId('search-result-list-row-skeleton').length,
+      ).toBeGreaterThan(0);
+      expect(screen.queryByTestId('search-result-card-skeleton')).not.toBeInTheDocument();
+
+      await act(async () => {
+        resolveSearch({
+          results: [{ discogsId: 1, resultType: 'release', title: 'Stockholm' }],
+          pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+        });
+      });
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+    });
+  });
 });

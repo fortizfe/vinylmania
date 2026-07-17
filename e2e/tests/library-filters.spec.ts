@@ -270,3 +270,70 @@ test.describe('Shared collapsible filters on My Library (feature 038, US2)', () 
     }
   });
 });
+
+test.describe('Filters behave identically in list mode (feature 052, US2)', () => {
+  test('applying a Genre filter narrows the list rows the same way it narrows the grid', async ({
+    page,
+  }) => {
+    await page.route('**/api/library*', async (route) => {
+      const url = new URL(route.request().url());
+      const genre = url.searchParams.get('genre');
+      const items =
+        genre === 'Rock'
+          ? [record('entry-1', 'Rock Only', { genre: ['Rock'] })]
+          : [
+              record('entry-1', 'Rock Only', { genre: ['Rock'] }),
+              record('entry-2', 'Jazz Only', { genre: ['Jazz'] }),
+            ];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items, page: 1, pageSize: 20, totalItems: items.length }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByText('Jazz Only')).toBeVisible();
+
+    await page.getByTestId('view-mode-list').click();
+    await expect(page.getByTestId('library-record-list')).toBeVisible();
+
+    await expandFilters(page);
+    await selectGenreOption(page, 'Rock');
+    await page.getByRole('button', { name: /apply filters/i }).click();
+
+    await expect(page.getByText('Rock Only')).toBeVisible();
+    await expect(page.getByText('Jazz Only')).toHaveCount(0);
+  });
+
+  test('the empty-library and no-matches-for-filter messages are unchanged in list mode', async ({
+    page,
+  }) => {
+    await page.route('**/api/library*', async (route) => {
+      const url = new URL(route.request().url());
+      const genre = url.searchParams.get('genre');
+      const items = genre ? [] : [record('entry-1', 'Stockholm')];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items, page: 1, pageSize: 20, totalItems: items.length }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByText('Stockholm')).toBeVisible();
+
+    await page.getByTestId('view-mode-list').click();
+    await expect(page.getByTestId('library-record-list')).toBeVisible();
+
+    await expandFilters(page);
+    await selectGenreOption(page, 'Non-Music');
+    await page.getByRole('button', { name: /apply filters/i }).click();
+
+    await expect(page.getByText(/no results for the active filters/i)).toBeVisible();
+  });
+});
