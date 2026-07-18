@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.2.0] - 2026-07-18
+
+### Added
+
+- attribute catalog requests to the user's linked account ([77282f2])
+
 ## [1.1.0] - 2026-07-17
 
 ### Added
