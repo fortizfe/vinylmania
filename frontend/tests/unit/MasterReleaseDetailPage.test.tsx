@@ -90,4 +90,34 @@ describe('MasterReleaseDetailPage', () => {
       expect(screen.getByText(/couldn.t find that master release/i)).toBeInTheDocument(),
     );
   });
+
+  it('shows the relink notice when the master fetch itself fails with discogs_link_invalid (spec 053, US3)', async () => {
+    const { ApiError } = await import('../../src/services/apiClient');
+    mockGetMasterRelease.mockRejectedValue(
+      new ApiError('Your Discogs link is no longer valid.', 401, 'discogs_link_invalid'),
+    );
+    mockGetMasterReleaseVersions.mockResolvedValue(versionsPage);
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText(/your discogs link is no longer valid/i)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/couldn.t find that master release/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the relink notice inline in the versions table when only that fetch fails with discogs_link_invalid, without hiding the rest of the page", async () => {
+    const { ApiError } = await import('../../src/services/apiClient');
+    mockGetMasterRelease.mockResolvedValue(fullMaster);
+    mockGetMasterReleaseVersions.mockRejectedValue(
+      new ApiError('Your Discogs link is no longer valid.', 401, 'discogs_link_invalid'),
+    );
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Hybrid Theory')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/your discogs link is no longer valid/i)).toBeInTheDocument(),
+    );
+  });
 });

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
+import { DiscogsRelinkNotice } from '../components/DiscogsRelinkNotice';
 import { RecordDetailSkeleton } from '../components/RecordDetailSkeleton';
 import { ReleaseAdditionalInfoSection } from '../components/ReleaseAdditionalInfoSection';
 import { ReleaseDetailsSection } from '../components/ReleaseDetailsSection';
@@ -21,7 +22,13 @@ export function ReleaseDetailPage() {
   const backTo = (location.state as { from?: string } | null)?.from ?? DEFAULT_BACK_PATH;
 
   const parsedId = Number(discogsId);
-  const { data: release, isLoading, isError: notFound } = useCatalogRelease(parsedId);
+  const { data: release, isLoading, isError, error: releaseError } = useCatalogRelease(parsedId);
+  // The release fetch itself (not just the "add to library" mutation) can
+  // fail with discogs_link_invalid when the caller's linked account was
+  // revoked (spec 053, US3) — distinguished from a genuine 404.
+  const relinkRequired =
+    isError && releaseError instanceof ApiError && releaseError.code === 'discogs_link_invalid';
+  const notFound = isError && !relinkRequired;
   const createEntry = useCreateLibraryEntry();
 
   const [added, setAdded] = useState(false);
@@ -43,6 +50,15 @@ export function ReleaseDetailPage() {
         setAddError('Something went wrong while adding this record. Please try again.');
       }
     }
+  }
+
+  if (relinkRequired) {
+    return (
+      <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+        <BackLink to={backTo} />
+        <DiscogsRelinkNotice />
+      </main>
+    );
   }
 
   if (notFound) {

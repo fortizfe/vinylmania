@@ -21,7 +21,10 @@ import {
 import { createSearchCatalogWithRatingsUseCase } from '../../../src/application/discogsCatalog/searchCatalogWithRatings';
 import { DiscogsRateLimitError } from '../../../src/discogs/discogsErrors';
 import { MAX_WAIT_MS } from '../../../src/discogs/discogsRateLimiter';
+import type { CatalogCredential } from '../../../src/domain/discogsCatalog/types';
 import type { DiscogsConnection } from '../../../src/domain/discogsOauth/types';
+
+const CREDENTIAL: CatalogCredential = { type: 'vinylmania' };
 
 const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
   discogsCatalog: discogsCatalogAdapter,
@@ -121,17 +124,17 @@ describe('Discogs rate-limit smoothing — User Story 1 (preventive throttle)', 
 
         // Well above the threshold (ceil(60*0.15)=9) — no delay.
         const beforeFirst = Date.now();
-        await getRelease(1001);
+        await getRelease({ type: 'vinylmania' }, 1001);
         expect(Date.now() - beforeFirst).toBe(0);
 
         // Crosses exactly to the threshold — still no delay for *this*
         // request (the correction from its own response arrives after it
         // was sent), but the next one now observes remaining=9.
-        await getRelease(1002);
+        await getRelease({ type: 'vinylmania' }, 1002);
 
         // Now at/below the threshold: the third request must be spaced out.
         let thirdResolved = false;
-        const thirdCall = getRelease(1003).then((release) => {
+        const thirdCall = getRelease({ type: 'vinylmania' }, 1003).then((release) => {
           thirdResolved = true;
           return release;
         });
@@ -157,7 +160,7 @@ describe('Discogs rate-limit smoothing — User Story 1 (preventive throttle)', 
         });
 
       const before = Date.now();
-      await getRelease(1010);
+      await getRelease({ type: 'vinylmania' }, 1010);
 
       // No fake timers here (real request/response round trip) — assert
       // "no throttle delay was added" as "well under MAX_WAIT_MS", not an
@@ -182,10 +185,10 @@ describe('Discogs rate-limit smoothing — User Story 1 (preventive throttle)', 
             'x-discogs-ratelimit-remaining': '1',
           });
 
-        await getRelease(1011);
+        await getRelease({ type: 'vinylmania' }, 1011);
 
         const before = Date.now();
-        const secondCall = getRelease(1012);
+        const secondCall = getRelease({ type: 'vinylmania' }, 1012);
         await jest.advanceTimersByTimeAsync(MAX_WAIT_MS);
         await secondCall;
 
@@ -210,7 +213,7 @@ describe('Discogs rate-limit smoothing — User Story 1 (preventive throttle)', 
         await listAllInstances(connection, emptyFieldMap);
 
         let resolved = false;
-        const catalogCall = getRelease(1020).then((release) => {
+        const catalogCall = getRelease({ type: 'vinylmania' }, 1020).then((release) => {
           resolved = true;
           return release;
         });
@@ -231,7 +234,7 @@ describe('Discogs rate-limit smoothing — User Story 1 (preventive throttle)', 
       discogsScope().get('/releases/1030').reply(429, { message: 'too many requests' });
       discogsScope().get('/releases/1030').reply(200, rawReleaseFor(1030));
 
-      const release = await getRelease(1030);
+      const release = await getRelease({ type: 'vinylmania' }, 1030);
 
       expect(release.discogsId).toBe(1030);
     }, 8_000);
@@ -327,7 +330,7 @@ describe('Discogs rate-limit smoothing — User Story 2 (bounded search-rating c
       const { getMaxInFlight, restore } = spyOnInFlightRequests();
       const before = Date.now();
       try {
-        const result = await searchCatalogWithRatings('US2 Smoothing Bounded', { resultType: 'release' });
+        const result = await searchCatalogWithRatings(CREDENTIAL, 'US2 Smoothing Bounded', { resultType: 'release' });
 
         expect(result.results).toHaveLength(eligibleCount);
         expect(getMaxInFlight()).toBeLessThanOrEqual(5);
@@ -353,12 +356,12 @@ describe('Discogs rate-limit smoothing — User Story 2 (bounded search-rating c
         .get('/releases/5100/rating')
         .reply(200, { release_id: 5100, rating: { average: 4.2, count: 20 } });
 
-      const first = await searchCatalogWithRatings('US2 Smoothing Warm Cache', { resultType: 'release' });
+      const first = await searchCatalogWithRatings(CREDENTIAL, 'US2 Smoothing Warm Cache', { resultType: 'release' });
       // Only the interceptors above are registered (nock.cleanAll() runs
       // afterEach) — a second real HTTP call here would hit no matching
       // interceptor and reject, so an equal second result proves the
       // cache (not a second Discogs round trip) served it.
-      const second = await searchCatalogWithRatings('US2 Smoothing Warm Cache', { resultType: 'release' });
+      const second = await searchCatalogWithRatings(CREDENTIAL, 'US2 Smoothing Warm Cache', { resultType: 'release' });
 
       expect(second).toEqual(first);
       expect(scope.isDone()).toBe(true);
@@ -382,7 +385,7 @@ describe('Discogs rate-limit smoothing — User Story 2 (bounded search-rating c
           .reply(200, { release_id: 5200 + i, rating: { average: 4, count: 10 } });
       }
 
-      const result = await searchCatalogWithRatings('US2 Smoothing Fail Soft', { resultType: 'release' });
+      const result = await searchCatalogWithRatings(CREDENTIAL, 'US2 Smoothing Fail Soft', { resultType: 'release' });
 
       expect(result.results).toHaveLength(eligibleCount);
       const failed = result.results.find((r) => r.discogsId === 5200);

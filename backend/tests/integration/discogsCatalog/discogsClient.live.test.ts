@@ -11,13 +11,13 @@ const describeLive = process.env.DISCOGS_TOKEN ? describe : describe.skip;
 
 describeLive('Discogs client live integration: searchCatalog', () => {
   it('finds the real "Stockholm" release (Discogs ID 1) when searching by title', async () => {
-    const result = await searchCatalog('Persuader Stockholm', { resultType: 'release' });
+    const result = await searchCatalog({ type: 'vinylmania' }, 'Persuader Stockholm', { resultType: 'release' });
 
     expect(result.results.some((r) => r.discogsId === 1)).toBe(true);
   });
 
   it('finds the real "The Persuader" artist (Discogs ID 1) when searching by name', async () => {
-    const result = await searchCatalog('The Persuader', { resultType: 'artist' });
+    const result = await searchCatalog({ type: 'vinylmania' }, 'The Persuader', { resultType: 'artist' });
 
     expect(result.results.some((r) => r.discogsId === 1)).toBe(true);
   });
@@ -25,7 +25,7 @@ describeLive('Discogs client live integration: searchCatalog', () => {
 
 describeLive('Discogs client live integration: getRelease', () => {
   it('maps the real release ID 1 ("Stockholm")', async () => {
-    const release = await getRelease(1);
+    const release = await getRelease({ type: 'vinylmania' }, 1);
 
     expect(release.title).toBe('Stockholm');
     expect(release.artists.some((a) => a.name === 'The Persuader')).toBe(true);
@@ -33,13 +33,13 @@ describeLive('Discogs client live integration: getRelease', () => {
   });
 
   it('rejects with DiscogsNotFoundError for an ID that does not exist', async () => {
-    await expect(getRelease(999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
+    await expect(getRelease({ type: 'vinylmania' }, 999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
   });
 });
 
 describeLive('Discogs client live integration: getArtist', () => {
   it('maps the real artist ID 1 ("The Persuader")', async () => {
-    const artist = await getArtist(1);
+    const artist = await getArtist({ type: 'vinylmania' }, 1);
 
     expect(artist.name).toBe('The Persuader');
     expect(artist.realName).toBe('Jesper Dahlbäck');
@@ -47,6 +47,6 @@ describeLive('Discogs client live integration: getArtist', () => {
   });
 
   it('rejects with DiscogsNotFoundError for an ID that does not exist', async () => {
-    await expect(getArtist(999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
+    await expect(getArtist({ type: 'vinylmania' }, 999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
   });
 });

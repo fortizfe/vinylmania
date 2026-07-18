@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { DiscogsRelinkNotice } from '../components/DiscogsRelinkNotice';
 import { FiltersControl } from '../components/FiltersControl';
 import { SearchResultCard } from '../components/SearchResultCard';
 import { SearchResultCardSkeleton } from '../components/SearchResultCardSkeleton';
@@ -57,7 +58,7 @@ export function SearchResultsPage() {
   const { mode, setMode } = useViewModePreference('vinylmania:view-mode:search');
 
   const searchQuery = useCatalogSearchInfinite(query, 'release', PAGE_SIZE, filters);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage, data, isLoading, isError } =
+  const { hasNextPage, isFetchingNextPage, fetchNextPage, data, isLoading, isError, error: searchError } =
     searchQuery;
   const createEntry = useCreateLibraryEntry();
 
@@ -69,10 +70,17 @@ export function SearchResultsPage() {
   // surfaced separately below (next-batch retry) instead of replacing
   // already-loaded results with a full-page error (FR-010).
   const initialLoadError = !data && isError;
+  // The search request itself (not just the "add to library" mutation) can
+  // now fail with discogs_link_invalid when the caller's linked account was
+  // revoked (spec 053, US3) — surfaced with the same relink prompt.
+  const searchRelinkRequired =
+    initialLoadError && searchError instanceof ApiError && searchError.code === 'discogs_link_invalid';
   const nextPageError = Boolean(data) && isError;
   const error =
     addError ??
-    (initialLoadError ? 'Something went wrong while searching. Please try again.' : null);
+    (initialLoadError && !searchRelinkRequired
+      ? 'Something went wrong while searching. Please try again.'
+      : null);
   const activeFilters = activeFilterLabels(filters);
   // Carried as router state into detail pages so their back action returns
   // here with the same query/filters (spec FR-012); infinite scroll has no
@@ -153,6 +161,8 @@ export function SearchResultsPage() {
           </Link>
         </Card>
       )}
+
+      {searchRelinkRequired && <DiscogsRelinkNotice />}
 
       {error && (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">

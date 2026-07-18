@@ -18,6 +18,9 @@ import {
 } from '../../../src/discogs/discogsErrors';
 import { MAX_WAIT_MS } from '../../../src/discogs/discogsRateLimiter';
 import { MAX_ATTEMPTS } from '../../../src/discogs/discogsRetry';
+import type { CatalogCredential } from '../../../src/domain/discogsCatalog/types';
+
+const CREDENTIAL: CatalogCredential = { type: 'vinylmania' };
 
 const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
   discogsCatalog: discogsCatalogAdapter,
@@ -52,7 +55,7 @@ describe('Discogs client contract: searchCatalog', () => {
         ],
       });
 
-    const result = await searchCatalog('Stockholm', { resultType: 'release' });
+    const result = await searchCatalog({ type: 'vinylmania' }, 'Stockholm', { resultType: 'release' });
 
     expect(result.pagination).toEqual({ page: 1, pages: 1, items: 1, perPage: 50 });
     expect(result.results).toEqual([
@@ -86,7 +89,7 @@ describe('Discogs client contract: searchCatalog', () => {
         ],
       });
 
-    const result = await searchCatalog('Persuader', { resultType: 'artist' });
+    const result = await searchCatalog({ type: 'vinylmania' }, 'Persuader', { resultType: 'artist' });
 
     expect(result.results).toEqual([
       {
@@ -105,7 +108,7 @@ describe('Discogs client contract: searchCatalog', () => {
       .reply(429, { message: 'too many requests' });
 
     await expect(
-      searchCatalog('anything', { resultType: 'release' }),
+      searchCatalog({ type: 'vinylmania' }, 'anything', { resultType: 'release' }),
     ).rejects.toBeInstanceOf(DiscogsRateLimitError);
   });
 
@@ -117,7 +120,7 @@ describe('Discogs client contract: searchCatalog', () => {
       .reply(500, { message: 'server error' });
 
     await expect(
-      searchCatalog('anything', { resultType: 'release' }),
+      searchCatalog({ type: 'vinylmania' }, 'anything', { resultType: 'release' }),
     ).rejects.toBeInstanceOf(DiscogsUnavailableError);
   });
 
@@ -129,7 +132,7 @@ describe('Discogs client contract: searchCatalog', () => {
       .replyWithError('connection reset');
 
     await expect(
-      searchCatalog('anything', { resultType: 'release' }),
+      searchCatalog({ type: 'vinylmania' }, 'anything', { resultType: 'release' }),
     ).rejects.toBeInstanceOf(DiscogsUnavailableError);
   });
 
@@ -165,7 +168,7 @@ describe('Discogs client contract: searchCatalog', () => {
         .get('/releases/98765/rating')
         .reply(200, { release_id: 98765, rating: { average: 4.5, count: 812 } });
 
-      const result = await searchCatalogWithRatings('Hybrid Theory', { resultType: 'release' });
+      const result = await searchCatalogWithRatings(CREDENTIAL, 'Hybrid Theory', { resultType: 'release' });
 
       expect(result.results[0]).toMatchObject({
         resultType: 'master',
@@ -192,7 +195,7 @@ describe('Discogs client contract: searchCatalog', () => {
         });
       discogsScope().get('/masters/12346').reply(503, { message: 'unavailable' });
 
-      const result = await searchCatalogWithRatings('Hybrid Theory Failure', {
+      const result = await searchCatalogWithRatings(CREDENTIAL, 'Hybrid Theory Failure', {
         resultType: 'release',
       });
 
@@ -232,7 +235,7 @@ describe('Discogs client contract: getRelease', () => {
         uri: 'https://www.discogs.com/release/1-The-Persuader-Stockholm',
       });
 
-    const release = await getRelease(1);
+    const release = await getRelease({ type: 'vinylmania' }, 1);
 
     expect(release).toEqual({
       discogsId: 1,
@@ -267,7 +270,7 @@ describe('Discogs client contract: getRelease', () => {
       .get('/releases/999999999')
       .reply(404, { message: 'Release not found' });
 
-    await expect(getRelease(999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
+    await expect(getRelease({ type: 'vinylmania' }, 999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
   });
 
   it('rejects with DiscogsRateLimitError on a sustained 429', async () => {
@@ -276,7 +279,7 @@ describe('Discogs client contract: getRelease', () => {
       .times(MAX_ATTEMPTS)
       .reply(429, { message: 'too many requests' });
 
-    await expect(getRelease(1)).rejects.toBeInstanceOf(DiscogsRateLimitError);
+    await expect(getRelease({ type: 'vinylmania' }, 1)).rejects.toBeInstanceOf(DiscogsRateLimitError);
   });
 
   it('rejects with DiscogsUnavailableError on a sustained 500 and on a sustained network error', async () => {
@@ -284,13 +287,13 @@ describe('Discogs client contract: getRelease', () => {
       .get('/releases/1')
       .times(MAX_ATTEMPTS)
       .reply(500, { message: 'server error' });
-    await expect(getRelease(1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+    await expect(getRelease({ type: 'vinylmania' }, 1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
 
     discogsScope()
       .get('/releases/1')
       .times(MAX_ATTEMPTS)
       .replyWithError('connection reset');
-    await expect(getRelease(1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+    await expect(getRelease({ type: 'vinylmania' }, 1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
   });
 });
 
@@ -322,7 +325,7 @@ describe('Discogs client contract: getArtist', () => {
         uri: 'https://www.discogs.com/artist/1-The-Persuader',
       });
 
-    const artist = await getArtist(1);
+    const artist = await getArtist({ type: 'vinylmania' }, 1);
 
     expect(artist).toEqual({
       discogsId: 1,
@@ -346,7 +349,7 @@ describe('Discogs client contract: getArtist', () => {
   it('rejects with DiscogsNotFoundError on a 404 response', async () => {
     discogsScope().get('/artists/999999999').reply(404, { message: 'Artist not found' });
 
-    await expect(getArtist(999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
+    await expect(getArtist({ type: 'vinylmania' }, 999999999)).rejects.toBeInstanceOf(DiscogsNotFoundError);
   });
 
   it('rejects with DiscogsRateLimitError on a sustained 429', async () => {
@@ -355,7 +358,7 @@ describe('Discogs client contract: getArtist', () => {
       .times(MAX_ATTEMPTS)
       .reply(429, { message: 'too many requests' });
 
-    await expect(getArtist(1)).rejects.toBeInstanceOf(DiscogsRateLimitError);
+    await expect(getArtist({ type: 'vinylmania' }, 1)).rejects.toBeInstanceOf(DiscogsRateLimitError);
   });
 
   it('rejects with DiscogsUnavailableError on a sustained 500 and on a sustained network error', async () => {
@@ -363,13 +366,13 @@ describe('Discogs client contract: getArtist', () => {
       .get('/artists/1')
       .times(MAX_ATTEMPTS)
       .reply(500, { message: 'server error' });
-    await expect(getArtist(1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+    await expect(getArtist({ type: 'vinylmania' }, 1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
 
     discogsScope()
       .get('/artists/1')
       .times(MAX_ATTEMPTS)
       .replyWithError('connection reset');
-    await expect(getArtist(1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+    await expect(getArtist({ type: 'vinylmania' }, 1)).rejects.toBeInstanceOf(DiscogsUnavailableError);
   });
 });
 
@@ -393,7 +396,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
           uri: 'https://www.discogs.com/release/5001',
         });
 
-      const release = await getRelease(5001);
+      const release = await getRelease({ type: 'vinylmania' }, 5001);
 
       expect(release.discogsId).toBe(5001);
       expect(infoSpy).toHaveBeenCalledWith(
@@ -421,7 +424,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
           uri: 'https://www.discogs.com/release/5002',
         });
 
-      const release = await getRelease(5002);
+      const release = await getRelease({ type: 'vinylmania' }, 5002);
 
       expect(release.discogsId).toBe(5002);
     });
@@ -430,7 +433,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
       const errorSpy = jest.spyOn(logger, 'error');
       discogsScope().get('/releases/5003').times(3).reply(500, { message: 'server error' });
 
-      await expect(getRelease(5003)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+      await expect(getRelease({ type: 'vinylmania' }, 5003)).rejects.toBeInstanceOf(DiscogsUnavailableError);
       expect(errorSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           outcome: 'unavailable',
@@ -446,7 +449,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
         .times(3)
         .reply(429, { message: 'too many requests' });
 
-      await expect(getRelease(5004)).rejects.toBeInstanceOf(DiscogsRateLimitError);
+      await expect(getRelease({ type: 'vinylmania' }, 5004)).rejects.toBeInstanceOf(DiscogsRateLimitError);
       expect(infoSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           outcome: 'rate_limited',
@@ -460,20 +463,20 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
     it('rejects a 404 immediately with DiscogsNotFoundError after exactly one call', async () => {
       const scope = discogsScope().get('/releases/5005').reply(404, { message: 'not found' });
 
-      await expect(getRelease(5005)).rejects.toBeInstanceOf(DiscogsNotFoundError);
+      await expect(getRelease({ type: 'vinylmania' }, 5005)).rejects.toBeInstanceOf(DiscogsNotFoundError);
       expect(scope.isDone()).toBe(true);
     });
 
     it('rejects a 401 immediately with DiscogsAuthError (never retried)', async () => {
       discogsScope().get('/releases/5006').reply(401, { message: 'unauthorized' });
 
-      await expect(getRelease(5006)).rejects.toBeInstanceOf(DiscogsAuthError);
+      await expect(getRelease({ type: 'vinylmania' }, 5006)).rejects.toBeInstanceOf(DiscogsAuthError);
     });
 
     it('rejects a 403 immediately with DiscogsAuthError (never retried)', async () => {
       discogsScope().get('/releases/5007').reply(403, { message: 'forbidden' });
 
-      await expect(getRelease(5007)).rejects.toBeInstanceOf(DiscogsAuthError);
+      await expect(getRelease({ type: 'vinylmania' }, 5007)).rejects.toBeInstanceOf(DiscogsAuthError);
     });
   });
 
@@ -482,7 +485,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
       for (let i = 0; i < 5; i += 1) {
         const id = 5100 + i;
         discogsScope().get(`/releases/${id}`).times(3).reply(500, { message: 'server error' });
-        await expect(getRelease(id)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+        await expect(getRelease({ type: 'vinylmania' }, id)).rejects.toBeInstanceOf(DiscogsUnavailableError);
       }
 
       const warnSpy = jest.spyOn(logger, 'warn');
@@ -490,7 +493,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
       // No nock interceptor registered for 5999 at all — if the breaker did
       // not short-circuit, the outbound call would hit nock's "no match"
       // guard instead of resolving via a mocked response.
-      await expect(getRelease(5999)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+      await expect(getRelease({ type: 'vinylmania' }, 5999)).rejects.toBeInstanceOf(DiscogsUnavailableError);
 
       expect(warnSpy).toHaveBeenCalledWith(
         expect.objectContaining({ outcome: 'circuit_open' }),
@@ -516,7 +519,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
           uri: 'https://www.discogs.com/release/5200',
         });
 
-      await getRelease(5200);
+      await getRelease({ type: 'vinylmania' }, 5200);
 
       expect(infoSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -530,7 +533,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
       const infoSpy = jest.spyOn(logger, 'info');
       discogsScope().get('/releases/5201').reply(404, { message: 'not found' });
 
-      await expect(getRelease(5201)).rejects.toBeInstanceOf(DiscogsNotFoundError);
+      await expect(getRelease({ type: 'vinylmania' }, 5201)).rejects.toBeInstanceOf(DiscogsNotFoundError);
 
       expect(infoSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -544,7 +547,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
       const warnSpy = jest.spyOn(logger, 'warn');
       discogsScope().get('/releases/5202').reply(401, { message: 'unauthorized' });
 
-      await expect(getRelease(5202)).rejects.toBeInstanceOf(DiscogsAuthError);
+      await expect(getRelease({ type: 'vinylmania' }, 5202)).rejects.toBeInstanceOf(DiscogsAuthError);
 
       expect(warnSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -558,11 +561,11 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
       for (let i = 0; i < 5; i += 1) {
         const id = 5300 + i;
         discogsScope().get(`/releases/${id}`).times(3).reply(500, { message: 'server error' });
-        await expect(getRelease(id)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+        await expect(getRelease({ type: 'vinylmania' }, id)).rejects.toBeInstanceOf(DiscogsUnavailableError);
       }
 
       const warnSpy = jest.spyOn(logger, 'warn');
-      await expect(getRelease(5399)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+      await expect(getRelease({ type: 'vinylmania' }, 5399)).rejects.toBeInstanceOf(DiscogsUnavailableError);
 
       const circuitOpenCall = warnSpy.mock.calls.find(
         ([event]) => event.outcome === 'circuit_open',
@@ -615,10 +618,10 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
 
       // Corrects the shared budget to remaining=8, at/below the
       // ceil(60*0.15)=9 safety threshold.
-      await getRelease(9001);
+      await getRelease({ type: 'vinylmania' }, 9001);
 
       let resolved = false;
-      const secondCall = getRelease(9002).then((release) => {
+      const secondCall = getRelease({ type: 'vinylmania' }, 9002).then((release) => {
         resolved = true;
         return release;
       });
@@ -647,10 +650,10 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
           'x-discogs-ratelimit-remaining': '1',
         });
 
-      await getRelease(9003);
+      await getRelease({ type: 'vinylmania' }, 9003);
 
       const before = Date.now();
-      const secondCallPromise = getRelease(9004);
+      const secondCallPromise = getRelease({ type: 'vinylmania' }, 9004);
       await jest.advanceTimersByTimeAsync(MAX_WAIT_MS);
       await secondCallPromise;
 
@@ -666,7 +669,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
         });
 
       const before = Date.now();
-      await getRelease(9005);
+      await getRelease({ type: 'vinylmania' }, 9005);
 
       expect(Date.now() - before).toBe(0);
       expect(scope.isDone()).toBe(true);
@@ -742,7 +745,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
 
       const { getMaxInFlight, restore } = spyOnInFlightRequests();
       try {
-        const result = await searchCatalogWithRatings('Concurrency Bounded', {
+        const result = await searchCatalogWithRatings(CREDENTIAL, 'Concurrency Bounded', {
           resultType: 'release',
         });
 
@@ -776,7 +779,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
 
       const { getMaxInFlight, restore } = spyOnInFlightRequests();
       try {
-        const result = await searchCatalogWithRatings('Concurrency Unaffected', {
+        const result = await searchCatalogWithRatings(CREDENTIAL, 'Concurrency Unaffected', {
           resultType: 'release',
         });
 
@@ -807,7 +810,7 @@ describe('Discogs client resilience: retry, circuit breaker, auth classification
           .reply(200, { release_id: 3200 + i, rating: { average: 4, count: 10 } });
       }
 
-      const result = await searchCatalogWithRatings('Concurrency Fail Soft', {
+      const result = await searchCatalogWithRatings(CREDENTIAL, 'Concurrency Fail Soft', {
         resultType: 'release',
       });
 

@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 
 import { useCatalogMasterVersions } from '../queries/discogsQueries';
+import { ApiError } from '../services/apiClient';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { DiscogsRelinkNotice } from './DiscogsRelinkNotice';
 import { MasterVersionsTableSkeleton } from './MasterVersionsTableSkeleton';
 
 interface MasterVersionsTableProps {
@@ -17,9 +19,28 @@ export function MasterVersionsTable({
   page,
   onPageChange,
 }: MasterVersionsTableProps) {
-  const { data, isLoading } = useCatalogMasterVersions(discogsId, page);
+  const { data, isLoading, isError, error } = useCatalogMasterVersions(discogsId, page);
 
-  if (isLoading || !data) {
+  if (isLoading) {
+    return <MasterVersionsTableSkeleton />;
+  }
+
+  // This query fetches independently of the surrounding page's own master
+  // fetch, so a revoked link (spec 053, US3) or any other failure here was
+  // previously invisible — the skeleton would render forever. Surfaced with
+  // the same relink prompt other catalog surfaces use, or a generic message.
+  if (isError) {
+    if (error instanceof ApiError && error.code === 'discogs_link_invalid') {
+      return <DiscogsRelinkNotice />;
+    }
+    return (
+      <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        Couldn&apos;t load this master&apos;s versions. Please try again.
+      </p>
+    );
+  }
+
+  if (!data) {
     return <MasterVersionsTableSkeleton />;
   }
 

@@ -18,6 +18,7 @@ import {
   DiscogsUnavailableError,
 } from '../../discogs/discogsErrors';
 import { acquireSlot, recordRateLimitHeaders } from '../../discogs/discogsRateLimiter';
+import { buildProtectedResourceHeader, type ConsumerCredentials } from '../discogsOauth/oauthSignature';
 import {
   backoffDelayMs,
   classifyForRetry,
@@ -26,12 +27,14 @@ import {
 } from '../../discogs/discogsRetry';
 import type {
   Artist,
+  CatalogCredential,
   CatalogSearchResponse,
   MasterRelease,
   MasterReleaseVersionsPage,
   Release,
   CommunityRating,
 } from '../../domain/discogsCatalog/types';
+import type { DiscogsConnection } from '../../domain/discogsOauth/types';
 import type {
   DiscogsCatalogPort,
   SearchCatalogOptions,
@@ -57,6 +60,23 @@ export function getDiscogsBaseUrl(): string {
 function buildAuthorizationHeader(): string | undefined {
   const token = process.env.DISCOGS_TOKEN;
   return token ? `Discogs token=${token}` : undefined;
+}
+
+function getCatalogOauthCredentials(): ConsumerCredentials {
+  const consumerKey = process.env.DISCOGS_CONSUMER_KEY;
+  const consumerSecret = process.env.DISCOGS_CONSUMER_SECRET;
+  if (!consumerKey || !consumerSecret) {
+    throw new Error('DISCOGS_CONSUMER_KEY / DISCOGS_CONSUMER_SECRET are not configured');
+  }
+  return { consumerKey, consumerSecret };
+}
+
+/** OAuth 1.0a PLAINTEXT header identifying a catalog request with the linked user's own account (spec 053). */
+function buildUserAuthorizationHeader(connection: DiscogsConnection): string {
+  return buildProtectedResourceHeader(getCatalogOauthCredentials(), {
+    token: connection.accessToken,
+    tokenSecret: connection.accessTokenSecret,
+  });
 }
 
 /**
@@ -86,21 +106,33 @@ function delay(ms: number): Promise<void> {
   });
 }
 
-export function createDiscogsHttpClient(): AxiosInstance {
-  const authorization = buildAuthorizationHeader();
-
+/**
+ * Builds the catalog HTTP client. `getAuthorization` is consulted fresh on
+ * every request (not baked into static headers at creation time) so the
+ * same interceptor pipeline — circuit breaker, rate limiting, retry, error
+ * mapping — serves both the shared `DISCOGS_TOKEN` (default) and a linked
+ * user's per-request OAuth 1.0a header (spec 053) without duplicating this
+ * ~100-line pipeline a second time (research.md Decision 4).
+ */
+export function createDiscogsHttpClient(
+  getAuthorization: () => string | undefined = buildAuthorizationHeader,
+  credentialType: CatalogCredential['type'] = 'vinylmania',
+): AxiosInstance {
   const instance = axios.create({
     baseURL: getDiscogsBaseUrl(),
     timeout: PER_ATTEMPT_TIMEOUT_MS,
     headers: {
       'User-Agent': process.env.DISCOGS_USER_AGENT || 'Vinylmania/0.1',
-      ...(authorization ? { Authorization: authorization } : {}),
     },
   });
 
   instance.interceptors.request.use(async (config: ResilienceConfig) => {
     if (!config.__skipResilience && shouldShortCircuit()) {
       return Promise.reject(new CircuitOpenError(config.url ?? 'unknown'));
+    }
+    const authorization = getAuthorization();
+    if (authorization) {
+      config.headers.Authorization = authorization;
     }
     await acquireSlot();
     return config;
@@ -114,7 +146,7 @@ export function createDiscogsHttpClient(): AxiosInstance {
       if (!config.__skipResilience) {
         recordSuccess();
       }
-      logRateLimit(config.url ?? 'unknown', 'success', response, attempts);
+      logRateLimit(config.url ?? 'unknown', 'success', response, attempts, credentialType);
       return response;
     },
     async (error: unknown) => {
@@ -143,7 +175,7 @@ export function createDiscogsHttpClient(): AxiosInstance {
         const { status } = error.response;
 
         if (status === 404) {
-          logRateLimit(endpoint, 'not_found', error.response, attempt);
+          logRateLimit(endpoint, 'not_found', error.response, attempt, credentialType);
           return Promise.reject(new DiscogsNotFoundError(error));
         }
 
@@ -152,7 +184,7 @@ export function createDiscogsHttpClient(): AxiosInstance {
             route: endpoint,
             outcome: 'auth_failed',
             message: `Discogs responded with status ${status}`,
-            meta: { attempts: attempt },
+            meta: { attempts: attempt, credentialType },
           });
           return Promise.reject(new DiscogsAuthError(error));
         }
@@ -173,7 +205,7 @@ export function createDiscogsHttpClient(): AxiosInstance {
       }
 
       if (classification === 'rate_limited' && error.response) {
-        logRateLimit(endpoint, 'rate_limited', error.response, attempt);
+        logRateLimit(endpoint, 'rate_limited', error.response, attempt, credentialType);
         return Promise.reject(new DiscogsRateLimitError(error));
       }
 
@@ -183,7 +215,7 @@ export function createDiscogsHttpClient(): AxiosInstance {
         message: error.response
           ? `Discogs responded with status ${error.response.status}`
           : error.message,
-        meta: { attempts: attempt },
+        meta: { attempts: attempt, credentialType },
       });
       return Promise.reject(new DiscogsUnavailableError(error));
     },
@@ -197,6 +229,7 @@ function logRateLimit(
   outcome: 'success' | 'not_found' | 'rate_limited',
   response: AxiosResponse,
   attempts: number,
+  credentialType: CatalogCredential['type'],
 ): void {
   logger.info({
     route: endpoint,
@@ -205,6 +238,7 @@ function logRateLimit(
       rateLimitRemaining: response.headers['x-discogs-ratelimit-remaining'],
       rateLimit: response.headers['x-discogs-ratelimit'],
       attempts,
+      credentialType,
     },
   });
 }
@@ -214,6 +248,19 @@ let sharedClient: AxiosInstance | undefined;
 export function getDiscogsHttpClient(): AxiosInstance {
   sharedClient ??= createDiscogsHttpClient();
   return sharedClient;
+}
+
+/**
+ * Selects the HTTP client to identify a catalog request with (spec 053).
+ * The `vinylmania` shared singleton is reused unchanged (zero behavior
+ * change for unlinked users, FR-002/FR-007); a `user` credential gets a
+ * fresh, OAuth-signed client per call — no cross-user caching, mirroring
+ * `discogsCollectionAdapter.ts`'s per-call `createClient`.
+ */
+function getClientForCredential(credential: CatalogCredential): AxiosInstance {
+  return credential.type === 'user'
+    ? createDiscogsHttpClient(() => buildUserAuthorizationHeader(credential.connection), 'user')
+    : getDiscogsHttpClient();
 }
 
 /** Trims a filter value; blank/whitespace-only values are treated as unset (spec FR-010). */
@@ -233,13 +280,14 @@ const RATING_LOOKUP_TIMEOUT_MS = 2_000;
 
 /** Fetches (and caches) one release's community rating; rejects if the lookup fails or times out. */
 export async function getReleaseRating(
+  credential: CatalogCredential,
   discogsReleaseId: number,
 ): Promise<CommunityRating> {
   return cacheAdapter.withCache(
     `discogs:rating:${discogsReleaseId}`,
     RATING_CACHE_TTL_SECONDS,
     async () => {
-      const response = await getDiscogsHttpClient().get(
+      const response = await getClientForCredential(credential).get(
         `/releases/${discogsReleaseId}/rating`,
         {
           timeout: RATING_LOOKUP_TIMEOUT_MS,
@@ -260,12 +308,15 @@ const MASTER_VERSIONS_CACHE_TTL_SECONDS = 6 * 60 * 60;
 const DEFAULT_MASTER_VERSIONS_PER_PAGE = 10;
 
 /** Fetches (and caches) one master release's detail (feature 026, US3). */
-export async function getMasterRelease(masterId: number): Promise<MasterRelease> {
+export async function getMasterRelease(
+  credential: CatalogCredential,
+  masterId: number,
+): Promise<MasterRelease> {
   return cacheAdapter.withCache(
     `discogs:master:${masterId}`,
     MASTER_CACHE_TTL_SECONDS,
     async () => {
-      const response = await getDiscogsHttpClient().get(`/masters/${masterId}`);
+      const response = await getClientForCredential(credential).get(`/masters/${masterId}`);
       return mapMasterRelease(response.data);
     },
   );
@@ -276,13 +327,14 @@ export async function getMasterRelease(masterId: number): Promise<MasterRelease>
  * default (spec FR-009, feature 026 US3).
  */
 export async function getMasterReleaseVersions(
+  credential: CatalogCredential,
   masterId: number,
   page = 1,
   perPage = DEFAULT_MASTER_VERSIONS_PER_PAGE,
 ): Promise<MasterReleaseVersionsPage> {
   const cacheKey = `discogs:master-versions:${masterId}:${page}:${perPage}`;
   return cacheAdapter.withCache(cacheKey, MASTER_VERSIONS_CACHE_TTL_SECONDS, async () => {
-    const response = await getDiscogsHttpClient().get(`/masters/${masterId}/versions`, {
+    const response = await getClientForCredential(credential).get(`/masters/${masterId}/versions`, {
       params: { page, per_page: perPage },
     });
     const { pagination, versions } = response.data as {
@@ -308,6 +360,7 @@ export async function getMasterReleaseVersions(
  * application/discogsCatalog/searchCatalogWithRatings.ts.
  */
 export async function searchCatalog(
+  credential: CatalogCredential,
   query: string,
   options: SearchCatalogOptions = {},
 ): Promise<CatalogSearchResponse> {
@@ -333,7 +386,7 @@ export async function searchCatalog(
   const discogsType = resultType === 'release' ? undefined : options.resultType;
   const KEPT_RAW_TYPES_FOR_RELEASE_SEARCH = new Set(['release', 'master']);
 
-  const response = await getDiscogsHttpClient().get('/database/search', {
+  const response = await getClientForCredential(credential).get('/database/search', {
     params: {
       q: query,
       type: discogsType,
@@ -378,23 +431,29 @@ export async function searchCatalog(
   };
 }
 
-export async function getRelease(discogsReleaseId: number): Promise<Release> {
+export async function getRelease(
+  credential: CatalogCredential,
+  discogsReleaseId: number,
+): Promise<Release> {
   return cacheAdapter.withCache(
     `discogs:release:${discogsReleaseId}`,
     RELEASE_CACHE_TTL_SECONDS,
     async () => {
-      const response = await getDiscogsHttpClient().get(`/releases/${discogsReleaseId}`);
+      const response = await getClientForCredential(credential).get(`/releases/${discogsReleaseId}`);
       return mapRelease(response.data);
     },
   );
 }
 
-export async function getArtist(discogsArtistId: number): Promise<Artist> {
+export async function getArtist(
+  credential: CatalogCredential,
+  discogsArtistId: number,
+): Promise<Artist> {
   return cacheAdapter.withCache(
     `discogs:artist:${discogsArtistId}`,
     ARTIST_CACHE_TTL_SECONDS,
     async () => {
-      const response = await getDiscogsHttpClient().get(`/artists/${discogsArtistId}`);
+      const response = await getClientForCredential(credential).get(`/artists/${discogsArtistId}`);
       return mapArtist(response.data);
     },
   );

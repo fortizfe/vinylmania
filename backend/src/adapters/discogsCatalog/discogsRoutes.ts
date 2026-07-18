@@ -2,6 +2,8 @@ import { Router, type Request, type Response } from 'express';
 
 import { logger } from '../../config/logger';
 import { createSearchCatalogWithRatingsUseCase } from '../../application/discogsCatalog/searchCatalogWithRatings';
+import { resolveCatalogCredential } from '../../application/discogsCatalog/resolveCatalogCredential';
+import type { CatalogCredential } from '../../domain/discogsCatalog/types';
 import {
   DiscogsNotFoundError,
   DiscogsRateLimitError,
@@ -9,6 +11,8 @@ import {
 } from '../../discogs/discogsErrors';
 import { requireAuth } from '../auth/requireAuth';
 import { cacheAdapter } from '../cache/cacheAdapter';
+import { respondDiscogsAuthError } from '../discogs/respondDiscogsAuthError';
+import { discogsConnectionAdapter } from '../discogsOauth/discogsConnectionAdapter';
 import {
   discogsCatalogAdapter,
   getMasterRelease,
@@ -54,8 +58,15 @@ discogsRouter.get('/search', requireAuth, async (req: Request, res: Response) =>
   const { page, perPage } = parsePageParams(req);
   const filters = parseFilterParams(req);
 
+  let credential: CatalogCredential | undefined;
   try {
-    const result = await searchCatalogWithRatings(query, { resultType, page, perPage, ...filters });
+    credential = await resolveCatalogCredential(discogsConnectionAdapter, req.auth!.uid);
+    const result = await searchCatalogWithRatings(credential, query, {
+      resultType,
+      page,
+      perPage,
+      ...filters,
+    });
     const releaseResults = result.results.filter((r) => r.resultType === 'release');
     const masterResults = result.results.filter((r) => r.resultType === 'master');
     const enrichedCount = [...releaseResults, ...masterResults].filter(
@@ -81,6 +92,14 @@ discogsRouter.get('/search', requireAuth, async (req: Request, res: Response) =>
     const nonMasterResults = result.results.filter((r) => r.resultType !== 'master');
     res.status(200).json({ ...result, results: [...masterResults, ...nonMasterResults] });
   } catch (err) {
+    const authErrorResponse =
+      credential && respondDiscogsAuthError(credential.type, err);
+    if (authErrorResponse) {
+      logger.warn({ route: '/api/discogs/search', outcome: 'auth_failed', uid: req.auth?.uid });
+      res.status(authErrorResponse.status).json(authErrorResponse.body);
+      return;
+    }
+
     if (err instanceof DiscogsRateLimitError || err instanceof DiscogsUnavailableError) {
       logger.warn({
         route: '/api/discogs/search',
@@ -114,8 +133,10 @@ discogsRouter.get(
   async (req: Request, res: Response) => {
     const discogsId = Number(req.params.discogsId);
 
+    let credential: CatalogCredential | undefined;
     try {
-      const release = await getRelease(discogsId);
+      credential = await resolveCatalogCredential(discogsConnectionAdapter, req.auth!.uid);
+      const release = await getRelease(credential, discogsId);
       logger.info({
         route: '/api/discogs/releases/:discogsId',
         outcome: 'success',
@@ -123,6 +144,18 @@ discogsRouter.get(
       });
       res.status(200).json(release);
     } catch (err) {
+      const authErrorResponse =
+        credential && respondDiscogsAuthError(credential.type, err);
+      if (authErrorResponse) {
+        logger.warn({
+          route: '/api/discogs/releases/:discogsId',
+          outcome: 'auth_failed',
+          uid: req.auth?.uid,
+        });
+        res.status(authErrorResponse.status).json(authErrorResponse.body);
+        return;
+      }
+
       if (err instanceof DiscogsNotFoundError) {
         logger.warn({
           route: '/api/discogs/releases/:discogsId',
@@ -173,8 +206,10 @@ discogsRouter.get(
   async (req: Request, res: Response) => {
     const discogsId = Number(req.params.discogsId);
 
+    let credential: CatalogCredential | undefined;
     try {
-      const master = await getMasterRelease(discogsId);
+      credential = await resolveCatalogCredential(discogsConnectionAdapter, req.auth!.uid);
+      const master = await getMasterRelease(credential, discogsId);
       logger.info({
         route: '/api/discogs/masters/:discogsId',
         outcome: 'success',
@@ -182,6 +217,18 @@ discogsRouter.get(
       });
       res.status(200).json(master);
     } catch (err) {
+      const authErrorResponse =
+        credential && respondDiscogsAuthError(credential.type, err);
+      if (authErrorResponse) {
+        logger.warn({
+          route: '/api/discogs/masters/:discogsId',
+          outcome: 'auth_failed',
+          uid: req.auth?.uid,
+        });
+        res.status(authErrorResponse.status).json(authErrorResponse.body);
+        return;
+      }
+
       if (err instanceof DiscogsNotFoundError) {
         logger.warn({
           route: '/api/discogs/masters/:discogsId',
@@ -239,8 +286,10 @@ discogsRouter.get(
       Number(req.query.perPage) || DEFAULT_MASTER_VERSIONS_PER_PAGE,
     );
 
+    let credential: CatalogCredential | undefined;
     try {
-      const versions = await getMasterReleaseVersions(discogsId, page, perPage);
+      credential = await resolveCatalogCredential(discogsConnectionAdapter, req.auth!.uid);
+      const versions = await getMasterReleaseVersions(credential, discogsId, page, perPage);
       logger.info({
         route: '/api/discogs/masters/:discogsId/versions',
         outcome: 'success',
@@ -248,6 +297,18 @@ discogsRouter.get(
       });
       res.status(200).json(versions);
     } catch (err) {
+      const authErrorResponse =
+        credential && respondDiscogsAuthError(credential.type, err);
+      if (authErrorResponse) {
+        logger.warn({
+          route: '/api/discogs/masters/:discogsId/versions',
+          outcome: 'auth_failed',
+          uid: req.auth?.uid,
+        });
+        res.status(authErrorResponse.status).json(authErrorResponse.body);
+        return;
+      }
+
       if (err instanceof DiscogsNotFoundError) {
         logger.warn({
           route: '/api/discogs/masters/:discogsId/versions',

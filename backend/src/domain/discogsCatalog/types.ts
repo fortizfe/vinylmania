@@ -1,7 +1,19 @@
+import type { DiscogsConnection } from '../discogsOauth/types';
+
 export interface CommunityRating {
   average: number;
   count: number;
 }
+
+/**
+ * Which Discogs credential identifies a given catalog request (spec 053).
+ * `vinylmania` is only a legitimate identification for a user with no
+ * active linked Discogs account; `user` MUST never be silently substituted
+ * with `vinylmania` once resolved (spec FR-003/FR-004).
+ */
+export type CatalogCredential =
+  | { readonly type: 'vinylmania' }
+  | { readonly type: 'user'; readonly connection: DiscogsConnection };
 
 export interface CatalogSearchResult {
   discogsId: number;

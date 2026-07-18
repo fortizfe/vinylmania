@@ -1,6 +1,7 @@
 import { createSearchCatalogWithRatingsUseCase } from '../../../../src/application/discogsCatalog/searchCatalogWithRatings';
 import type {
   Artist,
+  CatalogCredential,
   CatalogSearchResponse,
   CatalogSearchResult,
   CommunityRating,
@@ -13,6 +14,8 @@ import type {
   DiscogsCatalogPort,
   SearchCatalogOptions,
 } from '../../../../src/ports/discogsCatalog/discogsCatalogPort';
+
+const CREDENTIAL: CatalogCredential = { type: 'vinylmania' };
 
 function fakeCache(): jest.Mocked<CachePort> {
   return {
@@ -55,30 +58,40 @@ function fakeDiscogsCatalog(options: FakeCatalogPortOptions): jest.Mocked<Discog
   const { searchResults, masters = {}, ratings = {}, onRatingLookup } = options;
 
   return {
-    getRelease: jest.fn<Promise<Release>, [number]>(),
-    getArtist: jest.fn<Promise<Artist>, [number]>(),
-    getMasterRelease: jest.fn(async (masterId: number): Promise<MasterRelease> => {
-      const master = masters[masterId];
-      if (!master) {
-        throw new Error(`no fake master registered for ${masterId}`);
-      }
-      return master;
-    }),
-    getMasterReleaseVersions: jest.fn<Promise<MasterReleaseVersionsPage>, [number, number?, number?]>(),
-    getReleaseRating: jest.fn(async (releaseId: number): Promise<CommunityRating> => {
-      onRatingLookup?.(releaseId);
-      const outcome = ratings[releaseId];
-      if (outcome instanceof Error) {
-        throw outcome;
-      }
-      if (!outcome) {
-        throw new Error(`no fake rating registered for ${releaseId}`);
-      }
-      return outcome;
-    }),
+    getRelease: jest.fn<Promise<Release>, [CatalogCredential, number]>(),
+    getArtist: jest.fn<Promise<Artist>, [CatalogCredential, number]>(),
+    getMasterRelease: jest.fn(
+      async (_credential: CatalogCredential, masterId: number): Promise<MasterRelease> => {
+        const master = masters[masterId];
+        if (!master) {
+          throw new Error(`no fake master registered for ${masterId}`);
+        }
+        return master;
+      },
+    ),
+    getMasterReleaseVersions: jest.fn<
+      Promise<MasterReleaseVersionsPage>,
+      [CatalogCredential, number, number?, number?]
+    >(),
+    getReleaseRating: jest.fn(
+      async (_credential: CatalogCredential, releaseId: number): Promise<CommunityRating> => {
+        onRatingLookup?.(releaseId);
+        const outcome = ratings[releaseId];
+        if (outcome instanceof Error) {
+          throw outcome;
+        }
+        if (!outcome) {
+          throw new Error(`no fake rating registered for ${releaseId}`);
+        }
+        return outcome;
+      },
+    ),
     searchCatalog: jest.fn(
-      async (_query: string, _options?: SearchCatalogOptions): Promise<CatalogSearchResponse> =>
-        searchResponse(searchResults),
+      async (
+        _credential: CatalogCredential,
+        _query: string,
+        _options?: SearchCatalogOptions,
+      ): Promise<CatalogSearchResponse> => searchResponse(searchResults),
     ),
   };
 }
@@ -92,11 +105,11 @@ describe('searchCatalogWithRatings', () => {
     const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
       discogsCatalog,
       cache: fakeCache(),
-    });
+          });
 
-    const result = await searchCatalogWithRatings('Stockholm');
+    const result = await searchCatalogWithRatings(CREDENTIAL, 'Stockholm');
 
-    expect(discogsCatalog.getReleaseRating).toHaveBeenCalledWith(501);
+    expect(discogsCatalog.getReleaseRating).toHaveBeenCalledWith({ type: 'vinylmania' }, 501);
     expect(result.results[0].communityRating).toEqual({ average: 4.2, count: 7 });
   });
 
@@ -121,12 +134,12 @@ describe('searchCatalogWithRatings', () => {
     const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
       discogsCatalog,
       cache: fakeCache(),
-    });
+          });
 
-    const result = await searchCatalogWithRatings('Nevermind');
+    const result = await searchCatalogWithRatings(CREDENTIAL, 'Nevermind');
 
-    expect(discogsCatalog.getMasterRelease).toHaveBeenCalledWith(13540);
-    expect(discogsCatalog.getReleaseRating).toHaveBeenCalledWith(249504);
+    expect(discogsCatalog.getMasterRelease).toHaveBeenCalledWith({ type: 'vinylmania' }, 13540);
+    expect(discogsCatalog.getReleaseRating).toHaveBeenCalledWith({ type: 'vinylmania' }, 249504);
     expect(result.results[0].communityRating).toEqual({ average: 4.8, count: 20 });
   });
 
@@ -144,9 +157,9 @@ describe('searchCatalogWithRatings', () => {
     const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
       discogsCatalog,
       cache: fakeCache(),
-    });
+          });
 
-    const result = await searchCatalogWithRatings('Query');
+    const result = await searchCatalogWithRatings(CREDENTIAL, 'Query');
 
     expect(result.results).toHaveLength(2);
     expect(result.results.find((r) => r.discogsId === 1)?.communityRating).toEqual({
@@ -172,7 +185,7 @@ describe('searchCatalogWithRatings', () => {
       searchResults,
       ratings,
     });
-    discogsCatalog.getReleaseRating.mockImplementation(async (releaseId: number) => {
+    discogsCatalog.getReleaseRating.mockImplementation(async (_credential, releaseId: number) => {
       inFlight += 1;
       maxInFlight = Math.max(maxInFlight, inFlight);
       await new Promise((resolve) => setTimeout(resolve, 5));
@@ -183,9 +196,9 @@ describe('searchCatalogWithRatings', () => {
     const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
       discogsCatalog,
       cache: fakeCache(),
-    });
+          });
 
-    const result = await searchCatalogWithRatings('Query');
+    const result = await searchCatalogWithRatings(CREDENTIAL, 'Query');
 
     expect(result.results).toHaveLength(eligibleCount);
     expect(maxInFlight).toBeLessThanOrEqual(5);

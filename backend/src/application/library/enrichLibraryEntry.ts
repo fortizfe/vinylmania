@@ -22,7 +22,7 @@ export function createEnrichLibraryEntryUseCase(deps: {
     entry: LibraryEntry,
   ): Promise<EnrichedLibraryEntry> {
     try {
-      const release = await getRelease(entry.discogsReleaseId);
+      const release = await getRelease({ type: 'vinylmania' }, entry.discogsReleaseId);
       const catalogFields = {
         genre: release.genres,
         style: release.styles,

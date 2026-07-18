@@ -1,5 +1,9 @@
 import { logger } from '../../config/logger';
-import type { CatalogSearchResponse, CatalogSearchResult } from '../../domain/discogsCatalog/types';
+import type {
+  CatalogCredential,
+  CatalogSearchResponse,
+  CatalogSearchResult,
+} from '../../domain/discogsCatalog/types';
 import type { CachePort } from '../../ports/cache/cachePort';
 import type {
   DiscogsCatalogPort,
@@ -26,6 +30,7 @@ function normalizeFilterValue(value: string | undefined): string | undefined {
 
 export interface SearchCatalogWithRatingsUseCase {
   searchCatalogWithRatings(
+    credential: CatalogCredential,
     query: string,
     options?: SearchCatalogOptions,
   ): Promise<CatalogSearchResponse>;
@@ -46,6 +51,7 @@ export function createSearchCatalogWithRatingsUseCase(deps: {
    * search response (spec FR-008/SC-006, feature 026 FR-002).
    */
   async function enrichWithRating(
+    credential: CatalogCredential,
     result: CatalogSearchResult,
   ): Promise<CatalogSearchResult> {
     if (result.resultType !== 'release' && result.resultType !== 'master') {
@@ -55,9 +61,9 @@ export function createSearchCatalogWithRatingsUseCase(deps: {
     try {
       const releaseId =
         result.resultType === 'master'
-          ? (await discogsCatalog.getMasterRelease(result.discogsId)).mainReleaseId
+          ? (await discogsCatalog.getMasterRelease(credential, result.discogsId)).mainReleaseId
           : result.discogsId;
-      const rating = await discogsCatalog.getReleaseRating(releaseId);
+      const rating = await discogsCatalog.getReleaseRating(credential, releaseId);
       if (rating.count <= 0) {
         return result;
       }
@@ -74,6 +80,7 @@ export function createSearchCatalogWithRatingsUseCase(deps: {
   }
 
   async function searchCatalogWithRatings(
+    credential: CatalogCredential,
     query: string,
     options: SearchCatalogOptions = {},
   ): Promise<CatalogSearchResponse> {
@@ -81,6 +88,9 @@ export function createSearchCatalogWithRatingsUseCase(deps: {
       return { results: [], pagination: { page: 1, pages: 0, items: 0, perPage: 0 } };
     }
 
+    // `credential` is resolved once by the caller (the route) and threaded
+    // through the raw search call and every enrichment fan-out call below —
+    // never re-resolved per Discogs call (spec 053, research.md Decision 3).
     const resultType = options.resultType ?? '';
     const page = options.page ?? 1;
     const perPage = options.perPage ?? 50;
@@ -92,11 +102,11 @@ export function createSearchCatalogWithRatingsUseCase(deps: {
     const cacheKey = `discogs:search:${resultType}:${query}:${page}:${perPage}:${genre ?? ''}:${style ?? ''}:${format ?? ''}`;
 
     return cache.withCache(cacheKey, SEARCH_CACHE_TTL_SECONDS, async () => {
-      const raw = await discogsCatalog.searchCatalog(query, options);
+      const raw = await discogsCatalog.searchCatalog(credential, query, options);
       const enrichedResults = await mapWithConcurrency(
         raw.results,
         SEARCH_RATING_CONCURRENCY,
-        enrichWithRating,
+        (result) => enrichWithRating(credential, result),
       );
 
       return { results: enrichedResults, pagination: raw.pagination };

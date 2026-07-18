@@ -12,6 +12,7 @@ import {
   DiscogsUnavailableError,
 } from '../../discogs/discogsErrors';
 import { requireAuth } from '../auth/requireAuth';
+import { respondDiscogsAuthError } from '../discogs/respondDiscogsAuthError';
 import {
   CatalogUnavailableForCreationError,
   createCreateLibraryEntryUseCase,
@@ -98,11 +99,10 @@ function respondCollectionError(
   }
   if (err instanceof DiscogsAuthError) {
     logger.warn({ route, outcome: 'auth_failed', uid });
-    res.status(401).json({
-      error: 'discogs_link_invalid',
-      message:
-        'Your Discogs link is no longer valid. Please re-link your account from your profile.',
-    });
+    // Collection always identifies with the user's own linked account
+    // (never a shared app-level credential), so this mapping always applies.
+    const response = respondDiscogsAuthError('user', err);
+    res.status(response!.status).json(response!.body);
     return true;
   }
   if (err instanceof FieldNotEditableError) {

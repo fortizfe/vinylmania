@@ -331,7 +331,7 @@ describe('collectionClient: shared preventive throttle with the catalog client (
     await listAllInstances(connection, emptyFieldMap);
 
     let resolved = false;
-    const catalogCall = getRelease(9101).then((release) => {
+    const catalogCall = getRelease({ type: 'vinylmania' }, 9101).then((release) => {
       resolved = true;
       return release;
     });
@@ -366,7 +366,7 @@ describe('collectionClient: shared preventive throttle with the catalog client (
     // recordRateLimitHeaders() from the catalog client's own response
     // corrects it back up — read by the collection client next.
     await listAllInstances(connection, emptyFieldMap);
-    const catalogPromise = getRelease(9102);
+    const catalogPromise = getRelease({ type: 'vinylmania' }, 9102);
     await jest.advanceTimersByTimeAsync(MAX_WAIT_MS);
     await catalogPromise;
 
@@ -545,7 +545,7 @@ describe('collectionClient: retry-with-backoff & circuit breaker parity (feature
       // assertion a false positive. The circuit_open log line is the only
       // way to distinguish a real short-circuit from that coincidence.
       const warnSpy = jest.spyOn(logger, 'warn');
-      await expect(getRelease(9299)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+      await expect(getRelease({ type: 'vinylmania' }, 9299)).rejects.toBeInstanceOf(DiscogsUnavailableError);
       expect(warnSpy).toHaveBeenCalledWith(
         expect.objectContaining({ outcome: 'circuit_open' }),
       );
@@ -557,7 +557,7 @@ describe('collectionClient: retry-with-backoff & circuit breaker parity (feature
         discogsScope().get(`/releases/${id}`).times(MAX_ATTEMPTS).reply(500, {
           message: 'server error',
         });
-        await expect(getRelease(id)).rejects.toBeInstanceOf(DiscogsUnavailableError);
+        await expect(getRelease({ type: 'vinylmania' }, id)).rejects.toBeInstanceOf(DiscogsUnavailableError);
       }
 
       // Same "circuit_open log line is the only real proof" reasoning as

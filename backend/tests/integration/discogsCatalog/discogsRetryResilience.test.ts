@@ -119,7 +119,7 @@ describe('Discogs retry resilience — single retry per coalesced in-flight requ
       .reply(429, { message: 'too many requests' });
     const successScope = discogsScope().get('/releases/6100').reply(200, rawRelease(6100));
 
-    const [first, second] = await Promise.all([getRelease(6100), getRelease(6100)]);
+    const [first, second] = await Promise.all([getRelease({ type: 'vinylmania' }, 6100), getRelease({ type: 'vinylmania' }, 6100)]);
 
     expect(first).toEqual(second);
     expect(first.discogsId).toBe(6100);
@@ -182,7 +182,7 @@ describe('Discogs retry resilience — master detail/versions routes (US1)', () 
 
   it('a cache hit for a master triggers zero outbound Discogs calls (no retry logic invoked)', async () => {
     discogsScope().get('/masters/7004').reply(200, rawMaster(7004));
-    await getMasterRelease(7004); // populates the cache
+    await getMasterRelease({ type: 'vinylmania' }, 7004); // populates the cache
 
     const [header, value] = await authHeader('us1-master-cache-hit');
     const res = await request(app)
@@ -197,7 +197,7 @@ describe('Discogs retry resilience — master detail/versions routes (US1)', () 
     for (let i = 0; i < 5; i += 1) {
       const id = 7100 + i;
       discogsScope().get(`/releases/${id}`).times(3).reply(500, { message: 'server error' });
-      await expect(getRelease(id)).rejects.toThrow();
+      await expect(getRelease({ type: 'vinylmania' }, id)).rejects.toThrow();
     }
 
     // No nock interceptor registered for 7999 — a real outbound attempt

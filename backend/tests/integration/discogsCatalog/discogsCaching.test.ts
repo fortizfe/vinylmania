@@ -12,7 +12,10 @@ import { discogsCatalogAdapter, getRelease } from '../../../src/adapters/discogs
 import { firestoreLibraryRepository } from '../../../src/adapters/library/firestoreLibraryRepository';
 import { createSearchCatalogWithRatingsUseCase } from '../../../src/application/discogsCatalog/searchCatalogWithRatings';
 import { createEnrichLibraryEntryUseCase } from '../../../src/application/library/enrichLibraryEntry';
+import type { CatalogCredential } from '../../../src/domain/discogsCatalog/types';
 import type { LibraryEntry } from '../../../src/domain/library/types';
+
+const CREDENTIAL: CatalogCredential = { type: 'vinylmania' };
 
 const { enrichEntries } = createEnrichLibraryEntryUseCase({
   repository: firestoreLibraryRepository,
@@ -57,8 +60,8 @@ describe('Discogs response caching (US2)', () => {
     // afterEach) — a second outbound call here would hit no matching
     // interceptor and reject, so an equal second result proves the cache
     // (not a second HTTP call) served it.
-    const first = await searchCatalogWithRatings('Stockholm', { resultType: 'release' });
-    const second = await searchCatalogWithRatings('Stockholm', { resultType: 'release' });
+    const first = await searchCatalogWithRatings(CREDENTIAL, 'Stockholm', { resultType: 'release' });
+    const second = await searchCatalogWithRatings(CREDENTIAL, 'Stockholm', { resultType: 'release' });
 
     expect(second).toEqual(first);
   });
@@ -77,8 +80,8 @@ describe('Discogs response caching (US2)', () => {
       uri: 'https://www.discogs.com/release/501',
     });
 
-    const first = await getRelease(501);
-    const second = await getRelease(501);
+    const first = await getRelease({ type: 'vinylmania' }, 501);
+    const second = await getRelease({ type: 'vinylmania' }, 501);
 
     expect(second).toEqual(first);
   });

@@ -39,15 +39,19 @@ export async function authorizedFetch(
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 
-  if (response.status === 401) {
-    clearSessionToken();
-    onUnauthorized?.();
-  }
-
   if (!response.ok) {
     const body = await response
       .json()
       .catch(() => ({ error: 'unknown', message: 'Request failed' }));
+    // A 401 clears the vinylmania session — except `discogs_link_invalid`
+    // (spec 053), which means the caller's *linked Discogs account* was
+    // rejected, not their vinylmania session; clearing the session here
+    // would redirect away before the caller's own relink-prompt UI ever
+    // gets a chance to render.
+    if (response.status === 401 && body.error !== 'discogs_link_invalid') {
+      clearSessionToken();
+      onUnauthorized?.();
+    }
     throw new ApiError(
       body.message ?? 'Request failed',
       response.status,
