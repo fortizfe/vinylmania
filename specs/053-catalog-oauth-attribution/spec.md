@@ -78,7 +78,7 @@ Para poder auditar el cumplimiento de esta historia a lo largo del tiempo, cada 
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE identificar toda petición de catálogo (búsqueda, ficha de release, ficha de master, versiones de un master, ficha de artista, valoración de un release) realizada en nombre de un usuario autenticado con cuenta de Discogs vinculada activa, usando las credenciales de esa cuenta vinculada.
+- **FR-001**: El sistema DEBE identificar toda petición de catálogo (búsqueda, ficha de release, ficha de master, versiones de un master, ficha de artista¹, valoración de un release) realizada en nombre de un usuario autenticado con cuenta de Discogs vinculada activa, usando las credenciales de esa cuenta vinculada.
 - **FR-002**: El sistema DEBE seguir identificando las peticiones de catálogo de un usuario autenticado sin cuenta de Discogs vinculada con la cuenta compartida de vinylmania, sin bloquear ni degradar esa experiencia.
 - **FR-003**: El sistema NO DEBE sustituir en silencio, ante credenciales vinculadas inválidas o revocadas, la identificación por la cuenta de vinylmania; DEBE tratar esa situación con el mismo comportamiento de "reconexión requerida" que ya existe hoy para las peticiones de colección.
 - **FR-004**: La cuenta de vinylmania solo DEBE considerarse una identificación legítima para peticiones de usuarios sin cuenta vinculada activa; nunca DEBE actuar como sustituto de una cuenta vinculada activa y válida.
@@ -96,7 +96,7 @@ Para poder auditar el cumplimiento de esta historia a lo largo del tiempo, cada 
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de las peticiones de catálogo hechas por usuarios con cuenta de Discogs vinculada activa quedan identificadas con esa cuenta, no con la de vinylmania.
+- **SC-001**: El 100% de las peticiones de catálogo hechas por usuarios con cuenta de Discogs vinculada activa quedan identificadas con esa cuenta, no con la de vinylmania (medible sobre las peticiones que efectivamente ocurren hoy — ver nota¹ sobre ficha de artista).
 - **SC-002**: Los usuarios sin cuenta vinculada pueden seguir buscando y consultando fichas de catálogo con la misma tasa de éxito que antes de este cambio (0% de peticiones adicionales bloqueadas o degradadas por no tener cuenta vinculada).
 - **SC-003**: Ante una cuenta vinculada con credenciales revocadas, el 100% de las peticiones de catálogo de ese usuario resultan en el mismo aviso de reconexión que ya existe hoy en colección, con 0% de sustituciones silenciosas por la cuenta de vinylmania.
 - **SC-004**: Un auditor puede determinar, a partir únicamente del registro de actividad, qué tipo de credencial identificó cualquier petición de catálogo pasada, para el 100% de las peticiones, sin que el registro exponga tokens ni secretos.
@@ -108,3 +108,4 @@ Para poder auditar el cumplimiento de esta historia a lo largo del tiempo, cada 
 - Se considera "credenciales revocadas" cuando Discogs responde a una petición firmada con la cuenta vinculada indicando que esas credenciales ya no son válidas; el criterio de detección es el mismo que ya usa hoy el flujo de colección para decidir que hace falta reconexión.
 - Todas las peticiones de catálogo cubiertas por esta historia ya requieren que el usuario esté autenticado en vinylmania; no existe un escenario de catálogo servido a usuarios anónimos dentro del alcance de esta historia.
 - El objetivo de negocio (atribuir el consumo de rate limit a la cuenta real del usuario) se cumple identificando correctamente cada petición con la credencial adecuada; la medición o visualización del consumo de rate limit por cuenta no forma parte del alcance de esta historia.
+- ¹ **Ficha de artista**: hoy no existe ninguna ruta ni pantalla en vinylmania que permita a un usuario consultar la ficha de un artista de forma independiente (verificado: no hay endpoint `/api/discogs/artists/:id` ni página de artista en el frontend). Esta historia deja el soporte de identificación de credencial preparado a nivel de puerto/adaptador para cuando esa funcionalidad exista, pero no añade la ruta ni la pantalla — no es una acción que un usuario real pueda disparar todavía. SC-001 se mide, por tanto, solo sobre las acciones de catálogo que sí son alcanzables hoy (búsqueda, release, master, versiones de master, rating).
