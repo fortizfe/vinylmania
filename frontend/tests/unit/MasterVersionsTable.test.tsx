@@ -97,4 +97,29 @@ describe('MasterVersionsTable', () => {
     await waitFor(() => expect(screen.getAllByText('Only Version').length).toBeGreaterThan(0));
     expect(screen.queryByRole('button', { name: /^next$/i })).not.toBeInTheDocument();
   });
+
+  it('shows the relink notice when the versions fetch fails with discogs_link_invalid (spec 053, US3) — previously showed the skeleton forever', async () => {
+    const { ApiError } = await import('../../src/services/apiClient');
+    mockGetMasterReleaseVersions.mockRejectedValue(
+      new ApiError('Your Discogs link is no longer valid.', 401, 'discogs_link_invalid'),
+    );
+
+    renderTable();
+
+    await waitFor(() =>
+      expect(screen.getByText(/your discogs link is no longer valid/i)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('link', { name: /go to your profile/i })).toBeInTheDocument();
+  });
+
+  it('shows a generic error message for a non-relink failure', async () => {
+    const { ApiError } = await import('../../src/services/apiClient');
+    mockGetMasterReleaseVersions.mockRejectedValue(new ApiError('boom', 500, 'internal_error'));
+
+    renderTable();
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(/couldn.t load this master.s versions/i),
+    );
+  });
 });

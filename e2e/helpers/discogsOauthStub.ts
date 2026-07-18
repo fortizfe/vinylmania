@@ -208,6 +208,27 @@ function respondWithInjectedFailure(res: any): boolean {
   return false;
 }
 
+/** True for the backend's OAuth 1.0a PLAINTEXT header (a linked user's own credentials), false for its `Discogs token=` app-level header. */
+function isOAuthSignedRequest(req: any): boolean {
+  const authHeader = req.headers.authorization ?? '';
+  return authHeader.startsWith('OAuth ') && authHeader.includes('oauth_token=');
+}
+
+/**
+ * Spec 053: `auth` failure mode also revokes a linked user's *catalog*
+ * requests (OAuth-signed), while requests signed with the shared app token
+ * (unlinked users) keep succeeding — mirrors the backend's own mis-
+ * attribution guard (a broken app token is a different failure than a
+ * revoked user link) and its no-silent-fallback guarantee.
+ */
+function respondWithInjectedCatalogAuthFailure(req: any, res: any): boolean {
+  if (collectionFailureMode === 'auth' && isOAuthSignedRequest(req)) {
+    json(res, 401, { message: 'You must authenticate to access this resource.' });
+    return true;
+  }
+  return false;
+}
+
 /**
  * Routes /users/:username/collection/* and /__stub/* requests. Returns true
  * when the request was handled here.
@@ -334,12 +355,14 @@ const server = createServer(async (req: any, res: any) => {
   // Catalog endpoints (used by library enrichment when DISCOGS_BASE_URL points here).
   const releaseMatch = /^\/releases\/(\d+)$/.exec(url.pathname);
   if (releaseMatch && req.method === 'GET') {
+    if (respondWithInjectedCatalogAuthFailure(req, res)) return;
     json(res, 200, stubRelease(Number(releaseMatch[1])));
     return;
   }
 
   // Catalog search (used by AddRecordPage).
   if (url.pathname === '/database/search' && req.method === 'GET') {
+    if (respondWithInjectedCatalogAuthFailure(req, res)) return;
     const q = url.searchParams.get('q') ?? '';
     const releaseId = 99901;
     json(res, 200, {

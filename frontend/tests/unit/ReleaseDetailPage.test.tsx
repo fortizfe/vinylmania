@@ -128,4 +128,19 @@ describe('ReleaseDetailPage', () => {
       expect(screen.getByText(/couldn.t find that release/i)).toBeInTheDocument(),
     );
   });
+
+  it('shows the relink notice when the release fetch itself fails with discogs_link_invalid (spec 053, US3)', async () => {
+    const { ApiError } = await import('../../src/services/apiClient');
+    mockGetRelease.mockRejectedValue(
+      new ApiError('Your Discogs link is no longer valid.', 401, 'discogs_link_invalid'),
+    );
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText(/your discogs link is no longer valid/i)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('link', { name: /go to your profile/i })).toBeInTheDocument();
+    expect(screen.queryByText(/couldn.t find that release/i)).not.toBeInTheDocument();
+  });
 });

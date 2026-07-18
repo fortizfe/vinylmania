@@ -59,7 +59,7 @@ export function createCreateLibraryEntryUseCase(deps: {
     // semantics and never adds unknown releases to the user's collection.
     let release: Release;
     try {
-      release = await getRelease(discogsReleaseId);
+      release = await getRelease({ type: 'vinylmania' }, discogsReleaseId);
     } catch (err) {
       if (err instanceof DiscogsNotFoundError) {
         throw new ReleaseNotFoundForCreationError(err);

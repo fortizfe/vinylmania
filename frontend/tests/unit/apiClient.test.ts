@@ -56,6 +56,25 @@ describe('authorizedFetch', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
+  it('does not clear the session or invoke the handler on a discogs_link_invalid 401 (spec 053)', async () => {
+    setSessionToken('stored-token');
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({
+        error: 'discogs_link_invalid',
+        message: 'Your Discogs link is no longer valid. Please re-link your account from your profile.',
+      }),
+    }) as unknown as typeof fetch;
+
+    await expect(authorizedFetch('/api/discogs/releases/1')).rejects.toBeInstanceOf(ApiError);
+
+    expect(getSessionToken()).toBe('stored-token');
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it('does not invoke the handler on a non-401 error', async () => {
     setSessionToken('stored-token');
     const handler = vi.fn();

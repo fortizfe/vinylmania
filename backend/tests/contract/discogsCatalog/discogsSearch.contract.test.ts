@@ -8,11 +8,30 @@ import {
   stubReleaseRatingUnavailable,
 } from '../../helpers/nock';
 import { createApp } from '../../../src/app';
+import { getFirestoreDb } from '../../../src/config/firebase-admin';
 import { MAX_ATTEMPTS } from '../../../src/discogs/discogsRetry';
-import { clearEmulatorUsers } from '../../helpers/authEmulator';
+import { clearEmulatorUsers, clearEmulatorFirestore } from '../../helpers/authEmulator';
 import { createTestSession } from '../../helpers/testSession';
 
 const app = createApp();
+
+const OAUTH_TOKEN_HEADER = /oauth_token="access-token"/;
+const APP_TOKEN_HEADER = /^Discogs token=/;
+
+/** Seeds a Discogs connection doc as feature 015's completeLink would (spec 053). */
+async function linkDiscogs(uid: string): Promise<void> {
+  await getFirestoreDb()
+    .collection('discogsConnections')
+    .doc(uid)
+    .set({
+      uid,
+      discogsUsername: `collector-${uid}`,
+      discogsUserId: 42,
+      accessToken: 'access-token',
+      accessTokenSecret: 'access-secret',
+      linkedAt: new Date('2026-07-01T00:00:00.000Z'),
+    });
+}
 
 beforeAll(() => {
   // Deterministic behavior regardless of a local Redis: several tests
@@ -24,6 +43,85 @@ beforeAll(() => {
 describe('Discogs search API contract: GET /api/discogs/search', () => {
   afterEach(async () => {
     await clearEmulatorUsers();
+    await clearEmulatorFirestore();
+  });
+
+  it('signs the request with the linked user OAuth token when the caller has an active connection (spec 053, US1)', async () => {
+    const { sessionToken, uid } = await createTestSession('search-linked-user');
+    await linkDiscogs(uid);
+    discogsScope()
+      .get('/database/search')
+      .query({ q: 'Linked Query', page: '1', per_page: '50' })
+      .matchHeader('authorization', OAUTH_TOKEN_HEADER)
+      .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+
+    const res = await request(app)
+      .get('/api/discogs/search')
+      .query({ q: 'Linked Query', type: 'release' })
+      .set('Authorization', `Bearer ${sessionToken}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  it('signs the request with DISCOGS_TOKEN when the caller has no linked account (spec 053, US2)', async () => {
+    const { sessionToken } = await createTestSession('search-unlinked-user');
+    discogsScope()
+      .get('/database/search')
+      .query({ q: 'Unlinked Query', page: '1', per_page: '50' })
+      .matchHeader('authorization', APP_TOKEN_HEADER)
+      .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+
+    const res = await request(app)
+      .get('/api/discogs/search')
+      .query({ q: 'Unlinked Query', type: 'release' })
+      .set('Authorization', `Bearer ${sessionToken}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  it('returns 401 discogs_link_invalid, without ever calling the vinylmania-token stub, when the linked account is revoked (spec 053, US3)', async () => {
+    const { sessionToken, uid } = await createTestSession('search-revoked-user');
+    await linkDiscogs(uid);
+    const oauthScope = discogsScope()
+      .get('/database/search')
+      .query({ q: 'Revoked Query', page: '1', per_page: '50' })
+      .matchHeader('authorization', OAUTH_TOKEN_HEADER)
+      .reply(401, { message: 'unauthorized' });
+    const appTokenScope = discogsScope()
+      .get('/database/search')
+      .query({ q: 'Revoked Query', page: '1', per_page: '50' })
+      .matchHeader('authorization', APP_TOKEN_HEADER)
+      .reply(200, { pagination: { page: 1, pages: 1, items: 0, per_page: 50 }, results: [] });
+
+    const res = await request(app)
+      .get('/api/discogs/search')
+      .query({ q: 'Revoked Query', type: 'release' })
+      .set('Authorization', `Bearer ${sessionToken}`);
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({
+      error: 'discogs_link_invalid',
+      message: 'Your Discogs link is no longer valid. Please re-link your account from your profile.',
+    });
+    expect(oauthScope.isDone()).toBe(true);
+    expect(appTokenScope.isDone()).toBe(false);
+  });
+
+  it('falls through to 500 internal_error (not discogs_link_invalid) when DISCOGS_TOKEN itself is rejected for an unlinked user (spec 053, mis-attribution guard)', async () => {
+    const { sessionToken } = await createTestSession('search-badtoken-user');
+    discogsScope()
+      .get('/database/search')
+      .query({ q: 'Badtoken Query', page: '1', per_page: '50' })
+      .matchHeader('authorization', APP_TOKEN_HEADER)
+      .reply(401, { message: 'unauthorized' });
+
+    const res = await request(app)
+      .get('/api/discogs/search')
+      .query({ q: 'Badtoken Query', type: 'release' })
+      .set('Authorization', `Bearer ${sessionToken}`);
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('internal_error');
   });
 
   it('returns mapped release results for an authenticated caller', async () => {

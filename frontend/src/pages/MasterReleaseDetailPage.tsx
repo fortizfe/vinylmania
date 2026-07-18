@@ -1,5 +1,6 @@
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
+import { DiscogsRelinkNotice } from '../components/DiscogsRelinkNotice';
 import { MasterReleaseDetailsSection } from '../components/MasterReleaseDetailsSection';
 import { MasterVersionsTable } from '../components/MasterVersionsTable';
 import { RecordDetailSkeleton } from '../components/RecordDetailSkeleton';
@@ -8,6 +9,7 @@ import { ReleaseTracklistSection } from '../components/ReleaseTracklistSection';
 import { BackLink } from '../components/ui/BackLink';
 import { Card } from '../components/ui/Card';
 import { useCatalogMaster } from '../queries/discogsQueries';
+import { ApiError } from '../services/apiClient';
 
 const DEFAULT_BACK_PATH = '/app/search';
 
@@ -23,7 +25,13 @@ export function MasterReleaseDetailPage() {
   const versionsPage =
     Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
-  const { data: master, isLoading, isError: notFound } = useCatalogMaster(parsedId);
+  const { data: master, isLoading, isError, error: masterError } = useCatalogMaster(parsedId);
+  // The master fetch itself (not just an "add to library" mutation) can
+  // fail with discogs_link_invalid when the caller's linked account was
+  // revoked (spec 053, US3) — distinguished from a genuine 404.
+  const relinkRequired =
+    isError && masterError instanceof ApiError && masterError.code === 'discogs_link_invalid';
+  const notFound = isError && !relinkRequired;
 
   function setVersionsPage(nextPage: number) {
     const params = new URLSearchParams(searchParams);
@@ -37,6 +45,15 @@ export function MasterReleaseDetailPage() {
       replace: true,
       state: location.state,
     });
+  }
+
+  if (relinkRequired) {
+    return (
+      <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
+        <BackLink to={backTo} />
+        <DiscogsRelinkNotice />
+      </main>
+    );
   }
 
   if (notFound) {
