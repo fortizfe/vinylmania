@@ -143,12 +143,14 @@ deployment preview en los checks del PR; arreglar el test → confirmar que sí 
       check/comentario de la URL de preview aparece automáticamente en el PR** — este es el único
       comportamiento de esta feature con incertidumbre real, ver research.md §5. Incluye confirmar
       que los logs de ambos jobs no muestran el valor de `VERCEL_TOKEN` ni de los
-      `VERCEL_PROJECT_ID_*` en texto plano (FR-007)). **Parcialmente verificado**: en el PR #39, run
-      29679112036 (2026-07-19), ambos `deploy-preview-*` terminaron en `success` con deployment real
-      en Vercel, pero **sin ningún check/comentario automático** ni en los comentarios del PR ni en
-      `check-runs`/`statuses` del commit — confirma la incertidumbre de research.md §5 en sentido
-      negativo, lo que dispara T011. Falta re-verificar Paso 3 (test roto → Skipped) y confirmar que
-      el comentario del fallback (T011) aparece correctamente en el próximo run
+      `VERCEL_PROJECT_ID_*` en texto plano (FR-007)). **Parcialmente verificado**: en el PR #39
+      (run 29679112036, 2026-07-19) ambos `deploy-preview-*` terminaron en `success` con deployment
+      real en Vercel y logs con `VERCEL_TOKEN`/`VERCEL_PROJECT_ID` correctamente enmascarados
+      (`***`) por GitHub Actions, pero **sin ningún check/comentario automático** de Vercel — confirma
+      la incertidumbre de research.md §5 en sentido negativo. Tras implementar T011, el run
+      29679495528 (2026-07-19) confirma que el comentario del fallback **sí aparece** en el PR con
+      la URL real de cada preview. Falta únicamente re-verificar Paso 3 (test roto en un PR interno
+      → ambos `deploy-preview-*` en "Skipped" y sin comentario) para cerrar T010 del todo
 - [X] T011 [US2] **Condicional** — solo si T010 confirma que el check/comentario de preview NO
       aparece automáticamente: añadir un step `actions/github-script` al final de
       `deploy-preview-backend` y `deploy-preview-frontend` en `.github/workflows/ci.yml` que capture
