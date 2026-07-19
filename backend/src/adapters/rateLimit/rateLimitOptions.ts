@@ -12,9 +12,24 @@ export const RATE_LIMIT_WINDOW_MS = 60_000;
 // /request+/complete across its normal test flow, sharing one limiter
 // instance for the whole file) started tripping the limit at 10, per
 // research.md §2c.
+//
+// RATE_LIMIT_MAX_OVERRIDE (both tiers, not per-tier — E2E only needs
+// "effectively unlimited," not precise tuning): the e2e suite drives a
+// single long-lived backend process (playwright.config.ts's webServer)
+// through 139+ real Google sign-ins across its full run, comfortably
+// exceeding either tier's production threshold — this is CI test volume,
+// not the abuse pattern the limiter defends against. The rateLimit(...)
+// call itself stays present unconditionally in every route file regardless
+// of this override (CodeQL's js/missing-rate-limiting recognition is keyed
+// off that call's presence, not the threshold it resolves to — research.md
+// §2b/§2c), so this cannot regress the gate. playwright.config.ts sets it;
+// production and normal dev/tests leave it unset and get the real values.
+const overrideRaw = Number(process.env.RATE_LIMIT_MAX_OVERRIDE);
+const override = Number.isFinite(overrideRaw) && overrideRaw > 0 ? overrideRaw : undefined;
+
 export const RATE_LIMIT_THRESHOLDS = {
-  strict: 20,
-  standard: 100,
+  strict: override ?? 20,
+  standard: override ?? 100,
 } as const;
 
 export const RATE_LIMIT_MESSAGE = 'Too many requests. Please try again shortly.';

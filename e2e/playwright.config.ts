@@ -126,6 +126,11 @@ export default defineConfig({
         GOOGLE_OAUTH_CLIENT_ID: 'e2e-fake-client-id',
         GOOGLE_OAUTH_CLIENT_SECRET: 'e2e-fake-client-secret',
         GOOGLE_OAUTH_CALLBACK_URL: `${FRONTEND_URL}/login/callback`,
+        // Spec 056 FR-001: this single backend process serves the whole e2e
+        // run (139+ real sign-ins across all spec files), which comfortably
+        // exceeds either rate-limit tier's production threshold — CI test
+        // volume, not the abuse pattern rate limiting defends against.
+        RATE_LIMIT_MAX_OVERRIDE: '100000',
       },
     },
     {
