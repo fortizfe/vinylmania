@@ -143,12 +143,22 @@ deployment preview en los checks del PR; arreglar el test → confirmar que sí 
       check/comentario de la URL de preview aparece automáticamente en el PR** — este es el único
       comportamiento de esta feature con incertidumbre real, ver research.md §5. Incluye confirmar
       que los logs de ambos jobs no muestran el valor de `VERCEL_TOKEN` ni de los
-      `VERCEL_PROJECT_ID_*` en texto plano (FR-007))
-- [ ] T011 [US2] **Condicional** — solo si T010 confirma que el check/comentario de preview NO
+      `VERCEL_PROJECT_ID_*` en texto plano (FR-007)). **Parcialmente verificado**: en el PR #39, run
+      29679112036 (2026-07-19), ambos `deploy-preview-*` terminaron en `success` con deployment real
+      en Vercel, pero **sin ningún check/comentario automático** ni en los comentarios del PR ni en
+      `check-runs`/`statuses` del commit — confirma la incertidumbre de research.md §5 en sentido
+      negativo, lo que dispara T011. Falta re-verificar Paso 3 (test roto → Skipped) y confirmar que
+      el comentario del fallback (T011) aparece correctamente en el próximo run
+- [X] T011 [US2] **Condicional** — solo si T010 confirma que el check/comentario de preview NO
       aparece automáticamente: añadir un step `actions/github-script` al final de
       `deploy-preview-backend` y `deploy-preview-frontend` en `.github/workflows/ci.yml` que capture
       la URL de salida de `vercel deploy --prebuilt` y publique un comentario en el PR (patrón de
-      fallback documentado en research.md §5 y quickstart.md Paso 6)
+      fallback documentado en research.md §5 y quickstart.md Paso 6). Implementado: la URL se
+      captura vía `$GITHUB_OUTPUT` y se publica/actualiza (sin duplicar en cada push) mediante
+      `actions/github-script@v7`, pasando la URL por `env`/`process.env` en vez de interpolarla
+      directamente en el script (evita inyección en el JS embebido). Job con
+      `permissions: pull-requests: write` explícito. Pendiente: confirmar en un run real que el
+      comentario aparece.
 
 **Checkpoint**: User Stories 1 y 2 (P1 + P2) completas y verificables de forma independiente.
 

@@ -47,10 +47,16 @@ ejecutar para confirmar que la feature ya implementada funciona.
 
 1. Arreglar el test del Paso 3, hacer push al mismo PR.
 2. Confirmar que los 3 jobs de test y los 2 jobs `deploy-preview-*` terminan en verde.
-3. **Punto a verificar manualmente** (research.md §5, el único paso de esta feature con
-   incertidumbre operativa real): comprobar que la URL de preview aparece automáticamente como
-   check o comentario en el PR, generada por la integración Git de Vercel (sin paso custom).
-   - Si **no** aparece automáticamente → ver "Paso 6 (fallback)" más abajo.
+3. Confirmar que aparece un comentario `🔗 **Backend preview**: ...` / `🔗 **Frontend preview**: ...`
+   en el PR, publicado por el step "Comment preview URL on PR" de cada job (fallback de
+   `research.md` §5 / Paso 6 más abajo). **Ya no se espera** que Vercel lo publique
+   automáticamente vía su GitHub App: verificado en el PR #39 (run 29679112036, 2026-07-19) que,
+   con `git.deploymentEnabled: false`, un deployment creado por CLI no genera ningún check ni
+   comentario nativo de Vercel — de ahí que el fallback esté siempre activo, no sea condicional.
+4. En pushes sucesivos al mismo PR, confirmar que el comentario se **actualiza** (mismo comentario,
+   nueva URL) en vez de acumular uno nuevo por cada push — el marcador HTML
+   (`<!-- vercel-preview-backend -->` / `<!-- vercel-preview-frontend -->`) es lo que permite
+   localizarlo y editarlo.
 
 ## Paso 5 — Motivo de bloqueo visible sin entrar a Vercel (User Story 3, P3)
 
@@ -60,12 +66,14 @@ ejecutar para confirmar que la feature ya implementada funciona.
 3. Cronometrar cuánto tarda alguien sin contexto previo en identificar qué test falló mirando solo
    esa pantalla — debe ser menos de 1 minuto (SC-003).
 
-## Paso 6 (fallback, solo si el Paso 4.3 falla)
+## Paso 6 (fallback — ya implementado, ver Paso 4.3)
 
-Si la URL de preview no aparece automáticamente en el PR, añadir un step
-`actions/github-script` al final de `deploy-preview-backend`/`deploy-preview-frontend` que capture
-la URL de salida de `vercel deploy --prebuilt` y publique un comentario en el PR con esa URL
-(patrón documentado en `research.md` §5, "Alternatives considered").
+Confirmado que Vercel no publica check/comentario automático con `git.deploymentEnabled: false`,
+así que este fallback está siempre activo (no es condicional): `deploy-preview-backend` y
+`deploy-preview-frontend` capturan la URL de salida de `vercel deploy --prebuilt` (step `Deploy`,
+output `url`) y publican/actualizan un comentario en el PR vía `actions/github-script@v7` (step
+"Comment preview URL on PR"), pasando la URL por `env`/`process.env` en vez de interpolarla
+directamente en el script embebido. Cada job requiere `permissions: pull-requests: write`.
 
 ## Edge cases a verificar además de los pasos anteriores
 
