@@ -85,6 +85,14 @@ describe('FEED_SOURCES priority configuration (spec FR-008, FR-009, FR-010, FR-0
 
   it('does not include Metal Blade Records — confirmed persistently unreachable (research.md §1, spec 041 FR-006)', () => {
     expect(FEED_SOURCES.find((s) => s.name === 'Metal Blade Records')).toBeUndefined();
-    expect(FEED_SOURCES.some((s) => s.feedUrl.includes('metalblade.com'))).toBe(false);
+    expect(FEED_SOURCES.some((s) => new URL(s.feedUrl).hostname === 'metalblade.com')).toBe(
+      false,
+    );
+  });
+
+  it('is not fooled by a lookalike host embedding "metalblade.com" as a substring (spec 056 FR-003)', () => {
+    const lookalikeUrl = 'https://not-metalblade.com.attacker.test/feed';
+    expect(new URL(lookalikeUrl).hostname).not.toBe('metalblade.com');
+    expect(lookalikeUrl.includes('metalblade.com')).toBe(true);
   });
 });

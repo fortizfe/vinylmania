@@ -157,4 +157,43 @@ describe('mapFeedItem', () => {
       expect(mapped?.imageUrl).toBeUndefined();
     });
   });
+
+  describe('double-escaping / incomplete sanitization (spec 056 FR-002)', () => {
+    it('never reconstitutes a <script> fragment from numeric-entity-obfuscated markup', () => {
+      const mapped = mapFeedItem(
+        {
+          title: '&#38;lt;script&#38;gt;alert(1)&#38;lt;/script&#38;gt;Evil Album Review',
+          link: 'https://example.com/double-escaped-script',
+          contentSnippet: 'Safe summary text',
+        },
+        source,
+      );
+
+      expect(mapped?.title).not.toContain('<script>');
+      expect(mapped?.title).not.toMatch(/[<>]/);
+      expect(mapped?.title).toContain('Evil Album Review');
+    });
+
+    it('decodes a doubly-escaped ampersand exactly once, not down to a bare &', () => {
+      const mapped = mapFeedItem(
+        {
+          title: 'T',
+          link: 'https://example.com/double-escaped-ampersand',
+          contentSnippet: 'Metallica &#38;amp; Slayer co-headline tour',
+        },
+        source,
+      );
+
+      expect(mapped?.excerpt).toBe('Metallica &amp; Slayer co-headline tour');
+    });
+
+    it('still decodes an ordinary, single-escaped ampersand correctly (regression)', () => {
+      const mapped = mapFeedItem(
+        { title: 'AC&amp;DC Tribute Album', link: 'https://example.com/normal-ampersand' },
+        source,
+      );
+
+      expect(mapped?.title).toBe('AC&DC Tribute Album');
+    });
+  });
 });

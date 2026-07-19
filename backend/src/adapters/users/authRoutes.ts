@@ -6,6 +6,7 @@ import { createLogoutSessionUseCase } from '../../application/auth/logoutSession
 import { logger } from '../../config/logger';
 import { firestoreSessionStoreAdapter } from '../auth/firestoreSessionStoreAdapter';
 import { requireAuth } from '../auth/requireAuth';
+import { requireRateLimit } from '../rateLimit/requireRateLimit';
 import { firestoreUserRepository } from './firestoreUserRepository';
 
 export const authRouter = Router();
@@ -21,7 +22,7 @@ const { getUserProfile, updateThemePreference } = createUserProfileUseCases({
 });
 const logoutSession = createLogoutSessionUseCase({ sessionStore: firestoreSessionStoreAdapter });
 
-authRouter.delete('/session', requireAuth, async (req: Request, res: Response) => {
+authRouter.delete('/session', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   try {
     const header = req.headers.authorization ?? '';
     const sessionToken = header.startsWith(BEARER_PREFIX) ? header.slice(BEARER_PREFIX.length) : '';
@@ -41,7 +42,7 @@ authRouter.delete('/session', requireAuth, async (req: Request, res: Response) =
   }
 });
 
-authRouter.patch('/preferences', requireAuth, async (req: Request, res: Response) => {
+authRouter.patch('/preferences', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   const auth = req.auth!;
   const parsed = preferencesBodySchema.safeParse(req.body);
 
@@ -75,7 +76,7 @@ authRouter.patch('/preferences', requireAuth, async (req: Request, res: Response
   }
 });
 
-authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
+authRouter.get('/me', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   try {
     const auth = req.auth!;
     const user = await getUserProfile(auth.uid);

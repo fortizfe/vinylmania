@@ -3,6 +3,7 @@ import { Router, type Request, type Response } from 'express';
 import { createFeedsAggregationUseCase } from '../../application/feeds/getFeedsDashboard';
 import { logger } from '../../config/logger';
 import { requireAuth } from '../auth/requireAuth';
+import { requireRateLimit } from '../rateLimit/requireRateLimit';
 import { cacheAdapter } from '../cache/cacheAdapter';
 import { feedSourceAdapter } from './feedSourceAdapter';
 
@@ -13,7 +14,7 @@ const { getDashboard, getSourceArticles } = createFeedsAggregationUseCase({
 
 export const feedsRouter = Router();
 
-feedsRouter.get('/dashboard', requireAuth, async (req: Request, res: Response) => {
+feedsRouter.get('/dashboard', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   try {
     const dashboard = await getDashboard();
     logger.info({
@@ -38,6 +39,7 @@ feedsRouter.get('/dashboard', requireAuth, async (req: Request, res: Response) =
 
 feedsRouter.get(
   '/sources/:sourceId',
+  requireRateLimit('standard'),
   requireAuth,
   async (req: Request, res: Response) => {
     try {

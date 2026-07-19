@@ -8,6 +8,7 @@ import { createStartLoginUseCase } from '../../application/googleAuth/startLogin
 import { createUserProfileUseCases } from '../../application/users/userProfileUseCases';
 import { firebaseIdentityResolverAdapter } from '../auth/firebaseIdentityResolverAdapter';
 import { firestoreSessionStoreAdapter } from '../auth/firestoreSessionStoreAdapter';
+import { requireRateLimit } from '../rateLimit/requireRateLimit';
 import { firestoreUserRepository } from '../users/firestoreUserRepository';
 import { googleIdentityAdapter } from './googleIdentityAdapter';
 
@@ -67,7 +68,7 @@ function handleFailure(res: Response, route: string, err: unknown): void {
   });
 }
 
-googleAuthRouter.get('/authorize', async (_req: Request, res: Response) => {
+googleAuthRouter.get('/authorize', requireRateLimit('strict'), async (_req: Request, res: Response) => {
   try {
     const { authorizeUrl } = await startLogin();
     res.redirect(302, authorizeUrl);
@@ -76,7 +77,7 @@ googleAuthRouter.get('/authorize', async (_req: Request, res: Response) => {
   }
 });
 
-googleAuthRouter.post('/complete', async (req: Request, res: Response) => {
+googleAuthRouter.post('/complete', requireRateLimit('strict'), async (req: Request, res: Response) => {
   const parsed = completeBodySchema.safeParse(req.body);
 
   if (!parsed.success) {

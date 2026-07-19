@@ -12,6 +12,7 @@ import {
   DiscogsUnavailableError,
 } from '../../discogs/discogsErrors';
 import { requireAuth } from '../auth/requireAuth';
+import { requireRateLimit } from '../rateLimit/requireRateLimit';
 import { respondDiscogsAuthError } from '../discogs/respondDiscogsAuthError';
 import {
   CatalogUnavailableForCreationError,
@@ -194,7 +195,7 @@ const createBodySchema = z
   })
   .strict();
 
-libraryRouter.post('/', requireAuth, async (req: Request, res: Response) => {
+libraryRouter.post('/', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
 
   const parsed = createBodySchema.safeParse(req.body ?? {});
@@ -243,7 +244,7 @@ libraryRouter.post('/', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-libraryRouter.get('/:id', requireAuth, async (req: Request, res: Response) => {
+libraryRouter.get('/:id', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
 
   try {
@@ -276,7 +277,7 @@ libraryRouter.get('/:id', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-libraryRouter.get('/', requireAuth, async (req: Request, res: Response) => {
+libraryRouter.get('/', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   const { page, pageSize } = parsePageParams(req);
   const filters = parseLibraryFilters(req);
@@ -320,7 +321,7 @@ const patchBodySchema = z
     message: 'At least one field is required.',
   });
 
-libraryRouter.patch('/:id', requireAuth, async (req: Request, res: Response) => {
+libraryRouter.patch('/:id', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
 
   const parsed = patchBodySchema.safeParse(req.body ?? {});
@@ -363,7 +364,7 @@ libraryRouter.patch('/:id', requireAuth, async (req: Request, res: Response) => 
   }
 });
 
-libraryRouter.delete('/:id', requireAuth, async (req: Request, res: Response) => {
+libraryRouter.delete('/:id', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
 
   try {

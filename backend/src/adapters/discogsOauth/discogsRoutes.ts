@@ -5,6 +5,7 @@ import { logger } from '../../config/logger';
 import { DiscogsError } from '../../discogs/discogsErrors';
 import { DiscogsOauthFlowError } from '../../domain/discogsOauth/discogsOauthErrors';
 import { requireAuth } from '../auth/requireAuth';
+import { requireRateLimit } from '../rateLimit/requireRateLimit';
 import { createCompleteLinkUseCase } from '../../application/discogsOauth/completeLink';
 import { createDisconnectConnectionUseCase } from '../../application/discogsOauth/disconnectConnection';
 import { createGetConnectionStatusUseCase } from '../../application/discogsOauth/getConnectionStatus';
@@ -14,8 +15,9 @@ import { discogsConnectionAdapter } from './discogsConnectionAdapter';
 
 export const discogsOauthRouter = Router();
 
-discogsOauthRouter.use(requireAuth);
-
+// Per-route (not router-level .use()) so /request and /complete can carry a
+// stricter rate-limit tier than /connection and /status — rate limiting runs
+// before requireAuth on every route, matching every other flagged file.
 const ALREADY_CONNECTED = {
   error: 'already_connected',
   message: 'Your Discogs account is already linked. Disconnect it first to link again.',
@@ -93,7 +95,7 @@ function handleFailure(
   });
 }
 
-discogsOauthRouter.post('/request', async (req: Request, res: Response) => {
+discogsOauthRouter.post('/request', requireRateLimit('strict'), requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   try {
     const { authorizeUrl } = await startLink(uid);
@@ -103,7 +105,7 @@ discogsOauthRouter.post('/request', async (req: Request, res: Response) => {
   }
 });
 
-discogsOauthRouter.post('/complete', async (req: Request, res: Response) => {
+discogsOauthRouter.post('/complete', requireRateLimit('strict'), requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   const parsed = completeBodySchema.safeParse(req.body);
 
@@ -127,7 +129,7 @@ discogsOauthRouter.post('/complete', async (req: Request, res: Response) => {
   }
 });
 
-discogsOauthRouter.delete('/connection', async (req: Request, res: Response) => {
+discogsOauthRouter.delete('/connection', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   try {
     await disconnectConnection(uid);
@@ -137,7 +139,7 @@ discogsOauthRouter.delete('/connection', async (req: Request, res: Response) => 
   }
 });
 
-discogsOauthRouter.get('/status', async (req: Request, res: Response) => {
+discogsOauthRouter.get('/status', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   try {
     res.status(200).json(await getConnectionStatus(uid));
