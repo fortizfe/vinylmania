@@ -179,6 +179,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
@@ -209,6 +213,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
@@ -236,6 +244,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
@@ -262,6 +274,10 @@ jobs:
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_FRONTEND }}
     steps:
       - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
