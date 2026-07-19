@@ -38,26 +38,29 @@
 
 **Test-granularity note**: the 17 CodeQL alert locations map to only 6 integration tests below (one per route *file*/tier-group), not 17 per-handler tests. This satisfies FR-008 because every route within a given file is wired with the exact same one-line middleware addition at the same tier — the wiring is mechanically identical across sibling routes in a file, so one passing test per file is representative proof for all of that file's flagged handlers, not a coverage gap.
 
-- [X] T002 [P] [US1] Unit tests for `RateLimiterPort`/`redisRateLimiterAdapter` in `backend/tests/unit/rateLimit/redisRateLimiterAdapter.test.ts` — cover: increments per (tier, ip, window); returns `limited: true` once the tier's threshold is exceeded within the same window; returns `limited: false` + logs a warning when `getRedisClient()` returns `null` (use `ioredis-mock`, matching the existing `discogsRateLimitSmoothing` test's mocking approach, for the "Redis available" cases).
-- [X] T003 [P] [US1] Unit tests for the `requireRateLimit` middleware factory in `backend/tests/unit/rateLimit/requireRateLimit.test.ts` — verify `next()` is called when not limited; verify a `429` response with `Retry-After` header and `{ error: 'rate_limited', message }` body when limited (mock `RateLimiterPort`).
-- [ ] T004 [P] [US1] Integration test for standard-tier wiring on `authRouter` in `backend/tests/integration/users/authRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `/api/auth/me` and assert `429`.
-- [ ] T005 [P] [US1] Integration test for standard-tier wiring on `libraryRouter` in `backend/tests/integration/library/libraryRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `GET /api/library` and assert `429`.
-- [ ] T006 [P] [US1] Integration test for strict-tier wiring on `googleAuthRouter` in `backend/tests/integration/googleAuth/googleAuthRoutesRateLimit.integration.test.ts` — exceed the strict threshold against `GET /api/auth/google/authorize` (no `requireAuth` on this route, so this is also the test that a pre-auth endpoint is protected) and assert `429`.
-- [ ] T007 [P] [US1] Integration test for standard-tier wiring on `feedsRouter` in `backend/tests/integration/feeds/feedsRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `GET /api/feeds/dashboard` and assert `429`.
-- [ ] T008 [P] [US1] Integration test for mixed-tier wiring on `discogsOauthRouter` in `backend/tests/integration/discogsOauth/discogsRoutesRateLimit.integration.test.ts` — assert strict threshold (20/60s) on `POST /api/discogs/oauth/request` and standard threshold (100/60s) on `GET /api/discogs/oauth/status`.
-- [ ] T009 [P] [US1] Integration test for standard-tier wiring on `discogsRouter` (catalog) in `backend/tests/integration/discogsCatalog/discogsRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `GET /api/discogs/search` and assert `429`.
+**Revision note** (post-implementation, research.md §2b-§2d): T002/T003/T010-T012 below originally targeted a hand-rolled `RateLimiterPort`/`redisRateLimiterAdapter`/`requireRateLimit` — replaced by `express-rate-limit` (constructed locally per route file) once the PR's own gate proved the hand-rolled version invisible to CodeQL. Descriptions updated to match what shipped; checkboxes reflect actual completion.
+
+- [X] T002 [P] [US1] Unit tests for the shared store factory in `backend/tests/unit/rateLimit/rateLimitStore.test.ts` — cover: always returns a `Store` synchronously; counts correctly via the in-memory fallback when `REDIS_URL` is unset; counts correctly via the custom `INCR`/`PEXPIRE` Redis-backed store when `REDIS_URL` is configured; regression guard that `getRedisClient()` is called by neither construction nor `init()`, only by the first `increment()` (research.md §2c bug 2).
+- [X] T003 [P] [US1] *(superseded — no separate middleware-factory unit test exists; `express-rate-limit`'s own middleware is exercised end-to-end by T004-T009's integration tests instead, since there is no hand-rolled factory left to unit-test in isolation.)*
+- [X] T004 [P] [US1] Integration test for standard-tier wiring on `authRouter` in `backend/tests/integration/users/authRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `/api/auth/me` and assert `429`.
+- [X] T005 [P] [US1] Integration test for standard-tier wiring on `libraryRouter` in `backend/tests/integration/library/libraryRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `GET /api/library` and assert `429`.
+- [X] T006 [P] [US1] Integration test for strict-tier wiring on `googleAuthRouter` in `backend/tests/integration/googleAuth/googleAuthRoutesRateLimit.integration.test.ts` — exceed the strict threshold against `GET /api/auth/google/authorize` (no `requireAuth` on this route, so this is also the test that a pre-auth endpoint is protected) and assert `429`.
+- [X] T007 [P] [US1] Integration test for standard-tier wiring on `feedsRouter` in `backend/tests/integration/feeds/feedsRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `GET /api/feeds/dashboard` and assert `429`.
+- [X] T008 [P] [US1] Integration test for mixed-tier wiring on `discogsOauthRouter` in `backend/tests/integration/discogsOauth/discogsRoutesRateLimit.integration.test.ts` — assert strict threshold (20/60s) on `POST /api/discogs/oauth/request` and standard threshold (100/60s) on `GET /api/discogs/oauth/status`.
+- [X] T009 [P] [US1] Integration test for standard-tier wiring on `discogsRouter` (catalog) in `backend/tests/integration/discogsCatalog/discogsRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `GET /api/discogs/search` and assert `429`.
 
 ### Implementation for User Story 1
 
-- [X] T010 [US1] Create `RateLimiterPort` interface (`RateLimitTier`, `RateLimitDecision`, `checkAndIncrement`) per `contracts/rate-limiter-port.md` in `backend/src/ports/rateLimit/rateLimiterPort.ts`.
-- [X] T011 [US1] Implement `redisRateLimiterAdapter` in `backend/src/adapters/rateLimit/redisRateLimiterAdapter.ts` — fixed 60s window via `INCR`+`EXPIRE` against `getRedisClient()` (reused from `backend/src/adapters/cache/redisClient.ts`, no new connection); fail-open with a `ratelimit_unavailable` warn log when Redis is null/errors (depends on T010; makes T002 pass).
-- [X] T012 [US1] Implement `createRequireRateLimit`/`requireRateLimit` middleware factory in `backend/src/adapters/rateLimit/requireRateLimit.ts` per `contracts/rate-limiter-port.md` (depends on T011; makes T003 pass).
-- [X] T013 [P] [US1] Wire `requireRateLimit('standard')` before `requireAuth` on all 3 routes in `backend/src/adapters/users/authRoutes.ts` (depends on T012; makes T004 pass).
-- [X] T014 [P] [US1] Wire `requireRateLimit('standard')` before `requireAuth` on all 5 routes in `backend/src/adapters/library/libraryRoutes.ts` (depends on T012; makes T005 pass).
-- [X] T015 [P] [US1] Wire `requireRateLimit('strict')` as the first middleware on `/authorize` and `/complete` in `backend/src/adapters/googleAuth/googleAuthRoutes.ts` (depends on T012; makes T006 pass).
-- [X] T016 [P] [US1] Wire `requireRateLimit('standard')` before `requireAuth` on both flagged routes in `backend/src/adapters/feeds/feedsRoutes.ts` (depends on T012; makes T007 pass).
-- [X] T017 [P] [US1] Wire `requireRateLimit('strict')` before the router-level `.use(requireAuth)` on `/request` and `/complete`, and `requireRateLimit('standard')` on `/connection` and `/status`, in `backend/src/adapters/discogsOauth/discogsRoutes.ts` (depends on T012; makes T008 pass).
-- [X] T018 [P] [US1] Wire `requireRateLimit('standard')` before `requireAuth` on all 4 flagged routes in `backend/src/adapters/discogsCatalog/discogsRoutes.ts` (depends on T012; makes T009 pass).
+- [X] T010 [US1] Create shared, non-middleware rate-limit values (`RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_THRESHOLDS`, `RATE_LIMIT_MESSAGE`, `rateLimitHandler`) in `backend/src/adapters/rateLimit/rateLimitOptions.ts`, per `contracts/rate-limiter-port.md`.
+- [X] T011 [US1] Implement the custom `INCR`/`PEXPIRE`-based `Store` and the Redis-vs-in-memory lazy resolver in `backend/src/adapters/rateLimit/rateLimitStore.ts` (`createRateLimitStore()`) — no Lua scripting, resolution deferred to first `increment()`/`init()` call (research.md §2c); makes T002 pass.
+- [X] T012 [US1] *(superseded — no separate middleware factory; each route file below calls `rateLimit(...)` from `express-rate-limit` directly, per research.md §2b's cross-file false-negative finding.)*
+- [X] T013 [P] [US1] Construct a local `standardRateLimit = rateLimit(...)` and apply it before `requireAuth` on all 3 routes in `backend/src/adapters/users/authRoutes.ts` (depends on T010-T011; makes T004 pass).
+- [X] T014 [P] [US1] Construct a local `standardRateLimit` and apply it before `requireAuth` on all 5 routes in `backend/src/adapters/library/libraryRoutes.ts` (depends on T010-T011; makes T005 pass).
+- [X] T015 [P] [US1] Construct a local `strictRateLimit` and apply it as the first middleware on `/authorize` and `/complete` in `backend/src/adapters/googleAuth/googleAuthRoutes.ts` (depends on T010-T011; makes T006 pass).
+- [X] T016 [P] [US1] Construct a local `standardRateLimit` and apply it before `requireAuth` on both flagged routes in `backend/src/adapters/feeds/feedsRoutes.ts` (depends on T010-T011; makes T007 pass).
+- [X] T017 [P] [US1] Construct local `strictRateLimit`/`standardRateLimit` instances in `backend/src/adapters/discogsOauth/discogsRoutes.ts` and apply per-route (strict on `/request`+`/complete`, standard on `/connection`+`/status`) before `requireAuth` on each — the former router-level `.use(requireAuth)` was replaced with per-route `requireAuth` to allow the tier split (depends on T010-T011; makes T008 pass).
+- [X] T018 [P] [US1] Construct a local `standardRateLimit` and apply it before `requireAuth` on all 4 flagged routes in `backend/src/adapters/discogsCatalog/discogsRoutes.ts` (depends on T010-T011; makes T009 pass).
+- [X] T018b [US1] *(added post-implementation)* Make the strict/standard thresholds overridable via `RATE_LIMIT_MAX_OVERRIDE`; set it in `e2e/playwright.config.ts`'s backend `webServer` env so the e2e suite's one long-lived backend process (139+ real sign-ins across the full run) isn't throttled by CI test volume — the `rateLimit(...)` call stays present unconditionally in source, so CodeQL recognition is unaffected (research.md §2d).
 
 **Checkpoint**: `npx jest tests/unit/rateLimit tests/integration/users/authRoutesRateLimit tests/integration/library/libraryRoutesRateLimit tests/integration/googleAuth tests/integration/feeds/feedsRoutesRateLimit tests/integration/discogsOauth/discogsRoutesRateLimit tests/integration/discogsCatalog/discogsRoutesRateLimit` all pass. User Story 1 is independently complete and demoable.
 
@@ -106,8 +109,8 @@
 
 - [X] T027 [P] Add `paths-ignore: [docs/**]` to the `code-quality` job's `github/codeql-action/init@v4` step in `.github/workflows/ci.yml`, per `contracts/codeql-scan-config.md` (FR-006; resolves the `js/missing-origin-check` alert by scope exclusion, no code change).
 - [X] T028 Run the full backend suite (`cd backend && npm test`) and confirm it is green with no regression (spec SC-004).
-- [ ] T029 Push the branch, open the PR, wait for the `code-quality` gate to re-run, and confirm via `gh api repos/:owner/:repo/code-scanning/alerts --paginate -q '.[] | select(.state == "open")'` scoped to the PR ref that zero open alerts remain (quickstart.md §5; spec SC-001, SC-002, SC-003).
-- [ ] T030 Re-check the alert list from T029 specifically for any new alert introduced by the new `backend/src/ports/rateLimit/` / `backend/src/adapters/rateLimit/` code itself, confirming the fix didn't trade old alerts for new ones.
+- [X] T029 Push the branch, open the PR, wait for the `code-quality` gate to re-run, and confirm via `gh api repos/:owner/:repo/code-scanning/alerts --paginate -q '.[] | select(.state == "open")'` scoped to the PR ref that zero open alerts remain (quickstart.md §5; spec SC-001, SC-002, SC-003).
+- [X] T030 Re-check the alert list from T029 specifically for any new alert introduced by the new `backend/src/adapters/rateLimit/` code itself, confirming the fix didn't trade old alerts for new ones. Done — 0 open alerts on the PR ref after two follow-up fixes (research.md §2c, §2d) beyond the initial `express-rate-limit` pivot.
 - [ ] T031 After the PR merges to `main`, re-run `gh api repos/:owner/:repo/code-scanning/alerts --paginate -q '.[] | select(.state == "open")'` (no `ref` filter, i.e. against `main`'s own scan) and confirm zero open alerts — T029 only verifies the PR ref pre-merge; this closes SC-001's explicit "on the `main` branch" requirement, which nothing else in this task list checks post-merge.
 
 ---
@@ -146,13 +149,13 @@
 ## Parallel Example: User Story 1
 
 ```bash
-# After T010-T012 land, launch all 6 wiring tasks together (different files):
-Task: "Wire requireRateLimit('standard') into backend/src/adapters/users/authRoutes.ts"
-Task: "Wire requireRateLimit('standard') into backend/src/adapters/library/libraryRoutes.ts"
-Task: "Wire requireRateLimit('strict') into backend/src/adapters/googleAuth/googleAuthRoutes.ts"
-Task: "Wire requireRateLimit('standard') into backend/src/adapters/feeds/feedsRoutes.ts"
-Task: "Wire requireRateLimit (mixed tiers) into backend/src/adapters/discogsOauth/discogsRoutes.ts"
-Task: "Wire requireRateLimit('standard') into backend/src/adapters/discogsCatalog/discogsRoutes.ts"
+# After T010-T011 land, launch all 6 wiring tasks together (different files):
+Task: "Construct and apply a local standardRateLimit in backend/src/adapters/users/authRoutes.ts"
+Task: "Construct and apply a local standardRateLimit in backend/src/adapters/library/libraryRoutes.ts"
+Task: "Construct and apply a local strictRateLimit in backend/src/adapters/googleAuth/googleAuthRoutes.ts"
+Task: "Construct and apply a local standardRateLimit in backend/src/adapters/feeds/feedsRoutes.ts"
+Task: "Construct local strictRateLimit/standardRateLimit (mixed tiers) in backend/src/adapters/discogsOauth/discogsRoutes.ts"
+Task: "Construct and apply a local standardRateLimit in backend/src/adapters/discogsCatalog/discogsRoutes.ts"
 ```
 
 ---
