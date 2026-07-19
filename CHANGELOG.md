@@ -17,6 +17,17 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.4.0] - 2026-07-19
+
+### Added
+
+- add CodeQL quality gate and upgrade Node.js 20 actions to 24 ([e5ed397])
+
+### Fixed
+
+- loop stripHtml to a fixed point for CodeQL sanitization check (#42) ([ecef84b])
+- resolve all 25 open CodeQL code-quality alerts ([d3b766d])
+
 ## [1.3.0] - 2026-07-19
 
 ### Added
