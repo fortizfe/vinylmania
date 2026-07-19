@@ -10,8 +10,11 @@
            languages: javascript-typescript
            build-mode: none
            queries: security-and-quality
-+          paths-ignore:
-+            - docs/**
++          config: |
++            paths-ignore:
++              - docs/**
 ```
+
+Note: `paths-ignore` is not itself a direct input of `github/codeql-action/init` (confirmed via `actionlint`, which lists the action's valid inputs) — it must be passed through the `config:` input as inline YAML, which the action parses as a CodeQL config document.
 
 **Effect**: CodeQL no longer scans anything under `docs/` (currently: the design-brief `support.js` export carrying the one `js/missing-origin-check` alert, plus the sibling `Vinylmania Logo - Final.dc.html` generated export — neither ships to users). The severity-gate step and the 4 deploy jobs' `needs: [..., code-quality]` dependency are unchanged.
