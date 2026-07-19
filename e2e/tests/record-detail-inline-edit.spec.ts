@@ -151,26 +151,26 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
 
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
-    const gallery = page.getByTestId('record-detail-gallery');
-    const details = page.getByTestId('record-detail-details');
-    const tracklist = page.getByTestId('record-detail-tracklist');
-    const additionalInfo = page.getByTestId('record-detail-additional-info');
+    const gallery = page.getByTestId('record-detail-gallery-card');
+    const mainInfo = page.getByTestId('record-detail-main-info-card');
+    const tracklist = page.getByTestId('record-detail-tracklist-card');
+    const otherDetails = page.getByTestId('record-detail-other-details-card');
 
     const galleryBox = await gallery.boundingBox();
-    const detailsBox = await details.boundingBox();
+    const mainInfoBox = await mainInfo.boundingBox();
     const tracklistBox = await tracklist.boundingBox();
-    const additionalInfoBox = await additionalInfo.boundingBox();
-    expect(galleryBox && detailsBox && tracklistBox && additionalInfoBox).toBeTruthy();
+    const otherDetailsBox = await otherDetails.boundingBox();
+    expect(galleryBox && mainInfoBox && tracklistBox && otherDetailsBox).toBeTruthy();
 
-    // At the default desktop viewport (spec 044): the gallery and details
-    // form a two-column row (gallery left, details right), rather than
-    // stacking, with tracklist and additional-info rendering full-width
-    // below that row instead of beside it as extra panels.
-    expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
-    expect(detailsBox!.x).toBeGreaterThan(galleryBox!.x);
+    // At the default desktop viewport (spec 057): the gallery and main-info
+    // cards form a two-column row (gallery left, main-info right), rather
+    // than stacking, with tracklist and other-details cards rendering
+    // full-width below that row instead of beside it as extra panels.
+    expect(Math.abs(mainInfoBox!.y - galleryBox!.y)).toBeLessThan(4);
+    expect(mainInfoBox!.x).toBeGreaterThan(galleryBox!.x);
     expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
-    expect(tracklistBox!.y).toBeGreaterThan(detailsBox!.y);
-    expect(additionalInfoBox!.y).toBeGreaterThanOrEqual(tracklistBox!.y + tracklistBox!.height);
+    expect(tracklistBox!.y).toBeGreaterThan(mainInfoBox!.y);
+    expect(otherDetailsBox!.y).toBeGreaterThanOrEqual(tracklistBox!.y + tracklistBox!.height);
 
     await expect(page.getByText(/Vinyl/)).toBeVisible();
     await expect(page.getByText('Deep House')).toBeVisible();
@@ -198,32 +198,29 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
 
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
-    const gallery = page.getByTestId('record-detail-gallery');
-    const details = page.getByTestId('record-detail-details');
-    const tracklist = page.getByTestId('record-detail-tracklist');
-    const additionalInfo = page.getByTestId('record-detail-additional-info');
+    const gallery = page.getByTestId('record-detail-gallery-card');
+    const mainInfo = page.getByTestId('record-detail-main-info-card');
+    const yourCopy = page.getByTestId('record-detail-your-copy-card');
+    const tracklist = page.getByTestId('record-detail-tracklist-card');
+    const otherDetails = page.getByTestId('record-detail-other-details-card');
 
     const boxes = await Promise.all([
       gallery.boundingBox(),
-      details.boundingBox(),
+      mainInfo.boundingBox(),
+      yourCopy.boundingBox(),
       tracklist.boundingBox(),
-      additionalInfo.boundingBox(),
+      otherDetails.boundingBox(),
     ]);
     if (boxes.includes(null)) {
-      throw new Error('Expected all four section bounding boxes to be measurable');
+      throw new Error('Expected all five card bounding boxes to be measurable');
     }
-    const [galleryBox, detailsBox, tracklistBox, additionalInfoBox] = boxes as NonNullable<
-      (typeof boxes)[number]
-    >[];
+    const [galleryBox, mainInfoBox, yourCopyBox, tracklistBox, otherDetailsBox] =
+      boxes as NonNullable<(typeof boxes)[number]>[];
 
-    expect(detailsBox.y).toBeGreaterThan(galleryBox.y);
-    expect(tracklistBox.y).toBeGreaterThan(detailsBox.y);
-    expect(additionalInfoBox.y).toBeGreaterThan(tracklistBox.y);
-
-    const myCopyBox = await page.getByText('Your copy').boundingBox();
-    expect(myCopyBox).not.toBeNull();
-    expect(myCopyBox!.y).toBeGreaterThan(detailsBox.y);
-    expect(myCopyBox!.y).toBeLessThan(tracklistBox.y);
+    expect(mainInfoBox.y).toBeGreaterThan(galleryBox.y);
+    expect(yourCopyBox.y).toBeGreaterThan(mainInfoBox.y);
+    expect(tracklistBox.y).toBeGreaterThan(yourCopyBox.y);
+    expect(otherDetailsBox.y).toBeGreaterThan(tracklistBox.y);
   });
 
   test('resizing from desktop to mobile width reflows to single-column order (US3)', async ({
@@ -240,14 +237,15 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
     await page.goto(`/app/library/records/${ENTRY_ID}`);
-    await expect(page.getByTestId('record-detail-gallery')).toBeVisible();
+    await expect(page.getByTestId('record-detail-gallery-card')).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
 
-    await expect(page.getByTestId('record-detail-gallery')).toHaveCount(1);
-    await expect(page.getByTestId('record-detail-details')).toHaveCount(1);
-    await expect(page.getByTestId('record-detail-tracklist')).toHaveCount(1);
-    await expect(page.getByTestId('record-detail-additional-info')).toHaveCount(1);
+    await expect(page.getByTestId('record-detail-gallery-card')).toHaveCount(1);
+    await expect(page.getByTestId('record-detail-main-info-card')).toHaveCount(1);
+    await expect(page.getByTestId('record-detail-your-copy-card')).toHaveCount(1);
+    await expect(page.getByTestId('record-detail-tracklist-card')).toHaveCount(1);
+    await expect(page.getByTestId('record-detail-other-details-card')).toHaveCount(1);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
     await expect(page.getByText('Your copy')).toBeVisible();
     await expect(page.getByText(/Östermalm/)).toBeVisible();

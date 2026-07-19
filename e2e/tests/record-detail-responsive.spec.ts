@@ -73,36 +73,40 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
         await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
       }
 
-      const gallery = page.getByTestId('record-detail-gallery');
-      const details = page.getByTestId('record-detail-details');
-      const tracklist = page.getByTestId('record-detail-tracklist');
-      const additionalInfo = page.getByTestId('record-detail-additional-info');
+      const gallery = page.getByTestId('record-detail-gallery-card');
+      const mainInfo = page.getByTestId('record-detail-main-info-card');
+      const yourCopy = page.getByTestId('record-detail-your-copy-card');
+      const tracklist = page.getByTestId('record-detail-tracklist-card');
+      const otherDetails = page.getByTestId('record-detail-other-details-card');
 
-      const [galleryBox, detailsBox, tracklistBox, additionalInfoBox] = await Promise.all([
-        gallery.boundingBox(),
-        details.boundingBox(),
-        tracklist.boundingBox(),
-        additionalInfo.boundingBox(),
-      ]);
-      expect(galleryBox && detailsBox && tracklistBox && additionalInfoBox).toBeTruthy();
+      const [galleryBox, mainInfoBox, yourCopyBox, tracklistBox, otherDetailsBox] =
+        await Promise.all([
+          gallery.boundingBox(),
+          mainInfo.boundingBox(),
+          yourCopy.boundingBox(),
+          tracklist.boundingBox(),
+          otherDetails.boundingBox(),
+        ]);
+      expect(galleryBox && mainInfoBox && yourCopyBox && tracklistBox && otherDetailsBox).toBeTruthy();
 
-      // Gallery and details share a row (two-column composition), not a
-      // 3-panel row with the tracklist beside them.
-      expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
-      expect(galleryBox!.x).toBeLessThan(detailsBox!.x);
+      // Gallery and the main-info/your-copy column share a row (two-column
+      // composition), not a 3-panel row with the tracklist beside them.
+      expect(Math.abs(mainInfoBox!.y - galleryBox!.y)).toBeLessThan(4);
+      expect(galleryBox!.x).toBeLessThan(mainInfoBox!.x);
+      expect(yourCopyBox!.y).toBeGreaterThan(mainInfoBox!.y);
 
-      // Tracklist and additional-info both render full-width below the
-      // gallery/details row (spec 044 FR-005/FR-010).
+      // Tracklist and other-details both render full-width below the
+      // gallery/main-info row (spec 057 FR-009/FR-010).
       expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
-      expect(tracklistBox!.y).toBeGreaterThan(detailsBox!.y);
-      expect(additionalInfoBox!.y).toBeGreaterThan(tracklistBox!.y);
+      expect(tracklistBox!.y).toBeGreaterThan(yourCopyBox!.y);
+      expect(otherDetailsBox!.y).toBeGreaterThan(tracklistBox!.y);
 
       const hasHorizontalScroll = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
       );
       expect(hasHorizontalScroll).toBe(false);
 
-      return { galleryBox: galleryBox!, detailsBox: detailsBox! };
+      return { galleryBox: galleryBox!, mainInfoBox: mainInfoBox!, yourCopyBox: yourCopyBox! };
     }
 
     const lgRange = await checkComposition(1024, 900);
@@ -112,12 +116,14 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     expect(Math.abs(lgRange.galleryBox.x - xlRange.galleryBox.x)).toBeLessThan(4);
 
     // Top-alignment / no-stretch (spec FR-011a, /speckit-clarify): this page
-    // has the tallest right-column content of the three (release details +
-    // MyCopySection), so its details column is taller than the gallery.
-    // Neither column should stretch to match the other's height — the
-    // gallery must stay at its own square-derived height, not the taller
-    // details column's height.
-    expect(lgRange.detailsBox.height).toBeGreaterThan(lgRange.galleryBox.height);
+    // has the tallest right-column content of the three (main info + your
+    // copy, stacked as two cards), so the combined right column extends well
+    // past the gallery card's own height. Neither column should stretch to
+    // match the other's height — the gallery must stay at its own
+    // square-derived height, not the taller right column's height.
+    expect(lgRange.yourCopyBox.y + lgRange.yourCopyBox.height).toBeGreaterThan(
+      lgRange.galleryBox.y + lgRange.galleryBox.height,
+    );
     expect(lgRange.galleryBox.height).toBeLessThanOrEqual(lgRange.galleryBox.width + 1);
   });
 
@@ -141,17 +147,17 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     await page.goto(`/app/library/records/${ENTRY_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
-    const gallery = page.getByTestId('record-detail-gallery');
-    const details = page.getByTestId('record-detail-details');
+    const gallery = page.getByTestId('record-detail-gallery-card');
+    const mainInfo = page.getByTestId('record-detail-main-info-card');
 
-    const [galleryBox, detailsBox] = await Promise.all([
+    const [galleryBox, mainInfoBox] = await Promise.all([
       gallery.boundingBox(),
-      details.boundingBox(),
+      mainInfo.boundingBox(),
     ]);
-    expect(galleryBox && detailsBox).toBeTruthy();
+    expect(galleryBox && mainInfoBox).toBeTruthy();
 
-    expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
-    expect(galleryBox!.x + galleryBox!.width).toBeLessThanOrEqual(detailsBox!.x + 1);
+    expect(Math.abs(mainInfoBox!.y - galleryBox!.y)).toBeLessThan(4);
+    expect(galleryBox!.x + galleryBox!.width).toBeLessThanOrEqual(mainInfoBox!.x + 1);
 
     await expect(page.getByText(/no cover image available/i)).toBeVisible();
   });
@@ -162,26 +168,28 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await goToRecordDetail(page);
 
-    const gallery = page.getByTestId('record-detail-gallery');
-    const details = page.getByTestId('record-detail-details');
-    const tracklist = page.getByTestId('record-detail-tracklist');
-    const additionalInfo = page.getByTestId('record-detail-additional-info');
+    const gallery = page.getByTestId('record-detail-gallery-card');
+    const mainInfo = page.getByTestId('record-detail-main-info-card');
+    const yourCopy = page.getByTestId('record-detail-your-copy-card');
+    const tracklist = page.getByTestId('record-detail-tracklist-card');
+    const otherDetails = page.getByTestId('record-detail-other-details-card');
 
     const boxes = await Promise.all([
       gallery.boundingBox(),
-      details.boundingBox(),
+      mainInfo.boundingBox(),
+      yourCopy.boundingBox(),
       tracklist.boundingBox(),
-      additionalInfo.boundingBox(),
+      otherDetails.boundingBox(),
     ]);
     if (boxes.includes(null)) {
-      throw new Error('Expected all four section bounding boxes to be measurable');
+      throw new Error('Expected all five card bounding boxes to be measurable');
     }
-    const [galleryBox, detailsBox, tracklistBox, additionalInfoBox] = boxes as NonNullable<
-      (typeof boxes)[number]
-    >[];
-    expect(detailsBox.y).toBeGreaterThan(galleryBox.y);
-    expect(tracklistBox.y).toBeGreaterThan(detailsBox.y);
-    expect(additionalInfoBox.y).toBeGreaterThan(tracklistBox.y);
+    const [galleryBox, mainInfoBox, yourCopyBox, tracklistBox, otherDetailsBox] =
+      boxes as NonNullable<(typeof boxes)[number]>[];
+    expect(mainInfoBox.y).toBeGreaterThan(galleryBox.y);
+    expect(yourCopyBox.y).toBeGreaterThan(mainInfoBox.y);
+    expect(tracklistBox.y).toBeGreaterThan(yourCopyBox.y);
+    expect(otherDetailsBox.y).toBeGreaterThan(tracklistBox.y);
 
     const hasHorizontalScroll = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
