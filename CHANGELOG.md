@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.3.0] - 2026-07-19
+
+### Added
+
+- Gate Vercel preview/production deploys on passing tests ([faa30a5])
+
 ## [1.2.0] - 2026-07-18
 
 ### Added
