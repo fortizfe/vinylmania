@@ -75,6 +75,37 @@ describe('MasterReleaseDetailPage', () => {
     expect(
       screen.queryByRole('button', { name: /add to library/i }),
     ).not.toBeInTheDocument();
+
+    // Cards (spec 057): gallery, main info, other details, tracklist, versions.
+    expect(screen.getByTestId('master-detail-gallery-card')).toBeInTheDocument();
+    expect(screen.getByTestId('master-detail-main-info-card')).toBeInTheDocument();
+    expect(screen.getByTestId('master-detail-other-details-card')).toBeInTheDocument();
+    expect(screen.getByTestId('master-detail-tracklist-card')).toBeInTheDocument();
+    expect(screen.getByTestId('master-detail-versions-card')).toBeInTheDocument();
+
+    // "View on Discogs" link (spec 057 Clarification Q3): opens master.discogsUrl
+    // in a new tab, using the same external-link convention as FeedArticleCard.
+    const discogsLink = screen.getByRole('link', { name: /view on discogs/i });
+    expect(discogsLink).toHaveAttribute('href', fullMaster.discogsUrl);
+    expect(discogsLink).toHaveAttribute('target', '_blank');
+    expect(discogsLink).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('omits the other-details card entirely when the master has no year, genres, or styles', async () => {
+    mockGetMasterRelease.mockResolvedValue({
+      ...fullMaster,
+      year: undefined,
+      genres: [],
+      styles: [],
+    });
+    mockGetMasterReleaseVersions.mockResolvedValue(versionsPage);
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Hybrid Theory')).toBeInTheDocument());
+
+    expect(screen.getByTestId('master-detail-main-info-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('master-detail-other-details-card')).not.toBeInTheDocument();
   });
 
   it('shows a not-found message when the master lookup fails', async () => {

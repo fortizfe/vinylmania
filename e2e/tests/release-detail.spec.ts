@@ -158,28 +158,28 @@ test.describe('Release detail page (feature 026, US2)', () => {
     await expect(page.getByText('Stockholm')).toBeVisible();
     await page.getByRole('link', { name: /stockholm/i }).click();
 
-    const gallery = page.getByTestId('release-detail-gallery');
-    const details = page.getByTestId('release-detail-details');
-    const tracklist = page.getByTestId('release-detail-tracklist');
-    const additionalInfo = page.getByTestId('release-detail-additional-info');
+    const gallery = page.getByTestId('release-detail-gallery-card');
+    const mainInfo = page.getByTestId('release-detail-main-info-card');
+    const tracklist = page.getByTestId('release-detail-tracklist-card');
+    const otherDetails = page.getByTestId('release-detail-other-details-card');
 
-    const [galleryBox, detailsBox, tracklistBox, additionalInfoBox] = await Promise.all([
+    const [galleryBox, mainInfoBox, tracklistBox, otherDetailsBox] = await Promise.all([
       gallery.boundingBox(),
-      details.boundingBox(),
+      mainInfo.boundingBox(),
       tracklist.boundingBox(),
-      additionalInfo.boundingBox(),
+      otherDetails.boundingBox(),
     ]);
-    expect(galleryBox && detailsBox && tracklistBox && additionalInfoBox).toBeTruthy();
+    expect(galleryBox && mainInfoBox && tracklistBox && otherDetailsBox).toBeTruthy();
 
-    // At the default desktop viewport (spec 044): the gallery and details
-    // form a two-column row (gallery left, details right), rather than
-    // stacking, with tracklist and additional-info rendering full-width
-    // below that row instead of beside it as extra panels.
-    expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
-    expect(detailsBox!.x).toBeGreaterThan(galleryBox!.x);
+    // At the default desktop viewport (spec 057): the gallery and main-info
+    // cards form a two-column row (gallery left, main-info right), rather
+    // than stacking, with tracklist and other-details cards rendering
+    // full-width below that row instead of beside it as extra panels.
+    expect(Math.abs(mainInfoBox!.y - galleryBox!.y)).toBeLessThan(4);
+    expect(mainInfoBox!.x).toBeGreaterThan(galleryBox!.x);
     expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
-    expect(tracklistBox!.y).toBeGreaterThan(detailsBox!.y);
-    expect(additionalInfoBox!.y).toBeGreaterThanOrEqual(tracklistBox!.y + tracklistBox!.height);
+    expect(tracklistBox!.y).toBeGreaterThan(mainInfoBox!.y);
+    expect(otherDetailsBox!.y).toBeGreaterThanOrEqual(tracklistBox!.y + tracklistBox!.height);
 
     const mainImage = page.getByRole('img', { name: 'Stockholm' });
     await expect(mainImage).toHaveAttribute('src', 'https://example.com/cover-front.jpg');
@@ -243,26 +243,26 @@ test.describe('Release detail page (feature 026, US2)', () => {
     await page.goto(`/app/releases/${RELEASE_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
-    const gallery = page.getByTestId('release-detail-gallery');
-    const details = page.getByTestId('release-detail-details');
-    const tracklist = page.getByTestId('release-detail-tracklist');
-    const additionalInfo = page.getByTestId('release-detail-additional-info');
+    const gallery = page.getByTestId('release-detail-gallery-card');
+    const mainInfo = page.getByTestId('release-detail-main-info-card');
+    const tracklist = page.getByTestId('release-detail-tracklist-card');
+    const otherDetails = page.getByTestId('release-detail-other-details-card');
 
     const boxes = await Promise.all([
       gallery.boundingBox(),
-      details.boundingBox(),
+      mainInfo.boundingBox(),
       tracklist.boundingBox(),
-      additionalInfo.boundingBox(),
+      otherDetails.boundingBox(),
     ]);
     if (boxes.includes(null)) {
-      throw new Error('Expected all four section bounding boxes to be measurable');
+      throw new Error('Expected all four card bounding boxes to be measurable');
     }
-    const [galleryBox, detailsBox, tracklistBox, additionalInfoBox] = boxes as NonNullable<
+    const [galleryBox, mainInfoBox, tracklistBox, otherDetailsBox] = boxes as NonNullable<
       (typeof boxes)[number]
     >[];
 
-    expect(detailsBox.y).toBeGreaterThan(galleryBox.y);
-    expect(tracklistBox.y).toBeGreaterThan(detailsBox.y);
-    expect(additionalInfoBox.y).toBeGreaterThan(tracklistBox.y);
+    expect(mainInfoBox.y).toBeGreaterThan(galleryBox.y);
+    expect(tracklistBox.y).toBeGreaterThan(mainInfoBox.y);
+    expect(otherDetailsBox.y).toBeGreaterThan(tracklistBox.y);
   });
 });

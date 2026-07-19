@@ -71,28 +71,34 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
         await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
       }
 
-      const gallery = page.getByTestId('master-detail-gallery');
-      const details = page.getByTestId('master-detail-details');
-      const tracklist = page.getByTestId('master-detail-tracklist');
-      const versions = page.getByTestId('master-detail-versions');
+      const gallery = page.getByTestId('master-detail-gallery-card');
+      const mainInfo = page.getByTestId('master-detail-main-info-card');
+      const otherDetails = page.getByTestId('master-detail-other-details-card');
+      const tracklist = page.getByTestId('master-detail-tracklist-card');
+      const versions = page.getByTestId('master-detail-versions-card');
 
-      const [galleryBox, detailsBox, tracklistBox, versionsBox] = await Promise.all([
-        gallery.boundingBox(),
-        details.boundingBox(),
-        tracklist.boundingBox(),
-        versions.boundingBox(),
-      ]);
-      expect(galleryBox && detailsBox && tracklistBox && versionsBox).toBeTruthy();
+      const [galleryBox, mainInfoBox, otherDetailsBox, tracklistBox, versionsBox] =
+        await Promise.all([
+          gallery.boundingBox(),
+          mainInfo.boundingBox(),
+          otherDetails.boundingBox(),
+          tracklist.boundingBox(),
+          versions.boundingBox(),
+        ]);
+      expect(
+        galleryBox && mainInfoBox && otherDetailsBox && tracklistBox && versionsBox,
+      ).toBeTruthy();
 
-      // Gallery and details share a row (two-column composition).
-      expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
-      expect(galleryBox!.x).toBeLessThan(detailsBox!.x);
+      // Gallery and the main-info/other-details column share a row (two-column composition).
+      expect(Math.abs(mainInfoBox!.y - galleryBox!.y)).toBeLessThan(4);
+      expect(galleryBox!.x).toBeLessThan(mainInfoBox!.x);
+      expect(otherDetailsBox!.y).toBeGreaterThan(mainInfoBox!.y);
 
       // Tracklist and the versions table both render full-width below the
-      // gallery/details row, not beside it as extra panels (spec 044
-      // FR-005/FR-010), in their current visual order (tracklist first).
+      // gallery/info column, not beside it as extra panels (spec 057
+      // FR-009/FR-010), in their current visual order (tracklist first).
       expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
-      expect(tracklistBox!.y).toBeGreaterThan(detailsBox!.y);
+      expect(tracklistBox!.y).toBeGreaterThan(otherDetailsBox!.y);
       expect(versionsBox!.y).toBeGreaterThan(tracklistBox!.y);
 
       // Desktop keeps the versions table (not the mobile card list).
@@ -139,17 +145,17 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
     await page.goto(`/app/masters/${MASTER_ID}`);
     await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
 
-    const gallery = page.getByTestId('master-detail-gallery');
-    const details = page.getByTestId('master-detail-details');
+    const gallery = page.getByTestId('master-detail-gallery-card');
+    const mainInfo = page.getByTestId('master-detail-main-info-card');
 
-    const [galleryBox, detailsBox] = await Promise.all([
+    const [galleryBox, mainInfoBox] = await Promise.all([
       gallery.boundingBox(),
-      details.boundingBox(),
+      mainInfo.boundingBox(),
     ]);
-    expect(galleryBox && detailsBox).toBeTruthy();
+    expect(galleryBox && mainInfoBox).toBeTruthy();
 
-    expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
-    expect(galleryBox!.x + galleryBox!.width).toBeLessThanOrEqual(detailsBox!.x + 1);
+    expect(Math.abs(mainInfoBox!.y - galleryBox!.y)).toBeLessThan(4);
+    expect(galleryBox!.x + galleryBox!.width).toBeLessThanOrEqual(mainInfoBox!.x + 1);
 
     await expect(page.getByText(/no cover image available/i)).toBeVisible();
   });

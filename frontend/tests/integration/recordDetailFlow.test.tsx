@@ -381,39 +381,43 @@ describe('Record detail flow (US3)', () => {
 
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
 
-    const content = screen.getByTestId('record-detail-content');
-    expect(content.className).toMatch(/grid-cols-1/);
-    expect(content.className).toMatch(/lg:grid-cols-2/);
+    const gallery = screen.getByTestId('record-detail-gallery-card');
+    const mainInfo = screen.getByTestId('record-detail-main-info-card');
+    const yourCopy = screen.getByTestId('record-detail-your-copy-card');
+    const tracklist = screen.getByTestId('record-detail-tracklist-card');
+    const otherDetails = screen.getByTestId('record-detail-other-details-card');
 
-    // The whole page's content sits inside a single shared bordered surface (Card) —
-    // none of the individual sections gets its own independent border (spec Clarifications).
-    expect(content.parentElement?.className).toMatch(/rounded-xl/);
-    expect(content.parentElement?.className).toMatch(/border/);
-
-    const gallery = screen.getByTestId('record-detail-gallery');
-    const details = screen.getByTestId('record-detail-details');
-    const tracklist = screen.getByTestId('record-detail-tracklist');
-    const additionalInfo = screen.getByTestId('record-detail-additional-info');
-
-    // Gallery and details are the two natural lg columns of the flat grid
-    // (spec 044, contracts/DetailPageLayout.contract.md) — no col-span of
-    // their own, and both are direct children of `content`, alongside the
-    // full-width tracklist/additional-info rows.
-    expect(gallery.className).not.toMatch(/lg:col-span/);
-    expect(details.className).not.toMatch(/lg:col-span/);
-    expect(gallery.parentElement).toBe(content);
-    expect(details.parentElement).toBe(content);
-    expect(tracklist.parentElement).toBe(content);
-    expect(additionalInfo.parentElement).toBe(content);
-    expect(tracklist.className).toMatch(/lg:col-span-2/);
-    expect(additionalInfo.className).toMatch(/lg:col-span-2/);
-
-    [gallery, details, tracklist, additionalInfo].forEach((section) => {
-      expect(section.className).not.toMatch(/rounded-xl/);
+    // Each content group is its own card (spec 057) — no single outer
+    // wrapping card, and every card carries its own border/elevation plus
+    // dark-mode classes (FR-011: dark theme legibility regression guard).
+    [gallery, mainInfo, yourCopy, tracklist, otherDetails].forEach((card) => {
+      expect(card.className).toMatch(/rounded-xl/);
+      expect(card.className).toMatch(/border/);
+      expect(card.className).toMatch(/dark:border-border-dark/);
+      expect(card.className).toMatch(/dark:bg-surface-raised/);
     });
 
-    // DOM order: gallery, details (which contains my copy), tracklist, additional info.
-    const order = [gallery, details, tracklist, additionalInfo];
+    // The cards' shared grid wrapper uses the tighter gap-4 spacing (spec 057
+    // FR-009): gallery and a plain (non-card) right-column wrapper — holding
+    // main info + your copy stacked — are the two natural lg columns, while
+    // tracklist/other-details span both as their own full-width grid items.
+    const rightColumn = mainInfo.parentElement;
+    const wrapper = gallery.parentElement;
+    expect(wrapper?.className).toMatch(/grid-cols-1/);
+    expect(wrapper?.className).toMatch(/lg:grid-cols-2/);
+    expect(wrapper?.className).toMatch(/gap-4/);
+    expect(gallery.className).not.toMatch(/lg:col-span/);
+    expect(rightColumn?.className).not.toMatch(/lg:col-span/);
+    expect(rightColumn).not.toBe(wrapper);
+    expect(rightColumn?.parentElement).toBe(wrapper);
+    expect(yourCopy.parentElement).toBe(rightColumn);
+    expect(tracklist.parentElement).toBe(wrapper);
+    expect(otherDetails.parentElement).toBe(wrapper);
+    expect(tracklist.className).toMatch(/lg:col-span-2/);
+    expect(otherDetails.className).toMatch(/lg:col-span-2/);
+
+    // DOM order: gallery, main info, your copy, tracklist, other details.
+    const order = [gallery, mainInfo, yourCopy, tracklist, otherDetails];
     for (let i = 0; i < order.length - 1; i += 1) {
       expect(
         order[i].compareDocumentPosition(order[i + 1]) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -424,6 +428,37 @@ describe('Record detail flow (US3)', () => {
     expect(screen.getByText('Recorded at Stockholm Sound Studio.')).toBeInTheDocument();
     expect(screen.getByText(/Barcode/)).toBeInTheDocument();
     expect(screen.getByText(/214/)).toBeInTheDocument();
+  });
+
+  it('omits the other-details card entirely when the release has no notes, identifiers, or community data', async () => {
+    mockGetOne.mockResolvedValue({
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        identifiers: [],
+        tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    expect(screen.getByTestId('record-detail-gallery-card')).toBeInTheDocument();
+    expect(screen.getByTestId('record-detail-main-info-card')).toBeInTheDocument();
+    expect(screen.getByTestId('record-detail-tracklist-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('record-detail-other-details-card')).not.toBeInTheDocument();
   });
 
   it('shows every credited artist, format descriptor, genre, style, label, and date when there is more than one (US1)', async () => {

@@ -57,9 +57,9 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
         await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
       }
 
-      const gallery = page.getByTestId('release-detail-gallery');
-      const details = page.getByTestId('release-detail-details');
-      const tracklist = page.getByTestId('release-detail-tracklist');
+      const gallery = page.getByTestId('release-detail-gallery-card');
+      const details = page.getByTestId('release-detail-main-info-card');
+      const tracklist = page.getByTestId('release-detail-tracklist-card');
 
       const [galleryBox, detailsBox, tracklistBox] = await Promise.all([
         gallery.boundingBox(),
@@ -113,8 +113,8 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
     await page.goto(`/app/releases/${RELEASE_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
-    const gallery = page.getByTestId('release-detail-gallery');
-    const details = page.getByTestId('release-detail-details');
+    const gallery = page.getByTestId('release-detail-gallery-card');
+    const details = page.getByTestId('release-detail-main-info-card');
 
     const [galleryBox, detailsBox] = await Promise.all([
       gallery.boundingBox(),

@@ -98,37 +98,46 @@ export function RecordDetailPage() {
   }
 
   const { release } = entry;
+  const hasOtherDetails =
+    Boolean(release.notes) ||
+    (release.identifiers?.length ?? 0) > 0 ||
+    Boolean(release.community);
 
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
       <BackLink to="/app/library" />
-      <Card>
-        <div
-          data-testid="record-detail-content"
-          className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2"
-        >
-          <div data-testid="record-detail-gallery">
-            <ReleaseImageGallery images={release.images} alt={release.title} />
-          </div>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <Card data-testid="record-detail-gallery-card" padding="sm">
+          <ReleaseImageGallery images={release.images} alt={release.title} />
+        </Card>
 
-          <div data-testid="record-detail-details" className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
+          <Card data-testid="record-detail-main-info-card" padding="sm">
             <ReleaseDetailsSection release={release} />
+          </Card>
+          <Card data-testid="record-detail-your-copy-card" padding="sm">
             {myCopySection}
-          </div>
+          </Card>
+        </div>
 
-          <div data-testid="record-detail-tracklist" className="lg:col-span-2">
-            <ReleaseTracklistSection tracklist={release.tracklist} />
-          </div>
+        <Card data-testid="record-detail-tracklist-card" padding="sm" className="lg:col-span-2">
+          <ReleaseTracklistSection tracklist={release.tracklist} />
+        </Card>
 
-          <div data-testid="record-detail-additional-info" className="lg:col-span-2">
+        {hasOtherDetails && (
+          <Card
+            data-testid="record-detail-other-details-card"
+            padding="sm"
+            className="lg:col-span-2"
+          >
             <ReleaseAdditionalInfoSection
               notes={release.notes}
               identifiers={release.identifiers}
               community={release.community}
             />
-          </div>
-        </div>
-      </Card>
+          </Card>
+        )}
+      </div>
     </main>
   );
 }

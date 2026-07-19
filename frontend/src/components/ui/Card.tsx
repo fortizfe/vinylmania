@@ -5,6 +5,7 @@ interface CardProps {
   children: ReactNode;
   className?: string;
   padding?: 'sm' | 'md';
+  'data-testid'?: string;
 }
 
 const paddingClasses: Record<NonNullable<CardProps['padding']>, string> = {
@@ -12,9 +13,10 @@ const paddingClasses: Record<NonNullable<CardProps['padding']>, string> = {
   md: 'p-6',
 };
 
-export function Card({ children, className, padding = 'md' }: CardProps) {
+export function Card({ children, className, padding = 'md', 'data-testid': testId }: CardProps) {
   return (
     <div
+      data-testid={testId}
       className={clsx(
         'rounded-xl border border-stone-200 bg-stone-50 shadow-sm dark:border-border-dark dark:bg-surface-raised',
         paddingClasses[padding],

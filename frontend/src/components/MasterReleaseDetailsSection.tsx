@@ -1,42 +1,21 @@
-import { Badge } from './ui/Badge';
 import type { MasterRelease } from '../services/discogsApi';
 
 interface MasterReleaseDetailsSectionProps {
   master: MasterRelease;
 }
 
-/** Master-only fields, in the same compact layout style as `ReleaseDetailsSection` (spec FR-008, research Decision 5). */
-export function MasterReleaseDetailsSection({
-  master,
-}: MasterReleaseDetailsSectionProps) {
-  const hasMetaRow = master.year || master.genres.length > 0 || master.styles.length > 0;
-
+/** Master's identity only (title/artist) — year/genres/styles live in `MasterReleaseOtherDetailsSection` instead (spec 057). */
+export function MasterReleaseDetailsSection({ master }: MasterReleaseDetailsSectionProps) {
   return (
-    <div className="flex flex-col gap-3">
-      <div>
-        <h3 className="font-display text-lg leading-tight text-stone-900 dark:text-stone-100">
-          {master.title}
-        </h3>
-        {master.artists.map((artist) => (
-          <p key={artist.discogsArtistId} className="text-stone-500 dark:text-stone-400">
-            {artist.name}
-          </p>
-        ))}
-      </div>
-
-      {hasMetaRow && (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-          {master.year && <span>{master.year}</span>}
-          {master.genres.map((genre) => (
-            <Badge key={genre}>{genre}</Badge>
-          ))}
-          {master.styles.map((style) => (
-            <Badge key={style} tone="muted">
-              {style}
-            </Badge>
-          ))}
-        </div>
-      )}
+    <div>
+      <h3 className="font-display text-lg leading-tight text-stone-900 dark:text-stone-100">
+        {master.title}
+      </h3>
+      {master.artists.map((artist) => (
+        <p key={artist.discogsArtistId} className="text-stone-500 dark:text-stone-400">
+          {artist.name}
+        </p>
+      ))}
     </div>
   );
 }
