@@ -51,10 +51,12 @@ describe('Feeds dashboard with the expanded real catalog (spec 041 FR-005, FR-00
     ).toBe(false);
   });
 
-  it('is not fooled by a lookalike host embedding "metalblade.com" as a substring (spec 056 FR-003)', () => {
-    const lookalikeUrl = 'https://not-metalblade.com.attacker.test/feed';
-    expect(new URL(lookalikeUrl).hostname).not.toBe('metalblade.com');
-    expect(lookalikeUrl.includes('metalblade.com')).toBe(true);
+  it('is not fooled by a lookalike host that merely embeds "metalblade.com" (spec 056 FR-003)', () => {
+    // A naive `feedUrl.includes('metalblade.com')` check would wrongly match
+    // this host too; the anchored hostname check must not.
+    expect(new URL('https://not-metalblade.com.attacker.test/feed').hostname).not.toBe(
+      'metalblade.com',
+    );
   });
 
   it('aggregates articles from every new source and isolates one failing new source from the rest (FR-007)', async () => {

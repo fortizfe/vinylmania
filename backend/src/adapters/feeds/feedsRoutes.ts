@@ -1,9 +1,16 @@
 import { Router, type Request, type Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 
 import { createFeedsAggregationUseCase } from '../../application/feeds/getFeedsDashboard';
 import { logger } from '../../config/logger';
 import { requireAuth } from '../auth/requireAuth';
-import { requireRateLimit } from '../rateLimit/requireRateLimit';
+import {
+  RATE_LIMIT_MESSAGE,
+  RATE_LIMIT_THRESHOLDS,
+  RATE_LIMIT_WINDOW_MS,
+  rateLimitHandler,
+} from '../rateLimit/rateLimitOptions';
+import { createRateLimitStore } from '../rateLimit/rateLimitStore';
 import { cacheAdapter } from '../cache/cacheAdapter';
 import { feedSourceAdapter } from './feedSourceAdapter';
 
@@ -14,7 +21,17 @@ const { getDashboard, getSourceArticles } = createFeedsAggregationUseCase({
 
 export const feedsRouter = Router();
 
-feedsRouter.get('/dashboard', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
+const standardRateLimit = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  limit: RATE_LIMIT_THRESHOLDS.standard,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: RATE_LIMIT_MESSAGE,
+  handler: rateLimitHandler,
+  store: createRateLimitStore(),
+});
+
+feedsRouter.get('/dashboard', standardRateLimit, requireAuth, async (req: Request, res: Response) => {
   try {
     const dashboard = await getDashboard();
     logger.info({
@@ -39,7 +56,7 @@ feedsRouter.get('/dashboard', requireRateLimit('standard'), requireAuth, async (
 
 feedsRouter.get(
   '/sources/:sourceId',
-  requireRateLimit('standard'),
+  standardRateLimit,
   requireAuth,
   async (req: Request, res: Response) => {
     try {

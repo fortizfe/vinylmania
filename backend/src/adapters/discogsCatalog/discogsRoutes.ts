@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 
 import { logger } from '../../config/logger';
 import { createSearchCatalogWithRatingsUseCase } from '../../application/discogsCatalog/searchCatalogWithRatings';
@@ -10,7 +11,13 @@ import {
   DiscogsUnavailableError,
 } from '../../discogs/discogsErrors';
 import { requireAuth } from '../auth/requireAuth';
-import { requireRateLimit } from '../rateLimit/requireRateLimit';
+import {
+  RATE_LIMIT_MESSAGE,
+  RATE_LIMIT_THRESHOLDS,
+  RATE_LIMIT_WINDOW_MS,
+  rateLimitHandler,
+} from '../rateLimit/rateLimitOptions';
+import { createRateLimitStore } from '../rateLimit/rateLimitStore';
 import { cacheAdapter } from '../cache/cacheAdapter';
 import { respondDiscogsAuthError } from '../discogs/respondDiscogsAuthError';
 import { discogsConnectionAdapter } from '../discogsOauth/discogsConnectionAdapter';
@@ -53,7 +60,17 @@ function parseFilterParams(
 
 export const discogsRouter = Router();
 
-discogsRouter.get('/search', requireRateLimit('standard'), requireAuth, async (req: Request, res: Response) => {
+const standardRateLimit = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  limit: RATE_LIMIT_THRESHOLDS.standard,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: RATE_LIMIT_MESSAGE,
+  handler: rateLimitHandler,
+  store: createRateLimitStore(),
+});
+
+discogsRouter.get('/search', standardRateLimit, requireAuth, async (req: Request, res: Response) => {
   const query = typeof req.query.q === 'string' ? req.query.q : '';
   const resultType = req.query.type === 'artist' ? 'artist' : 'release';
   const { page, perPage } = parsePageParams(req);
@@ -130,7 +147,7 @@ discogsRouter.get('/search', requireRateLimit('standard'), requireAuth, async (r
 
 discogsRouter.get(
   '/releases/:discogsId',
-  requireRateLimit('standard'),
+  standardRateLimit,
   requireAuth,
   async (req: Request, res: Response) => {
     const discogsId = Number(req.params.discogsId);
@@ -204,7 +221,7 @@ discogsRouter.get(
 
 discogsRouter.get(
   '/masters/:discogsId',
-  requireRateLimit('standard'),
+  standardRateLimit,
   requireAuth,
   async (req: Request, res: Response) => {
     const discogsId = Number(req.params.discogsId);
@@ -280,7 +297,7 @@ const DEFAULT_MASTER_VERSIONS_PER_PAGE = 10;
 
 discogsRouter.get(
   '/masters/:discogsId/versions',
-  requireRateLimit('standard'),
+  standardRateLimit,
   requireAuth,
   async (req: Request, res: Response) => {
     const discogsId = Number(req.params.discogsId);

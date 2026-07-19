@@ -32,7 +32,7 @@
 
 **Goal**: Every one of the 17 flagged route handlers (across 6 files) rejects excess requests with `429` instead of processing them past its tier's threshold, while normal traffic is unaffected.
 
-**Independent Test**: Re-run the CodeQL scan against the 6 affected route files and confirm zero `missing-rate-limiting` findings; hit a strict-tier endpoint (e.g. `GET /api/auth/google/authorize`) more than 10 times in 60s from one IP and observe `429` with `Retry-After` on the 11th request.
+**Independent Test**: Re-run the CodeQL scan against the 6 affected route files and confirm zero `missing-rate-limiting` findings; hit a strict-tier endpoint (e.g. `GET /api/auth/google/authorize`) more than 20 times in 60s from one IP and observe `429` with `Retry-After` on the 21st request (threshold raised from 10, research.md §2c).
 
 ### Tests for User Story 1 ⚠️ Write first, confirm they fail (module doesn't exist yet)
 
@@ -44,7 +44,7 @@
 - [ ] T005 [P] [US1] Integration test for standard-tier wiring on `libraryRouter` in `backend/tests/integration/library/libraryRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `GET /api/library` and assert `429`.
 - [ ] T006 [P] [US1] Integration test for strict-tier wiring on `googleAuthRouter` in `backend/tests/integration/googleAuth/googleAuthRoutesRateLimit.integration.test.ts` — exceed the strict threshold against `GET /api/auth/google/authorize` (no `requireAuth` on this route, so this is also the test that a pre-auth endpoint is protected) and assert `429`.
 - [ ] T007 [P] [US1] Integration test for standard-tier wiring on `feedsRouter` in `backend/tests/integration/feeds/feedsRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `GET /api/feeds/dashboard` and assert `429`.
-- [ ] T008 [P] [US1] Integration test for mixed-tier wiring on `discogsOauthRouter` in `backend/tests/integration/discogsOauth/discogsRoutesRateLimit.integration.test.ts` — assert strict threshold (10/60s) on `POST /api/discogs/oauth/request` and standard threshold (100/60s) on `GET /api/discogs/oauth/status`.
+- [ ] T008 [P] [US1] Integration test for mixed-tier wiring on `discogsOauthRouter` in `backend/tests/integration/discogsOauth/discogsRoutesRateLimit.integration.test.ts` — assert strict threshold (20/60s) on `POST /api/discogs/oauth/request` and standard threshold (100/60s) on `GET /api/discogs/oauth/status`.
 - [ ] T009 [P] [US1] Integration test for standard-tier wiring on `discogsRouter` (catalog) in `backend/tests/integration/discogsCatalog/discogsRoutesRateLimit.integration.test.ts` — exceed the standard threshold against `GET /api/discogs/search` and assert `429`.
 
 ### Implementation for User Story 1

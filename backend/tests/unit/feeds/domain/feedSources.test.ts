@@ -90,9 +90,11 @@ describe('FEED_SOURCES priority configuration (spec FR-008, FR-009, FR-010, FR-0
     );
   });
 
-  it('is not fooled by a lookalike host embedding "metalblade.com" as a substring (spec 056 FR-003)', () => {
-    const lookalikeUrl = 'https://not-metalblade.com.attacker.test/feed';
-    expect(new URL(lookalikeUrl).hostname).not.toBe('metalblade.com');
-    expect(lookalikeUrl.includes('metalblade.com')).toBe(true);
+  it('is not fooled by a lookalike host that merely embeds "metalblade.com" (spec 056 FR-003)', () => {
+    // A naive `feedUrl.includes('metalblade.com')` check would wrongly match
+    // this host too; the anchored hostname check must not.
+    expect(new URL('https://not-metalblade.com.attacker.test/feed').hostname).not.toBe(
+      'metalblade.com',
+    );
   });
 });
