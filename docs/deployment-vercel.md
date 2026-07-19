@@ -30,8 +30,8 @@ deployment anymore — Vercel's native Git integration is intentionally
 disabled for both projects.
 
 Instead, `.github/workflows/ci.yml` deploys via the Vercel CLI, and only
-after the three test jobs (`backend-test`, `frontend-test`, `e2e-test`) have
-all passed:
+after the three test jobs (`backend-test`, `frontend-test`, `e2e-test`) plus
+the `code-quality` CodeQL gate have all passed:
 
 - `deploy-production-backend` / `deploy-production-frontend` — run on push to
   `main`, deploy `--prod`.
@@ -39,11 +39,14 @@ all passed:
   opened from a branch of this repository (not from a fork — GitHub Actions
   doesn't expose secrets to fork PRs), deploy a preview.
 
-If any of the three test jobs fails or is cancelled, the corresponding
-`deploy-*` job is skipped automatically (via `needs`) and no deployment is
+If any of the three test jobs or `code-quality` fails or is cancelled, the
+corresponding `deploy-*` job is skipped automatically (via `needs:
+[backend-test, frontend-test, e2e-test, code-quality]`) and no deployment is
 created for that commit. See
 [specs/054-gate-deploys-on-passing-tests](../specs/054-gate-deploys-on-passing-tests/)
-for the full rationale.
+for the test-gating rationale, and
+[specs/055-ci-codeql-node-upgrade](../specs/055-ci-codeql-node-upgrade/) for
+the `code-quality` gate added on top of it.
 
 This requires four additional GitHub repository secrets (Settings → Secrets
 and variables → Actions), on top of the ones already used by the test jobs:

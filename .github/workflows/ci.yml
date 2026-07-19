@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
@@ -40,7 +40,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -68,19 +68,19 @@ jobs:
         with:
           node-version: 24
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Cache Firebase emulator binaries
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/firebase/emulators
           key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('e2e/package-lock.json') }}
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('e2e/package-lock.json') }}
@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload e2e failure artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: e2e-test-results
           path: |
@@ -120,9 +120,50 @@ jobs:
             e2e/playwright-report/
           retention-days: 7
 
+  code-quality:
+    name: Code quality (CodeQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-and-quality
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"
+
+      # Blocks the 4 deploy jobs via `needs` (see below) only on Critical/High
+      # security alerts (research.md §4). codeql-action/analyze does not fail
+      # the job by severity on its own, so this step queries the alerts it
+      # just uploaded (safe immediately after `analyze`, whose default
+      # wait-for-processing: true guarantees the SARIF is already indexed)
+      # and fails the job if any qualifying alert is still open.
+      - name: Fail on Critical/High CodeQL alerts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          alerts=$(gh api "repos/${{ github.repository }}/code-scanning/alerts?ref=${{ github.ref }}&state=open" --paginate)
+          blocking=$(echo "$alerts" | jq '[.[] | select(.rule.security_severity_level == "critical" or .rule.security_severity_level == "high")]')
+          count=$(echo "$blocking" | jq 'length')
+          if [ "$count" -gt 0 ]; then
+            echo "Found $count Critical/High CodeQL alert(s) blocking deployment:"
+            echo "$blocking" | jq -r '.[] | "- [\(.rule.security_severity_level)] \(.rule.description) (\(.html_url))"'
+            exit 1
+          fi
+          echo "No Critical/High CodeQL alerts found."
+
   release:
     name: Compute version & changelog
-    needs: [backend-test, frontend-test, e2e-test]
+    needs: [backend-test, frontend-test, e2e-test, code-quality]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -138,7 +179,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Run repo script tests
         run: node --test scripts/__tests__/*.test.js scripts/release/__tests__/*.test.js
@@ -166,7 +207,7 @@ jobs:
 
   deploy-production-backend:
     name: Deploy backend to production
-    needs: [backend-test, frontend-test, e2e-test]
+    needs: [backend-test, frontend-test, e2e-test, code-quality]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -181,7 +222,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -197,7 +238,7 @@ jobs:
 
   deploy-production-frontend:
     name: Deploy frontend to production
-    needs: [backend-test, frontend-test, e2e-test]
+    needs: [backend-test, frontend-test, e2e-test, code-quality]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -212,7 +253,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -228,7 +269,7 @@ jobs:
 
   deploy-preview-backend:
     name: Deploy backend preview
-    needs: [backend-test, frontend-test, e2e-test]
+    needs: [backend-test, frontend-test, e2e-test, code-quality]
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -242,7 +283,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -262,7 +303,7 @@ jobs:
       # publish the preview URL ourselves. Updates the same comment on every push to this PR
       # instead of piling up a new one each time.
       - name: Comment preview URL on PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.url }}
         with:
@@ -293,7 +334,7 @@ jobs:
 
   deploy-preview-frontend:
     name: Deploy frontend preview
-    needs: [backend-test, frontend-test, e2e-test]
+    needs: [backend-test, frontend-test, e2e-test, code-quality]
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -307,7 +348,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -324,7 +365,7 @@ jobs:
 
       # Fallback (research.md §5 / quickstart.md Paso 6): same reasoning as deploy-preview-backend.
       - name: Comment preview URL on PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.url }}
         with:
