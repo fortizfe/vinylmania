@@ -39,6 +39,20 @@ y el `ci.yml` / `vercel.json` actuales del repo (`Contexto verificado en el repo
   - Acción de terceros (`amondnet/vercel-action` u otra) — descartada: añade una dependencia externa
     no oficial para replicar lo que la CLI oficial ya hace en 3 comandos; menos control y una
     superficie de confianza adicional (Principio III, Simplicity/YAGNI/KISS).
+- **Corrección (post-implementación, tras fallo real en CI del PR #39)**: la primera implementación
+  ejecutaba `vercel pull`/`build`/`deploy` con `working-directory: backend` (o `frontend`) en cada
+  step, replicando el `cwd` de los jobs de test. Esto rompe `vercel build` con
+  `Error: spawn npm ENOENT` — síntoma reportado y confirmado en
+  [vercel/vercel#10202](https://github.com/vercel/vercel/discussions/10202): cuando el proyecto
+  tiene `rootDirectory` configurado en el dashboard (aquí, `backend`/`frontend`, ver
+  `docs/deployment-vercel.md`) y el CLI además se invoca ya posicionado dentro de esa carpeta,
+  `vercel build` concatena el `rootDirectory` sobre el cwd actual y busca `backend/backend/...`
+  (que no existe), fallando al spawnear el proceso de instalación con ese cwd inexistente — el
+  mensaje de Node.js para "cwd no existe" es el mismo `ENOENT` que para "comando no encontrado".
+  **Fix**: eliminar `working-directory` de los tres steps de Vercel CLI (`pull`/`build`/`deploy`) en
+  los 4 jobs de deploy; se ejecutan desde la raíz del repo (igual que en el patrón oficial de
+  "Vercel for GitHub Actions"), dejando que el `rootDirectory` ya configurado en cada proyecto
+  resuelva la subcarpeta correcta una única vez, vía `VERCEL_PROJECT_ID`.
 
 ## 3. Secrets necesarios (FR-007)
 

@@ -18,11 +18,19 @@ Esta feature no expone una API HTTP; su "interfaz" es el contrato del workflow d
 
 **Steps (orden fijo)**:
 1. `actions/checkout`
-2. `npm install --global vercel@latest` (o versión pinneada, ver research.md §2)
-3. `vercel pull --yes --environment=<preview|production> --token=$VERCEL_TOKEN` — variables de
+2. `actions/setup-node` (Node 20, igual que el resto de jobs — sin este step, `vercel build` falla
+   con `Error: spawn npm ENOENT`, ver research.md §2 "Corrección")
+3. `npm install --global vercel@latest` (o versión pinneada, ver research.md §2)
+4. `vercel pull --yes --environment=<preview|production> --token=$VERCEL_TOKEN` — variables de
    entorno `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID` deben estar seteadas antes de este paso.
-4. `vercel build [--prod] --token=$VERCEL_TOKEN`
-5. `vercel deploy --prebuilt [--prod] --token=$VERCEL_TOKEN`
+5. `vercel build [--prod] --token=$VERCEL_TOKEN`
+6. `vercel deploy --prebuilt [--prod] --token=$VERCEL_TOKEN`
+
+**Importante**: los pasos 4-6 se ejecutan desde la **raíz del repo**, sin `working-directory` ni
+`--cwd`. El proyecto Vercel correspondiente (identificado por `VERCEL_PROJECT_ID`) ya tiene su
+`rootDirectory` configurado en el dashboard (`backend`/`frontend`, ver
+`docs/deployment-vercel.md`); añadir además `working-directory`/`--cwd` duplica esa subcarpeta
+(`backend/backend/...`) y rompe `vercel build` — ver research.md §2 "Corrección".
 
 **Outputs / efectos observables**:
 - Un nuevo deployment en el proyecto Vercel correspondiente, en estado `READY` si el comando termina
@@ -37,7 +45,7 @@ Esta feature no expone una API HTTP; su "interfaz" es el contrato del workflow d
 |---|---|
 | Evento | `pull_request` |
 | Condición extra | `github.event.pull_request.head.repo.full_name == github.repository` (excluye forks) |
-| `working-directory` / `--cwd` | `backend/` o `frontend/` respectivamente |
+| `working-directory` / `--cwd` | Ninguno — se ejecuta desde la raíz del repo (ver nota arriba) |
 | `environment` en `vercel pull` | `preview` |
 | Flag `--prod` | No |
 | `VERCEL_PROJECT_ID` | `secrets.VERCEL_PROJECT_ID_BACKEND` o `secrets.VERCEL_PROJECT_ID_FRONTEND` |
@@ -48,7 +56,7 @@ Esta feature no expone una API HTTP; su "interfaz" es el contrato del workflow d
 |---|---|
 | Evento | `push` |
 | Condición extra | `github.ref == 'refs/heads/main'` (mismo criterio que el job `release`) |
-| `working-directory` / `--cwd` | `backend/` o `frontend/` respectivamente |
+| `working-directory` / `--cwd` | Ninguno — se ejecuta desde la raíz del repo (ver nota arriba) |
 | `environment` en `vercel pull` | `production` |
 | Flag `--prod` | Sí, en `build` y `deploy` |
 | `VERCEL_PROJECT_ID` | `secrets.VERCEL_PROJECT_ID_BACKEND` o `secrets.VERCEL_PROJECT_ID_FRONTEND` |

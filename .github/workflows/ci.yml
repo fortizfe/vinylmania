@@ -187,15 +187,12 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Pull Vercel environment
-        working-directory: backend
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build
-        working-directory: backend
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy
-        working-directory: backend
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
   deploy-production-frontend:
@@ -221,15 +218,12 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Pull Vercel environment
-        working-directory: frontend
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build
-        working-directory: frontend
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy
-        working-directory: frontend
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
   deploy-preview-backend:
@@ -252,15 +246,12 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Pull Vercel environment
-        working-directory: backend
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build
-        working-directory: backend
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy
-        working-directory: backend
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
 
   deploy-preview-frontend:
@@ -283,13 +274,10 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Pull Vercel environment
-        working-directory: frontend
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build
-        working-directory: frontend
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy
-        working-directory: frontend
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
