@@ -33,8 +33,19 @@ function decodeEntities(input: string): string {
   });
 }
 
+// Stripped to a fixed point (looping until a pass makes no further change)
+// rather than a single replace pass, so removing an outer tag can never
+// reveal a new tag formed by the leftover fragments (e.g. "<<img>>" or
+// "<scr<script>ipt>") — the exact gap CodeQL's incomplete multi-character
+// sanitization check flags in one-shot regex stripping.
 function stripHtml(input: string): string {
-  return input.replace(/<[^>]*>/g, '');
+  let previous: string;
+  let current = input;
+  do {
+    previous = current;
+    current = previous.replace(/<[^>]*>/g, '');
+  } while (current !== previous);
+  return current;
 }
 
 // Feed content is never rendered as HTML (research.md §2) — this always
