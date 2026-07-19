@@ -46,7 +46,17 @@ describe('Feeds dashboard with the expanded real catalog (spec 041 FR-005, FR-00
     for (const id of NEW_SOURCE_IDS) {
       expect(FEED_SOURCES.some((source) => source.id === id)).toBe(true);
     }
-    expect(FEED_SOURCES.some((source) => source.feedUrl.includes('metalblade.com'))).toBe(false);
+    expect(
+      FEED_SOURCES.some((source) => new URL(source.feedUrl).hostname === 'metalblade.com'),
+    ).toBe(false);
+  });
+
+  it('is not fooled by a lookalike host that merely embeds "metalblade.com" (spec 056 FR-003)', () => {
+    // A naive `feedUrl.includes('metalblade.com')` check would wrongly match
+    // this host too; the anchored hostname check must not.
+    expect(new URL('https://not-metalblade.com.attacker.test/feed').hostname).not.toBe(
+      'metalblade.com',
+    );
   });
 
   it('aggregates articles from every new source and isolates one failing new source from the rest (FR-007)', async () => {

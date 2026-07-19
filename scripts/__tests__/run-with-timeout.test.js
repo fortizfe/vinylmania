@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const { spawn, spawnSync } = require('node:child_process');
+const { spawnSync } = require('node:child_process');
 const { parseArgs } = require('../run-with-timeout');
 
 const SCRIPT = path.join(__dirname, '..', 'run-with-timeout.js');

@@ -1,10 +1,18 @@
 import { Router, type Request, type Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 
 import { logger } from '../../config/logger';
 import { DiscogsError } from '../../discogs/discogsErrors';
 import { DiscogsOauthFlowError } from '../../domain/discogsOauth/discogsOauthErrors';
 import { requireAuth } from '../auth/requireAuth';
+import {
+  RATE_LIMIT_MESSAGE,
+  RATE_LIMIT_THRESHOLDS,
+  RATE_LIMIT_WINDOW_MS,
+  rateLimitHandler,
+} from '../rateLimit/rateLimitOptions';
+import { createRateLimitStore } from '../rateLimit/rateLimitStore';
 import { createCompleteLinkUseCase } from '../../application/discogsOauth/completeLink';
 import { createDisconnectConnectionUseCase } from '../../application/discogsOauth/disconnectConnection';
 import { createGetConnectionStatusUseCase } from '../../application/discogsOauth/getConnectionStatus';
@@ -14,7 +22,28 @@ import { discogsConnectionAdapter } from './discogsConnectionAdapter';
 
 export const discogsOauthRouter = Router();
 
-discogsOauthRouter.use(requireAuth);
+// Per-route (not router-level .use()) so /request and /complete can carry a
+// stricter rate-limit tier than /connection and /status — rate limiting runs
+// before requireAuth on every route, matching every other flagged file.
+const strictRateLimit = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  limit: RATE_LIMIT_THRESHOLDS.strict,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: RATE_LIMIT_MESSAGE,
+  handler: rateLimitHandler,
+  store: createRateLimitStore(),
+});
+
+const standardRateLimit = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  limit: RATE_LIMIT_THRESHOLDS.standard,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: RATE_LIMIT_MESSAGE,
+  handler: rateLimitHandler,
+  store: createRateLimitStore(),
+});
 
 const ALREADY_CONNECTED = {
   error: 'already_connected',
@@ -93,7 +122,7 @@ function handleFailure(
   });
 }
 
-discogsOauthRouter.post('/request', async (req: Request, res: Response) => {
+discogsOauthRouter.post('/request', strictRateLimit, requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   try {
     const { authorizeUrl } = await startLink(uid);
@@ -103,7 +132,7 @@ discogsOauthRouter.post('/request', async (req: Request, res: Response) => {
   }
 });
 
-discogsOauthRouter.post('/complete', async (req: Request, res: Response) => {
+discogsOauthRouter.post('/complete', strictRateLimit, requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   const parsed = completeBodySchema.safeParse(req.body);
 
@@ -127,7 +156,7 @@ discogsOauthRouter.post('/complete', async (req: Request, res: Response) => {
   }
 });
 
-discogsOauthRouter.delete('/connection', async (req: Request, res: Response) => {
+discogsOauthRouter.delete('/connection', standardRateLimit, requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   try {
     await disconnectConnection(uid);
@@ -137,7 +166,7 @@ discogsOauthRouter.delete('/connection', async (req: Request, res: Response) => 
   }
 });
 
-discogsOauthRouter.get('/status', async (req: Request, res: Response) => {
+discogsOauthRouter.get('/status', standardRateLimit, requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
   try {
     res.status(200).json(await getConnectionStatus(uid));

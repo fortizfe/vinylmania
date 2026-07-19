@@ -272,7 +272,7 @@ export async function listAllInstances(
 
   const instances: CollectionInstance[] = [];
   let page = 1;
-  let pages = 1;
+  let pages: number;
   do {
     const response = await client.get(
       `/users/${username}/collection/folders/0/releases`,

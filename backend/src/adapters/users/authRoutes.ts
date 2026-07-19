@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 
 import { createUserProfileUseCases } from '../../application/users/userProfileUseCases';
@@ -6,9 +7,26 @@ import { createLogoutSessionUseCase } from '../../application/auth/logoutSession
 import { logger } from '../../config/logger';
 import { firestoreSessionStoreAdapter } from '../auth/firestoreSessionStoreAdapter';
 import { requireAuth } from '../auth/requireAuth';
+import {
+  RATE_LIMIT_MESSAGE,
+  RATE_LIMIT_THRESHOLDS,
+  RATE_LIMIT_WINDOW_MS,
+  rateLimitHandler,
+} from '../rateLimit/rateLimitOptions';
+import { createRateLimitStore } from '../rateLimit/rateLimitStore';
 import { firestoreUserRepository } from './firestoreUserRepository';
 
 export const authRouter = Router();
+
+const standardRateLimit = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  limit: RATE_LIMIT_THRESHOLDS.standard,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: RATE_LIMIT_MESSAGE,
+  handler: rateLimitHandler,
+  store: createRateLimitStore(),
+});
 
 const BEARER_PREFIX = 'Bearer ';
 
@@ -21,7 +39,7 @@ const { getUserProfile, updateThemePreference } = createUserProfileUseCases({
 });
 const logoutSession = createLogoutSessionUseCase({ sessionStore: firestoreSessionStoreAdapter });
 
-authRouter.delete('/session', requireAuth, async (req: Request, res: Response) => {
+authRouter.delete('/session', standardRateLimit, requireAuth, async (req: Request, res: Response) => {
   try {
     const header = req.headers.authorization ?? '';
     const sessionToken = header.startsWith(BEARER_PREFIX) ? header.slice(BEARER_PREFIX.length) : '';
@@ -41,7 +59,7 @@ authRouter.delete('/session', requireAuth, async (req: Request, res: Response) =
   }
 });
 
-authRouter.patch('/preferences', requireAuth, async (req: Request, res: Response) => {
+authRouter.patch('/preferences', standardRateLimit, requireAuth, async (req: Request, res: Response) => {
   const auth = req.auth!;
   const parsed = preferencesBodySchema.safeParse(req.body);
 
@@ -75,7 +93,7 @@ authRouter.patch('/preferences', requireAuth, async (req: Request, res: Response
   }
 });
 
-authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
+authRouter.get('/me', standardRateLimit, requireAuth, async (req: Request, res: Response) => {
   try {
     const auth = req.auth!;
     const user = await getUserProfile(auth.uid);

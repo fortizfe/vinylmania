@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 
 import { logger } from '../../config/logger';
@@ -8,10 +9,27 @@ import { createStartLoginUseCase } from '../../application/googleAuth/startLogin
 import { createUserProfileUseCases } from '../../application/users/userProfileUseCases';
 import { firebaseIdentityResolverAdapter } from '../auth/firebaseIdentityResolverAdapter';
 import { firestoreSessionStoreAdapter } from '../auth/firestoreSessionStoreAdapter';
+import {
+  RATE_LIMIT_MESSAGE,
+  RATE_LIMIT_THRESHOLDS,
+  RATE_LIMIT_WINDOW_MS,
+  rateLimitHandler,
+} from '../rateLimit/rateLimitOptions';
+import { createRateLimitStore } from '../rateLimit/rateLimitStore';
 import { firestoreUserRepository } from '../users/firestoreUserRepository';
 import { googleIdentityAdapter } from './googleIdentityAdapter';
 
 export const googleAuthRouter = Router();
+
+const strictRateLimit = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  limit: RATE_LIMIT_THRESHOLDS.strict,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: RATE_LIMIT_MESSAGE,
+  handler: rateLimitHandler,
+  store: createRateLimitStore(),
+});
 
 const completeBodySchema = z
   .object({
@@ -67,7 +85,7 @@ function handleFailure(res: Response, route: string, err: unknown): void {
   });
 }
 
-googleAuthRouter.get('/authorize', async (_req: Request, res: Response) => {
+googleAuthRouter.get('/authorize', strictRateLimit, async (_req: Request, res: Response) => {
   try {
     const { authorizeUrl } = await startLogin();
     res.redirect(302, authorizeUrl);
@@ -76,7 +94,7 @@ googleAuthRouter.get('/authorize', async (_req: Request, res: Response) => {
   }
 });
 
-googleAuthRouter.post('/complete', async (req: Request, res: Response) => {
+googleAuthRouter.post('/complete', strictRateLimit, async (req: Request, res: Response) => {
   const parsed = completeBodySchema.safeParse(req.body);
 
   if (!parsed.success) {
