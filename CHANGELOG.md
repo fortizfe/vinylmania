@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.5.0] - 2026-07-19
+
+### Added
+
+- redesign release and master release detail screens as cards (#43) ([2487ff0])
+
 ## [1.4.0] - 2026-07-19
 
 ### Added
