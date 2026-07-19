@@ -39,7 +39,7 @@ feature no añade código de aplicación: modifica `.github/workflows/ci.yml`, `
 
 **Purpose**: Prerrequisitos externos (fuera del repo) sin los que ningún job nuevo puede autenticarse.
 
-- [ ] T001 Crear los GitHub Secrets del repositorio (Settings → Secrets and variables → Actions):
+- [X] T001 Crear los GitHub Secrets del repositorio (Settings → Secrets and variables → Actions):
       `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_BACKEND`, `VERCEL_PROJECT_ID_FRONTEND`
       (valores obtenidos del dashboard de Vercel / `vercel project ls` con acceso de administración
       a ambos proyectos — ver research.md §3 y Assumptions del spec)
