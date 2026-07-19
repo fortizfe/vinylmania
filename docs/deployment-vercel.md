@@ -21,6 +21,43 @@ This guide covers a from-scratch setup (production deployments only). Preview
 (pull request) deployments of the two projects are not wired to reach each
 other — see "Known limitations" at the end.
 
+## Deployments are gated on CI, not on Git push
+
+Both projects have `git.deploymentEnabled: false` set in their `vercel.json`
+(`backend/vercel.json`, `frontend/vercel.json`). This means pushing to `main`
+or opening a pull request does **not**, by itself, trigger a Vercel
+deployment anymore — Vercel's native Git integration is intentionally
+disabled for both projects.
+
+Instead, `.github/workflows/ci.yml` deploys via the Vercel CLI, and only
+after the three test jobs (`backend-test`, `frontend-test`, `e2e-test`) have
+all passed:
+
+- `deploy-production-backend` / `deploy-production-frontend` — run on push to
+  `main`, deploy `--prod`.
+- `deploy-preview-backend` / `deploy-preview-frontend` — run on pull requests
+  opened from a branch of this repository (not from a fork — GitHub Actions
+  doesn't expose secrets to fork PRs), deploy a preview.
+
+If any of the three test jobs fails or is cancelled, the corresponding
+`deploy-*` job is skipped automatically (via `needs`) and no deployment is
+created for that commit. See
+[specs/054-gate-deploys-on-passing-tests](../specs/054-gate-deploys-on-passing-tests/)
+for the full rationale.
+
+This requires four additional GitHub repository secrets (Settings → Secrets
+and variables → Actions), on top of the ones already used by the test jobs:
+
+| Secret | What it's for | Where the real value comes from |
+|---|---|---|
+| `VERCEL_TOKEN` | Authenticates the Vercel CLI in CI | Vercel dashboard → Account Settings → Tokens |
+| `VERCEL_ORG_ID` | Identifies the Vercel team/org both projects belong to | `.vercel/project.json` after running `vercel link` locally, or Vercel dashboard → Team Settings |
+| `VERCEL_PROJECT_ID_BACKEND` | Identifies the backend project | `.vercel/project.json` after running `vercel link` inside `backend/` |
+| `VERCEL_PROJECT_ID_FRONTEND` | Identifies the frontend project | `.vercel/project.json` after running `vercel link` inside `frontend/` |
+
+**Never paste any of these values into this file, into a commit, or into any
+file tracked by git** — they only ever live as GitHub Secrets.
+
 ## Prerequisites
 
 - Push access to `fortizfe/vinylmania` on GitHub
@@ -61,8 +98,10 @@ fails with a `500 internal_error` (logged server-side as "GOOGLE_OAUTH_CLIENT_ID
 / GOOGLE_OAUTH_CLIENT_SECRET / GOOGLE_OAUTH_CALLBACK_URL are not configured") —
 if "Sign in with Google" shows an internal error, check these three first.
 
-After adding these, trigger a redeploy (Vercel does this automatically on the
-next push to `main`, or use **Deployments → Redeploy**).
+After adding these, trigger a redeploy. Since `git.deploymentEnabled: false`
+means a push to `main` no longer redeploys automatically, either push a commit
+so the `deploy-production-backend` CI job runs, or use **Deployments →
+Redeploy** in the Vercel dashboard for a one-off manual redeploy.
 
 **Verify**: `curl https://<your-backend-project>.vercel.app/health` should
 return `{"status":"ok"}`.
