@@ -143,12 +143,54 @@ below.
 
 ## US4 — Touch gestures: drag-to-dismiss & gallery swipe (P2)
 
+**Status**: ✅ done (T068–T077). Implementation shipped in commit 1232ce9
+(T070–T075; `MotionProvider` bumped `domAnimation` → `domMax` so the `drag`
+gesture works at runtime). E2E coverage (T068/T069/T076/T077):
+`e2e/tests/sheet-drag-dismiss.spec.ts` (new, 8 cases — 1:1 tracking from the
+grab point; released < 45% & slow → spring-back with the dialog still
+mounted and focus still trapped; released > 45% → dismiss + `onClose` +
+focus restored to the opener; short flick ≥ 500 px/s → dismiss; the whole
+surface — not just the handle — is the drag affordance and a vertical
+content-scroll offset never swallows the horizontal dismiss; close-button +
+Escape parity; axe serious/critical = [] with the drawer open, light + dark),
+`e2e/tests/gallery-swipe.spec.ts` (new, 10 cases — swipe left/right steps
+exactly ±1; thumbnail `aria-current` follows; a hard flick never skips two
+images; no wrap at either end; `ArrowLeft`/`ArrowRight` + thumbnail-button +
+close-button + Escape parity; axe serious/critical = [] with the viewer
+open, light + dark), `e2e/tests/header-responsive-nav.spec.ts` (+2 — the
+header hamburger drawer opens, swipe-dismisses, and lands focus back on the
+hamburger, matching the Escape / close-button paths). US4 validation set
+(`sheet-drag-dismiss` + `gallery-swipe` + `header-responsive-nav` +
+`release-detail-responsive`): 64 passed / 0 failed (chromium + webkit).
+SC-005 baseline (`reduced-motion`, `overlay-focus-management`,
+`overlay-contrast`, `dark-mode-contrast`, `press-feedback`): 47 passed / 0
+failed — no regression from the `domMax` bump. SC-008 met: every
+gesture-driven outcome (drawer dismissal, gallery navigation) has an
+automated non-gesture button + keyboard path covered alongside the gesture.
+
+Notes / deltas from the task text:
+- **FR-011 scroll-vs-dismiss "block" branch** — the app's only `Sheet` is the
+  x-axis hamburger drawer, whose content scrolls only vertically.
+  `scrollBlocksDismiss` gates an x-axis dismiss on horizontal scroll
+  (`scrollLeft`, always 0 here) — vertical scroll is orthogonal and never
+  blocks the horizontal dismiss, matching `Sheet.test.tsx`. The classic
+  "drag down while scrolled → scroll first" case only applies to a y-axis
+  sheet, which does not exist in the product yet; that branch stays covered
+  by the `scrollBlocksDismiss` unit tests.
+- **Synthetic Pointer-Event drags** reliably drive `motion`'s gesture layer
+  in Playwright (Chromium + WebKit). `page.mouse` moves with an inter-step
+  delay drive the drawer's slow drags; rAF-paced in-page `PointerEvent`
+  dispatch drives the velocity flicks and every gallery swipe (it also
+  avoids the stray post-drag `click` that a real off-surface `page.mouse`
+  drag lands on the gallery scrim — see the minor findings in the T077
+  report).
+
 | Component | Disposition | HIG | Skill | Change | e2e |
 |---|---|---|---|---|---|
-| `motion/Sheet` | rework | DM, INT | apple-design | 1:1 drag from grab offset; dismiss on 45% distance OR 500 px/s; spring-back; rubber-band; scroll-boundary disambiguation; velocity hand-off | sheet-drag-dismiss |
-| `ui/Modal` (`position="end"`) | rework | DM | apple-design | Drawer form renders through `Sheet`; button + Escape parity kept | sheet-drag-dismiss, header-responsive-nav |
-| `components/HamburgerMenu` | refine | DM | apple-design | Drawer is now swipe-dismissible via `Modal position="end"`; nav rows keep press state | header-responsive-nav |
-| `components/GalleryFullscreenViewer` | rework | DM, INT, SPACE | apple-design, animate | Horizontal swipe between images (offset/velocity + momentum projection); `ArrowLeft/Right` keys added; thumbnails + close + Escape parity | gallery-swipe, release-detail-responsive |
+| `motion/Sheet` | rework | DM, INT | apple-design | 1:1 drag from grab offset; dismiss on 45% distance OR 500 px/s; spring-back; rubber-band; scroll-boundary disambiguation; velocity hand-off | ✅ sheet-drag-dismiss |
+| `ui/Modal` (`position="end"`) | rework | DM | apple-design | Drawer form renders through `Sheet`; button + Escape parity kept | ✅ sheet-drag-dismiss, header-responsive-nav |
+| `components/HamburgerMenu` | refine | DM | apple-design | Drawer is now swipe-dismissible via `Modal position="end"`; nav rows keep press state | ✅ header-responsive-nav |
+| `components/GalleryFullscreenViewer` | rework | DM, INT, SPACE | apple-design, animate | Horizontal swipe between images (offset/velocity + momentum projection); `ArrowLeft/Right` keys added; thumbnails + close + Escape parity | ✅ gallery-swipe, release-detail-responsive |
 
 ---
 

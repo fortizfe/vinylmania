@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 import { runAxeScan } from '../helpers/axe';
 import { assertFocusIndicatorContrast } from '../helpers/contrast';
@@ -242,4 +242,111 @@ test.describe('Header/navigation focus-indicator contrast (spec 058, US2)', () =
       );
     });
   }
+});
+
+/**
+ * Spec 059 — User Story 4, T076 (FR-010 / FR-013, SC-008).
+ *
+ * The header's hamburger drawer (`Modal position="end"` → `motion/Sheet`) is
+ * now swipe-dismissible on touch. This covers the header-nav *integration*:
+ * the drawer opens from the hamburger, a 1:1 drag right dismisses it, and
+ * focus lands back on the hamburger button — exactly as it does for the
+ * always-available Escape / close-button / nav-link paths. The drag
+ * mechanics themselves (1:1 tracking, thresholds, spring-back, scroll
+ * disambiguation) live in `sheet-drag-dismiss.spec.ts`.
+ */
+test.describe('Header drawer swipe-to-dismiss (spec 059 US4, T076)', () => {
+  test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+  /** rAF-paced pointer flick right on the drawer surface, dispatched in-page. */
+  async function flickDrawerClosed(page: Page): Promise<void> {
+    await page.evaluate(async () => {
+      const el = document.querySelector('[data-testid="sheet-surface"]') as HTMLElement;
+      const r = el.getBoundingClientRect();
+      const y = r.y + r.height / 2;
+      let x = r.x + r.width / 2;
+      const raf = () => new Promise((res) => requestAnimationFrame(res));
+      const fire = (type: string, buttons: number, mx: number) =>
+        el.dispatchEvent(
+          new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            pointerId: 1,
+            pointerType: 'touch',
+            isPrimary: true,
+            clientX: x,
+            clientY: y,
+            movementX: mx,
+            buttons,
+            button: type === 'pointerdown' || type === 'pointerup' ? 0 : -1,
+          }),
+        );
+      fire('pointerdown', 1, 0);
+      await raf();
+      for (let i = 0; i < 5; i += 1) {
+        x += 12;
+        fire('pointermove', 1, 12);
+        await raf();
+      }
+      fire('pointerup', 0, 0);
+      await raf();
+    });
+  }
+
+  test('opens from the hamburger, swipe-dismisses, and returns focus to the hamburger button', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    const hamburger = page.getByRole('button', { name: /^menu$/i });
+    await hamburger.click();
+
+    const drawer = page.getByRole('dialog');
+    const surface = page.getByTestId('sheet-surface');
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole('link', { name: /my library/i })).toBeVisible();
+    await page.waitForTimeout(550); // settle the enter slide
+
+    await flickDrawerClosed(page);
+
+    await expect(surface).toHaveCount(0);
+    await expect(hamburger).toBeFocused();
+    // The header is fully interactive again — reopening still works.
+    await hamburger.click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+  });
+
+  test('the swipe and the Escape / close-button paths all land focus back on the hamburger', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    const hamburger = page.getByRole('button', { name: /^menu$/i });
+
+    // Escape
+    await hamburger.click();
+    await expect(page.getByTestId('sheet-surface')).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('sheet-surface')).toHaveCount(0);
+    await expect(hamburger).toBeFocused();
+
+    // Close button
+    await hamburger.click();
+    await expect(page.getByTestId('sheet-surface')).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByTestId('sheet-surface')).toHaveCount(0);
+    await expect(hamburger).toBeFocused();
+
+    // Swipe
+    await hamburger.click();
+    await expect(page.getByTestId('sheet-surface')).toBeVisible();
+    await page.waitForTimeout(550);
+    await flickDrawerClosed(page);
+    await expect(page.getByTestId('sheet-surface')).toHaveCount(0);
+    await expect(hamburger).toBeFocused();
+  });
 });
