@@ -1,0 +1,326 @@
+# Agent Assignments
+# Feature: Apple HIG Component Polish (059-apple-hig-component-polish)
+# Generated: 2026-09-05
+# Command: /speckit-agent-assign-assign
+
+agents_scanned:
+  - name: "frontend-agent"
+    source: "project"
+    description: "Work under frontend/ — React 19 + TypeScript (Vite), Tailwind CSS v4, TanStack Query. Builds interfaces with the installed Apple design skills, enforces WCAG 2.1 AA, TDD via Vitest + RTL."
+  - name: "qa-agent"
+    source: "project"
+    description: "Enforces Test-First/TDD discipline and test quality across backend/frontend/e2e; owns Playwright e2e specs and validation gates. Not feature implementation."
+  - name: "backend-agent"
+    source: "project"
+    description: "Work under backend/ — Express.js + TypeScript, hexagonal architecture, Firebase Admin/Firestore, Discogs, Redis. Not applicable: this feature has no backend work."
+  - name: "docs-agent"
+    source: "project"
+    description: "End-user documentation for collectors. Not applicable: this feature ships no end-user docs."
+
+assignments:
+  # --- Phase 1: Setup ---
+  T001:
+    agent: "frontend-agent"
+    reason: "Adds the `motion` dependency to frontend/package.json and verifies the frontend build."
+  T002:
+    agent: "frontend-agent"
+    reason: "Authors a Vitest architecture guard test under frontend/tests/unit/architecture/."
+  T003:
+    agent: "frontend-agent"
+    reason: "Creates the frontend/src/motion/ module directory and barrel."
+
+  # --- Phase 2: Foundational (motion layer + tokens + focusRing) ---
+  T004:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/motion/tokens.test.ts — TDD for the token module."
+  T005:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/motion/useFocusTrap.test.tsx — RTL/jsdom hook test."
+  T006:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/motion/useScrollLock.test.tsx — RTL/jsdom hook test."
+  T007:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/motion/useRestoreFocus.test.tsx — RTL/jsdom hook test."
+  T008:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/motion/Overlay.test.tsx — component TDD (a11y, focus, scroll lock)."
+  T009:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/motion/Sheet.test.tsx — component TDD (release-decision logic, parity)."
+  T010:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/ui/focusRing.test.ts — shared constant test."
+  T011:
+    agent: "frontend-agent"
+    reason: "Adds motion/typography tokens and prefers-* media queries to frontend/src/styles/global.css (Tailwind v4 CSS-first)."
+  T012:
+    agent: "frontend-agent"
+    reason: "Creates frontend/src/motion/tokens.ts."
+  T013:
+    agent: "frontend-agent"
+    reason: "Creates frontend/src/motion/useFocusTrap.ts."
+  T014:
+    agent: "frontend-agent"
+    reason: "Creates frontend/src/motion/useScrollLock.ts."
+  T015:
+    agent: "frontend-agent"
+    reason: "Creates frontend/src/motion/useRestoreFocus.ts."
+  T016:
+    agent: "frontend-agent"
+    reason: "Creates frontend/src/components/ui/focusRing.ts."
+  T017:
+    agent: "frontend-agent"
+    reason: "Creates frontend/src/motion/MotionProvider.tsx (LazyMotion + MotionConfig)."
+  T018:
+    agent: "frontend-agent"
+    reason: "Creates frontend/src/motion/Overlay.tsx — the wrapped-library overlay primitive."
+  T019:
+    agent: "frontend-agent"
+    reason: "Creates frontend/src/motion/Sheet.tsx — drag-to-dismiss primitive."
+  T020:
+    agent: "frontend-agent"
+    reason: "Fills the frontend/src/motion/index.ts barrel."
+  T021:
+    agent: "frontend-agent"
+    reason: "Mounts <MotionProvider> in frontend/src/main.tsx alongside ThemeProvider."
+
+  # --- Phase 3: US1 — Instant press feedback (P1) ---
+  T022:
+    agent: "qa-agent"
+    reason: "Authors e2e/tests/press-feedback.spec.ts (Playwright); frontend-agent does not touch e2e/."
+  T023:
+    agent: "frontend-agent"
+    reason: "Extends frontend/tests/unit/ui/Button.test.tsx."
+  T024:
+    agent: "frontend-agent"
+    reason: "Extends frontend/tests/unit/ui/ StarRating/ThemeToggle/Checkbox specs."
+  T025:
+    agent: "frontend-agent"
+    reason: "Press state + focusRing in frontend/src/components/ui/Button.tsx."
+  T026:
+    agent: "frontend-agent"
+    reason: "Press state + focusRing in frontend/src/components/ui/StarRating.tsx."
+  T027:
+    agent: "frontend-agent"
+    reason: "Press state + focusRing in frontend/src/components/ui/ThemeToggle.tsx."
+  T028:
+    agent: "frontend-agent"
+    reason: "Press state + focusRing in frontend/src/components/ui/ViewModeToggle.tsx."
+  T029:
+    agent: "frontend-agent"
+    reason: "Press nudge + focusRing in frontend/src/components/ui/BackLink.tsx."
+  T030:
+    agent: "frontend-agent"
+    reason: "Trigger press + focusRing in frontend/src/components/ui/InlineEditableField.tsx."
+  T031:
+    agent: "frontend-agent"
+    reason: "Row press feedback in frontend/src/components/ui/Checkbox.tsx."
+  T032:
+    agent: "frontend-agent"
+    reason: "Row press + pattern conformance in frontend/src/components/filters/SelectableListFilter.tsx."
+  T033:
+    agent: "frontend-agent"
+    reason: "Icon-button press + focusRing in frontend/src/components/HeaderNavIcons.tsx."
+  T034:
+    agent: "frontend-agent"
+    reason: "Control press in frontend/src/components/HeaderSearchBox.tsx."
+  T035:
+    agent: "frontend-agent"
+    reason: "Action-button press in frontend/src/components/ResultCardActions.tsx."
+  T036:
+    agent: "frontend-agent"
+    reason: "Press state in frontend/src/components/GoogleSignInButton.tsx."
+  T037:
+    agent: "frontend-agent"
+    reason: "Card-link press in frontend/src/components/RecordCard.tsx + RecordListRow.tsx."
+  T038:
+    agent: "frontend-agent"
+    reason: "Card-link press in frontend/src/components/SearchResultCard.tsx + SearchResultListRow.tsx."
+  T039:
+    agent: "frontend-agent"
+    reason: "Card press in frontend/src/components/FeedArticleCard.tsx."
+  T040:
+    agent: "frontend-agent"
+    reason: "Chip press + pattern in frontend/src/components/FeedCategoryFilterBar.tsx + FeedSourceFilterBar.tsx."
+  T041:
+    agent: "frontend-agent"
+    reason: "Navigable-row press in frontend/src/components/MasterVersionsTable.tsx."
+  T042:
+    agent: "frontend-agent"
+    reason: "Verifies inherited press in CollapsibleFilterPanel/FilterActions/HamburgerMenu."
+  T043:
+    agent: "qa-agent"
+    reason: "Extends e2e/tests/view-mode-toggle.spec.ts and record-detail-inline-edit.spec.ts."
+  T044:
+    agent: "qa-agent"
+    reason: "Runs US1 validation — press-feedback.spec.ts + axe on both themes."
+
+  # --- Phase 4: US2 — Physical, interruptible transitions (P1) ---
+  T045:
+    agent: "qa-agent"
+    reason: "Authors e2e/tests/reduced-motion.spec.ts (Playwright emulateMedia)."
+  T046:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/architecture/no-inline-motion.test.ts guard test."
+  T047:
+    agent: "frontend-agent"
+    reason: "Extends frontend/tests/unit/ui/Modal.test.tsx for motion + reduced-motion."
+  T048:
+    agent: "frontend-agent"
+    reason: "Motion unit tests for ViewModeToggle + CollapsibleFilterPanel."
+  T049:
+    agent: "frontend-agent"
+    reason: "Re-homes frontend/src/components/ui/Modal.tsx on motion/Overlay."
+  T050:
+    agent: "frontend-agent"
+    reason: "Spring knob + token crossfade in frontend/src/components/ui/ThemeToggle.tsx."
+  T051:
+    agent: "frontend-agent"
+    reason: "Shared-element pill in frontend/src/components/ui/ViewModeToggle.tsx."
+  T052:
+    agent: "frontend-agent"
+    reason: "Disclosure motion in frontend/src/components/filters/CollapsibleFilterPanel.tsx."
+  T053:
+    agent: "frontend-agent"
+    reason: "motion-safe gating in frontend/src/components/ui/Skeleton.tsx."
+  T054:
+    agent: "frontend-agent"
+    reason: "Image-change motion in frontend/src/components/GalleryFullscreenViewer.tsx."
+  T055:
+    agent: "frontend-agent"
+    reason: "Thumbnail-anchored open in frontend/src/components/ReleaseImageGallery.tsx."
+  T056:
+    agent: "frontend-agent"
+    reason: "Carousel token easing + momentum in frontend/src/components/FeedArticleBoard.tsx."
+  T057:
+    agent: "qa-agent"
+    reason: "Extends e2e theme-preference / library-filters / search-result-filters specs."
+  T058:
+    agent: "qa-agent"
+    reason: "Adds interruptibility check (rAF sampling) to e2e/tests/overlay-focus-management.spec.ts."
+  T059:
+    agent: "qa-agent"
+    reason: "Runs US2 validation (reduced-motion + interrupt + grep)."
+
+  # --- Phase 5: US3 — Overlay depth & focus management (P2) ---
+  T060:
+    agent: "qa-agent"
+    reason: "Authors e2e/tests/overlay-focus-management.spec.ts."
+  T061:
+    agent: "qa-agent"
+    reason: "Extends e2e/helpers/contrast.ts with an over-blur assertion + test."
+  T062:
+    agent: "frontend-agent"
+    reason: "Overlay material + fallbacks in frontend/src/motion/Overlay.tsx and global.css."
+  T063:
+    agent: "frontend-agent"
+    reason: "aria-labelledby + Overlay material consumption in frontend/src/components/ui/Modal.tsx."
+  T064:
+    agent: "frontend-agent"
+    reason: "Routes frontend/src/components/GalleryFullscreenViewer.tsx through Overlay."
+  T065:
+    agent: "qa-agent"
+    reason: "Adds a nested-overlay e2e fixture + focus-unwind assertion."
+  T066:
+    agent: "qa-agent"
+    reason: "Extends e2e release-detail-responsive + dark-mode-contrast specs."
+  T067:
+    agent: "qa-agent"
+    reason: "Runs US3 validation (focus trap/restore/scroll lock + contrast)."
+
+  # --- Phase 6: US4 — Touch gestures (P2) ---
+  T068:
+    agent: "qa-agent"
+    reason: "Authors e2e/tests/sheet-drag-dismiss.spec.ts."
+  T069:
+    agent: "qa-agent"
+    reason: "Authors e2e/tests/gallery-swipe.spec.ts."
+  T070:
+    agent: "frontend-agent"
+    reason: "Extends frontend/tests/unit/motion/Sheet.test.tsx."
+  T071:
+    agent: "frontend-agent"
+    reason: "Drag mechanics in frontend/src/motion/Sheet.tsx."
+  T072:
+    agent: "frontend-agent"
+    reason: "Scroll-boundary disambiguation in frontend/src/motion/Sheet.tsx."
+  T073:
+    agent: "frontend-agent"
+    reason: "Renders Modal position=end through Sheet in frontend/src/components/ui/Modal.tsx."
+  T074:
+    agent: "frontend-agent"
+    reason: "Verifies swipe-dismiss + press in frontend/src/components/HamburgerMenu.tsx."
+  T075:
+    agent: "frontend-agent"
+    reason: "Swipe + arrow keys + thumbnail sync in frontend/src/components/GalleryFullscreenViewer.tsx."
+  T076:
+    agent: "qa-agent"
+    reason: "Extends e2e/tests/header-responsive-nav.spec.ts with gesture + parity."
+  T077:
+    agent: "qa-agent"
+    reason: "Runs US4 validation (gesture + button + keyboard parity, real-device manual)."
+
+  # --- Phase 7: US5 — Consistent interaction & typography (P2) ---
+  T078:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/architecture/focus-ring-consistency.test.ts."
+  T079:
+    agent: "frontend-agent"
+    reason: "Unit test for display-heading tracking/leading tokens."
+  T080:
+    agent: "frontend-agent"
+    reason: "focusRing rollout across frontend/src/components/**."
+  T081:
+    agent: "frontend-agent"
+    reason: "Adds --tracking-display / --leading-display to @theme in frontend/src/styles/global.css."
+  T082:
+    agent: "frontend-agent"
+    reason: "Applies display tracking/leading to headings in frontend/src/components/**."
+  T083:
+    agent: "frontend-agent"
+    reason: "Removes underline-as-emphasis across frontend/src/components/**."
+  T084:
+    agent: "frontend-agent"
+    reason: "Scroll-edge header treatment in AppHeader.tsx + LandingHeader.tsx."
+  T085:
+    agent: "frontend-agent"
+    reason: "Calm focus transition in frontend/src/components/ui/Input.tsx."
+  T086:
+    agent: "frontend-agent"
+    reason: "Opacity-only entrance for status/empty components under frontend/src/components/."
+  T087:
+    agent: "frontend-agent"
+    reason: "Documents canonical Interaction Patterns in frontend/src/motion/README.md + audit.md."
+  T088:
+    agent: "qa-agent"
+    reason: "Extends e2e landing-page-responsive / dashboard-feed-grid / header-responsive-nav."
+  T089:
+    agent: "qa-agent"
+    reason: "Runs US5 validation (focus-ring consistency, typography, scroll-edge)."
+
+  # --- Phase 8: Polish & cross-cutting ---
+  T090:
+    agent: "frontend-agent"
+    reason: "Finalizes specs/059-apple-hig-component-polish/audit.md against the implemented component changes."
+  T091:
+    agent: "qa-agent"
+    reason: "Authors e2e/tests/motion-performance.spec.ts (CDP CPU throttling, frame-interval assertion)."
+  T092:
+    agent: "frontend-agent"
+    reason: "Runs the frontend gate: npm run test + lint + build."
+  T093:
+    agent: "qa-agent"
+    reason: "Runs the full e2e gate: playwright test + axe + dark-mode-contrast on both themes."
+  T094:
+    agent: "default"
+    reason: "Manual real-device feel-checks from research.md — human judgment, no single agent scope."
+  T095:
+    agent: "default"
+    reason: "Side-by-side responsiveness survey with 10+ people (SC-009) — human activity."
+  T096:
+    agent: "default"
+    reason: "Writes the PR description documenting the three constitution deviations — cross-cutting authoring task."
+  T097:
+    agent: "qa-agent"
+    reason: "Full quickstart.md validation pass against the Definition-of-Done table."
