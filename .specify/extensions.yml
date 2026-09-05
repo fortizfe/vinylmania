@@ -1,4 +1,5 @@
 installed:
+- agent-assign
 - git
 settings:
   auto_execute_hooks: true
@@ -128,6 +129,14 @@ hooks:
     priority: 10
     prompt: Commit task changes?
     description: Auto-commit after task generation
+    condition: null
+  - extension: agent-assign
+    command: speckit.agent-assign.assign
+    enabled: true
+    optional: true
+    priority: 10
+    prompt: Assign agents to the generated tasks?
+    description: Automatically assign specialized agents to tasks after generation
     condition: null
   after_implement:
   - extension: git
