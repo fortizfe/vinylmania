@@ -81,13 +81,13 @@ reduced-motion transform leak found in the implementation.
 |---|---|---|---|---|---|
 | `ui/Modal` | rework | INT, SPACE, DEPTH | apple-design, animate | Re-home on `Overlay`; spring enter/exit, interruptible, same-path exit; reduced-motion opacity-only | ✅ overlay-focus-management, reduced-motion |
 | `ui/ThemeToggle` | refine | INT, CRAFT | animate | Knob translate → `spring.default`; sky/stars → token crossfade; reduced-motion static | ✅ theme-preference |
-| `ui/ViewModeToggle` | rework | INT, SPACE, CRAFT | animate, emil | Active state → shared-element sliding pill (`layoutId` + `spring.default`); reduced-motion jump | ✅ view-mode-toggle, reduced-motion |
+| `ui/ViewModeToggle` | rework | INT, SPACE, CRAFT | animate, emil | Active state → shared-element sliding pill on `spring.default`; reduced-motion jump. **Shipped as a measured-transform `m.div`** (target rect read from the live buttons, animated on `x/y/width/height`), **not `layoutId`** — see Deviations from plan | ✅ view-mode-toggle, reduced-motion |
 | `filters/CollapsibleFilterPanel` | refine | INT, FB | animate | Height+opacity disclosure motion (measured height), chevron rotate on token; reduced-motion instant | ✅ library-filters, search-result-filters, reduced-motion |
 | `ui/Skeleton` + all `*Skeleton` | refine | CRAFT | apple-design | `animate-pulse` gated behind `motion-safe`; dims/structure unchanged | ✅ reduced-motion |
 | `components/GalleryFullscreenViewer` (image change) | refine | INT, SPACE | animate | Image swap → directional slide + `spring.momentum`; (swipe in US4) | ✅ reduced-motion (release-detail-responsive in US3/US4) |
 | `components/ReleaseImageGallery` (thumb → viewer) | refine | SPACE | apple-design | Open viewer anchored to the tapped thumbnail (transform-origin) | ✅ reduced-motion (release-detail-responsive in US3/US4) |
 | `components/FeedArticleBoard` / carousel | refine | INT, DM | animate | No carousel exists (responsive grid) — no-op; token easing applies if one is added | n/a (dashboard-feed-grid) |
-| `components/*Section` (Release/Master detail sections) | conforms | — | apple-design | Static content; no motion warranted (emil: don't animate content) | — |
+| `components/*Section` (Release/Master detail sections) | conforms (motion) | — | apple-design | Static content; no motion warranted (emil: don't animate content). Typography handled separately in US5: `MasterReleaseDetailsSection` + `ReleaseDetailsSection` are `refine` (display-heading tokens); `ReleaseAdditionalInfoSection`, `ReleaseTracklistSection`, `MasterReleaseOtherDetailsSection` stay `conforms` | — |
 
 ---
 
@@ -120,7 +120,7 @@ are proven closed by e2e for all three overlays. No focus, scroll-lock or
 material defect found in the implementation; two secondary observations logged
 below.
 
-**Notes / follow-ups (not US3-blocking):**
+**Notes / follow-ups (not US3-blocking — carried to Deviations from plan #5–#7 as known/accepted):**
 - The fullscreen gallery `[role="dialog"]` has no accessible name
   (`GalleryFullscreenViewer` passes no `labelledBy`/`aria-label` to `Overlay`).
   Not a `wcag2a`/`aa` axe failure (the `aria-dialog-name` rule is
@@ -263,7 +263,7 @@ focus treatment is always the shared `focusRing`.
 |---|---|---|---|
 | `pressable` | native `:active` on any button/link/role control | `--motion-duration-press`, `--ease-out` (CSS) | Button, ThemeToggle, ViewModeToggle opts, StarRating stars, BackLink, InlineEditableField trigger, Checkbox row, SelectableListFilter rows, HeaderNavIcons, HeaderSearchBox, HamburgerMenu trigger + rows, ResultCardActions, GoogleSignInButton, Record{Card,ListRow}, SearchResult{Card,ListRow}, FeedArticleCard, Feed{Category,Source}FilterBar chips, MasterVersionsTable rows, GalleryFullscreenViewer thumbnails |
 | `binary-switch` | `role="switch"` + `aria-checked` | `spring.default`, `--motion-duration-fade` | ThemeToggle |
-| `segmented-selector` | `role="radiogroup"` / `role="radio"` + roving tabindex + Arrow keys | `spring.default` (shared-element pill via `layoutId`) | ViewModeToggle |
+| `segmented-selector` | `role="radiogroup"` / `role="radio"` + roving tabindex + Arrow keys | `spring.default` (shared-element pill via measured `m.div` transform — see Deviations from plan) | ViewModeToggle |
 | `multi-select-list` | native checkbox + `<label htmlFor>` / `aria-pressed` chip | `--motion-duration-press` | Checkbox, SelectableListFilter options, Feed{Category,Source}FilterBar |
 | `disclosure` | `<button>` toggle + measured height + chevron direction | `--motion-duration-collapse`, `easing.out` | CollapsibleFilterPanel |
 | `dismissible-layer` | `role="dialog"` `aria-modal` + trap/restore/scroll-lock + one material | `spring.default` / `.sheet` / `.momentum`, `--motion-duration-fade` | Overlay, Sheet, Modal (center + end), GalleryFullscreenViewer, HamburgerMenu drawer, SelectableListFilter modal |
@@ -275,7 +275,7 @@ focus treatment is always the shared `focusRing`.
 | `ui/ThemeToggle` vs `ui/ViewModeToggle` vs `ui/StarRating` | ✅ refine | CONS | apple-design, emil | Documented as `binary-switch` / `segmented-selector` / rating-input in `motion/README.md`; focus + press unified, semantics kept distinct | theme-preference, view-mode-toggle |
 | `filters/CollapsibleFilterPanel` + any accordion | ✅ refine | CONS | emil | `disclosure` pattern documented (chevron dir, `--motion-duration-collapse`, aria) — shipped in US2, catalogued here | library-filters |
 | `components/RecordCard` + `RecordListRow` ("Open record" `underline`) | ✅ refine | TYPO, CRAFT | apple-design | underline-as-emphasis → `text-primary dark:text-primary-text font-medium not-italic` (T083) | library-list-responsive |
-| `components/*` + `pages/*` display headings (page/pillar/showcase) | ✅ refine | TYPO | apple-design | `tracking-display` (-0.02em) + `leading-display` (1.05) on `--font-display` headings (`Master/ReleaseDetailsSection`, `UnderConstruction`, `LandingPillarSection`, `SearchResultsPage`, `ProfilePage`, `LibraryListPage`); `leading-tight` replaced (not stacked) → no CLS (T081/T082) | landing-page-responsive, dashboard-feed-grid |
+| `components/*` + `pages/*` display headings (page/pillar/showcase) | ✅ refine | TYPO | apple-design | `tracking-display` (-0.02em) + `leading-display` (1.05) on `--font-display` headings — shipped in: `MasterReleaseDetailsSection`, `ReleaseDetailsSection`, `UnderConstruction`, `LandingPillarSection` (components) and `SearchResultsPage`, `ProfilePage`, `LibraryListPage` (pages); `leading-tight` replaced (not stacked) → no CLS (T081/T082) | landing-page-responsive, dashboard-feed-grid |
 | `components/LandingHero`, `LandingPillarSection` | ✅ refine | TYPO, CRAFT | apple-design | `LandingPillarSection` heading gets the display tokens; `LandingHero`'s only display-font mark is `VinylmaniaWordmark` (brand mark — exempt), so no heading change there; CTA press shipped in US1 | landing-page-responsive |
 | `components/AppHeader`, `LandingHeader` | ✅ refine | DEPTH, CRAFT | apple-design | Hard `border-b` → `useScrolledPast` + `.header-scroll-edge` box-shadow that fades in on scroll (`transition-shadow` + `--motion-duration-fade`); opaque near-black surface kept; box-shadow never a border → no layout shift (T084) | header-responsive-nav, landing-page-responsive |
 | Body-text links/emphasis across composites | ✅ refine | TYPO | apple-design | `underline` grep swept; only `RecordCard`/`RecordListRow` were decoration-as-emphasis; genuine links + `no-underline` resets kept (see US5 status note) | (per-screen specs) |
@@ -288,8 +288,59 @@ focus treatment is always the shared `focusRing`.
 
 ---
 
+## Scope components with no story change (reviewed, `conforms` / inherited)
+
+These were enumerated in `spec.md` → Scope but did not need a source change of
+their own; each was still reviewed against Principle XI (Principle XI: "MUST NOT
+be skipped because a change looks small").
+
+| Component | Disposition | HIG | Skill | Rationale | e2e |
+|---|---|---|---|---|---|
+| `components/FiltersControl` | conforms | CONS | emil | Pure composition wrapper (`CollapsibleFilterPanel` + `SelectableListFilter` + `FilterActions`); renders no interactive element of its own, so press/focus/motion all come from its children's rows above | ✅ library-filters, search-result-filters (inherited) |
+| `components/DiscogsConnectionCard` | conforms | CONS, CRAFT | emil, apple-design | Static status card on `<Card>`; its only control is a `Button` (inherits US1 press + shared `focusRing`); spec-058 contrast already correct; no motion warranted | ✅ discogs-account-link (inherited) |
+| `components/DiscogsConnectionCardSkeleton` | conforms | CRAFT | apple-design | Covered by the `ui/Skeleton` + all `*Skeleton` row (US2) — `animate-pulse` gated behind `motion-safe`; dims/structure unchanged | ✅ reduced-motion |
+| `components/RecordDetailSkeleton` | conforms | CRAFT | apple-design | Same as above — inherits the `motion-safe` pulse gate from `ui/Skeleton`; no structural change | ✅ reduced-motion |
+| `components/ReleaseAdditionalInfoSection` | conforms | — | apple-design | Static content, no `--font-display` heading; no motion or typography change (emil: don't animate content) | — |
+| `components/ReleaseTracklistSection` | conforms | — | apple-design | Static tabular content; no motion warranted; headings are body-scale, not display | — |
+| `components/MasterReleaseOtherDetailsSection` | conforms | TYPO | apple-design | Static content; the "View on Discogs" `no-underline hover:underline` link is a genuine external-link hover affordance, not decoration-as-emphasis — kept (US5 `underline` sweep note) | — |
+
+All `*Skeleton` components (`RecordCardSkeleton`, `RecordListRowSkeleton`,
+`SearchResultCardSkeleton`, `FeedArticleCardSkeleton`, `MasterVersionsTableSkeleton`,
+`DiscogsConnectionCardSkeleton`, `RecordDetailSkeleton`) are covered collectively
+by the **`ui/Skeleton` + all `*Skeleton`** row under US2.
+
+---
+
+## Deviations from plan
+
+Recorded here per the Development Workflow gate. All are **known and accepted** —
+none is an open bug. The three constitution-level deviations
+(`motion` dependency, the `frontend/src/motion/` module, the CSS motion custom
+properties) are tracked in `plan.md` → Complexity Tracking and carried into the
+PR description (T096).
+
+| # | Deviation | Planned | Shipped | Why accepted |
+|---|---|---|---|---|
+| 1 | `ViewModeToggle` sliding pill | `m` + `layoutId` shared-element projection (`contracts/component-api-changes.md`, tasks T051) | A measured-transform `m.div`: the active option's rect is read from the live buttons in `useLayoutEffect` (+ `ResizeObserver`) and animated on `x/y/width/height` with `spring.default` | No `layout` projection / reflow jitter; already unit- + e2e-tested; behaviour (slide on `spring.default`, reduced-motion jump) is identical. Kept deliberately even after the `domMax` bump made `layoutId` available. |
+| 2 | `MotionProvider` feature bundle | `<LazyMotion features={domAnimation} strict>` (plan, tasks T017) | `<LazyMotion features={domMax} strict>` (lazy `motionFeatures` chunk, ~27.6 KB gzip, still out of the initial payload) | `domAnimation` does not include the `drag` gesture that US4 (FR-010 / FR-012) requires. `domMax` is the smallest bundle that does. Still lazy-loaded, `strict` still enforces `m`. |
+| 3 | `usePrefersReducedMotion` hook | Not in the original `motion/` file list (plan lists 6 files) | Added as a 7th `motion/` primitive and exported from the barrel | Components that branch their `transition` prop (e.g. `ViewModeToggle`, `CollapsibleFilterPanel`) need the boolean at render time; `MotionConfig reducedMotion="user"` only covers `m`-managed props. Thin wrapper over `motion`'s `useReducedMotion`, keeps the import boundary intact. |
+| 4 | `Overlay` public props | Contract lists 6 props (`open`, `onClose`, `variant`, `restoreFocusRef`, `labelledBy`, `children`) | Additive optional props: `ariaLabel`, `surfaceTestId`, `exitTransition`, `surfaceDrag`, `surfaceClassName`, `surfaceStyle`, `surface` (`'card'`\|`'bare'`), `scrim`, `scrimTestId`; exported types `OverlaySurfaceDrag`, `OverlayScrimMaterial` | All additive, all optional, no existing prop removed or repurposed (Principle VI stays MINOR). Needed to let `Sheet` inject drag, `GalleryFullscreenViewer` opt out of the `<Card>` surface, and consumers keep their historical `data-testid`s. |
+| 5 | `useEscapeKey` is not stack-aware (US3 observation) | — | One Escape with the nested confirm-in-Modal stack open fires **both** overlays' handlers | **Accepted.** No nested-overlay product pattern exists yet (the only nested case is the DEV-only `NestedOverlayHarness` test fixture). The T065 tests dismiss the inner dialog by its button for a deterministic unwind. A topmost-only Escape is the cleaner behaviour *if* nested overlays ever become a real pattern. |
+| 6 | FR-011 scroll-vs-dismiss "scroll first" branch (US3/US4 observation) | Drag on scrollable content away from its boundary scrolls instead of dismissing | Only fully exercised for a **y-axis** sheet, which the product does not have yet. The one real `Sheet` is the x-axis hamburger drawer; its content scrolls only vertically, so `scrollBlocksDismiss` (gating an x-axis dismiss on `scrollLeft`, always 0) is orthogonal to it | **Accepted.** The classic "drag down while scrolled → scroll first" case stays covered by the `scrollBlocksDismiss` unit tests in `Sheet.test.tsx`; it activates automatically when a y-axis sheet is added. |
+| 7 | Fullscreen gallery dialog has no accessible name (US3 observation) | `Overlay` supports `labelledBy` / `ariaLabel` | `GalleryFullscreenViewer` passes neither to `Overlay` | **Accepted / minor.** Not a `wcag2a`/`aa` axe failure (`aria-dialog-name` is best-practice-tagged). Worth a one-line follow-up (`ariaLabel="Image viewer"`), out of scope for T090. |
+
+---
+
 ## Coverage check
 
-- Every component listed in spec.md → Scope appears above exactly once (atomic `ui/*`, `filters/*`, `brand/*`, and all composites).
+- **SC-002 (component coverage)**: every component listed in `spec.md` → Scope has a row — under its story section when it took a change, under **Scope components with no story change** or the **`ui/Skeleton` + all `*Skeleton`** collective row when it did not. Atomic `ui/*`, `filters/*`, `brand/*`, and all composites accounted for; skeletons are covered collectively by one explicit row.
+- **SC-002 (task → row)**: every implementation task in `tasks.md` maps to a row here — verified T090:
+  - **Foundational T001–T021** → `frontend/src/motion/` + `global.css` + `focusRing.ts` + App-root rows (Foundational section). `usePrefersReducedMotion` and the `domMax` bundle are logged under Deviations from plan.
+  - **US1 T022–T044** → the US1 press/`focusRing` rows (Button, StarRating, ThemeToggle, ViewModeToggle, BackLink, InlineEditableField, Checkbox, SelectableListFilter, FilterActions, CollapsibleFilterPanel trigger, HeaderNavIcons, HamburgerMenu trigger, HeaderSearchBox, ResultCardActions, GoogleSignInButton, Record/SearchResult Card+ListRow, FeedArticleCard, Feed*FilterBar, MasterVersionsTable). T033–T036/T042 are verify-inheritance tasks (the control consumes `Button` / `iconButtonClassName`, which carry the shipped press + `focusRing`).
+  - **US2 T045–T059** → the US2 motion rows (Modal, ThemeToggle, ViewModeToggle, CollapsibleFilterPanel, Skeleton, GalleryFullscreenViewer, ReleaseImageGallery, FeedArticleBoard, `*Section` conforms).
+  - **US3 T060–T067** → the US3 depth/focus rows (Overlay, Modal, GalleryFullscreenViewer, `contrast.ts`, `NestedOverlayHarness`, Card).
+  - **US4 T068–T077** → the US4 gesture rows (Sheet, Modal `position="end"`, HamburgerMenu, GalleryFullscreenViewer).
+  - **US5 T078–T089** → the US5 consistency/typography rows (`focusRing` rollout, toggle-pattern doc, disclosure-pattern doc, RecordCard/RecordListRow underline, display-heading typography, LandingHero/LandingPillarSection, AppHeader/LandingHeader, body-text emphasis sweep, Badge, Input, Avatar, status/empty components, brand marks, CloseIcon).
+  - **Polish T090–T097** are cross-cutting (this finalization, e2e perf, gates, PR write-up) — not per-component.
 - `conforms` rows still name the principle checked + skill consulted (Principle XI: "MUST NOT be skipped because a change looks small").
 - Story mapping: US1 = press/RESP · US2 = motion/INT · US3 = depth+focus/DEPTH · US4 = gestures/DM · US5 = consistency+typography/CONS+TYPO. Foundational precedes all.

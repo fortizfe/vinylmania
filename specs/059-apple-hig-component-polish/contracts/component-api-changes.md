@@ -45,7 +45,9 @@ No prop changes (`theme`, `onToggle`, `className`).
 
 ## `ui/ViewModeToggle.tsx`
 
-**Change**: active-option background becomes a **shared-element sliding pill** (`m` + `layoutId` + `spring.default`) instead of the color snapping between buttons. `role="radiogroup"` / roving tabindex / arrow keys unchanged. Reduced-motion → pill jumps (no layout animation). Shared `focusRing`.
+**Change**: active-option background becomes a **shared-element sliding pill** on `spring.default` instead of the color snapping between buttons. `role="radiogroup"` / roving tabindex / arrow keys unchanged. Reduced-motion → pill jumps (no animation). Shared `focusRing`.
+
+> **Shipped (deviation)**: implemented as a **measured-transform `m.div`**, not `layoutId`. The active option's rect is read from the live buttons in `useLayoutEffect` (+ `ResizeObserver`) and the pill animates on `x/y/width/height` — a plain transform that needs no `layout` projection, so there is no reflow jitter. Kept deliberately even after the `MotionProvider` `domAnimation`→`domMax` bump (US4) made `layoutId` available. See `audit.md` → Deviations from plan #1.
 
 No prop changes (`mode`, `onChange`, `screen`).
 

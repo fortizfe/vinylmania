@@ -222,9 +222,9 @@ description: "Task list for Apple HIG Component Polish"
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T090 [P] Finalize [audit.md](./audit.md) — every row marked done, every implementation task cross-checked against a row (SC-002)
+- [X] T090 [P] Finalize [audit.md](./audit.md) — every row marked done, every implementation task cross-checked against a row (SC-002)
 - [ ] T091 [P] Add `e2e/tests/motion-performance.spec.ts` — CDP `Emulation.setCPUThrottlingRate(4)`, measure frame interval during modal / drawer / gallery transitions via `PerformanceObserver`, assert p95 ≤ ~20 ms or a `data-motion-reduced` fallback marker (SC-010)
-- [ ] T092 Run full `frontend` gate: `npm run test` + `npm run lint` + `npm run build`
+- [X] T092 Run full `frontend` gate: `npm run test` + `npm run lint` + `npm run build`
 - [ ] T093 Run full `e2e` gate: `npx playwright test` + axe `@a11y` + `dark-mode-contrast.spec.ts` on both themes; confirm ≥ baseline pass rate (SC-005)
 - [ ] T094 [P] Execute the "Open feel-checks" from [research.md](./research.md) on a real mid-tier device; record outcomes in the PR
 - [ ] T095 [P] Run the side-by-side responsiveness comparison (SC-009) with ≥ 10 people; record ratings

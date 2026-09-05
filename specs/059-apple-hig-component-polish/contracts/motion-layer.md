@@ -40,7 +40,7 @@ export const dismiss = {
 <MotionProvider>{children}</MotionProvider>
 ```
 
-- Wraps children in `<LazyMotion features={domAnimation} strict>` + `<MotionConfig reducedMotion="user">`.
+- Wraps children in `<LazyMotion features={domMax} strict>` + `<MotionConfig reducedMotion="user">`. *(Shipped with `domMax`, not `domAnimation` — the `drag` gesture behind US4 / FR-010 / FR-012 needs it; still a lazy chunk, ~27.6 KB gzip, out of the initial payload. See `audit.md` → Deviations from plan #2.)*
 - `strict` forces use of the `m` component (no full `motion` component) — keeps the bundle small and is a lint-style guard.
 - Mounted once, alongside `ThemeProvider`, above the router.
 - **Contract**: with `reducedMotion="user"`, every `m` element automatically drops `transform`/`layout` animations when `prefers-reduced-motion: reduce`, animating only `opacity`. Components still must not *depend* on motion for meaning.
@@ -61,6 +61,8 @@ interface OverlayProps {
   children: React.ReactNode;
 }
 ```
+
+*Shipped with additive optional props beyond this list (all backward-compatible, Principle VI stays MINOR): `ariaLabel`, `surfaceTestId`, `exitTransition`, `surfaceDrag`, `surfaceClassName`, `surfaceStyle`, `surface` (`'card'`\|`'bare'`), `scrim`, `scrimTestId`, plus exported types `OverlaySurfaceDrag` / `OverlayScrimMaterial`. They let `Sheet` inject the drag-to-dismiss surface, `GalleryFullscreenViewer` opt out of the `<Card>` surface, and consumers keep historical `data-testid`s. See `audit.md` → Deviations from plan #4.*
 
 **Behavioral guarantees**:
 1. Renders `role="dialog" aria-modal="true"` on the surface; `aria-labelledby` when `labelledBy` given.
@@ -103,6 +105,7 @@ interface SheetProps extends Omit<OverlayProps, 'variant'> {
 | `useFocusTrap` | `(ref: RefObject<HTMLElement>, active: boolean) => void` | While `active`: focus enters the container, `Tab` wraps at both ends, no focusable outside is reachable. No-op when inactive. |
 | `useScrollLock` | `(active: boolean) => void` | While `active`: body scroll locked, scrollbar gutter compensated, ref-counted. Restores exact prior state. |
 | `useRestoreFocus` | `(active: boolean, ref?: RefObject<HTMLElement>) => void` | Captures `activeElement` on `active` rising edge; restores on falling edge / unmount if the target is still connected. |
+| `usePrefersReducedMotion` | `() => boolean` | *(Added — not in the original plan file list.)* Thin wrapper over `motion`'s `useReducedMotion`; lets components that branch their own `transition` prop (`ViewModeToggle`, `CollapsibleFilterPanel`) read the preference at render time, since `MotionConfig reducedMotion="user"` only auto-handles `m`-managed props. See `audit.md` → Deviations from plan #3. |
 
 Each has its own Vitest suite (jsdom) written before implementation (Principle I).
 
