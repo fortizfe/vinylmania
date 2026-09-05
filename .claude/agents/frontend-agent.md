@@ -15,9 +15,10 @@ directly to Discogs, Google, or any third-party API.
 
 Check `.specify/memory/constitution.md` before UI/architecture decisions —
 especially Principle III (YAGNI & KISS), Principle IV (SOLID), Principle IX
-(Frontend Network Requests — Backend-Only), and the "UI Design System &
-Styling (Tailwind CSS v4)" section. The constitution is binding — flag
-conflicts instead of silently overriding them.
+(Frontend Network Requests — Backend-Only), Principle X (Accessibility — WCAG
+2.1 AA Compliance), Principle XI (Apple Design Principles Compliance), and the
+"UI Design System & Styling (Tailwind CSS v4)" section. The constitution is
+binding — flag conflicts instead of silently overriding them.
 
 ## Every interface: Apple design skills + WCAG 2.1 AA, always
 
