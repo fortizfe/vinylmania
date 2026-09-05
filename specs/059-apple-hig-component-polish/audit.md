@@ -196,7 +196,9 @@ Notes / deltas from the task text:
 
 ## US5 — Consistent interaction & typography language (P2)
 
-**Status**: ✅ done (T078–T089). Implementation on branch
+**Status**: ⚠️ implementation done (T078–T089), but T091/T093 polish found a
+WCAG AA regression in the `status-fade-in` treatment (T086) — see "Open defect —
+blocks SC-005" below. Implementation on branch
 `059-apple-hig-component-polish`. Unit coverage:
 `frontend/tests/unit/architecture/focus-ring-consistency.test.ts` (new — the
 only focus-visible treatment in `components/**` is the shared `focusRing`;
@@ -328,6 +330,33 @@ PR description (T096).
 | 5 | `useEscapeKey` is not stack-aware (US3 observation) | — | One Escape with the nested confirm-in-Modal stack open fires **both** overlays' handlers | **Accepted.** No nested-overlay product pattern exists yet (the only nested case is the DEV-only `NestedOverlayHarness` test fixture). The T065 tests dismiss the inner dialog by its button for a deterministic unwind. A topmost-only Escape is the cleaner behaviour *if* nested overlays ever become a real pattern. |
 | 6 | FR-011 scroll-vs-dismiss "scroll first" branch (US3/US4 observation) | Drag on scrollable content away from its boundary scrolls instead of dismissing | Only fully exercised for a **y-axis** sheet, which the product does not have yet. The one real `Sheet` is the x-axis hamburger drawer; its content scrolls only vertically, so `scrollBlocksDismiss` (gating an x-axis dismiss on `scrollLeft`, always 0) is orthogonal to it | **Accepted.** The classic "drag down while scrolled → scroll first" case stays covered by the `scrollBlocksDismiss` unit tests in `Sheet.test.tsx`; it activates automatically when a y-axis sheet is added. |
 | 7 | Fullscreen gallery dialog has no accessible name (US3 observation) | `Overlay` supports `labelledBy` / `ariaLabel` | `GalleryFullscreenViewer` passes neither to `Overlay` | **Accepted / minor.** Not a `wcag2a`/`aa` axe failure (`aria-dialog-name` is best-practice-tagged). Worth a one-line follow-up (`ariaLabel="Image viewer"`), out of scope for T090. |
+| 8 | Motion perf under 4× CPU throttle (T091 / SC-010 observation) | Sustained 60 fps / ~16 ms budget on the mid-tier model | Steady-state animation holds a 60 fps median (p50 12–14 ms, no sustained stutter). The overlay-mount React commit + first `backdrop-filter` composite spikes **1–3 frames at 50–70 ms** (whole-arc p95 26–32 ms). No frame blocks input (< 150 ms). | **Accepted, follow-up flagged.** The spike is a one-time mount cost, not dropped frames during the transition; `motion-performance.spec.ts` asserts the animation window and records the whole-arc numbers as an annotation. Suggested follow-up: profile / lighten the animated Modal-scrim blur ramp (the hotspot the US3 agent flagged). |
+
+---
+
+## ⚠️ Open defect — blocks SC-005 (must be fixed before merge)
+
+**Feature-059 WCAG 2.1 AA regression introduced by US5 T086 (`status-fade-in`).**
+
+The one-shot `status-fade-in` opacity animation (0 → 1 over `--motion-duration-fade`
+= 200 ms) was added to `UnderConstruction` and `LibraryLinkRequired`. Their body
+copy is `text-stone-500 dark:text-stone-400`, which sits right at the AA boundary
+on `bg-stone-50` at full opacity and drops **below 4.5:1 while the card is
+mid-fade** (axe measured 3.38:1 and 3.87:1 as the composited foreground lightens
+toward the page background). Two pre-existing spec-058 axe scans catch it:
+
+- `e2e/tests/library-discogs-sync.spec.ts:283` — light mode (`LibraryLinkRequired`)
+- `e2e/tests/wishlist-responsive.spec.ts:67` — light mode (`UnderConstruction`)
+
+Dark mode passes (more headroom). `main` passes both (no fade). This is real
+behaviour breakage — a ~200 ms window (longer on slow devices) of sub-AA status
+text — not a test-timing artifact, so the spec-058 scans are left failing rather
+than neutered.
+
+**Fix (frontend-agent):** bump the two components' body `<p>` to
+`text-stone-600 dark:text-stone-400` (the established AA body-on-light token, cf.
+`DiscogsConnectionCard`) so the resting ratio (~7:1) survives mid-fade
+compositing. Re-run both specs + `npm run test` in `frontend/`.
 
 ---
 

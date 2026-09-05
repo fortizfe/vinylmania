@@ -224,6 +224,88 @@ export function expectGradualMotion(frames: MotionFrame[], label: string): void 
 }
 
 /**
+ * Spec 059 Polish — T091 / SC-010 (60 fps under load).
+ *
+ * `startFrameCadenceRecorder` installs an in-page `requestAnimationFrame` loop
+ * that records the interval between successive animation frames, plus a
+ * `PerformanceObserver('long-animation-frame')` that captures any frame the
+ * browser itself flagged as long (> 50 ms per the LoAF spec). Install it
+ * synchronously, then trigger the transition on the next line so the window
+ * straddles the whole enter → settle (or enter → interrupt → exit) arc.
+ *
+ * `collectFrameCadence` waits out the window and returns the raw samples;
+ * `percentile` turns the intervals into the p95 the SC-010 gate asserts on.
+ */
+export interface FrameCadence {
+  /** rAF-to-rAF intervals in ms across the recording window. */
+  intervals: number[];
+  /** Frames the browser flagged as long-animation-frames during the window. */
+  longFrames: { duration: number; blockingDuration: number }[];
+  /** Whether `long-animation-frame` was observable in this browser. */
+  loafSupported: boolean;
+  /** Total recording duration in ms. */
+  elapsed: number;
+}
+
+export async function startFrameCadenceRecorder(page: Page, durationMs = 1600): Promise<void> {
+  await page.evaluate((durationMs) => {
+    const w = window as unknown as {
+      __cadence: {
+        intervals: number[];
+        longFrames: { duration: number; blockingDuration: number }[];
+        loafSupported: boolean;
+        elapsed: number;
+      };
+      __cadenceObserver?: PerformanceObserver;
+    };
+    w.__cadence = { intervals: [], longFrames: [], loafSupported: false, elapsed: 0 };
+
+    try {
+      const po = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as (PerformanceEntry & {
+          blockingDuration?: number;
+        })[]) {
+          w.__cadence.longFrames.push({
+            duration: entry.duration,
+            blockingDuration: entry.blockingDuration ?? 0,
+          });
+        }
+      });
+      po.observe({ type: 'long-animation-frame', buffered: true } as PerformanceObserverInit);
+      w.__cadenceObserver = po;
+      w.__cadence.loafSupported = true;
+    } catch {
+      // long-animation-frame unsupported — the rAF-interval sampler still runs.
+    }
+
+    const start = performance.now();
+    let last = start;
+    const tick = (now: number) => {
+      w.__cadence.intervals.push(now - last);
+      last = now;
+      w.__cadence.elapsed = now - start;
+      if (now - start < durationMs) requestAnimationFrame(tick);
+      else w.__cadenceObserver?.disconnect();
+    };
+    requestAnimationFrame(tick);
+  }, durationMs);
+}
+
+export async function collectFrameCadence(page: Page, waitMs = 1700): Promise<FrameCadence> {
+  await page.waitForTimeout(waitMs);
+  return page.evaluate(
+    () => (window as unknown as { __cadence: FrameCadence }).__cadence,
+  );
+}
+
+export function percentile(values: number[], p: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.max(0, Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1));
+  return sorted[idx];
+}
+
+/**
  * SC-003 — an interrupted transition never jumps to its start or end value in
  * a single frame. Asserts the per-frame delta of every tracked quantity stays
  * bounded across the whole recording (a jump shows up as one outsized delta).
