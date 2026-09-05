@@ -23,7 +23,13 @@ export function Input({ label, id, hideLabel = false, className, ...props }: Inp
         id={id}
         {...props}
         className={clsx(
-          'min-h-11 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-stone-800 dark:bg-stone-950 dark:text-stone-100',
+          // Calm tokenized focus-border transition (spec 059 US5 T085): only
+          // the border *colour* animates, over `--motion-duration-fade` with
+          // the shared `ease-out` curve — the border width never changes, so
+          // there is no layout shift. `focus:border-primary` is kept as the
+          // input-field focus treatment (distinct from the shared `focusRing`
+          // used on buttons/toggles — see contracts §ui/Input).
+          'min-h-11 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 transition-[border-color] duration-(--motion-duration-fade) ease-out focus:border-primary focus:outline-none dark:border-stone-800 dark:bg-stone-950 dark:text-stone-100',
           className,
         )}
       />

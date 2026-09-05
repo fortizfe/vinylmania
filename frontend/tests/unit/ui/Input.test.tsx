@@ -31,4 +31,17 @@ describe('Input', () => {
 
     expect(screen.getByLabelText('Search Discogs').className).toMatch(/min-h-11/);
   });
+
+  it('keeps the border-colour focus treatment and animates it on a motion token (spec 059 US5 T085)', () => {
+    render(
+      <Input id="record-search" label="Search Discogs" value="" onChange={() => {}} />,
+    );
+
+    const input = screen.getByLabelText('Search Discogs');
+    expect(input.className).toMatch(/focus:border-primary/);
+    // Only the border colour animates (no width change → no layout shift).
+    expect(input.className).toMatch(/transition-\[border-color\]/);
+    expect(input.className).toMatch(/duration-\(--motion-duration-fade\)/);
+    expect(input.className).not.toMatch(/duration-\d/);
+  });
 });

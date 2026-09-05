@@ -20,7 +20,10 @@ export function RecordListRow({ entry }: RecordListRowProps) {
           className="flex flex-col gap-1 text-stone-500 italic dark:text-stone-400"
         >
           <p>Couldn&apos;t load catalog details for this record right now.</p>
-          <Link to={`/app/library/records/${entry.id}`} className="text-sm underline">
+          <Link
+            to={`/app/library/records/${entry.id}`}
+            className="text-sm font-medium text-primary not-italic dark:text-primary-text"
+          >
             Open record
           </Link>
         </Card>

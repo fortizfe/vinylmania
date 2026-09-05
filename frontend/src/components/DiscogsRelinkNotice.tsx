@@ -19,7 +19,7 @@ const DEFAULT_MESSAGE =
  */
 export function DiscogsRelinkNotice({ message = DEFAULT_MESSAGE }: DiscogsRelinkNoticeProps) {
   return (
-    <Card>
+    <Card className="status-fade-in">
       <p className="text-stone-700 dark:text-stone-300">{message}</p>
       <Link
         to="/app/profile"

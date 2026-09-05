@@ -16,7 +16,7 @@ export function LandingPillarSection({
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-accent/10 dark:text-accent">
         {icon}
       </span>
-      <h2 className="font-display text-xl leading-tight text-stone-900 dark:text-stone-100">
+      <h2 className="font-display text-xl leading-display tracking-display text-stone-900 dark:text-stone-100">
         {title}
       </h2>
       <p className="text-base text-stone-500 dark:text-stone-400">{description}</p>

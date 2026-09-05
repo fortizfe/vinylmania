@@ -8,7 +8,7 @@ interface MasterReleaseDetailsSectionProps {
 export function MasterReleaseDetailsSection({ master }: MasterReleaseDetailsSectionProps) {
   return (
     <div>
-      <h3 className="font-display text-lg leading-tight text-stone-900 dark:text-stone-100">
+      <h3 className="font-display text-lg leading-display tracking-display text-stone-900 dark:text-stone-100">
         {master.title}
       </h3>
       {master.artists.map((artist) => (

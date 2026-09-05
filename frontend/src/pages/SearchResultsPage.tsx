@@ -132,7 +132,7 @@ export function SearchResultsPage() {
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl leading-tight text-stone-900 dark:text-stone-100">
+        <h1 className="font-display text-2xl leading-display tracking-display text-stone-900 dark:text-stone-100">
           Search results
         </h1>
         <ViewModeToggle mode={mode} onChange={setMode} screen="search" />

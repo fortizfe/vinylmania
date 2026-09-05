@@ -196,20 +196,70 @@ Notes / deltas from the task text:
 
 ## US5 — Consistent interaction & typography language (P2)
 
+**Status**: ✅ done (T078–T087). Implementation on branch
+`059-apple-hig-component-polish`. Unit coverage:
+`frontend/tests/unit/architecture/focus-ring-consistency.test.ts` (new — the
+only focus-visible treatment in `components/**` is the shared `focusRing`;
+caught `Checkbox`'s legacy `focus:ring-primary`),
+`frontend/tests/unit/ui/displayHeadingTypography.test.tsx` (new —
+`--font-display` headings pair `tracking-display` + `leading-display`, no
+stacked `leading-*`), `frontend/tests/unit/statusMessageEntrance.test.tsx`
+(new — the four status/empty components carry `status-fade-in` + clear
+wayfinding copy), plus scroll-edge assertions in `AppHeader.test.tsx` /
+`LandingHeader.test.tsx` and the focus-border-token assertion in
+`Input.test.tsx`. `focusRing.test.ts`, `no-inline-motion` and
+`motion-import-boundary` stay green. Full `frontend` gate:
+`npm run test` 640 passed / 0 failed · `npm run lint` clean · `npm run build`
+green (`tracking-display` / `leading-display` / `header-scroll-edge` /
+`status-fade-in` all emitted into `dist`).
+
+**`focusRing` rollout** — the negative scan (T078) surfaced one remaining
+offender, `Checkbox` (`focus:ring-primary`); T080 also added `focusRing` to the
+`GalleryFullscreenViewer` thumbnail `<button>`s (contract §shared `focusRing`),
+which relied on the UA default outline. The three historical variants
+(`outline-primary`, ad-hoc `focus-visible:ring`, per-component `focus:ring`) are
+now absent from `components/**`. `ui/Input` + `MyCopySection` keep the distinct
+**input-field** focus treatment (`focus:border-primary` border-colour change,
+not a ring) — allow-listed by the consistency test.
+
+**`underline`-as-emphasis sweep** (T083): removed from `RecordCard` and
+`RecordListRow` "Open record" links → `text-primary dark:text-primary-text
+font-medium not-italic` (weight + colour is a sufficient cue for a standalone
+block link and both pairings clear AA). **Kept**: `MasterReleaseOtherDetailsSection`
+"View on Discogs" `no-underline hover:underline` (genuine external link; underline
+is a hover affordance reinforcement, not resting emphasis) and every `no-underline`
+(default-underline reset on `<Link>`/`<a>`) — none of those is decoration-as-emphasis.
+
+### Canonical interaction patterns (FR-014) — final mapping
+
+Documented in full in [`frontend/src/motion/README.md`](../../frontend/src/motion/README.md).
+Every interactive control = `pressable` + at most one higher-level pattern; the
+focus treatment is always the shared `focusRing`.
+
+| Pattern | Semantics | Motion tokens | Conforming components |
+|---|---|---|---|
+| `pressable` | native `:active` on any button/link/role control | `--motion-duration-press`, `--ease-out` (CSS) | Button, ThemeToggle, ViewModeToggle opts, StarRating stars, BackLink, InlineEditableField trigger, Checkbox row, SelectableListFilter rows, HeaderNavIcons, HeaderSearchBox, HamburgerMenu trigger + rows, ResultCardActions, GoogleSignInButton, Record{Card,ListRow}, SearchResult{Card,ListRow}, FeedArticleCard, Feed{Category,Source}FilterBar chips, MasterVersionsTable rows, GalleryFullscreenViewer thumbnails |
+| `binary-switch` | `role="switch"` + `aria-checked` | `spring.default`, `--motion-duration-fade` | ThemeToggle |
+| `segmented-selector` | `role="radiogroup"` / `role="radio"` + roving tabindex + Arrow keys | `spring.default` (shared-element pill via `layoutId`) | ViewModeToggle |
+| `multi-select-list` | native checkbox + `<label htmlFor>` / `aria-pressed` chip | `--motion-duration-press` | Checkbox, SelectableListFilter options, Feed{Category,Source}FilterBar |
+| `disclosure` | `<button>` toggle + measured height + chevron direction | `--motion-duration-collapse`, `easing.out` | CollapsibleFilterPanel |
+| `dismissible-layer` | `role="dialog"` `aria-modal` + trap/restore/scroll-lock + one material | `spring.default` / `.sheet` / `.momentum`, `--motion-duration-fade` | Overlay, Sheet, Modal (center + end), GalleryFullscreenViewer, HamburgerMenu drawer, SelectableListFilter modal |
+| `status-fade-in` (non-interactive) | opacity-only, no transform | `--motion-duration-fade`, `--ease-out` | UnderConstruction, LibraryLinkRequired, DiscogsRelinkNotice, FeedSourceStatusBanner |
+
 | Component | Disposition | HIG | Skill | Change | e2e |
 |---|---|---|---|---|---|
-| `focusRing` rollout | refine | CONS | emil | Every interactive control uses the one shared constant; delete the 3 historical variants | (each control's spec) |
-| `ui/ThemeToggle` vs `ui/ViewModeToggle` vs `ui/StarRating` | refine | CONS | apple-design, emil | Document as `binary-switch` / `segmented-selector` / rating-input; unify focus + press only, keep distinct semantics | theme-preference, view-mode-toggle |
-| `filters/CollapsibleFilterPanel` + any accordion | refine | CONS | emil | One `disclosure` pattern (chevron dir, motion token, aria) | library-filters |
-| `components/RecordCard` ("Open record" `underline`) | refine | TYPO, CRAFT | apple-design | Replace underline-as-emphasis with `text-primary dark:text-primary-text font-medium` | library-list-responsive |
-| `components/*` display headings (page/pillar/showcase) | refine | TYPO | apple-design | Apply `--tracking-display` (-0.02em) + `--leading-display` (1.05) to `--font-display` headings; keep fixed `text-*`/`leading-*` no-CLS pairing | landing-page-responsive, dashboard-feed-grid |
-| `components/LandingHero`, `LandingPillarSection` | refine | TYPO, CRAFT | apple-design | Display-type tracking/leading; press state on CTAs | landing-page-responsive |
-| `components/AppHeader`, `LandingHeader` | refine | DEPTH, CRAFT | apple-design | Hard bottom border → scroll-edge mask; opaque near-black surface kept (constitution wins over full translucency) | header-responsive-nav, landing-page-responsive |
-| Body-text links/emphasis across composites | refine | TYPO | apple-design | Remove decoration-as-emphasis; hierarchy via weight/size/color | (per-screen specs) |
+| `focusRing` rollout | ✅ refine | CONS | emil | `Checkbox` + `GalleryFullscreenViewer` thumbnails adopt the shared constant; 3 historical variants gone from `components/**`; `focus-ring-consistency.test.ts` guards it | (each control's spec) |
+| `ui/ThemeToggle` vs `ui/ViewModeToggle` vs `ui/StarRating` | ✅ refine | CONS | apple-design, emil | Documented as `binary-switch` / `segmented-selector` / rating-input in `motion/README.md`; focus + press unified, semantics kept distinct | theme-preference, view-mode-toggle |
+| `filters/CollapsibleFilterPanel` + any accordion | ✅ refine | CONS | emil | `disclosure` pattern documented (chevron dir, `--motion-duration-collapse`, aria) — shipped in US2, catalogued here | library-filters |
+| `components/RecordCard` + `RecordListRow` ("Open record" `underline`) | ✅ refine | TYPO, CRAFT | apple-design | underline-as-emphasis → `text-primary dark:text-primary-text font-medium not-italic` (T083) | library-list-responsive |
+| `components/*` + `pages/*` display headings (page/pillar/showcase) | ✅ refine | TYPO | apple-design | `tracking-display` (-0.02em) + `leading-display` (1.05) on `--font-display` headings (`Master/ReleaseDetailsSection`, `UnderConstruction`, `LandingPillarSection`, `SearchResultsPage`, `ProfilePage`, `LibraryListPage`); `leading-tight` replaced (not stacked) → no CLS (T081/T082) | landing-page-responsive, dashboard-feed-grid |
+| `components/LandingHero`, `LandingPillarSection` | ✅ refine | TYPO, CRAFT | apple-design | `LandingPillarSection` heading gets the display tokens; `LandingHero`'s only display-font mark is `VinylmaniaWordmark` (brand mark — exempt), so no heading change there; CTA press shipped in US1 | landing-page-responsive |
+| `components/AppHeader`, `LandingHeader` | ✅ refine | DEPTH, CRAFT | apple-design | Hard `border-b` → `useScrolledPast` + `.header-scroll-edge` box-shadow that fades in on scroll (`transition-shadow` + `--motion-duration-fade`); opaque near-black surface kept; box-shadow never a border → no layout shift (T084) | header-responsive-nav, landing-page-responsive |
+| Body-text links/emphasis across composites | ✅ refine | TYPO | apple-design | `underline` grep swept; only `RecordCard`/`RecordListRow` were decoration-as-emphasis; genuine links + `no-underline` resets kept (see US5 status note) | (per-screen specs) |
 | `ui/Badge`, `ui/ReleaseRatingBadge` | conforms | CONS, CRAFT | emil | Spec-058 boundary/contrast work already correct; no motion warranted | — |
-| `ui/Input` | refine | FB, CRAFT | emil | `focus:border-primary` kept; add a calm focus transition token; no layout shift | (form specs) |
+| `ui/Input` | ✅ refine | FB, CRAFT | emil | `focus:border-primary` kept; `transition-[border-color]` + `--motion-duration-fade` + `ease-out` added; border width unchanged → no layout shift (T085) | (form specs) |
 | `ui/Avatar` | conforms | — | apple-design | Static image/placeholder; correct | — |
-| `components/UnderConstruction`, `LibraryLinkRequired`, `DiscogsRelinkNotice`, `FeedSourceStatusBanner` | refine | CRAFT, FB | emil | Status/empty states: gentle opacity entrance (token), no movement; wayfinding copy check | (per-screen specs) |
+| `components/UnderConstruction`, `LibraryLinkRequired`, `DiscogsRelinkNotice`, `FeedSourceStatusBanner` | ✅ refine | CRAFT, FB | emil | `.status-fade-in` opacity-only entrance (`--motion-duration-fade`, `--ease-out`, no transform); reduced-motion → instant via global guard; wayfinding copy reviewed — each already answers "where am I / how do I get out" (T086) | (per-screen specs) |
 | `brand/VinylmaniaIcon`, `VinylmaniaWordmark`, `VinylmaniaGrungeFilter` | conforms | — | apple-design | Decorative brand marks; no interaction/motion change | logo-rebranding |
 | `ui/icons/CloseIcon` | conforms | — | — | Pure SVG; inherits button treatment from its parent | — |
 

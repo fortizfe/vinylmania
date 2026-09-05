@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 
 import { useAuth } from '../auth/AuthContext';
+import { useScrolledPast } from '../hooks/useScrolledPast';
 import { VinylmaniaIcon } from './brand/VinylmaniaIcon';
 import { VinylmaniaWordmark } from './brand/VinylmaniaWordmark';
 import { HamburgerMenu } from './HamburgerMenu';
@@ -10,9 +12,15 @@ import { Button } from './ui/Button';
 
 export function AppHeader() {
   const { signOut } = useAuth();
+  const scrolled = useScrolledPast();
 
   return (
-    <header className="sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-stone-200 bg-white px-4 py-4 dark:border-border-dark dark:bg-surface-raised sm:px-6">
+    <header
+      className={clsx(
+        'sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center gap-3 bg-white px-4 py-4 transition-shadow duration-(--motion-duration-fade) ease-out dark:bg-surface-raised sm:px-6',
+        scrolled && 'header-scroll-edge',
+      )}
+    >
       <Link
         to="/app"
         aria-label="Vinylmania"

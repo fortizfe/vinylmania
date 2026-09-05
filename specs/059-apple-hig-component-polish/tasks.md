@@ -200,19 +200,19 @@ description: "Task list for Apple HIG Component Polish"
 
 ### Tests (write first, must fail)
 
-- [ ] T078 [P] [US5] `frontend/tests/unit/architecture/focus-ring-consistency.test.ts` — the only focus utility string in `frontend/src/components/**` is `focusRing`; no `outline-primary` / ad-hoc `focus-visible:ring` variants remain
-- [ ] T079 [P] [US5] Test that `--font-display` headings render with `--tracking-display` / `--leading-display` (unit test on a representative header component)
+- [X] T078 [P] [US5] `frontend/tests/unit/architecture/focus-ring-consistency.test.ts` — the only focus utility string in `frontend/src/components/**` is `focusRing`; no `outline-primary` / ad-hoc `focus-visible:ring` variants remain
+- [X] T079 [P] [US5] Test that `--font-display` headings render with `--tracking-display` / `--leading-display` (unit test on a representative header component)
 
 ### Implementation
 
-- [ ] T080 [US5] Roll `focusRing` out to every remaining interactive control and delete the historical variants (touches `frontend/src/components/GalleryFullscreenViewer.tsx` thumbnails, any file still holding a local focus string)
-- [ ] T081 [P] [US5] Add `--tracking-display` (`-0.02em`) and `--leading-display` (`1.05`) to the `@theme` block in `frontend/src/styles/global.css` (if not already added in T011) and expose as utilities
-- [ ] T082 [P] [US5] Apply display tracking/leading to page/pillar/showcase headings: `frontend/src/components/LandingHero.tsx`, `frontend/src/components/LandingPillarSection.tsx`, and the section/page headers in the release/master detail + dashboard components (keep the fixed `text-*`/`leading-*` no-CLS pairing)
-- [ ] T083 [P] [US5] Replace underline-as-emphasis with weight/color: `frontend/src/components/RecordCard.tsx` ("Open record"), and body-text emphasis across composite components (grep `underline` in `frontend/src/components/**`, keep it only for genuine inline links where affordance needs it)
-- [ ] T084 [P] [US5] Replace the hard bottom border with a scroll-edge shadow/gradient mask (appears only once content scrolls under) in `frontend/src/components/AppHeader.tsx` and `frontend/src/components/LandingHeader.tsx`; keep the opaque near-black surface token
-- [ ] T085 [P] [US5] Add a calm tokenized focus-border transition (no layout shift) in `frontend/src/components/ui/Input.tsx`
-- [ ] T086 [P] [US5] Gentle opacity-only entrance (token, no movement) for status/empty components: `frontend/src/components/UnderConstruction.tsx`, `frontend/src/components/LibraryLinkRequired.tsx`, `frontend/src/components/DiscogsRelinkNotice.tsx`, `frontend/src/components/FeedSourceStatusBanner.tsx`
-- [ ] T087 [US5] Document the canonical Interaction Patterns (binary-switch / segmented-selector / multi-select-list / disclosure / dismissible-layer / pressable) in `frontend/src/motion/README.md` and finalize the pattern column in [audit.md](./audit.md)
+- [X] T080 [US5] Roll `focusRing` out to every remaining interactive control and delete the historical variants (touches `frontend/src/components/GalleryFullscreenViewer.tsx` thumbnails, any file still holding a local focus string)
+- [X] T081 [P] [US5] Add `--tracking-display` (`-0.02em`) and `--leading-display` (`1.05`) to the `@theme` block in `frontend/src/styles/global.css` (if not already added in T011) and expose as utilities
+- [X] T082 [P] [US5] Apply display tracking/leading to page/pillar/showcase headings: `frontend/src/components/LandingHero.tsx`, `frontend/src/components/LandingPillarSection.tsx`, and the section/page headers in the release/master detail + dashboard components (keep the fixed `text-*`/`leading-*` no-CLS pairing)
+- [X] T083 [P] [US5] Replace underline-as-emphasis with weight/color: `frontend/src/components/RecordCard.tsx` ("Open record"), and body-text emphasis across composite components (grep `underline` in `frontend/src/components/**`, keep it only for genuine inline links where affordance needs it)
+- [X] T084 [P] [US5] Replace the hard bottom border with a scroll-edge shadow/gradient mask (appears only once content scrolls under) in `frontend/src/components/AppHeader.tsx` and `frontend/src/components/LandingHeader.tsx`; keep the opaque near-black surface token
+- [X] T085 [P] [US5] Add a calm tokenized focus-border transition (no layout shift) in `frontend/src/components/ui/Input.tsx`
+- [X] T086 [P] [US5] Gentle opacity-only entrance (token, no movement) for status/empty components: `frontend/src/components/UnderConstruction.tsx`, `frontend/src/components/LibraryLinkRequired.tsx`, `frontend/src/components/DiscogsRelinkNotice.tsx`, `frontend/src/components/FeedSourceStatusBanner.tsx`
+- [X] T087 [US5] Document the canonical Interaction Patterns (binary-switch / segmented-selector / multi-select-list / disclosure / dismissible-layer / pressable) in `frontend/src/motion/README.md` and finalize the pattern column in [audit.md](./audit.md)
 - [ ] T088 [US5] Extend `e2e/tests/landing-page-responsive.spec.ts`, `e2e/tests/dashboard-feed-grid.spec.ts`, `e2e/tests/header-responsive-nav.spec.ts` for typography tokens + scroll-edge treatment
 - [ ] T089 [US5] Run US5 validation (quickstart §US5); update US5 rows in [audit.md](./audit.md)
 

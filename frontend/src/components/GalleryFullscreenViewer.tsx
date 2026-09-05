@@ -11,6 +11,7 @@ import {
 } from '../motion';
 import type { CatalogImage } from '../services/libraryApi';
 import { Button } from './ui/Button';
+import { focusRing } from './ui/focusRing';
 import { CloseIcon } from './ui/icons/CloseIcon';
 
 interface GalleryFullscreenViewerProps {
@@ -169,6 +170,7 @@ export function GalleryFullscreenViewer({
                 aria-current={index === selectedIndex}
                 className={clsx(
                   'aspect-square min-h-11 min-w-11 shrink-0 overflow-hidden rounded-md ring-2 transition-[box-shadow] duration-(--motion-duration-fade) ease-out',
+                  focusRing,
                   index === selectedIndex
                     ? 'ring-primary'
                     : 'ring-transparent hover:ring-stone-300 dark:hover:ring-stone-700',

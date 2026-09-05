@@ -211,3 +211,56 @@
     border: 1px solid currentColor;
   }
 }
+
+/*
+ * ── Sticky-header scroll-edge treatment (feature 059 US5 — T084,
+ * research.md R5, contracts §AppHeader/LandingHeader) ───────────────────────
+ *
+ * The header keeps its opaque near-black surface token (the constitution's
+ * dark-surface rule wins over full HIG translucency). Instead of a permanent
+ * hard 1px divider it carries a soft shadow that fades in (via
+ * `transition-shadow` + `--motion-duration-fade` on the element) only once
+ * page content has scrolled under it (apple-design §12 — "scroll edge
+ * effects, not hard dividers"). The `prefers-reduced-motion` block above
+ * collapses the transition so it appears instantly for those users.
+ *
+ * Justified custom CSS: it is a `box-shadow` — never a border — so the header
+ * box never changes size (no layout shift), and it needs a distinct per-theme
+ * value (a hairline + a soft ambient drop) that no single Tailwind elevation
+ * utility expresses. `.header-scroll-edge` is unlayered so it wins over the
+ * component's `shadow-*` reset regardless of source order.
+ */
+.header-scroll-edge {
+  box-shadow:
+    0 1px 0 0 rgb(0 0 0 / 0.08),
+    0 6px 16px -8px rgb(0 0 0 / 0.18);
+}
+
+.dark .header-scroll-edge {
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.08),
+    0 6px 16px -8px rgb(0 0 0 / 0.6);
+}
+
+/*
+ * ── Status / empty-state entrance (feature 059 US5 — T086) ─────────────────
+ *
+ * A single gentle opacity fade (`--motion-duration-fade`, `--ease-out`) with
+ * NO translate/scale — status and empty states announce "where am I / how do
+ * I get out" and must not pull the eye with movement (emil-design-eng —
+ * status messages don't move). The global `prefers-reduced-motion` block
+ * above collapses the timing so it resolves instantly for those users.
+ */
+@keyframes vinyl-status-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@utility status-fade-in {
+  animation: vinyl-status-fade-in var(--motion-duration-fade) var(--ease-out) both;
+}
