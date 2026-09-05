@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
+import { assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 function record(
@@ -336,4 +338,127 @@ test.describe('Filters behave identically in list mode (feature 052, US2)', () =
 
     await expect(page.getByText(/no results for the active filters/i)).toBeVisible();
   });
+});
+
+test.describe('Library filters WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.route('**/api/library*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            items: [record('entry-1', 'Stockholm')],
+            page: 1,
+            pageSize: 20,
+            totalItems: 1,
+          }),
+        });
+      });
+
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+      await page.goto('/app/library');
+      await expect(page.getByText('Stockholm')).toBeVisible();
+      await expandFilters(page);
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
+});
+
+test.describe('Library filter controls UI component contrast (spec 058, US2)', () => {
+  /**
+   * Each contrast check below runs as its own test rather than as chained
+   * assertions in one test — otherwise the first failing assertion would
+   * abort the test and hide whether the later ones pass or fail.
+   */
+  async function goToLibraryWithFilters(page: import('@playwright/test').Page) {
+    await page.route('**/api/library*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [record('entry-1', 'Stockholm')],
+          page: 1,
+          pageSize: 20,
+          totalItems: 1,
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByText('Stockholm')).toBeVisible();
+  }
+
+  for (const theme of ['light', 'dark'] as const) {
+    // Collapsed state: CollapsibleFilterPanel.tsx renders the "Filters"
+    // trigger button inside a Card whose visible border is the panel's
+    // own boundary against the page background.
+    test(`collapsed filter panel border meets WCAG UI component contrast in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await goToLibraryWithFilters(page);
+
+      const filtersButton = page.getByRole('button', { name: /^filters$/i });
+      const collapsedPanelCard = filtersButton.locator('xpath=..');
+      await assertUiComponentContrast(
+        page,
+        collapsedPanelCard,
+        page.getByTestId('app-shell'),
+        `Collapsed filter panel border (${theme})`,
+      );
+    });
+
+    // Expanded state: the Genre filter trigger (a secondary Button, real
+    // border) against the same Card, now wrapping the filter <form>.
+    test(`Genre filter trigger border meets WCAG UI component contrast in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await goToLibraryWithFilters(page);
+      await expandFilters(page);
+
+      const genreTrigger = page.locator('#filter-genre-trigger');
+      // Scoped from the trigger itself, not `page.locator('form')` — the
+      // header search box (HeaderSearchBox.tsx) is also a <form>, so an
+      // unscoped lookup hits 2 elements (strict-mode violation).
+      const expandedPanelCard = genreTrigger.locator('xpath=ancestor::form/parent::*');
+      await assertUiComponentContrast(
+        page,
+        genreTrigger,
+        expandedPanelCard,
+        `Genre filter trigger border (${theme})`,
+      );
+    });
+
+    test(`Genre option checkbox border meets WCAG UI component contrast in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await goToLibraryWithFilters(page);
+      await expandFilters(page);
+
+      const genreTrigger = page.locator('#filter-genre-trigger');
+      await genreTrigger.click();
+      const dialog = page.getByRole('dialog');
+      const dialogSurface = dialog.locator('> div').first();
+      const genreCheckbox = dialog.getByLabel('Rock', { exact: true });
+      await assertUiComponentContrast(
+        page,
+        genreCheckbox,
+        dialogSurface,
+        `Genre option checkbox border (${theme})`,
+      );
+      await page.keyboard.press('Escape');
+    });
+  }
 });

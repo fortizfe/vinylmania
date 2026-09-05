@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
+import { assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const RELEASE_ID = 1;
@@ -206,4 +208,57 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
     );
     expect(hasHorizontalScroll).toBe(false);
   });
+});
+
+test.describe('Release detail responsive WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await goToReleaseDetail(page);
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
+});
+
+test.describe('Release detail Badge UI component contrast (spec 058, US2)', () => {
+  // ReleaseRatingBadge is not rendered on the release detail page itself
+  // (only on library/search cards and rows — SearchResultCard.tsx,
+  // RecordCard.tsx, etc.) — the plain Badge chips in
+  // ReleaseDetailsSection.tsx (format/label/genre/style) are the real
+  // boundary-having components this screen actually renders. Each chip's
+  // check runs as its own test so one failing assertion never hides
+  // whether the other would have passed or failed.
+  // The format Badge (`tone="muted"`) is intentionally borderless,
+  // bg-transparent, inline colored text with no interactive/selectable
+  // behavior — see the `muted` tone's comment in `Badge.tsx`. WCAG 1.4.11
+  // (Non-text Contrast) only applies to boundaries needed to perceive a
+  // component; it does not require one to be added to a text-only status
+  // label whose own text contrast is already covered by this file's axe
+  // scan above. No `assertUiComponentContrast` check for it here — adding
+  // one would assert a boundary the design deliberately doesn't have,
+  // which `spec 058, T027 finding #7` confirmed reads a transparent fill
+  // as opaque black (a measurement artifact, not a real violation).
+  for (const theme of ['light', 'dark'] as const) {
+    test(`genre Badge chip meets WCAG UI component contrast against the main-info card in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await goToReleaseDetail(page);
+
+      const mainInfoCard = page.getByTestId('release-detail-main-info-card');
+      const genreBadge = mainInfoCard.getByText('Electronic', { exact: true });
+
+      await assertUiComponentContrast(
+        page,
+        genreBadge,
+        mainInfoCard,
+        `Genre Badge boundary (${theme})`,
+      );
+    });
+  }
 });

@@ -24,7 +24,7 @@ export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
       <div
         role="img"
         aria-label={`No cover image available for ${alt}`}
-        className="flex aspect-square w-full items-center justify-center rounded-md bg-stone-100 text-sm text-stone-400 dark:bg-stone-900 dark:text-stone-500"
+        className="flex aspect-square w-full items-center justify-center rounded-md bg-stone-100 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-400"
       >
         No cover image available
       </div>

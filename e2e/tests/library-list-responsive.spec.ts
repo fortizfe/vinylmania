@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 function buildLibraryResponse(count: number) {
@@ -206,4 +207,19 @@ test.describe('List mode (feature 052, US2)', () => {
     );
     expect(hasHorizontalScroll).toBe(false);
   });
+});
+
+test.describe('Library WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await goToLibrary(page, 12);
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
 });

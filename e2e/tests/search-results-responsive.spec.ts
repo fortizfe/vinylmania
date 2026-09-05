@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
+import { assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 function buildResults(count: number) {
@@ -194,4 +196,91 @@ test.describe('List mode (feature 052, US3)', () => {
     );
     expect(hasHorizontalScroll).toBe(false);
   });
+});
+
+test.describe('Search results WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await searchAndWait(page, 10);
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
+});
+
+test.describe('Search result card badges UI component contrast (spec 058, US2)', () => {
+  /**
+   * A dedicated fixture with a format value (unlike buildResults()) so the
+   * muted format Badge — not just the always-rendered ReleaseRatingBadge —
+   * actually renders for these checks. Each check below runs as its own
+   * test rather than chained in one, so one failing assertion never hides
+   * whether the other would have passed or failed.
+   */
+  async function goToSearchResultsWithBadgeFixture(page: import('@playwright/test').Page) {
+    await page.route('**/api/discogs/search*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            {
+              discogsId: 1,
+              resultType: 'release',
+              title: 'Badge Contrast Result',
+              artist: 'Test Artist',
+              year: 2000,
+              formats: ['Vinyl'],
+            },
+          ],
+          pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/search?q=rock');
+    await expect(page.getByTestId('search-results-grid')).toBeVisible();
+  }
+
+  function getCardSurface(page: import('@playwright/test').Page) {
+    const card = page.locator('li', { hasText: 'Badge Contrast Result' });
+    // Card.tsx renders the actual bg-stone-50/dark:bg-surface-raised
+    // surface as the <li>'s single direct child div — the <li> itself
+    // carries no background of its own.
+    return { card, cardSurface: card.locator('> div').first() };
+  }
+
+  for (const theme of ['light', 'dark'] as const) {
+    test(`ReleaseRatingBadge boundary meets WCAG UI component contrast against the card in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await goToSearchResultsWithBadgeFixture(page);
+
+      const { card, cardSurface } = getCardSurface(page);
+      const ratingBadge = card.getByRole('status');
+      await assertUiComponentContrast(
+        page,
+        ratingBadge,
+        cardSurface,
+        `ReleaseRatingBadge boundary (${theme})`,
+      );
+    });
+
+    // The format Badge (`tone="muted"`) is intentionally borderless,
+    // bg-transparent, inline colored text with no interactive/selectable
+    // behavior — see the `muted` tone's comment in `Badge.tsx`. WCAG 1.4.11
+    // (Non-text Contrast) only applies to boundaries needed to perceive a
+    // component; it does not require one on a text-only status label whose
+    // own text contrast is already covered by this file's axe scan. No
+    // `assertUiComponentContrast` check for it here — spec 058, T027
+    // finding #7 confirmed the alternative reads a transparent fill as
+    // opaque black (a measurement artifact, not a real violation).
+  }
 });

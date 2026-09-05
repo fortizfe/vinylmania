@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const MASTER_ID = 1660109;
@@ -190,5 +191,25 @@ test.describe('Master release detail page (feature 026, US3)', () => {
 
     await page.goto('/app/masters/999999999');
     await expect(page.getByText(/couldn.t find that master release/i)).toBeVisible();
+  });
+
+  test.describe('WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme: theme });
+        await stubAll(page);
+
+        await page.goto('/');
+        await signInAsFakeGoogleUser(page);
+        await page.goto(`/app/masters/${MASTER_ID}`);
+        await expect(page.getByRole('heading', { name: 'Hybrid Theory' })).toBeVisible();
+
+        const seriousOrCritical = await runAxeScan(page);
+
+        expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+      });
+    }
   });
 });

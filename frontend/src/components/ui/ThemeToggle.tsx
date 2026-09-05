@@ -64,9 +64,16 @@ export function ThemeToggle({ theme, onToggle, className }: ThemeToggleProps) {
       onClick={onToggle}
       className={clsx(
         'relative inline-flex min-h-11 h-9 w-16 shrink-0 items-center overflow-hidden rounded-full border transition-colors duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+        // Light-state border is sky-600, not the sky-300 used in the fill
+        // gradient — sky-300 measured only 1.60:1 against this switch's
+        // `bg-stone-50` row surface (spec 058 WCAG audit), under the 3:1
+        // minimum for UI component boundaries (1.4.11); sky-600 clears it
+        // at ~3.92:1 while staying recognizably "sky" blue. The dark-state
+        // border reuses `--color-border-dark`, fixed at the token level in
+        // global.css.
         isDark
           ? 'border-border-dark bg-linear-to-b from-surface-raised to-surface'
-          : 'border-sky-300 bg-linear-to-b from-sky-300 to-sky-500',
+          : 'border-sky-600 bg-linear-to-b from-sky-300 to-sky-500',
         className,
       )}
     >

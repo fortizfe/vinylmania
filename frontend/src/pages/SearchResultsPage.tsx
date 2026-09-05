@@ -155,7 +155,7 @@ export function SearchResultsPage() {
           </p>
           <Link
             to="/app/profile"
-            className="mt-2 inline-block text-sm font-medium text-primary hover:opacity-80"
+            className="mt-2 inline-block text-sm font-medium text-primary hover:opacity-80 dark:text-primary-text"
           >
             Go to your profile
           </Link>

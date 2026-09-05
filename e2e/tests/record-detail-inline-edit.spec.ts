@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { assertFocusIndicatorContrast, assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const ENTRY_ID = 'e2e-entry-1';
@@ -249,6 +250,82 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
     await expect(page.getByText('Your copy')).toBeVisible();
     await expect(page.getByText(/Östermalm/)).toBeVisible();
+  });
+
+  /**
+   * Loads the record-detail page once with a stable Discogs-backed entry so
+   * each UI-component/focus-contrast check below can run as its own
+   * independent test — otherwise, chaining every assertion inside a single
+   * test means the first failure aborts the rest, hiding whether later
+   * checks would have passed or failed (spec 058 T020).
+   */
+  async function goToRecordDetailForContrastChecks(page: import('@playwright/test').Page) {
+    await page.route(`**/api/library/${ENTRY_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildEntry()),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/library/records/${ENTRY_ID}`);
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+  }
+
+  test.describe('Media Condition and rating control UI/focus contrast (spec 058, US2)', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      // The "Your copy" card is the Media Condition select's adjacent
+      // surface — the actual editable field in this screen (no shared
+      // ui/Input or ui/Checkbox component is used here; MyCopySection.tsx
+      // renders a plain bordered <select>, matching what this spec already
+      // exercises).
+      test(`Media Condition select border meets WCAG UI component contrast in ${theme} mode`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme: theme });
+        await goToRecordDetailForContrastChecks(page);
+
+        const mediaConditionSelect = page.getByLabel('Media Condition');
+        const yourCopyCard = page.getByTestId('record-detail-your-copy-card');
+
+        await assertUiComponentContrast(
+          page,
+          mediaConditionSelect,
+          yourCopyCard,
+          `Media Condition select border (${theme})`,
+        );
+      });
+
+      test(`Media Condition select meets WCAG focus-indicator contrast in ${theme} mode`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme: theme });
+        await goToRecordDetailForContrastChecks(page);
+
+        const mediaConditionSelect = page.getByLabel('Media Condition');
+        await assertFocusIndicatorContrast(
+          page,
+          mediaConditionSelect,
+          `Media Condition select focus indicator (${theme})`,
+        );
+      });
+
+      test(`rating star button meets WCAG focus-indicator contrast in ${theme} mode`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme: theme });
+        await goToRecordDetailForContrastChecks(page);
+
+        const ratingButton = page.getByRole('button', { name: '4 stars' });
+        await assertFocusIndicatorContrast(
+          page,
+          ratingButton,
+          `Rating star button focus indicator (${theme})`,
+        );
+      });
+    }
   });
 });
 

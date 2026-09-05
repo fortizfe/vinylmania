@@ -1,6 +1,7 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
+import { assertFocusIndicatorContrast, assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 test.describe('Sign-in journey (US1)', () => {
@@ -66,11 +67,19 @@ test.describe('Sign-in journey (US1)', () => {
     await page.goto('/');
     await expect(page.getByTestId('landing-viewport')).toBeVisible();
 
-    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    const seriousOrCritical = await runAxeScan(page);
 
-    const seriousOrCritical = results.violations.filter(
-      (violation) => violation.impact === 'serious' || violation.impact === 'critical',
-    );
+    expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+  });
+
+  test('has no automatically detectable WCAG 2.1 AA violations in dark mode (spec 058, FR-010/SC-006)', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('/');
+    await expect(page.getByTestId('landing-viewport')).toBeVisible();
+
+    const seriousOrCritical = await runAxeScan(page);
 
     expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
   });
@@ -95,6 +104,26 @@ test.describe('Sign-in journey (US1)', () => {
       for (const heading of await pillarHeadings.all()) {
         await expect(heading).toBeVisible();
       }
+    });
+  }
+
+  for (const theme of ['light', 'dark'] as const) {
+    test(`"Sign in with Google" button meets WCAG UI component and focus-indicator contrast in ${theme} mode (spec 058, US2)`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto('/');
+      await expect(page.getByTestId('landing-viewport')).toBeVisible();
+
+      const button = page.getByRole('button', { name: /sign in with google/i });
+      const header = page.getByRole('banner');
+
+      await assertUiComponentContrast(page, button, header, `Sign in with Google button (${theme})`);
+      await assertFocusIndicatorContrast(
+        page,
+        button,
+        `Sign in with Google button focus indicator (${theme})`,
+      );
     });
   }
 });

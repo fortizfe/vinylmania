@@ -1,5 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 function buildArticle(
@@ -357,4 +358,32 @@ test.describe('Dashboard responsive grid & new sources (feature 033)', () => {
     await expect(page.getByText('Metal Injection News Article 0')).toBeVisible();
     await expect(page.getByRole('status')).toContainText('MetalSucks');
   });
+});
+
+test.describe('Dashboard WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.route('**/api/feeds/dashboard', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(buildDashboardResponse()),
+        });
+      });
+
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+
+      const grid = page.getByTestId('feed-article-grid');
+      await expect(grid).toBeVisible();
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
 });

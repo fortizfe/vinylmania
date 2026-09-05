@@ -63,7 +63,14 @@ export function ViewModeToggle({ mode, onChange, screen }: ViewModeToggleProps) 
       role="radiogroup"
       aria-label="View mode"
       data-testid="view-mode-toggle"
-      className="inline-flex gap-1 rounded-xl border border-stone-300 p-1 dark:border-border-dark"
+      // border-stone-500 (not the lighter default border-stone-300)
+      // against the app shell: at border-stone-300 this measured 1.49:1
+      // (light), under the WCAG AA 3:1 minimum for UI component boundaries
+      // (1.4.11) — see specs/058-theme-wcag-aa-refactor. border-stone-500
+      // measures ~4.80:1 against the light (white) app shell and ~4.09:1
+      // against the dark app shell, so one value replaces both the old
+      // light default and the `dark:border-border-dark` override.
+      className="inline-flex gap-1 rounded-xl border border-stone-500 p-1"
     >
       {OPTIONS.map(({ mode: optionMode, label, icon: Icon }) => {
         const isActive = optionMode === mode;

@@ -19,6 +19,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const STUB_URL = 'http://localhost:4571';
@@ -100,4 +101,27 @@ test.describe('Catalog browsing with a revoked Discogs link (spec 053, US3)', ()
         await expect(page.getByText('Stub Release 1')).toBeVisible({ timeout: 10_000 });
         await expect(page.getByText(/your discogs link is no longer valid/i)).not.toBeVisible();
     });
+});
+
+test.describe('Discogs relink WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+    for (const theme of ['light', 'dark'] as const) {
+        test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+            page,
+        }) => {
+            await page.emulateMedia({ colorScheme: theme });
+            await signInAndLinkDiscogs(page);
+            await setFailureMode('auth');
+
+            await page.getByLabel(/search discogs/i).fill('anything');
+            await page.getByRole('button', { name: /^search$/i }).click();
+            await expect(page).toHaveURL(/\/app\/search/);
+            await expect(page.getByText(/your discogs link is no longer valid/i)).toBeVisible({
+                timeout: 10_000,
+            });
+
+            const seriousOrCritical = await runAxeScan(page);
+
+            expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+        });
+    }
 });

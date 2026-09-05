@@ -1,0 +1,137 @@
+# Agent Assignments
+# Feature: Refactor de tema claro/oscuro para cumplimiento estricto WCAG 2.1 AA (058-theme-wcag-aa-refactor)
+# Generated: 2026-09-05T06:36:56Z
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "backend-agent"
+    source: "project"
+    description: "Use for any work under backend/ — Express.js + TypeScript APIs, hexagonal architecture (domain/application/ports/adapters), Firebase Admin/Firestore, Discogs API client, Redis caching. Enforces TDD, YAGNI, SOLID, and KISS on every change. Do NOT use for frontend/ or e2e/ work — hand those to frontend-agent or qa-agent instead."
+  - name: "docs-agent"
+    source: "project"
+    description: "Use for end-user documentation for Vinylmania — user manuals, getting-started guides, feature walkthroughs, and FAQs written for collectors using the app, not for developers. Not for developer/API docs, specs/, or code changes."
+  - name: "frontend-agent"
+    source: "project"
+    description: "Use for any work under frontend/ — React 19 + TypeScript (Vite), Tailwind CSS v4, TanStack Query. Builds every interface with the installed Apple design skills and strictly enforces WCAG 2.1 AA accessibility, with TDD via Vitest + React Testing Library. Applies YAGNI, SOLID, KISS. Do NOT use for backend/ or e2e/ work."
+  - name: "qa-agent"
+    source: "project"
+    description: "Use for enforcing Test-First/TDD discipline and overall test quality across the whole Vinylmania codebase (backend, frontend, e2e). Reviews whether tests were written before implementation, audits coverage and test quality, fixes flaky/failing tests, and gates changes against the constitution's Test-First principle and quality gates."
+
+assignments:
+  T001:
+    agent: "qa-agent"
+    reason: "Test-tooling verification (confirm axe/Playwright deps, capture e2e baseline) — no feature code"
+  T002:
+    agent: "qa-agent"
+    reason: "Pure refactor of e2e/helpers/contrast.ts (Playwright test helper)"
+  T003:
+    agent: "qa-agent"
+    reason: "New e2e/helpers/axe.ts test helper, wraps existing Playwright/axe pattern"
+  T004:
+    agent: "qa-agent"
+    reason: "New UI-component/focus contrast test helpers in e2e/helpers/contrast.ts"
+  T005:
+    agent: "qa-agent"
+    reason: "Generalizes an existing e2e spec (dark-mode-contrast.spec.ts) to both themes"
+  T006:
+    agent: "qa-agent"
+    reason: "Adds axe scan to e2e/tests/sign-in.spec.ts and landing-page-responsive.spec.ts"
+  T007:
+    agent: "qa-agent"
+    reason: "Adds axe scan to e2e/tests/header-responsive-nav.spec.ts"
+  T008:
+    agent: "qa-agent"
+    reason: "Adds axe scan to e2e/tests/dashboard-feed-grid.spec.ts"
+  T009:
+    agent: "qa-agent"
+    reason: "Adds axe scan to library/search e2e specs"
+  T010:
+    agent: "qa-agent"
+    reason: "Adds axe scan to release/master/record detail e2e specs"
+  T011:
+    agent: "qa-agent"
+    reason: "Adds axe scan to Discogs/profile/wishlist e2e specs"
+  T012:
+    agent: "frontend-agent"
+    reason: "Fixes text-contrast violations in frontend/src/pages/LandingPage.tsx and landing components"
+  T013:
+    agent: "frontend-agent"
+    reason: "Fixes text-contrast violations in header/navigation frontend components"
+  T014:
+    agent: "frontend-agent"
+    reason: "Fixes text-contrast violations in dashboard/feed frontend components"
+  T015:
+    agent: "frontend-agent"
+    reason: "Fixes text-contrast violations in library/search frontend pages and components"
+  T016:
+    agent: "frontend-agent"
+    reason: "Fixes text-contrast violations in release/master/record detail frontend pages and components"
+  T017:
+    agent: "frontend-agent"
+    reason: "Fixes text-contrast violations in Discogs/profile/wishlist frontend pages and components"
+  T018:
+    agent: "frontend-agent"
+    reason: "Fixes remaining shared UI-atom violations and shared color tokens in frontend/src/styles/global.css"
+  T019:
+    agent: "qa-agent"
+    reason: "Runs e2e suite and confirms US1 axe scans pass — verification, not feature code"
+  T020:
+    agent: "qa-agent"
+    reason: "Adds UI-component/focus contrast checks to e2e/tests/sign-in.spec.ts and record-detail-inline-edit.spec.ts"
+  T021:
+    agent: "qa-agent"
+    reason: "Adds UI-component contrast checks to theme-preference.spec.ts and view-mode-toggle.spec.ts"
+  T022:
+    agent: "qa-agent"
+    reason: "Adds UI-component contrast checks for Badge/ReleaseRatingBadge to e2e specs"
+  T023:
+    agent: "qa-agent"
+    reason: "Adds UI-component contrast checks for filter controls to e2e specs"
+  T024:
+    agent: "qa-agent"
+    reason: "Adds focus-indicator contrast checks to header-responsive-nav.spec.ts"
+  T025:
+    agent: "frontend-agent"
+    reason: "Fixes border/fill contrast in frontend/src/components/ui/{Button,Input,Checkbox}.tsx"
+  T026:
+    agent: "frontend-agent"
+    reason: "Fixes contrast in frontend/src/components/ui/{ThemeToggle,ViewModeToggle}.tsx"
+  T027:
+    agent: "frontend-agent"
+    reason: "Fixes contrast in frontend/src/components/ui/{Badge,ReleaseRatingBadge}.tsx"
+  T028:
+    agent: "frontend-agent"
+    reason: "Fixes contrast in frontend/src/components/FiltersControl.tsx and filters/*"
+  T029:
+    agent: "frontend-agent"
+    reason: "Fixes focus-ring contrast in header components and shared token in global.css"
+  T030:
+    agent: "qa-agent"
+    reason: "Runs e2e suite and confirms US2 checks pass — verification, not feature code"
+  T031:
+    agent: "frontend-agent"
+    reason: "Adds non-color rating signal to frontend/src/components/ui/ReleaseRatingBadge.tsx and usages"
+  T032:
+    agent: "frontend-agent"
+    reason: "Adds non-color status signal to feed/Discogs status frontend components"
+  T033:
+    agent: "frontend-agent"
+    reason: "Adds non-color validation/error signal to frontend/src/components/ui/{Input,Checkbox,InlineEditableField}.tsx"
+  T034:
+    agent: "frontend-agent"
+    reason: "Adds non-color selected-state signal to ViewModeToggle.tsx and SelectableListFilter.tsx"
+  T035:
+    agent: "qa-agent"
+    reason: "Manual color-blindness emulation verification pass — QA/accessibility audit, not feature code"
+  T036:
+    agent: "frontend-agent"
+    reason: "Fixes Vitest/RTL component-test regressions in frontend/ — frontend-agent's TDD stack"
+  T037:
+    agent: "frontend-agent"
+    reason: "Runs frontend lint/build gate (oxlint, tsc, vite build)"
+  T038:
+    agent: "qa-agent"
+    reason: "Regression-gate verification of the e2e contrast checks — quality-gate audit"
+  T039:
+    agent: "qa-agent"
+    reason: "Final cross-cutting confirmation that e2e + frontend suites satisfy SC-001 to SC-006"

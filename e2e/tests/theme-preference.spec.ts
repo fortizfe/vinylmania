@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 import { getActiveTheme } from '../helpers/theme';
 
@@ -176,4 +177,36 @@ test.describe('Theme preference persistence (US2)', () => {
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
   });
+});
+
+test.describe('ThemeToggle UI component contrast (spec 058, US2)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`meets WCAG UI component contrast against its row surface in ${theme} mode`, async ({
+      page,
+    }) => {
+      // A brand-new user has no saved preference, so the app falls back to
+      // the OS-level colorScheme (see the "falls back to the OS setting"
+      // test above) — this is what lets emulateMedia drive the rendered
+      // theme here without first clicking the toggle.
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page, {
+        displayName: 'Contrast Check User',
+        email: `e2e-theme-contrast-${theme}@example.com`,
+      });
+
+      await page.getByRole('link', { name: 'Profile' }).click();
+      const toggle = page
+        .getByRole('region', { name: 'Preferences' })
+        .getByRole('switch', { name: /dark mode/i });
+      await expect(toggle).toBeVisible();
+
+      // The toggle's actual adjacent surface is the "Dark mode" row it sits
+      // in (bg-stone-50/dark:bg-stone-950 in ProfilePage.tsx), not the
+      // outer <section> (which carries no background of its own).
+      const row = toggle.locator('xpath=..');
+
+      await assertUiComponentContrast(page, toggle, row, `ThemeToggle border (${theme})`);
+    });
+  }
 });

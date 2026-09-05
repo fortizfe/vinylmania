@@ -9,8 +9,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary: 'bg-primary text-white hover:opacity-90',
+  // border-stone-500 (not the lighter default border-stone-300) against
+  // the light surfaces this variant sits on (app shell, Card) — at
+  // border-stone-300 it measured 1.43:1 against a Card surface (the Genre
+  // filter trigger, spec 058 T028 finding #9), under the WCAG AA 3:1
+  // minimum for UI component boundaries (1.4.11). The dark side is fixed
+  // at the token level via `--color-border-dark` in global.css.
   secondary:
-    'border border-stone-300 bg-transparent text-stone-900 hover:bg-stone-50 dark:border-border-dark dark:text-stone-100 dark:hover:bg-stone-900',
+    'border border-stone-500 bg-transparent text-stone-900 hover:bg-stone-50 dark:border-border-dark dark:text-stone-100 dark:hover:bg-stone-900',
 };
 
 const sizeClasses: Record<NonNullable<ButtonProps['size']>, string> = {

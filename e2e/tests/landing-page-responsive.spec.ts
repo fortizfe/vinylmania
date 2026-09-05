@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
+
 // Unauthenticated landing page: dual layout + 44px touch targets
 // (spec 035, Acceptance Scenarios 1-2). No sign-in needed — this is the
 // anonymous entry point.
@@ -81,4 +83,22 @@ test.describe('Landing page responsive layout (spec 035, US1)', () => {
     // Confirm no navigation/reload happened across the resizes.
     await expect(page).toHaveURL(/\/$/);
   });
+});
+
+test.describe('Landing page WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto('/');
+
+      const pillarGrid = page.getByTestId('landing-pillar-grid');
+      await expect(pillarGrid).toBeVisible();
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
 });

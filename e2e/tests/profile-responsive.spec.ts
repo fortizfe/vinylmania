@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 test.describe('Profile page responsive layout (spec 035, US1)', () => {
@@ -65,4 +66,22 @@ test.describe('Profile page responsive layout (spec 035, US1)', () => {
     expect(connectBox?.width).toBeGreaterThanOrEqual(44);
     expect(connectBox?.height).toBeGreaterThanOrEqual(44);
   });
+});
+
+test.describe('Profile WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+      await page.goto('/app/profile');
+      await expect(page.getByRole('heading', { name: /^profile$/i })).toBeVisible();
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
 });

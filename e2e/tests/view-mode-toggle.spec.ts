@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { assertFocusIndicatorContrast, assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 function buildLibraryResponse(count: number) {
@@ -141,5 +142,71 @@ test.describe('View mode toggle (feature 052, US1)', () => {
       'aria-checked',
       'true',
     );
+  });
+
+  /**
+   * Each contrast check below runs as its own test rather than as several
+   * chained assertions in one test — otherwise the first failing assertion
+   * would abort the test and hide whether the later ones pass or fail.
+   */
+  async function goToLibraryForContrastChecks(page: import('@playwright/test').Page) {
+    await mockLibrary(page);
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByTestId('library-record-grid')).toBeVisible();
+  }
+
+  test.describe('ViewModeToggle UI component and focus-indicator contrast (spec 058, US2)', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      test(`toggle container border meets WCAG UI component contrast in ${theme} mode`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme: theme });
+        await goToLibraryForContrastChecks(page);
+
+        const toggleContainer = page.getByTestId('view-mode-toggle');
+        const appShell = page.getByTestId('app-shell');
+        await assertUiComponentContrast(
+          page,
+          toggleContainer,
+          appShell,
+          `ViewModeToggle container border (${theme})`,
+        );
+      });
+
+      test(`active option fill meets WCAG UI component contrast in ${theme} mode`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme: theme });
+        await goToLibraryForContrastChecks(page);
+
+        const toggleContainer = page.getByTestId('view-mode-toggle');
+        const activeOption = page.getByTestId('view-mode-grid');
+        await assertUiComponentContrast(
+          page,
+          activeOption,
+          toggleContainer,
+          `ViewModeToggle active option fill (${theme})`,
+        );
+      });
+
+      // This file already reaches the toggle via keyboard (see "the toggle
+      // can be reached and operated with keyboard only" above), so a
+      // focus-indicator check applies here too (per spec 058 T021).
+      test(`active option meets WCAG focus-indicator contrast in ${theme} mode`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme: theme });
+        await goToLibraryForContrastChecks(page);
+
+        const activeOption = page.getByTestId('view-mode-grid');
+        await assertFocusIndicatorContrast(
+          page,
+          activeOption,
+          `ViewModeToggle active option focus indicator (${theme})`,
+        );
+      });
+    }
   });
 });

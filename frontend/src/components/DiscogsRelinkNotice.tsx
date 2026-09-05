@@ -23,7 +23,7 @@ export function DiscogsRelinkNotice({ message = DEFAULT_MESSAGE }: DiscogsRelink
       <p className="text-stone-700 dark:text-stone-300">{message}</p>
       <Link
         to="/app/profile"
-        className="mt-2 inline-block text-sm font-medium text-primary hover:opacity-80"
+        className="mt-2 inline-block text-sm font-medium text-primary hover:opacity-80 dark:text-primary-text"
       >
         Go to your profile
       </Link>
