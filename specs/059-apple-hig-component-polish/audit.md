@@ -93,12 +93,50 @@ reduced-motion transform leak found in the implementation.
 
 ## US3 — Overlay depth & focus management (P2)
 
+**Status**: ✅ done (T060–T067). Material + focus contract shipped in commits
+75c00d4 / 1d370f5 (T062–T064). E2E coverage (T060/T061/T065/T066/T067):
+`e2e/tests/overlay-focus-management.spec.ts` (+13 cases — for the centered
+Modal, the end-drawer and the fullscreen gallery: Tab/Shift+Tab trapped inside;
+Escape, scrim-click and close-button each restore focus to the exact opener;
+`document.body` `overflow: hidden` while open and reverted after; background
+does not scroll on wheel/`PageDown`; scrim reads as a distinct backdrop —
+plus the T065 nested confirm-in-Modal stack: inner traps, unwinds to the outer
+opener, then to the page trigger, with ref-counted scroll lock),
+`e2e/tests/overlay-contrast.spec.ts` (new, 8 cases — `assertOverlayContentContrast`
+over blurred busy cover art both themes; axe `serious`/`critical` = 0 with the
+Genre Modal open and with the fullscreen gallery open, both themes;
+`prefers-contrast: more` emulated → solid scrim + bordered surface; the
+`prefers-reduced-transparency` / `@supports not (backdrop-filter)` fallback
+rules asserted present in the shipped stylesheet — neither is emulatable in
+Playwright 1.61), `e2e/tests/release-detail-responsive.spec.ts` (+2, chromium
+& webkit — gallery scrim dims + blurs and the surface is the `.overlay-surface`
+floating layer; close control clears 1.4.11 against the scrim),
+`e2e/tests/dark-mode-contrast.spec.ts` (+4 — Modal content on its opaque
+surface + gallery scrim/close-control contrast, both themes). Test-only harness
+`frontend/src/pages/dev/NestedOverlayHarness.tsx` at `/__dev/nested-overlay`
+(DEV-only route). Full US3 e2e set: 60 passed / 0 failed. The four latent
+`Modal` gaps (focus trap / focus restore / scroll lock / backdrop distinction)
+are proven closed by e2e for all three overlays. No focus, scroll-lock or
+material defect found in the implementation; two secondary observations logged
+below.
+
+**Notes / follow-ups (not US3-blocking):**
+- The fullscreen gallery `[role="dialog"]` has no accessible name
+  (`GalleryFullscreenViewer` passes no `labelledBy`/`aria-label` to `Overlay`).
+  Not a `wcag2a`/`aa` axe failure (the `aria-dialog-name` rule is
+  best-practice-tagged), but worth a one-line fix.
+- `useEscapeKey` is not stack-aware: with the nested stack open, one Escape
+  fires both overlays' handlers. The T065 tests dismiss the inner dialog via
+  its button to get a deterministic unwind; a topmost-only Escape would be the
+  cleaner behaviour if nested overlays become a real pattern.
+
 | Component | Disposition | HIG | Skill | Change | e2e |
 |---|---|---|---|---|---|
-| `motion/Overlay` | rework | DEPTH, RESP | apple-design | Scrim `bg-stone-950/60` + `backdrop-blur-md backdrop-saturate-150`; `@supports`/reduced-transparency/reduced-contrast fallbacks; focus trap + restore + scroll lock | overlay-focus-management |
-| `ui/Modal` | rework | DEPTH | apple-design | Consumes `Overlay` material + focus contract; `aria-labelledby` on title | overlay-focus-management |
-| `components/GalleryFullscreenViewer` | rework | DEPTH | apple-design | Consumes `Overlay`; blur backdrop + fallbacks; focus trap/restore/scroll lock | release-detail-responsive |
-| `e2e/helpers/contrast.ts` | refine | — | — | Add over-blur worst-case (busy cover art) contrast assertion for overlay surface+text | overlay-focus-management, dark-mode-contrast |
+| `motion/Overlay` | rework | DEPTH, RESP | apple-design | Scrim `bg-stone-950/60` + `backdrop-blur-md backdrop-saturate-150`; `@supports`/reduced-transparency/reduced-contrast fallbacks; focus trap + restore + scroll lock | ✅ overlay-focus-management, overlay-contrast |
+| `ui/Modal` | rework | DEPTH | apple-design | Consumes `Overlay` material + focus contract; `aria-labelledby` on title | ✅ overlay-focus-management, overlay-contrast, dark-mode-contrast |
+| `components/GalleryFullscreenViewer` | rework | DEPTH | apple-design | Consumes `Overlay`; blur backdrop + fallbacks; focus trap/restore/scroll lock | ✅ overlay-focus-management, release-detail-responsive, dark-mode-contrast |
+| `e2e/helpers/contrast.ts` | refine | — | — | Add `colorAlpha` + `assertOverlayContentContrast` over-blur worst-case (busy cover art) — opaque-surface guard + text ≥ 4.5:1 + control ≥ 3:1 | ✅ overlay-contrast, dark-mode-contrast |
+| `pages/dev/NestedOverlayHarness` (test-only) | add | — | — | DEV-only `/__dev/nested-overlay` route — confirm dialog inside a Modal, for the nested focus-unwind test | ✅ overlay-focus-management |
 | `ui/Card` | conforms | DEPTH | apple-design | `rounded-xl border shadow-sm` already correct for in-flow cards; floating tiers reserved correctly | — |
 
 ---
