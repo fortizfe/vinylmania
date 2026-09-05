@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { assertFocusIndicatorContrast, assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
+import { expectPressed, samplePress } from '../helpers/press';
 
 const ENTRY_ID = 'e2e-entry-1';
 
@@ -273,6 +274,52 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await page.goto(`/app/library/records/${ENTRY_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
   }
+
+  test.describe('Pressed-state feedback on the record-detail controls (spec 059 US1, T043)', () => {
+    test('the rating stars depress on pointer-down without autosaving', async ({ page }) => {
+      let sawPatch = false;
+      await page.route(`**/api/library/${ENTRY_ID}`, async (route) => {
+        if (route.request().method() === 'PATCH') {
+          sawPatch = true;
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(buildEntry()),
+          });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(buildEntry()),
+        });
+      });
+
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+      await page.goto(`/app/library/records/${ENTRY_ID}`);
+      await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+
+      expectPressed(await samplePress(page, page.getByRole('button', { name: '3 stars' })));
+      // Released off the control (acceptance scenario 3) — no rating change.
+      expect(sawPatch).toBe(false);
+    });
+
+    test('the inline-edit trigger and BackLink acknowledge a pointer-down', async ({ page }) => {
+      await goToRecordDetailForContrastChecks(page);
+
+      // Inline-edit "Edit Notes" trigger — standard pressable, and a
+      // drag-off release must not open the editor.
+      expectPressed(await samplePress(page, page.getByRole('button', { name: /edit notes/i })));
+      await expect(page.getByRole('textbox', { name: 'Notes' })).toHaveCount(0);
+
+      // BackLink nudges toward its chevron (translate, not scale).
+      const backSample = await samplePress(page, page.getByRole('link', { name: /back/i }));
+      expect(Math.abs(backSample.pressedWidth - backSample.restingWidth)).toBeLessThan(1.5);
+      expect(backSample.xShift).toBeLessThan(-1);
+      expect(backSample.xShift).toBeGreaterThan(-4);
+    });
+  });
 
   test.describe('Media Condition and rating control UI/focus contrast (spec 058, US2)', () => {
     for (const theme of ['light', 'dark'] as const) {

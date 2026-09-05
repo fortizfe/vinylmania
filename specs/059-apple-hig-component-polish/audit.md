@@ -23,27 +23,35 @@ Every implementation task in `tasks.md` MUST cite a `component` + `story` row he
 
 ## US1 — Instant press feedback (P1)
 
+**Status**: ✅ done (T022/T043/T044). `e2e/tests/press-feedback.spec.ts` (new, 13 cases)
+covers Button, filter chip, star, header nav icon, inline-edit trigger, BackLink nudge,
+disabled-Button suppression, whole-card scale, `prefers-reduced-motion` (brightness kept,
+no scale), and keyboard activation + shared `focusRing` visible & AA on both themes.
+`view-mode-toggle.spec.ts` and `record-detail-inline-edit.spec.ts` extended with
+press-state assertions (T043). Axe: zero serious/critical on the authed Dashboard,
+light + dark (SC-005 ≥ baseline). Full US1 gate green.
+
 | Component | Disposition | HIG | Skill | Change | e2e |
 |---|---|---|---|---|---|
-| `ui/Button` (+ `buttonClassName`, `iconButtonClassName`) | refine | RESP, FB | emil-design-eng | `active:scale-[0.97]` + `active:brightness` on pointer-down; token transition; suppressed when disabled/loading & reduced-motion; adopt `focusRing` | press-feedback |
-| `ui/StarRating` | refine | RESP, FB, CONS | emil-design-eng | Per-star press scale; adopt `focusRing` (removes the documented `outline-primary` race) | press-feedback, record-detail-inline-edit |
-| `ui/ThemeToggle` | refine | RESP, FB | emil, animate | Press feedback on the track; (motion handled in US2) | theme-preference |
-| `ui/ViewModeToggle` | refine | RESP, FB | emil | Press feedback on each option; adopt `focusRing` | view-mode-toggle |
-| `ui/BackLink` | refine | RESP | emil | Press state (`active:-translate-x-0.5` nudge toward the chevron); `focusRing` | release-detail-responsive |
-| `ui/InlineEditableField` (read trigger) | refine | RESP, FB | emil | Press state on the trigger button; `focusRing` | record-detail-inline-edit |
-| `ui/Checkbox` | refine | RESP, FB | emil | Press feedback on the row; keep spec-058 dark `bg-stone-300` fix | library-filters |
-| `filters/SelectableListFilter` | refine | RESP, FB, CONS | emil | Press state on each selectable row; ensure it maps to `multi-select-list` pattern | library-filters, search-result-filters |
-| `filters/FilterActions` | refine | RESP | emil | Buttons inherit `Button` press state — verify | library-filters |
-| `filters/CollapsibleFilterPanel` (trigger) | refine | RESP | emil | Trigger inherits `Button` press; (disclosure motion in US2) | library-filters |
-| `components/HeaderNavIcons` | refine | RESP, FB | emil | Icon-button press state; `focusRing` | header-responsive-nav |
-| `components/HamburgerMenu` (trigger) | refine | RESP | emil | Inherits `Button` press; (drawer gesture in US4) | header-responsive-nav |
-| `components/HeaderSearchBox` | refine | RESP | emil | Submit/clear controls press; input focus unchanged | header-responsive-nav |
-| `components/ResultCardActions` | refine | RESP, FB | emil | Action buttons press state | search-results-responsive |
-| `components/GoogleSignInButton` | refine | RESP, FB | emil | Press state; keep the spec-032 AA indigo | sign-in |
-| `components/RecordCard`, `RecordListRow`, `SearchResultCard`, `SearchResultListRow` | refine | RESP, FB | emil | Whole-card press affordance (`active:scale-[0.99]`) on the `<Link>`; keep skeleton parity | library-list-responsive, search-results-responsive |
-| `components/FeedArticleCard` | refine | RESP | emil | Card press affordance | dashboard-feed-grid |
-| `components/FeedCategoryFilterBar`, `FeedSourceFilterBar` | refine | RESP, CONS | emil | Chip press state; map chips to one pattern | dashboard-feed-grid |
-| `components/MasterVersionsTable` (rows) | refine | RESP | emil | Row press affordance where rows navigate | master-release-detail-responsive |
+| `ui/Button` (+ `buttonClassName`, `iconButtonClassName`) | refine | RESP, FB | emil-design-eng | `active:scale-[0.97]` + `active:brightness` on pointer-down; token transition; suppressed when disabled/loading & reduced-motion; adopt `focusRing` | ✅ press-feedback |
+| `ui/StarRating` | refine | RESP, FB, CONS | emil-design-eng | Per-star press scale; adopt `focusRing` (removes the documented `outline-primary` race) | ✅ press-feedback, record-detail-inline-edit |
+| `ui/ThemeToggle` | refine | RESP, FB | emil, animate | Press feedback on the track; (motion handled in US2) | ✅ theme-preference (unit-covered; e2e press in US2) |
+| `ui/ViewModeToggle` | refine | RESP, FB | emil | Press feedback on each option; adopt `focusRing` | ✅ view-mode-toggle |
+| `ui/BackLink` | refine | RESP | emil | Press state (`active:-translate-x-0.5` nudge toward the chevron); `focusRing` | ✅ press-feedback, record-detail-inline-edit |
+| `ui/InlineEditableField` (read trigger) | refine | RESP, FB | emil | Press state on the trigger button; `focusRing` | ✅ press-feedback, record-detail-inline-edit |
+| `ui/Checkbox` | refine | RESP, FB | emil | Press feedback on the row; keep spec-058 dark `bg-stone-300` fix | ✅ library-filters (unit-covered) |
+| `filters/SelectableListFilter` | refine | RESP, FB, CONS | emil | Press state on each selectable row; ensure it maps to `multi-select-list` pattern | ✅ library-filters, search-result-filters (unit-covered) |
+| `filters/FilterActions` | refine | RESP | emil | Buttons inherit `Button` press state — verify | ✅ library-filters (unit-covered) |
+| `filters/CollapsibleFilterPanel` (trigger) | refine | RESP | emil | Trigger inherits `Button` press; (disclosure motion in US2) | ✅ library-filters (unit-covered) |
+| `components/HeaderNavIcons` | refine | RESP, FB | emil | Icon-button press state; `focusRing` | ✅ press-feedback |
+| `components/HamburgerMenu` (trigger) | refine | RESP | emil | Inherits `Button` press; (drawer gesture in US4) | ✅ header-responsive-nav (unit-covered) |
+| `components/HeaderSearchBox` | refine | RESP | emil | Submit/clear controls press; input focus unchanged | ✅ press-feedback (Search button) |
+| `components/ResultCardActions` | refine | RESP, FB | emil | Action buttons press state | ✅ press-feedback (disabled "Added to library"), search-results-responsive |
+| `components/GoogleSignInButton` | refine | RESP, FB | emil | Press state; keep the spec-032 AA indigo | ✅ sign-in (inherits `Button`; unit-covered) |
+| `components/RecordCard`, `RecordListRow`, `SearchResultCard`, `SearchResultListRow` | refine | RESP, FB | emil | Whole-card press affordance (`active:scale-[0.99]`) on the `<Link>`; keep skeleton parity | ✅ press-feedback (SearchResultCard link), library-list-responsive, search-results-responsive |
+| `components/FeedArticleCard` | refine | RESP | emil | Card press affordance | ✅ dashboard-feed-grid (unit-covered) |
+| `components/FeedCategoryFilterBar`, `FeedSourceFilterBar` | refine | RESP, CONS | emil | Chip press state; map chips to one pattern | ✅ press-feedback (FeedCategoryFilterBar chip), dashboard-feed-grid |
+| `components/MasterVersionsTable` (rows) | refine | RESP | emil | Row press affordance where rows navigate | ✅ master-release-detail-responsive (unit-covered) |
 
 ---
 

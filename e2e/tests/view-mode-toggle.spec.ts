@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { assertFocusIndicatorContrast, assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
+import { expectPressed, samplePress } from '../helpers/press';
 
 function buildLibraryResponse(count: number) {
   return {
@@ -124,6 +125,27 @@ test.describe('View mode toggle (feature 052, US1)', () => {
     expect(gridBox?.height).toBeGreaterThanOrEqual(44);
     expect(listBox?.width).toBeGreaterThanOrEqual(44);
     expect(listBox?.height).toBeGreaterThanOrEqual(44);
+  });
+
+  // Spec 059 US1 (T043): each option acknowledges a pointer-down with the
+  // shared `pressable` scale-down + brightness nudge, before release.
+  test('each toggle option depresses on pointer-down (spec 059 US1)', async ({ page }) => {
+    await mockLibrary(page);
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByTestId('library-record-grid')).toBeVisible();
+
+    // The inactive option — pressing it must not switch mode yet (released
+    // off-target), only show the pressed state.
+    const listOption = page.getByTestId('view-mode-list');
+    const sample = await samplePress(page, listOption);
+    expectPressed(sample);
+    await expect(page.getByTestId('library-record-grid')).toBeVisible();
+    await expect(listOption).toHaveAttribute('aria-checked', 'false');
+
+    // The active option depresses too.
+    expectPressed(await samplePress(page, page.getByTestId('view-mode-grid')));
   });
 
   test('the toggle can be reached and operated with keyboard only', async ({ page }) => {

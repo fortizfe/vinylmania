@@ -80,7 +80,7 @@ description: "Task list for Apple HIG Component Polish"
 
 ### Tests (write first, must fail)
 
-- [ ] T022 [P] [US1] `e2e/tests/press-feedback.spec.ts` — pressed state on pointer-down (not click) for Button, filter chip, star, header nav icon, inline-edit trigger; disabled Button shows none; reduced-motion keeps a brightness/opacity shift but no scale
+- [X] T022 [P] [US1] `e2e/tests/press-feedback.spec.ts` — pressed state on pointer-down (not click) for Button, filter chip, star, header nav icon, inline-edit trigger; disabled Button shows none; reduced-motion keeps a brightness/opacity shift but no scale
 - [X] T023 [P] [US1] Extend `frontend/tests/unit/ui/Button.test.tsx` — asserts press utilities present in `baseClassName`, absent effect when `disabled`/`loading`, and `focusRing` applied
 - [X] T024 [P] [US1] Extend `frontend/tests/unit/ui/StarRating.test.tsx` and `ThemeToggle.test.tsx` / `Checkbox.test.tsx` — press affordance + shared `focusRing`
 
@@ -104,8 +104,8 @@ description: "Task list for Apple HIG Component Polish"
 - [X] T040 [P] [US1] Chip press + single chip pattern in `frontend/src/components/FeedCategoryFilterBar.tsx` and `frontend/src/components/FeedSourceFilterBar.tsx`
 - [X] T041 [P] [US1] Navigable-row press in `frontend/src/components/MasterVersionsTable.tsx`
 - [X] T042 [P] [US1] Collapse-trigger + filter action buttons inherit `Button` press — verify and add press assertions in `frontend/src/components/filters/CollapsibleFilterPanel.tsx`, `frontend/src/components/filters/FilterActions.tsx`, `frontend/src/components/HamburgerMenu.tsx`
-- [ ] T043 [US1] Extend `e2e/tests/view-mode-toggle.spec.ts` and `e2e/tests/record-detail-inline-edit.spec.ts` with press-state assertions
-- [ ] T044 [US1] Run US1 validation (quickstart §US1): `press-feedback.spec.ts` + axe both themes green; update the US1 rows in [audit.md](./audit.md) to done
+- [X] T043 [US1] Extend `e2e/tests/view-mode-toggle.spec.ts` and `e2e/tests/record-detail-inline-edit.spec.ts` with press-state assertions
+- [X] T044 [US1] Run US1 validation (quickstart §US1): `press-feedback.spec.ts` + axe both themes green; update the US1 rows in [audit.md](./audit.md) to done
 
 **Checkpoint**: US1 fully functional and independently testable — shippable MVP.
 
