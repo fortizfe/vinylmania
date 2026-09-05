@@ -119,7 +119,7 @@ description: "Task list for Apple HIG Component Polish"
 
 ### Tests (write first, must fail)
 
-- [ ] T045 [P] [US2] `e2e/tests/reduced-motion.spec.ts` — `emulateMedia({ reducedMotion: 'reduce' })`: every animated element's `transform` is `none` mid-transition; skeletons have `animation-name: none`
+- [X] T045 [P] [US2] `e2e/tests/reduced-motion.spec.ts` — `emulateMedia({ reducedMotion: 'reduce' })`: every animated element's `transform` is `none` mid-transition; skeletons have `animation-name: none`
 - [X] T046 [P] [US2] `frontend/tests/unit/architecture/no-inline-motion.test.ts` — scans `frontend/src/components/**` for `cubic-bezier(`, `duration-[`, `transition: all`, bare `ease`/`ease-in`/`linear` and fails on new occurrences
 - [X] T047 [P] [US2] Extend `frontend/tests/unit/ui/Modal.test.tsx` — motion wrapper present; reduced-motion prop path renders; all existing assertions still pass
 - [X] T048 [P] [US2] Motion tests for `frontend/tests/unit/ui/ViewModeToggle.test.tsx` (shared-element pill) and a new `frontend/tests/unit/filters/CollapsibleFilterPanel.test.tsx` (disclosure height/opacity)
@@ -134,9 +134,9 @@ description: "Task list for Apple HIG Component Polish"
 - [X] T054 [P] [US2] Image-change directional slide + `spring.momentum` in `frontend/src/components/GalleryFullscreenViewer.tsx` (swipe input added in US4)
 - [X] T055 [P] [US2] Open viewer anchored to the tapped thumbnail (`transform-origin`) in `frontend/src/components/ReleaseImageGallery.tsx`
 - [X] T056 [P] [US2] Carousel/scroll-snap motion → token easing + momentum projection in `frontend/src/components/FeedArticleBoard.tsx`
-- [ ] T057 [US2] Extend `e2e/tests/theme-preference.spec.ts`, `e2e/tests/library-filters.spec.ts`, `e2e/tests/search-result-filters.spec.ts` with motion + reduced-motion assertions
-- [ ] T058 [US2] Add interruptibility check to `e2e/tests/overlay-focus-management.spec.ts` (create if not yet present): trigger modal close mid-enter and drawer reverse mid-drag; sample `getBoundingClientRect()` across rAF ticks; assert no single-frame jump to start/end transform (SC-003)
-- [ ] T059 [US2] Run US2 validation (quickstart §US2); update US2 rows in [audit.md](./audit.md)
+- [X] T057 [US2] Extend `e2e/tests/theme-preference.spec.ts`, `e2e/tests/library-filters.spec.ts`, `e2e/tests/search-result-filters.spec.ts` with motion + reduced-motion assertions (also `view-mode-toggle.spec.ts`: sliding-pill motion + fixed the spec-058 "active option fill" contrast check to target `view-mode-pill`)
+- [X] T058 [US2] Add interruptibility check to `e2e/tests/overlay-focus-management.spec.ts` (create if not yet present): trigger modal close mid-enter and drawer reverse mid-drag; sample `getBoundingClientRect()` across rAF ticks; assert no single-frame jump to start/end transform (SC-003)
+- [X] T059 [US2] Run US2 validation (quickstart §US2); update US2 rows in [audit.md](./audit.md)
 
 **Checkpoint**: US1 + US2 both work independently; motion feels physical and respects reduced-motion.
 

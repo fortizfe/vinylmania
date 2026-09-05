@@ -57,16 +57,36 @@ light + dark (SC-005 ≥ baseline). Full US1 gate green.
 
 ## US2 — Physical, interruptible transitions (P1)
 
+**Status**: ✅ done (T045–T059). Motion implementation shipped in commit 75c00d4
+(T046–T056). E2E coverage (T045/T057/T058/T059): `e2e/tests/reduced-motion.spec.ts`
+(new, 6 cases — Modal, end-drawer, ViewModeToggle pill, CollapsibleFilterPanel,
+gallery viewer + image swap all opacity-only with no translate/scale under
+`emulateMedia({ reducedMotion: 'reduce' })`; skeleton `animation-name: none`),
+`e2e/tests/overlay-focus-management.spec.ts` (new, 2 cases — SC-003: closing the
+centered Modal mid-enter and reversing the end-drawer mid-slide both track from
+the current on-screen value with no single-frame jump to a start/end transform),
+`theme-preference.spec.ts` (+2: knob glides on `spring.default`; reduced-motion
+jump), `view-mode-toggle.spec.ts` (+2: sliding pill; reduced-motion jump — plus
+the spec-058 "active option fill" contrast check re-pointed at `view-mode-pill`
+now that the active `<button>` no longer carries `bg-primary`),
+`library-filters.spec.ts` / `search-result-filters.spec.ts` (+2 each: disclosure
+height+opacity motion; reduced-motion opacity-only, no transform). SC-006 (one
+shared token set) is guarded by the frontend unit test
+`frontend/tests/unit/architecture/no-inline-motion.test.ts` — green.
+Full US2 e2e set: 77 passed / 0 failed (2 pre-existing unrelated `test.fixme`
+skips in `search-result-filters.spec.ts`). No interruptibility jump or
+reduced-motion transform leak found in the implementation.
+
 | Component | Disposition | HIG | Skill | Change | e2e |
 |---|---|---|---|---|---|
-| `ui/Modal` | rework | INT, SPACE, DEPTH | apple-design, animate | Re-home on `Overlay`; spring enter/exit, interruptible, same-path exit; reduced-motion opacity-only | overlay-focus-management, header-responsive-nav |
-| `ui/ThemeToggle` | refine | INT, CRAFT | animate | Knob translate → `spring.default`; sky/stars → token crossfade; reduced-motion static | theme-preference |
-| `ui/ViewModeToggle` | rework | INT, SPACE, CRAFT | animate, emil | Active state → shared-element sliding pill (`layoutId` + `spring.default`); reduced-motion jump | view-mode-toggle |
-| `filters/CollapsibleFilterPanel` | refine | INT, FB | animate | Height+opacity disclosure motion (measured height), chevron rotate on token; reduced-motion instant | library-filters, search-result-filters |
-| `ui/Skeleton` + all `*Skeleton` | refine | CRAFT | apple-design | `animate-pulse` gated behind `motion-safe`; dims/structure unchanged | reduced-motion |
-| `components/GalleryFullscreenViewer` (image change) | refine | INT, SPACE | animate | Image swap → directional slide + `spring.momentum`; (swipe in US4) | release-detail-responsive |
-| `components/ReleaseImageGallery` (thumb → viewer) | refine | SPACE | apple-design | Open viewer anchored to the tapped thumbnail (transform-origin) | release-detail-responsive |
-| `components/FeedArticleBoard` / carousel | refine | INT, DM | animate | Any scroll-snap / carousel motion → token easing; momentum projection if snapping | dashboard-feed-grid |
+| `ui/Modal` | rework | INT, SPACE, DEPTH | apple-design, animate | Re-home on `Overlay`; spring enter/exit, interruptible, same-path exit; reduced-motion opacity-only | ✅ overlay-focus-management, reduced-motion |
+| `ui/ThemeToggle` | refine | INT, CRAFT | animate | Knob translate → `spring.default`; sky/stars → token crossfade; reduced-motion static | ✅ theme-preference |
+| `ui/ViewModeToggle` | rework | INT, SPACE, CRAFT | animate, emil | Active state → shared-element sliding pill (`layoutId` + `spring.default`); reduced-motion jump | ✅ view-mode-toggle, reduced-motion |
+| `filters/CollapsibleFilterPanel` | refine | INT, FB | animate | Height+opacity disclosure motion (measured height), chevron rotate on token; reduced-motion instant | ✅ library-filters, search-result-filters, reduced-motion |
+| `ui/Skeleton` + all `*Skeleton` | refine | CRAFT | apple-design | `animate-pulse` gated behind `motion-safe`; dims/structure unchanged | ✅ reduced-motion |
+| `components/GalleryFullscreenViewer` (image change) | refine | INT, SPACE | animate | Image swap → directional slide + `spring.momentum`; (swipe in US4) | ✅ reduced-motion (release-detail-responsive in US3/US4) |
+| `components/ReleaseImageGallery` (thumb → viewer) | refine | SPACE | apple-design | Open viewer anchored to the tapped thumbnail (transform-origin) | ✅ reduced-motion (release-detail-responsive in US3/US4) |
+| `components/FeedArticleBoard` / carousel | refine | INT, DM | animate | No carousel exists (responsive grid) — no-op; token easing applies if one is added | n/a (dashboard-feed-grid) |
 | `components/*Section` (Release/Master detail sections) | conforms | — | apple-design | Static content; no motion warranted (emil: don't animate content) | — |
 
 ---

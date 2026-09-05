@@ -3,6 +3,13 @@ import { expect, type Page, test } from '@playwright/test';
 import { runAxeScan } from '../helpers/axe';
 import { assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
+import {
+  collectMotionFrames,
+  connectedFrames,
+  expectGradualMotion,
+  expectNoTransformMotion,
+  startMotionRecorder,
+} from '../helpers/motion';
 
 /**
  * Opens the Format modal, checks the given option, and closes the modal
@@ -1101,6 +1108,64 @@ test.describe('Filters behave identically in list mode (feature 052, US3)', () =
     await expect(
       page.getByText(/no results found for the active filters/i),
     ).toBeVisible();
+  });
+});
+
+test.describe('Filter panel disclosure motion (spec 059 US2)', () => {
+  async function goToSearch(page: Page) {
+    await page.route('**/api/discogs/search*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [{ discogsId: 501, resultType: 'release', title: 'Nevermind' }],
+          pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+        }),
+      });
+    });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.getByLabel(/search discogs/i).fill('nirvana');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+    await expect(page.getByText('Nevermind')).toBeVisible();
+  }
+
+  test('expanding animates the body open (height + opacity) over several frames', async ({
+    page,
+  }) => {
+    await goToSearch(page);
+
+    await startMotionRecorder(page, { body: '[data-testid="collapsible-filter-body"]' }, 900);
+    await page.getByRole('button', { name: /^filters$/i }).click();
+    const frames = await collectMotionFrames(page);
+
+    await expect(page.getByTestId('collapsible-filter-body')).toHaveAttribute(
+      'data-reduced-motion',
+      'false',
+    );
+    expectGradualMotion(frames.body, 'CollapsibleFilterPanel disclosure (search)');
+  });
+
+  test('under prefers-reduced-motion the body reveals with no transform (opacity only)', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await goToSearch(page);
+
+    await startMotionRecorder(page, { body: '[data-testid="collapsible-filter-body"]' }, 700);
+    await page.getByRole('button', { name: /^filters$/i }).click();
+    const frames = await collectMotionFrames(page);
+
+    await expect(page.getByTestId('collapsible-filter-body')).toHaveAttribute(
+      'data-reduced-motion',
+      'true',
+    );
+    // SC-004: no translate/scale from the disclosure — a brief opacity change
+    // is the only motion permitted.
+    expectNoTransformMotion(frames.body, 'CollapsibleFilterPanel disclosure (reduced motion)');
+    const seen = connectedFrames(frames.body);
+    expect(Number.parseFloat(seen.at(-1)!.opacity)).toBeGreaterThan(0.99);
   });
 });
 

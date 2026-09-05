@@ -1,8 +1,24 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 import { assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
+import {
+  collectMotionFrames,
+  expectGradualMotion,
+  expectJumpNotGlide,
+  startMotionRecorder,
+} from '../helpers/motion';
 import { getActiveTheme } from '../helpers/theme';
+
+async function goToPreferences(page: Page) {
+  await page.goto('/');
+  await signInAsFakeGoogleUser(page);
+  await page.getByRole('link', { name: 'Profile' }).click();
+  await expect(page.getByRole('heading', { name: /profile/i })).toBeVisible();
+  return page
+    .getByRole('region', { name: 'Preferences' })
+    .getByRole('switch', { name: /dark mode/i });
+}
 
 test.describe('Theme preference toggle (US1)', () => {
   test('toggling the Preferences switch changes the whole app theme instantly, with matching artwork', async ({
@@ -176,6 +192,44 @@ test.describe('Theme preference persistence (US2)', () => {
     // The app remains fully usable — the toggle can still be operated.
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  });
+});
+
+test.describe('ThemeToggle knob motion (spec 059 US2)', () => {
+  // The knob is the `m.span` (the switch's last child, `z-10`) that wraps the
+  // sun/moon artwork; it rides `spring.default` between the ends of the track.
+  // Tracked by the persistent wrapper, not the artwork svg, which React swaps
+  // out on toggle.
+  const KNOB = '[role="switch"][aria-label="Dark mode"] span.z-10';
+
+  test('the knob glides between light and dark rather than snapping', async ({ page }) => {
+    const toggle = await goToPreferences(page);
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+    await startMotionRecorder(page, { knob: KNOB }, 900);
+    await toggle.click();
+    const frames = await collectMotionFrames(page);
+
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    // The knob's transform interpolated across several frames (spring), it
+    // did not jump straight to the dark-end position.
+    expectGradualMotion(frames.knob, 'ThemeToggle knob (light → dark)');
+  });
+
+  test('under prefers-reduced-motion the knob jumps with no glide and no residual transform animation', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const toggle = await goToPreferences(page);
+
+    await startMotionRecorder(page, { knob: KNOB }, 700);
+    await toggle.click();
+    const frames = await collectMotionFrames(page);
+
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    // MotionConfig reducedMotion="user" neutralises the knob translate — it
+    // snaps to the dark-end position in a single step rather than gliding.
+    expectJumpNotGlide(frames.knob, 'ThemeToggle knob under reduced motion');
   });
 });
 
