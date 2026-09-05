@@ -1,38 +1,42 @@
 <!--
 Sync Impact Report
-Version change: 2.5.0 → 2.6.0
-Modified principles: none (existing principles I-VIII unchanged)
+Version change: 2.6.0 → 2.7.0
+Modified principles: none (existing principles I-IX unchanged)
 Added sections:
-  - New Core Principle IX: "Frontend Network Requests — Backend-Only".
-    Requires that all JS-initiated frontend requests (fetch/XHR/WebSocket/
-    third-party SDK) target the Vinylmania backend exclusively, and that no
-    third-party SDK (Firebase, Discogs, or future equivalents) be used from
-    `frontend/` to make data requests. Explicitly carves out two cases from
-    its scope: (1) a full-page navigation to an external identity/OAuth
-    provider's authorization page is not a "request" under this principle,
-    since it is inevitable in any redirect-based OAuth flow and outside the
-    app's own JS code's control; (2) static resource loading via native
-    HTML attributes (`<img src>`, `<link>`) is out of scope, since the
-    principle governs data/API requests initiated by JS, not passive
-    resource loading. Explicitly exempts `e2e/` test doubles, which exist
-    to simulate the external third parties this principle restricts
-    production code from calling directly. Governs `frontend/` only; does
-    not restate, contradict, or narrow Principle VIII (backend-only) or
-    Principle II (Discogs integration, which already assumes the
-    integration lives in `backend/` without saying so explicitly).
+  - New Core Principle X: "Accessibility — WCAG 2.1 AA Compliance
+    (NON-NEGOTIABLE)". Requires every UI surface shipped by the project to
+    strictly conform to WCAG 2.1 Level AA as a hard merge gate, not an
+    aspirational goal, with concrete, testable criteria (semantic HTML
+    first, full keyboard operability, contrast ratios, accessible names,
+    heading structure, reduced-motion support, no color-only state).
+    Codifies practice already documented informally in
+    `.claude/agents/frontend-agent.md`.
+  - New Core Principle XI: "Apple Design Principles Compliance". Requires
+    every UI surface to follow Apple's Human Interface Guidelines design
+    principles (consistency, feedback, direct manipulation, clarity/
+    restraint, spatial consistency, physically believable motion, depth/
+    materials, typography discipline), translated for the web via the
+    project's installed design skills (`apple-design`, `emil-design-eng`,
+    `animate`). Explicitly subordinates itself to Principle X (WCAG 2.1 AA)
+    and to the existing "UI Design System & Styling" Tailwind rules where
+    they would conflict, since Apple's guidelines govern interaction feel
+    and visual judgment, not compliance floors.
 Changed sections: none
 Removed sections: none
 Templates requiring updates:
   ✅ .specify/templates/plan-template.md (Constitution Check is a generic
      "[Gates determined based on constitution file]" placeholder re-evaluated
      per feature against whatever principles exist; no principle — including
-     I-VIII — is hardcoded into it, so Principle IX needs no template change)
-  ✅ .specify/templates/spec-template.md (no network-origin-specific section
-     exists for any principle; no change needed)
-  ✅ .specify/templates/tasks-template.md (no network-origin-specific
+     X-XI — is hardcoded into it, so no template change needed)
+  ✅ .specify/templates/spec-template.md (no accessibility/design-specific
+     section exists for any principle; no change needed)
+  ✅ .specify/templates/tasks-template.md (no accessibility/design-specific
      references; no change needed)
   ✅ .specify/templates/checklist-template.md (generic checklist template; no
      conflicting gate)
+  ✅ .claude/agents/frontend-agent.md (already documents this practice
+     informally; updated its "Source of truth" pointer to cite the new
+     Principle X/XI numbers now that they are formalized)
   ⚠  No command files found under .specify/templates/commands/ — nothing to update
 Follow-up TODOs: none
 -->
@@ -199,6 +203,60 @@ The OAuth-redirect and static-resource carve-outs exist because a literal readin
 established, backend-mediated login/account-link pattern (a full-page redirect, never a
 popup or SDK call) and the routine loading of cover art and brand typography — neither
 of which the audit that produced this principle found to be a violation in practice.
+
+### X. Accessibility — WCAG 2.1 AA Compliance (NON-NEGOTIABLE)
+Every user interface the project ships MUST strictly conform to the Web Content
+Accessibility Guidelines (WCAG) 2.1, Level AA. This is a hard merge gate, not an
+aspirational goal: it applies to all `frontend/` UI code and to any other UI surface
+the project ships (e.g. embedded webviews), and it applies equally to new screens and
+to any existing screen materially modified by a PR. Concretely, every UI change MUST:
+use semantic HTML first, with ARIA reserved for filling real gaps rather than replacing
+correct native elements; support full keyboard operability, including visible focus
+states, a logical tab order, and no keyboard traps; meet WCAG 1.4.3 contrast ratios
+(at least 4.5:1 for normal text, at least 3:1 for large text and UI components); give
+every interactive element an accessible name (visible label, `aria-label`, or
+equivalent) and preserve a correct, non-skipped heading structure; respect the user's
+`prefers-reduced-motion` setting for any animation; and never rely on color alone to
+convey state (errors, selection, availability). The 44×44 CSS px minimum touch target
+rule in "UI Design System & Styling" below is one instance of this principle, not a
+substitute for it. If a design request would violate WCAG 2.1 AA, that MUST be flagged
+and an accessible alternative proposed instead of implementing the inaccessible
+version. Reviewers MUST reject any PR that introduces a WCAG 2.1 AA violation.
+**Rationale**: Vinylmania is a collector-facing product; an inaccessible interface
+excludes real users rather than merely looking unpolished, so accessibility is treated
+as a correctness property of the UI, on the same non-negotiable footing as Principle I
+(Test-First). This formalizes what `.claude/agents/frontend-agent.md` already documents
+as required practice, giving reviewers an explicit, testable constitutional gate instead
+of relying on convention alone.
+
+### XI. Apple Design Principles Compliance
+Every user interface the project ships MUST follow the design principles of Apple's
+Human Interface Guidelines (https://developer.apple.com/design/human-interface-guidelines/design-principles)
+— consistency, clarity and restraint, feedback, direct manipulation, spatial
+consistency, physically believable and interruptible motion, appropriate use of depth
+and materials, and disciplined typography — translated for the web via the project's
+installed design skills (`apple-design`, `emil-design-eng`, and `animate` for motion).
+Before building or restyling any UI surface, the relevant installed design skill(s)
+MUST be consulted; this MUST NOT be skipped because a change looks small, since visual
+and interaction language consistency is the point of this principle. Motion introduced
+for a UI change MUST use physically believable, interruptible transitions (e.g.
+spring-based easing) consistent with the HIG rather than ad hoc linear/ease CSS
+transitions, and MUST still respect `prefers-reduced-motion` per Principle X. Where
+following Apple's guidelines would conflict with Principle X (WCAG 2.1 AA) or with the
+Tailwind-specific rules in "UI Design System & Styling" below, Principle X and the
+existing Tailwind rules take precedence — this principle governs interaction feel,
+motion, and visual judgment, not compliance floors. Reviewers MUST reject a UI PR that
+disregards the project's established Apple-style interaction patterns (e.g. abrupt,
+non-eased transitions where an installed animation skill exists, or a visual hierarchy
+that departs from the project's established typography/spacing language) without a
+documented rationale.
+**Rationale**: Vinylmania's existing "Visual lightness & brand personality" rules
+(display typeface, warm-neutral palette, soft shadows) already pursue a considered,
+non-generic visual language rather than default framework styling. Formalizing Apple's
+design principles as an explicit standard — already applied in practice via the
+`apple-design`/`emil-design-eng` skills per `.claude/agents/frontend-agent.md` — gives
+reviewers an objective, external reference point for interaction and motion quality
+instead of leaving it to individual taste.
 
 ## Additional Constraints (Web Application Standards)
 
@@ -413,4 +471,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 2.6.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-07-16
+**Version**: 2.7.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-09-05
