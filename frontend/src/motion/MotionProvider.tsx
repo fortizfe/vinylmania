@@ -6,11 +6,12 @@ interface MotionProviderProps {
 }
 
 /**
- * Loads the `motion` DOM-animation feature bundle as its own async chunk,
- * so it stays out of the initial payload (research.md R1).
+ * Loads the `motion` `domMax` feature bundle as its own async chunk, so it
+ * stays out of the initial payload (research.md R1). `domMax` (rather than
+ * `domAnimation`) is required for the `drag` gesture behind FR-010 / FR-012.
  */
-const loadDomAnimationFeatures = () =>
-  import('./domAnimationFeatures').then((mod) => mod.default);
+const loadMotionFeatures = () =>
+  import('./motionFeatures').then((mod) => mod.default);
 
 /**
  * App-wide motion context. Mounted once, alongside `ThemeProvider`, above
@@ -26,7 +27,7 @@ const loadDomAnimationFeatures = () =>
  */
 export function MotionProvider({ children }: MotionProviderProps) {
   return (
-    <LazyMotion features={loadDomAnimationFeatures} strict>
+    <LazyMotion features={loadMotionFeatures} strict>
       <MotionConfig reducedMotion="user">{children}</MotionConfig>
     </LazyMotion>
   );

@@ -65,9 +65,10 @@ interface PillRect {
  * slides between the two options on `spring.default` instead of the colour
  * snapping from one button to the other (US2 / contracts §ViewModeToggle).
  * Its target rect is measured from the live buttons — a plain transform
- * animation, so it works under the app's `domAnimation` feature bundle and
- * needs no `layout` projection. Under `prefers-reduced-motion` the pill
- * jumps (no spring).
+ * animation that needs no `layout` projection. Even though the app now loads
+ * the `domMax` bundle (which would make `layoutId` available), this measured
+ * approach is kept deliberately: it is already tested and has no reflow
+ * jitter. Under `prefers-reduced-motion` the pill jumps (no spring).
  */
 export function ViewModeToggle({ mode, onChange, screen }: ViewModeToggleProps) {
   const reduceMotion = usePrefersReducedMotion();

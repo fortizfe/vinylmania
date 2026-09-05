@@ -1,7 +1,7 @@
 import { useId, type ReactNode, type RefObject } from 'react';
 import clsx from 'clsx';
 
-import { Overlay } from '../../motion';
+import { Overlay, Sheet } from '../../motion';
 import { Button } from './Button';
 import { CloseIcon } from './icons/CloseIcon';
 
@@ -26,8 +26,10 @@ const centerSizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
  * Centered dialog / end-anchored drawer. The overlay material, focus trap,
  * focus restoration, background scroll lock, Escape + scrim-click dismissal
  * and the spring enter/exit motion all come from `motion/Overlay`
- * (spec 059, contracts/component-api-changes §Modal). Public props are
- * unchanged; every existing call site keeps working.
+ * (spec 059, contracts/component-api-changes §Modal). The `end` drawer
+ * additionally routes through `motion/Sheet`, so it is drag-to-dismissible
+ * on touch — the close button and Escape stay exactly as before (FR-013).
+ * Public props are unchanged; every existing call site keeps working.
  */
 export function Modal({
   open,
@@ -41,41 +43,62 @@ export function Modal({
 }: ModalProps) {
   const titleId = useId();
 
+  const body = (
+    <div className={clsx('h-full', hideScrollbar && 'scrollbar-hidden')}>
+      <div className="mb-4 flex items-center justify-between gap-4">
+        {title && (
+          <h2
+            id={titleId}
+            className="text-lg font-semibold text-stone-900 dark:text-stone-100"
+          >
+            {title}
+          </h2>
+        )}
+        <Button
+          size="icon"
+          variant="secondary"
+          onClick={onClose}
+          aria-label="Close"
+          className="ml-auto"
+        >
+          <CloseIcon />
+        </Button>
+      </div>
+      {children}
+    </div>
+  );
+
+  const sharedProps = {
+    open,
+    onClose,
+    labelledBy: title ? titleId : undefined,
+    restoreFocusRef,
+    scrimTestId: 'modal-backdrop',
+  } as const;
+
+  if (position === 'end') {
+    return (
+      <Sheet
+        {...sharedProps}
+        dismissAxis="x"
+        showHandle
+        surfaceClassName={clsx('rounded-none', hideScrollbar && 'scrollbar-hidden')}
+      >
+        {body}
+      </Sheet>
+    );
+  }
+
   return (
     <Overlay
-      open={open}
-      onClose={onClose}
-      variant={position}
-      labelledBy={title ? titleId : undefined}
-      restoreFocusRef={restoreFocusRef}
-      scrimTestId="modal-backdrop"
+      {...sharedProps}
+      variant="center"
       surfaceClassName={clsx(
-        position === 'end' ? 'rounded-none' : centerSizeClasses[size],
+        centerSizeClasses[size],
         hideScrollbar && 'scrollbar-hidden',
       )}
     >
-      <div className={clsx('h-full', hideScrollbar && 'scrollbar-hidden')}>
-        <div className="mb-4 flex items-center justify-between gap-4">
-          {title && (
-            <h2
-              id={titleId}
-              className="text-lg font-semibold text-stone-900 dark:text-stone-100"
-            >
-              {title}
-            </h2>
-          )}
-          <Button
-            size="icon"
-            variant="secondary"
-            onClick={onClose}
-            aria-label="Close"
-            className="ml-auto"
-          >
-            <CloseIcon />
-          </Button>
-        </div>
-        {children}
-      </div>
+      {body}
     </Overlay>
   );
 }

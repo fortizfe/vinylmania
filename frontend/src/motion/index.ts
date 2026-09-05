@@ -21,8 +21,8 @@ export { AnimatePresence, m } from 'motion/react';
 
 export { MotionProvider } from './MotionProvider';
 export { Overlay } from './Overlay';
-export type { OverlayProps } from './Overlay';
-export { Sheet, shouldDismissSheet } from './Sheet';
+export type { OverlayProps, OverlaySurfaceDrag } from './Overlay';
+export { Sheet, shouldDismissSheet, scrollBlocksDismiss } from './Sheet';
 export type { SheetProps } from './Sheet';
 
 export { useFocusTrap } from './useFocusTrap';

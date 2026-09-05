@@ -1,10 +1,16 @@
-import { useRef, type CSSProperties, type ReactNode, type RefObject } from 'react';
-import { AnimatePresence, m } from 'motion/react';
+import {
+  useRef,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react';
+import { AnimatePresence, m, type DragControls, type PanInfo } from 'motion/react';
 import clsx from 'clsx';
 
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import { Card } from '../components/ui/Card';
-import { motionDuration, spring } from './tokens';
+import { motionDuration, spring, type SpringToken } from './tokens';
 import { useFocusTrap } from './useFocusTrap';
 import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 import { useRestoreFocus } from './useRestoreFocus';
@@ -34,6 +40,31 @@ export interface OverlayScrimMaterial {
   blurPx?: number;
 }
 
+/**
+ * Makes the opaque surface itself draggable, so a drawer can be dismissed by
+ * a 1:1 drag (spec 059 US4). Supplied only by `Sheet` — every other consumer
+ * leaves it undefined and gets a static surface. The surface still animates
+ * to its `open` position (`x: 0` / `y: 0`) whenever a drag ends without a
+ * dismiss, so the spring-back is `motion`'s constraint animation on
+ * `spring.sheet`.
+ */
+export interface OverlaySurfaceDrag {
+  /** Axis the surface may be dragged along. */
+  axis: 'x' | 'y';
+  /** Drag is started imperatively (see `onPointerDown`) so the scroll-boundary guard can veto it. */
+  controls: DragControls;
+  /**
+   * Called on pointer-down on the surface. `Sheet` decides here whether to
+   * begin the drag (`controls.start(event)`) or let the browser scroll the
+   * content (FR-011).
+   */
+  onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  /** Release decision — `Sheet` compares offset/velocity against `tokens.dismiss`. */
+  onDragEnd: (event: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) => void;
+  /** Per-edge rubber-band: 1 on the outward (dismiss) edge for 1:1 tracking, `dismiss.elastic` elsewhere. */
+  elastic: Record<'top' | 'right' | 'bottom' | 'left', number>;
+}
+
 export interface OverlayProps {
   open: boolean;
   onClose: () => void;
@@ -46,6 +77,22 @@ export interface OverlayProps {
   restoreFocusRef?: RefObject<HTMLElement | null>;
   /** id of the title element, for `aria-labelledby`. */
   labelledBy?: string;
+  /**
+   * Accessible name for the dialog when there is no visible title element to
+   * point `labelledBy` at (e.g. the fullscreen gallery). Ignored when
+   * `labelledBy` is given.
+   */
+  ariaLabel?: string;
+  /** `data-testid` for the animating surface element. */
+  surfaceTestId?: string;
+  /**
+   * Overrides the surface exit transition — `Sheet` sets `spring.momentum`
+   * when the drawer was flung shut so the dismissal carries the release
+   * energy (apple-design §4). Default keeps the per-variant transition.
+   */
+  exitTransition?: SpringToken;
+  /** When set, the surface is draggable for a drag-to-dismiss sheet. */
+  surfaceDrag?: OverlaySurfaceDrag;
   /** Extra classes for the opaque surface (e.g. a consumer's own width). */
   surfaceClassName?: string;
   /**
@@ -99,6 +146,10 @@ export function Overlay({
   surface = 'card',
   scrim,
   scrimTestId = 'overlay-scrim',
+  ariaLabel,
+  surfaceTestId,
+  exitTransition,
+  surfaceDrag,
   children,
 }: OverlayProps) {
   const surfaceRef = useRef<HTMLDivElement>(null);
@@ -176,12 +227,34 @@ export function Overlay({
             role="dialog"
             aria-modal="true"
             aria-labelledby={labelledBy}
+            aria-label={labelledBy ? undefined : ariaLabel}
+            data-testid={surfaceTestId}
             data-variant={variant}
             data-reduced-motion={reduceMotion ? 'true' : 'false'}
             tabIndex={-1}
             onClick={bare ? undefined : (event) => event.stopPropagation()}
+            onPointerDown={surfaceDrag?.onPointerDown}
             style={surfaceStyle}
             {...surfaceMotion}
+            {...(exitTransition && !reduceMotion
+              ? {
+                  exit: {
+                    ...(surfaceMotion.exit as Record<string, unknown>),
+                    transition: exitTransition,
+                  },
+                }
+              : {})}
+            {...(surfaceDrag
+              ? {
+                  drag: surfaceDrag.axis,
+                  dragControls: surfaceDrag.controls,
+                  dragListener: false,
+                  dragMomentum: false,
+                  dragConstraints: { left: 0, right: 0, top: 0, bottom: 0 },
+                  dragElastic: surfaceDrag.elastic,
+                  onDragEnd: surfaceDrag.onDragEnd,
+                }
+              : {})}
             className={clsx(
               !bare && surfaceSizeClasses[variant],
               !bare &&

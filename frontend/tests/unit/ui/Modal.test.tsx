@@ -270,4 +270,42 @@ describe('Modal', () => {
       expect(screen.getByRole('dialog')).toHaveAttribute('data-variant', 'end');
     });
   });
+
+  describe('drag-to-dismiss drawer (US4)', () => {
+    it('routes position="end" through the Sheet (draggable surface + grab handle)', () => {
+      render(
+        <Modal open onClose={() => {}} position="end" title="Menu">
+          Content
+        </Modal>,
+      );
+
+      expect(screen.getByTestId('sheet-surface')).toBeInTheDocument();
+      expect(screen.getByTestId('sheet-handle')).toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toHaveAttribute('data-variant', 'end');
+    });
+
+    it('keeps close-button + Escape parity for the drag drawer (FR-013)', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      render(
+        <Modal open onClose={onClose} position="end" title="Menu">
+          Content
+        </Modal>,
+      );
+
+      await user.click(screen.getByRole('button', { name: /close/i }));
+      await user.keyboard('{Escape}');
+      expect(onClose).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not render the Sheet drag surface for a centered modal', () => {
+      render(
+        <Modal open onClose={() => {}} title="Preview">
+          Content
+        </Modal>,
+      );
+
+      expect(screen.queryByTestId('sheet-surface')).not.toBeInTheDocument();
+    });
+  });
 });

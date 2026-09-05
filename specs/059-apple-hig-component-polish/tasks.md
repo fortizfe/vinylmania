@@ -176,15 +176,15 @@ description: "Task list for Apple HIG Component Polish"
 
 - [ ] T068 [P] [US4] `e2e/tests/sheet-drag-dismiss.spec.ts` — synthetic pointer drag on the drawer: 1:1 tracking from grab point; release <45% & slow → springs back; release >45% or ≥500 px/s → closes + fires `onClose`; drag starting mid-scroll (not at boundary) scrolls instead
 - [ ] T069 [P] [US4] `e2e/tests/gallery-swipe.spec.ts` — horizontal swipe advances image; `aria-current` thumbnail follows; `ArrowLeft/Right` and thumbnail buttons still work; hard flick does not skip two images
-- [ ] T070 [P] [US4] Extend `frontend/tests/unit/motion/Sheet.test.tsx` — scroll-boundary disambiguation, button/keyboard parity retained
+- [X] T070 [P] [US4] Extend `frontend/tests/unit/motion/Sheet.test.tsx` — scroll-boundary disambiguation, button/keyboard parity retained
 
 ### Implementation
 
-- [ ] T071 [US4] Drag mechanics in `frontend/src/motion/Sheet.tsx` — 1:1 tracking with grab offset, release decision from `tokens.dismiss`, `dragElastic` rubber-band, release-velocity hand-off to `spring.momentum`, reduced-motion snap
-- [ ] T072 [US4] Scroll-boundary disambiguation in `frontend/src/motion/Sheet.tsx` — only capture the dismiss drag when scrollable content is at its boundary in the drag direction
-- [ ] T073 [US4] Render `Modal position="end"` through `Sheet` in `frontend/src/components/ui/Modal.tsx` (button + Escape parity unchanged)
-- [ ] T074 [P] [US4] Verify `frontend/src/components/HamburgerMenu.tsx` drawer is now swipe-dismissible and nav rows keep press state
-- [ ] T075 [US4] Horizontal swipe + `ArrowLeft`/`ArrowRight` keys + momentum projection + thumbnail sync in `frontend/src/components/GalleryFullscreenViewer.tsx`
+- [X] T071 [US4] Drag mechanics in `frontend/src/motion/Sheet.tsx` — 1:1 tracking with grab offset, release decision from `tokens.dismiss`, `dragElastic` rubber-band, release-velocity hand-off to `spring.momentum`, reduced-motion snap
+- [X] T072 [US4] Scroll-boundary disambiguation in `frontend/src/motion/Sheet.tsx` — only capture the dismiss drag when scrollable content is at its boundary in the drag direction
+- [X] T073 [US4] Render `Modal position="end"` through `Sheet` in `frontend/src/components/ui/Modal.tsx` (button + Escape parity unchanged)
+- [X] T074 [P] [US4] Verify `frontend/src/components/HamburgerMenu.tsx` drawer is now swipe-dismissible and nav rows keep press state
+- [X] T075 [US4] Horizontal swipe + `ArrowLeft`/`ArrowRight` keys + momentum projection + thumbnail sync in `frontend/src/components/GalleryFullscreenViewer.tsx`
 - [ ] T076 [US4] Extend `e2e/tests/header-responsive-nav.spec.ts` with the drawer gesture + parity assertions
 - [ ] T077 [US4] Run US4 validation (quickstart §US4, incl. real-device manual checks); update US4 rows in [audit.md](./audit.md)
 
