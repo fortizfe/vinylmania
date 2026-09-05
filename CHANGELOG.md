@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.6.1] - 2026-09-05
+
+### Fixed
+
+- resolve WCAG 2.1 AA contrast violations in light/dark theme (#46) ([c53c61f])
+
 ## [1.6.0] - 2026-09-05
 
 ### Added
