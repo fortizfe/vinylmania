@@ -150,10 +150,15 @@ other focus-visible treatment in `components/**`.
 
 ### Non-interactive: `status-fade-in`
 
-Status / empty-state components (`UnderConstruction`, `LibraryLinkRequired`,
-`DiscogsRelinkNotice`, `FeedSourceStatusBanner`) get one gentle opacity-only
-entrance (`--motion-duration-fade`, `--ease-out`, **no** translate/scale — they
-must not pull the eye from their wayfinding copy). The header scroll-edge
+`FeedSourceStatusBanner` gets one gentle opacity-only entrance
+(`--motion-duration-fade`, `--ease-out`, **no** translate/scale — it must not
+pull the eye from its copy). Scoped to it alone: the banner mounts *in response
+to a news source failing*, so the entrance is genuine status feedback
+(apple-design §16). First-paint placeholders that just describe a state
+(`UnderConstruction`, `LibraryLinkRequired`, `DiscogsRelinkNotice`) render
+statically — an entrance there communicates nothing and its ancestor `opacity`
+ramp tripped the axe-core contrast scanner mid-fade (see spec 059 T097 /
+`e2e/helpers/settleEntrance.ts`). The header scroll-edge
 treatment (`AppHeader`, `LandingHeader`) fades a `box-shadow` in on scroll via
 `transition-shadow` + `--motion-duration-fade`; the surface stays the opaque
 near-black token (constitution wins over full HIG translucency — research.md

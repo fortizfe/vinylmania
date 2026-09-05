@@ -243,13 +243,20 @@
 }
 
 /*
- * ── Status / empty-state entrance (feature 059 US5 — T086) ─────────────────
+ * ── Status-banner entrance (feature 059 US5 — T086, scoped in T097) ────────
  *
  * A single gentle opacity fade (`--motion-duration-fade`, `--ease-out`) with
- * NO translate/scale — status and empty states announce "where am I / how do
- * I get out" and must not pull the eye with movement (emil-design-eng —
- * status messages don't move). The global `prefers-reduced-motion` block
- * above collapses the timing so it resolves instantly for those users.
+ * NO translate/scale — status feedback announces itself without pulling the
+ * eye with movement (emil-design-eng — status messages don't move). The
+ * global `prefers-reduced-motion` block above collapses the timing so it
+ * resolves instantly for those users.
+ *
+ * Scoped (T097) to components that mount *in response to a state change* —
+ * currently only `FeedSourceStatusBanner` (a news source started failing).
+ * Permanent placeholders that render on first paint (`UnderConstruction`,
+ * `LibraryLinkRequired`, `DiscogsRelinkNotice`) do NOT use this: the entrance
+ * added no signal there and its ancestor opacity ramp tripped the axe-core
+ * contrast scanner mid-fade (axe folds ancestor opacity into contrast maths).
  */
 @keyframes vinyl-status-fade-in {
   from {

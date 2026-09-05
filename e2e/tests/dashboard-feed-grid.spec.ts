@@ -6,6 +6,7 @@ import {
   assertHeaderScrollEdge,
   assertHeaderScrollEdgeInstant,
 } from '../helpers/scrollEdge';
+import { settleStatusFadeIn } from '../helpers/settleEntrance';
 import { assertDisplayHeadingTokens } from '../helpers/typography';
 
 function buildArticle(
@@ -505,10 +506,16 @@ test.describe('Dashboard WCAG 2.1 AA automated scan (spec 058, US1)', () => {
       await page.emulateMedia({ colorScheme: theme });
       await page.setViewportSize({ width: 1280, height: 800 });
       await page.route('**/api/feeds/dashboard', async (route) => {
+        // One source unavailable so the `FeedSourceStatusBanner`
+        // (`.status-fade-in`) renders and is covered by this scan.
+        const response = buildDashboardResponse();
+        response.sourceStatuses = response.sourceStatuses.map((source, index) =>
+          index === 0 ? { ...source, status: 'unavailable' } : source,
+        );
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(buildDashboardResponse()),
+          body: JSON.stringify(response),
         });
       });
 
@@ -517,6 +524,11 @@ test.describe('Dashboard WCAG 2.1 AA automated scan (spec 058, US1)', () => {
 
       const grid = page.getByTestId('feed-article-grid');
       await expect(grid).toBeVisible();
+      await expect(page.getByRole('status')).toContainText('unavailable');
+
+      // The banner's 200 ms opacity entrance would otherwise be folded into
+      // axe's contrast maths mid-fade (see `settleStatusFadeIn`).
+      await settleStatusFadeIn(page);
 
       const seriousOrCritical = await runAxeScan(page);
 

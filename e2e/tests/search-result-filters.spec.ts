@@ -10,6 +10,7 @@ import {
   expectNoTransformMotion,
   startMotionRecorder,
 } from '../helpers/motion';
+import { settleEntranceOpacity } from '../helpers/settleEntrance';
 
 /**
  * Opens the Format modal, checks the given option, and closes the modal
@@ -1202,6 +1203,11 @@ test.describe('Search result filters WCAG 2.1 AA automated scan (spec 058, US1)'
       await expect(page.getByText('Nevermind')).toBeVisible();
 
       await expandFilters(page);
+
+      // The US2 disclosure animates the panel body's opacity 0→1; axe folds a
+      // mid-animation ancestor opacity into its contrast maths and reports a
+      // false-positive `color-contrast`. Wait for the resting state.
+      await settleEntranceOpacity(page, '[data-testid="collapsible-filter-body"]');
 
       const seriousOrCritical = await runAxeScan(page);
 

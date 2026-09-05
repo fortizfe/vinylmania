@@ -27,12 +27,15 @@ export function LibraryLinkRequired({ variant }: LibraryLinkRequiredProps) {
   const copy = COPY[variant];
 
   return (
-    <Card className="status-fade-in flex min-h-48 flex-col items-start justify-center gap-3">
+    <Card className="flex min-h-48 flex-col items-start justify-center gap-3">
       <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">
         {copy.title}
       </h2>
       <p className="text-stone-500 dark:text-stone-400">{copy.body}</p>
-      <Link to="/app/profile" className={buttonClassName('primary', 'md', 'inline-flex items-center')}>
+      <Link
+        to="/app/profile"
+        className={buttonClassName('primary', 'md', 'inline-flex items-center')}
+      >
         Go to your profile
       </Link>
     </Card>
