@@ -213,8 +213,8 @@ description: "Task list for Apple HIG Component Polish"
 - [X] T085 [P] [US5] Add a calm tokenized focus-border transition (no layout shift) in `frontend/src/components/ui/Input.tsx`
 - [X] T086 [P] [US5] Gentle opacity-only entrance (token, no movement) for status/empty components: `frontend/src/components/UnderConstruction.tsx`, `frontend/src/components/LibraryLinkRequired.tsx`, `frontend/src/components/DiscogsRelinkNotice.tsx`, `frontend/src/components/FeedSourceStatusBanner.tsx`
 - [X] T087 [US5] Document the canonical Interaction Patterns (binary-switch / segmented-selector / multi-select-list / disclosure / dismissible-layer / pressable) in `frontend/src/motion/README.md` and finalize the pattern column in [audit.md](./audit.md)
-- [ ] T088 [US5] Extend `e2e/tests/landing-page-responsive.spec.ts`, `e2e/tests/dashboard-feed-grid.spec.ts`, `e2e/tests/header-responsive-nav.spec.ts` for typography tokens + scroll-edge treatment
-- [ ] T089 [US5] Run US5 validation (quickstart §US5); update US5 rows in [audit.md](./audit.md)
+- [X] T088 [US5] Extend `e2e/tests/landing-page-responsive.spec.ts`, `e2e/tests/dashboard-feed-grid.spec.ts`, `e2e/tests/header-responsive-nav.spec.ts` for typography tokens + scroll-edge treatment
+- [X] T089 [US5] Run US5 validation (quickstart §US5); update US5 rows in [audit.md](./audit.md)
 
 **Checkpoint**: All five stories independently functional; the component library reads as one system.
 

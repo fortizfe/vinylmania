@@ -3,6 +3,11 @@ import { expect, type Page, test } from '@playwright/test';
 import { runAxeScan } from '../helpers/axe';
 import { assertFocusIndicatorContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
+import { assertSharedFocusRing } from '../helpers/focusRing';
+import {
+  assertHeaderScrollEdge,
+  assertHeaderScrollEdgeInstant,
+} from '../helpers/scrollEdge';
 
 test.describe('Responsive header navigation (US1, US2, US3)', () => {
   test('shows three icon buttons and hides the hamburger at a wide viewport, each navigating correctly (US1)', async ({
@@ -185,6 +190,74 @@ test.describe('Responsive header navigation (US1, US2, US3)', () => {
       expect(ultraWideBox?.height).toBeCloseTo(desktopBox?.height ?? 0, 0);
     });
   });
+});
+
+/**
+ * Spec 059 — User Story 5, T088 (FR-014, SC-007).
+ *
+ * `AppHeader` replaced its permanent hard `border-b` divider with a
+ * `.header-scroll-edge` box-shadow that fades in on `--motion-duration-fade`
+ * only once content scrolls under it (apple-design §12). The box-shadow is
+ * never a border, so the header box never resizes — no layout shift. Every
+ * header nav control signals focus with the one shared `focusRing` treatment.
+ */
+test.describe('Header scroll-edge treatment & shared focus ring (spec 059 US5, T088)', () => {
+  test('the app header gains a soft edge shadow on scroll and loses it at the top, with no height change', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    await assertHeaderScrollEdge(page, page.getByRole('banner'), 'AppHeader');
+  });
+
+  test('under prefers-reduced-motion the edge shadow toggles instantly (transition neutralised)', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    const header = page.getByRole('banner');
+    await assertHeaderScrollEdgeInstant(header, 'AppHeader');
+    await assertHeaderScrollEdge(page, header, 'AppHeader (reduced motion)');
+  });
+
+  for (const theme of ['light', 'dark'] as const) {
+    test(`every header nav control uses the shared focusRing, visible and AA in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+
+      for (const name of [/^profile$/i, /my wishlist/i, /my library/i]) {
+        const control = page.getByRole('link', { name });
+        await assertSharedFocusRing(control, `${String(name)} nav icon (${theme})`);
+        await assertFocusIndicatorContrast(
+          page,
+          control,
+          `${String(name)} nav icon focus indicator (${theme})`,
+        );
+      }
+
+      const signOut = page.getByRole('button', { name: /sign out/i });
+      await assertSharedFocusRing(signOut, `Sign out button (${theme})`);
+
+      await page.setViewportSize({ width: 375, height: 812 });
+      const hamburger = page.getByRole('button', { name: /^menu$/i });
+      await expect(hamburger).toBeVisible();
+      await assertSharedFocusRing(hamburger, `Hamburger button (${theme})`);
+      await assertFocusIndicatorContrast(
+        page,
+        hamburger,
+        `Hamburger button focus indicator (${theme})`,
+      );
+    });
+  }
 });
 
 test.describe('Header/navigation WCAG 2.1 AA automated scan (spec 058, US1)', () => {

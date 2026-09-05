@@ -196,7 +196,7 @@ Notes / deltas from the task text:
 
 ## US5 — Consistent interaction & typography language (P2)
 
-**Status**: ✅ done (T078–T087). Implementation on branch
+**Status**: ✅ done (T078–T089). Implementation on branch
 `059-apple-hig-component-polish`. Unit coverage:
 `frontend/tests/unit/architecture/focus-ring-consistency.test.ts` (new — the
 only focus-visible treatment in `components/**` is the shared `focusRing`;
@@ -221,6 +221,29 @@ which relied on the UA default outline. The three historical variants
 now absent from `components/**`. `ui/Input` + `MyCopySection` keep the distinct
 **input-field** focus treatment (`focus:border-primary` border-colour change,
 not a ring) — allow-listed by the consistency test.
+
+**e2e coverage** (T088, T089): `landing-page-responsive.spec.ts`,
+`dashboard-feed-grid.spec.ts` and `header-responsive-nav.spec.ts` each gain a
+spec-059 US5 block driving the real browser — display-heading tokens
+(`assertDisplayHeadingTokens`: computed `letter-spacing` ≈ -0.02em,
+`line-height` ≈ 1.05 on the `LandingPillarSection` h2 and the
+`UnderConstruction` h1), the header scroll-edge treatment
+(`assertHeaderScrollEdge`: no `.header-scroll-edge` / `box-shadow: none` /
+`border-bottom-width: 0px` at the top → `.header-scroll-edge` + a real
+box-shadow after scroll, header box height unchanged = no CLS; reduced-motion
+collapses the `transition-shadow` timing to instant), the shared `focusRing`
+on every header nav control (`assertSharedFocusRing`: `outline-style: none` +
+a visible ring box-shadow layer, both themes, alongside the existing
+`assertFocusIndicatorContrast` AA check) and the `FeedSourceStatusBanner`
+`status-fade-in` entrance (computed `transform: none`, `@keyframes
+vinyl-status-fade-in` touches only `opacity`, reduced-motion collapses
+`animation-duration`). New helpers: `e2e/helpers/scrollEdge.ts`,
+`e2e/helpers/typography.ts`, `e2e/helpers/focusRing.ts`. **T089 validation
+run**: `npx playwright test landing-page-responsive.spec.ts
+dashboard-feed-grid.spec.ts header-responsive-nav.spec.ts` → 38/38 passed
+(chromium); `frontend` `npm test -- focus-ring-consistency no-inline-motion`
+green (SC-006/SC-007); axe scans on the landing page and the dashboard in
+both themes report zero serious/critical violations (SC-005 ≥ baseline).
 
 **`underline`-as-emphasis sweep** (T083): removed from `RecordCard` and
 `RecordListRow` "Open record" links → `text-primary dark:text-primary-text
