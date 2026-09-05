@@ -66,6 +66,44 @@ describe('ViewModeToggle', () => {
     expect(screen.getByTestId('view-mode-grid')).toHaveAttribute('tabIndex', '-1');
   });
 
+  describe('shared-element sliding pill (US2)', () => {
+    it('renders a single pill element behind the active option', () => {
+      render(<ViewModeToggle mode="grid" onChange={vi.fn()} screen="search" />);
+
+      const pills = screen.getAllByTestId('view-mode-pill');
+      expect(pills).toHaveLength(1);
+      expect(pills[0].className).toMatch(/bg-primary/);
+      expect(pills[0]).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('marks the pill non-animating under prefers-reduced-motion', () => {
+      vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+        matches: query.includes('prefers-reduced-motion'),
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      }));
+
+      render(<ViewModeToggle mode="list" onChange={vi.fn()} screen="library" />);
+
+      expect(screen.getByTestId('view-mode-pill')).toHaveAttribute(
+        'data-reduced-motion',
+        'true',
+      );
+      vi.restoreAllMocks();
+    });
+
+    it('does not paint a static background on the active button (the pill owns it)', () => {
+      render(<ViewModeToggle mode="grid" onChange={vi.fn()} screen="search" />);
+
+      expect(screen.getByTestId('view-mode-grid').className).not.toMatch(/\bbg-primary\b/);
+    });
+  });
+
   it('pressing an arrow key while the active option is focused moves focus to and activates the other option', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

@@ -15,7 +15,10 @@ export function Skeleton({ className, rounded = 'md' }: SkeletonProps) {
     <div
       aria-hidden="true"
       className={clsx(
-        'animate-pulse bg-stone-200 dark:bg-stone-800',
+        // `motion-safe:` gates the pulse so it is fully absent (no
+        // `animation-name`) under `prefers-reduced-motion: reduce` (WCAG
+        // 2.3.3 / spec 059 FR-005). Dimensions and structure are unchanged.
+        'motion-safe:animate-pulse bg-stone-200 dark:bg-stone-800',
         roundedClasses[rounded],
         className,
       )}

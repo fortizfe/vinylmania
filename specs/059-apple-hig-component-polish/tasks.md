@@ -120,20 +120,20 @@ description: "Task list for Apple HIG Component Polish"
 ### Tests (write first, must fail)
 
 - [ ] T045 [P] [US2] `e2e/tests/reduced-motion.spec.ts` — `emulateMedia({ reducedMotion: 'reduce' })`: every animated element's `transform` is `none` mid-transition; skeletons have `animation-name: none`
-- [ ] T046 [P] [US2] `frontend/tests/unit/architecture/no-inline-motion.test.ts` — scans `frontend/src/components/**` for `cubic-bezier(`, `duration-[`, `transition: all`, bare `ease`/`ease-in`/`linear` and fails on new occurrences
-- [ ] T047 [P] [US2] Extend `frontend/tests/unit/ui/Modal.test.tsx` — motion wrapper present; reduced-motion prop path renders; all existing assertions still pass
-- [ ] T048 [P] [US2] Motion tests for `frontend/tests/unit/ui/ViewModeToggle.test.tsx` (shared-element pill) and a new `frontend/tests/unit/filters/CollapsibleFilterPanel.test.tsx` (disclosure height/opacity)
+- [X] T046 [P] [US2] `frontend/tests/unit/architecture/no-inline-motion.test.ts` — scans `frontend/src/components/**` for `cubic-bezier(`, `duration-[`, `transition: all`, bare `ease`/`ease-in`/`linear` and fails on new occurrences
+- [X] T047 [P] [US2] Extend `frontend/tests/unit/ui/Modal.test.tsx` — motion wrapper present; reduced-motion prop path renders; all existing assertions still pass
+- [X] T048 [P] [US2] Motion tests for `frontend/tests/unit/ui/ViewModeToggle.test.tsx` (shared-element pill) and a new `frontend/tests/unit/filters/CollapsibleFilterPanel.test.tsx` (disclosure height/opacity)
 
 ### Implementation
 
-- [ ] T049 [US2] Re-home `frontend/src/components/ui/Modal.tsx` on `motion/Overlay` — spring `center` scale+opacity enter/exit, `end` slide on-axis, interruptible, same-path exit; public props unchanged (per [contracts/component-api-changes.md](./contracts/component-api-changes.md))
-- [ ] T050 [P] [US2] Knob translate → `spring.default`, sky/stars → `motionDuration.fade` + `easing.out` crossfade, reduced-motion static, in `frontend/src/components/ui/ThemeToggle.tsx`
-- [ ] T051 [P] [US2] Active state → shared-element sliding pill (`m` + `layoutId` + `spring.default`), reduced-motion jump, in `frontend/src/components/ui/ViewModeToggle.tsx`
-- [ ] T052 [P] [US2] Height+opacity disclosure motion (measured height, `motionDuration.collapse`, chevron rotate), reduced-motion instant, in `frontend/src/components/filters/CollapsibleFilterPanel.tsx`
-- [ ] T053 [P] [US2] Gate `animate-pulse` behind `motion-safe` in `frontend/src/components/ui/Skeleton.tsx`; verify all `*Skeleton.tsx` inherit (grep for stray `animate-pulse`)
-- [ ] T054 [P] [US2] Image-change directional slide + `spring.momentum` in `frontend/src/components/GalleryFullscreenViewer.tsx` (swipe input added in US4)
-- [ ] T055 [P] [US2] Open viewer anchored to the tapped thumbnail (`transform-origin`) in `frontend/src/components/ReleaseImageGallery.tsx`
-- [ ] T056 [P] [US2] Carousel/scroll-snap motion → token easing + momentum projection in `frontend/src/components/FeedArticleBoard.tsx`
+- [X] T049 [US2] Re-home `frontend/src/components/ui/Modal.tsx` on `motion/Overlay` — spring `center` scale+opacity enter/exit, `end` slide on-axis, interruptible, same-path exit; public props unchanged (per [contracts/component-api-changes.md](./contracts/component-api-changes.md))
+- [X] T050 [P] [US2] Knob translate → `spring.default`, sky/stars → `motionDuration.fade` + `easing.out` crossfade, reduced-motion static, in `frontend/src/components/ui/ThemeToggle.tsx`
+- [X] T051 [P] [US2] Active state → shared-element sliding pill (`m` + `layoutId` + `spring.default`), reduced-motion jump, in `frontend/src/components/ui/ViewModeToggle.tsx`
+- [X] T052 [P] [US2] Height+opacity disclosure motion (measured height, `motionDuration.collapse`, chevron rotate), reduced-motion instant, in `frontend/src/components/filters/CollapsibleFilterPanel.tsx`
+- [X] T053 [P] [US2] Gate `animate-pulse` behind `motion-safe` in `frontend/src/components/ui/Skeleton.tsx`; verify all `*Skeleton.tsx` inherit (grep for stray `animate-pulse`)
+- [X] T054 [P] [US2] Image-change directional slide + `spring.momentum` in `frontend/src/components/GalleryFullscreenViewer.tsx` (swipe input added in US4)
+- [X] T055 [P] [US2] Open viewer anchored to the tapped thumbnail (`transform-origin`) in `frontend/src/components/ReleaseImageGallery.tsx`
+- [X] T056 [P] [US2] Carousel/scroll-snap motion → token easing + momentum projection in `frontend/src/components/FeedArticleBoard.tsx`
 - [ ] T057 [US2] Extend `e2e/tests/theme-preference.spec.ts`, `e2e/tests/library-filters.spec.ts`, `e2e/tests/search-result-filters.spec.ts` with motion + reduced-motion assertions
 - [ ] T058 [US2] Add interruptibility check to `e2e/tests/overlay-focus-management.spec.ts` (create if not yet present): trigger modal close mid-enter and drawer reverse mid-drag; sample `getBoundingClientRect()` across rAF ticks; assert no single-frame jump to start/end transform (SC-003)
 - [ ] T059 [US2] Run US2 validation (quickstart §US2); update US2 rows in [audit.md](./audit.md)

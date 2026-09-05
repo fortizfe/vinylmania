@@ -1,8 +1,22 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import clsx from 'clsx';
 
 import type { CatalogImage } from '../services/libraryApi';
 import { GalleryFullscreenViewer } from './GalleryFullscreenViewer';
+
+/** Viewport-relative centre of `element`, in percentages — the point the
+ * fullscreen viewer scales out from so it feels anchored to the thumbnail
+ * the user tapped (spec 059 T055). */
+function viewportOriginPercent(element: HTMLElement | null): { x: number; y: number } | undefined {
+  if (!element || typeof window === 'undefined') return undefined;
+  const rect = element.getBoundingClientRect();
+  const vw = window.innerWidth || 1;
+  const vh = window.innerHeight || 1;
+  return {
+    x: ((rect.left + rect.width / 2) / vw) * 100,
+    y: ((rect.top + rect.height / 2) / vh) * 100,
+  };
+}
 
 interface ReleaseImageGalleryProps {
   images: CatalogImage[];
@@ -17,7 +31,14 @@ function initialIndex(images: CatalogImage[]): number {
 export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(() => initialIndex(images));
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [viewerOrigin, setViewerOrigin] = useState<{ x: number; y: number } | undefined>();
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = images[selectedIndex];
+
+  function openFullscreen() {
+    setViewerOrigin(viewportOriginPercent(triggerRef.current));
+    setIsFullscreenOpen(true);
+  }
 
   if (!selected) {
     return (
@@ -34,8 +55,9 @@ export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
   return (
     <div className="mx-auto flex aspect-square gap-3 overflow-hidden lg:max-w-md">
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setIsFullscreenOpen(true)}
+        onClick={openFullscreen}
         aria-label={`View ${alt} fullscreen`}
         className="aspect-square min-w-0 flex-1"
       >
@@ -56,7 +78,7 @@ export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
               aria-label={`Show image ${index + 1} of ${images.length}`}
               aria-current={index === selectedIndex}
               className={clsx(
-                'aspect-square min-h-11 min-w-11 shrink-0 overflow-hidden rounded-md ring-2 transition',
+                'aspect-square min-h-11 min-w-11 shrink-0 overflow-hidden rounded-md ring-2 transition-[box-shadow] duration-(--motion-duration-fade) ease-out',
                 index === selectedIndex
                   ? 'ring-primary'
                   : 'ring-transparent hover:ring-stone-300 dark:hover:ring-stone-700',
@@ -75,6 +97,7 @@ export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
           onSelect={setSelectedIndex}
           alt={alt}
           onClose={() => setIsFullscreenOpen(false)}
+          originPercent={viewerOrigin}
         />
       )}
     </div>

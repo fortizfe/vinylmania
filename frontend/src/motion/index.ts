@@ -11,6 +11,14 @@
 export { dismiss, easing, motionDuration, spring } from './tokens';
 export type { SpringToken } from './tokens';
 
+/**
+ * Thin re-export of the two `motion` primitives components are allowed to
+ * use directly (research.md R1 — "a thin `m`-re-export + token module").
+ * The `m` component is feature-gated by `MotionProvider`'s `LazyMotion`;
+ * everything else (springs, drag, focus/scroll/restore) is composed here.
+ */
+export { AnimatePresence, m } from 'motion/react';
+
 export { MotionProvider } from './MotionProvider';
 export { Overlay } from './Overlay';
 export type { OverlayProps } from './Overlay';

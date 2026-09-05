@@ -92,6 +92,44 @@ describe('CollapsibleFilterPanel (feature 038, US1)', () => {
     expect(screen.getByRole('button', { name: /^filters$/i })).toBeInTheDocument();
   });
 
+  describe('disclosure motion (US2)', () => {
+    it('wraps the revealed children in a height + opacity motion container', async () => {
+      const user = userEvent.setup();
+      render(
+        <CollapsibleFilterPanel activeCount={0}>
+          <div data-testid="filter-fields">fields</div>
+        </CollapsibleFilterPanel>,
+      );
+
+      await user.click(screen.getByRole('button', { name: /^filters$/i }));
+
+      const panel = screen.getByTestId('filter-fields').parentElement as HTMLElement;
+      expect(panel.className).toMatch(/overflow-hidden/);
+      // motion/react renders the current animated values as inline styles.
+      expect(panel.getAttribute('style') ?? '').toMatch(/opacity|height/);
+    });
+
+    it('rotates the disclosure chevron between the collapsed and expanded states on the collapse token', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <CollapsibleFilterPanel activeCount={0}>
+          <div>fields</div>
+        </CollapsibleFilterPanel>,
+      );
+
+      const collapsedChevron = container.querySelector('svg') as SVGElement;
+      expect(collapsedChevron.getAttribute('class')).toMatch(
+        /transition-transform duration-\(--motion-duration-collapse\) ease-out/,
+      );
+      expect(collapsedChevron.getAttribute('class')).toMatch(/rotate-180/);
+
+      await user.click(screen.getByRole('button', { name: /^filters$/i }));
+
+      const expandedChevron = container.querySelector('svg') as SVGElement;
+      expect(expandedChevron.getAttribute('class')).toMatch(/rotate-0/);
+    });
+  });
+
   it('keeps showing the active-filter badge on the collapsed trigger after re-collapsing (FR-004)', async () => {
     const user = userEvent.setup();
     render(

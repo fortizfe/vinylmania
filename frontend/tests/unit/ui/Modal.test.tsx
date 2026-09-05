@@ -1,8 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Modal } from '../../../src/components/ui/Modal';
+
+afterEach(() => {
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  vi.restoreAllMocks();
+});
 
 describe('Modal', () => {
   it('renders nothing when closed', () => {
@@ -169,5 +175,81 @@ describe('Modal', () => {
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
     await user.click(screen.getByRole('button', { name: /close/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  describe('physical motion (US2)', () => {
+    it('routes through the shared motion Overlay (spring wrapper present)', () => {
+      render(
+        <Modal open onClose={() => {}} title="Preview">
+          Content
+        </Modal>,
+      );
+
+      const dialog = screen.getByRole('dialog');
+      // `data-variant` / `data-reduced-motion` are stamped by motion/Overlay.
+      expect(dialog).toHaveAttribute('data-variant', 'center');
+      expect(dialog).toHaveAttribute('data-reduced-motion', 'false');
+    });
+
+    it('links the title via aria-labelledby', () => {
+      render(
+        <Modal open onClose={() => {}} title="Preview">
+          Content
+        </Modal>,
+      );
+
+      const dialog = screen.getByRole('dialog');
+      const labelledBy = dialog.getAttribute('aria-labelledby');
+      expect(labelledBy).toBeTruthy();
+      expect(document.getElementById(labelledBy!)).toHaveTextContent('Preview');
+    });
+
+    it('locks background scroll while open and restores it on close', () => {
+      const { rerender } = render(
+        <Modal open onClose={() => {}}>
+          Content
+        </Modal>,
+      );
+      expect(document.body.style.overflow).toBe('hidden');
+
+      rerender(
+        <Modal open={false} onClose={() => {}}>
+          Content
+        </Modal>,
+      );
+      expect(document.body.style.overflow).toBe('');
+    });
+
+    it('renders the reduced-motion path when the user prefers reduced motion', () => {
+      vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+        matches: query.includes('prefers-reduced-motion'),
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      }));
+
+      render(
+        <Modal open onClose={() => {}}>
+          Content
+        </Modal>,
+      );
+
+      expect(screen.getByRole('dialog')).toHaveAttribute('data-reduced-motion', 'true');
+      expect(screen.getByText('Content')).toBeInTheDocument();
+    });
+
+    it('end drawer also routes through the Overlay drawer variant', () => {
+      render(
+        <Modal open onClose={() => {}} position="end">
+          Content
+        </Modal>,
+      );
+
+      expect(screen.getByRole('dialog')).toHaveAttribute('data-variant', 'end');
+    });
   });
 });

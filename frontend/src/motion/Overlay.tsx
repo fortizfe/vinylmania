@@ -22,8 +22,13 @@ export interface OverlayProps {
   restoreFocusRef?: RefObject<HTMLElement | null>;
   /** id of the title element, for `aria-labelledby`. */
   labelledBy?: string;
-  /** Extra classes for the opaque surface. */
+  /** Extra classes for the opaque surface (e.g. a consumer's own width). */
   surfaceClassName?: string;
+  /**
+   * `data-testid` for the scrim element. Defaults to `overlay-scrim`;
+   * consumers (e.g. `Modal`) may keep their historical id for existing tests.
+   */
+  scrimTestId?: string;
   children: ReactNode;
 }
 
@@ -32,10 +37,17 @@ const positionClasses: Record<OverlayProps['variant'], string> = {
   end: 'justify-end',
 };
 
+// Layout only — a consumer supplies its own max-width via `surfaceClassName`
+// (e.g. `Modal`'s `size`). `center` falls back to `max-w-lg` when the
+// consumer names no width.
 const surfaceSizeClasses: Record<OverlayProps['variant'], string> = {
-  center: 'max-h-[90vh] w-full max-w-lg overflow-y-auto',
+  center: 'max-h-[90vh] w-full overflow-y-auto',
   end: 'h-dvh w-full max-w-xs overflow-y-auto',
 };
+
+function hasMaxWidth(className: string | undefined): boolean {
+  return !!className && /(?:^|\s)max-w-/.test(className);
+}
 
 export function Overlay({
   open,
@@ -44,6 +56,7 @@ export function Overlay({
   restoreFocusRef,
   labelledBy,
   surfaceClassName,
+  scrimTestId = 'overlay-scrim',
   children,
 }: OverlayProps) {
   const surfaceRef = useRef<HTMLDivElement>(null);
@@ -81,7 +94,7 @@ export function Overlay({
       {open && (
         <m.div
           key="overlay-scrim"
-          data-testid="overlay-scrim"
+          data-testid={scrimTestId}
           onClick={onClose}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -102,7 +115,11 @@ export function Overlay({
             tabIndex={-1}
             onClick={(event) => event.stopPropagation()}
             {...surfaceMotion}
-            className={clsx(surfaceSizeClasses[variant], surfaceClassName)}
+            className={clsx(
+              surfaceSizeClasses[variant],
+              variant === 'center' && !hasMaxWidth(surfaceClassName) && 'max-w-lg',
+              surfaceClassName,
+            )}
           >
             <Card
               className={clsx(
