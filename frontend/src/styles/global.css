@@ -113,3 +113,81 @@
     display: none;
   }
 }
+
+/*
+ * Motion & display-typography tokens (feature 059 — Apple HIG component
+ * polish). The easings are exposed as Tailwind `ease-*` utilities; the
+ * durations back both CSS-only transitions (press, fades, disclosure) and
+ * the JS spring layer in `frontend/src/motion/`. Every value here is
+ * mirrored 1:1 by a typed constant in `frontend/src/motion/tokens.ts` — a
+ * Vitest parity test (`tests/unit/motion/tokens.test.ts`) fails if they
+ * drift. Exact values come from specs/059-apple-hig-component-polish/
+ * research.md R2 (motion) and R6 (typography); do not hand-tune them here.
+ */
+@theme {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --motion-duration-press: 130ms;
+  --motion-duration-fade: 200ms;
+  --motion-duration-collapse: 200ms;
+  --motion-duration-drawer: 250ms;
+
+  /*
+   * Size-specific tracking/leading for the `--font-display` (Anton)
+   * headings only — negative tracking + tight leading as large display
+   * text grows (apple-design §15). Body text keeps browser defaults.
+   */
+  --tracking-display: -0.02em;
+  --leading-display: 1.05;
+}
+
+/*
+ * User preference media queries (FR-005). `prefers-reduced-motion` is the
+ * global vestibular-safety guard — it neutralizes CSS animation/transition
+ * timing everywhere so nothing moves, while final states still apply
+ * instantly (the JS spring layer additionally honors
+ * `MotionConfig reducedMotion="user"`). `prefers-reduced-transparency` and
+ * `prefers-contrast` degrade the overlay material (the `.overlay-scrim` /
+ * `.overlay-surface` hooks are applied by `frontend/src/motion/Overlay`);
+ * the full material treatment is finished in US3.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .overlay-scrim {
+    background-color: rgb(12 10 9 / 0.8);
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .overlay-scrim {
+    background-color: rgb(12 10 9 / 0.95) !important;
+    backdrop-filter: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .overlay-scrim {
+    background-color: rgb(12 10 9 / 1) !important;
+    backdrop-filter: none !important;
+  }
+
+  .overlay-surface {
+    border-width: 1px;
+    border-style: solid;
+    border-color: currentColor;
+  }
+}

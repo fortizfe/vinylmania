@@ -30,9 +30,9 @@ description: "Task list for Apple HIG Component Polish"
 
 **Purpose**: Bring in the one new dependency and its guard rail.
 
-- [ ] T001 Add `motion` (`^12`) to `dependencies` in `frontend/package.json` and run `npm install` in `frontend/`; confirm `npm run build` still succeeds
-- [ ] T002 [P] Create `frontend/tests/unit/architecture/motion-import-boundary.test.ts` — a failing test that scans `frontend/src/components/**` and `frontend/src/pages/**` and asserts no file imports `motion` / `framer-motion` directly (only `frontend/src/motion/**` may)
-- [ ] T003 [P] Create the `frontend/src/motion/` directory with a placeholder `frontend/src/motion/index.ts` barrel
+- [X] T001 Add `motion` (`^12`) to `dependencies` in `frontend/package.json` and run `npm install` in `frontend/`; confirm `npm run build` still succeeds
+- [X] T002 [P] Create `frontend/tests/unit/architecture/motion-import-boundary.test.ts` — a failing test that scans `frontend/src/components/**` and `frontend/src/pages/**` and asserts no file imports `motion` / `framer-motion` directly (only `frontend/src/motion/**` may)
+- [X] T003 [P] Create the `frontend/src/motion/` directory with a placeholder `frontend/src/motion/index.ts` barrel
 
 **Checkpoint**: dependency installed, import-boundary guard is red (no code yet).
 
@@ -46,27 +46,27 @@ description: "Task list for Apple HIG Component Polish"
 
 ### Tests (write first, must fail)
 
-- [ ] T004 [P] `frontend/tests/unit/motion/tokens.test.ts` — asserts `spring`, `motionDuration`, `easing`, `dismiss` values match [contracts/motion-layer.md](./contracts/motion-layer.md) and are frozen; asserts parity with the `--ease-*` / `--motion-duration-*` custom properties in `frontend/src/styles/global.css`
-- [ ] T005 [P] `frontend/tests/unit/motion/useFocusTrap.test.tsx` — Tab/Shift+Tab wrap at boundaries; focus enters container on activate; no-op when inactive
-- [ ] T006 [P] `frontend/tests/unit/motion/useScrollLock.test.tsx` — body scroll locked while active, scrollbar gutter compensated, reference-counted for nesting, prior state restored
-- [ ] T007 [P] `frontend/tests/unit/motion/useRestoreFocus.test.tsx` — captures `activeElement` on rising edge, restores on falling edge / unmount when target still connected
-- [ ] T008 [P] `frontend/tests/unit/motion/Overlay.test.tsx` — renders `role="dialog" aria-modal="true"`; `aria-labelledby` when `labelledBy` given; Escape + scrim click call `onClose`; traps + restores focus; locks scroll; reduced-motion path renders with no spring config
-- [ ] T009 [P] `frontend/tests/unit/motion/Sheet.test.tsx` — release-decision logic (dismiss at ≥45% distance OR ≥500 px/s, else spring back); button + Escape parity preserved
-- [ ] T010 [P] `frontend/tests/unit/ui/focusRing.test.ts` — exports the single expected utility string
+- [X] T004 [P] `frontend/tests/unit/motion/tokens.test.ts` — asserts `spring`, `motionDuration`, `easing`, `dismiss` values match [contracts/motion-layer.md](./contracts/motion-layer.md) and are frozen; asserts parity with the `--ease-*` / `--motion-duration-*` custom properties in `frontend/src/styles/global.css`
+- [X] T005 [P] `frontend/tests/unit/motion/useFocusTrap.test.tsx` — Tab/Shift+Tab wrap at boundaries; focus enters container on activate; no-op when inactive
+- [X] T006 [P] `frontend/tests/unit/motion/useScrollLock.test.tsx` — body scroll locked while active, scrollbar gutter compensated, reference-counted for nesting, prior state restored
+- [X] T007 [P] `frontend/tests/unit/motion/useRestoreFocus.test.tsx` — captures `activeElement` on rising edge, restores on falling edge / unmount when target still connected
+- [X] T008 [P] `frontend/tests/unit/motion/Overlay.test.tsx` — renders `role="dialog" aria-modal="true"`; `aria-labelledby` when `labelledBy` given; Escape + scrim click call `onClose`; traps + restores focus; locks scroll; reduced-motion path renders with no spring config
+- [X] T009 [P] `frontend/tests/unit/motion/Sheet.test.tsx` — release-decision logic (dismiss at ≥45% distance OR ≥500 px/s, else spring back); button + Escape parity preserved
+- [X] T010 [P] `frontend/tests/unit/ui/focusRing.test.ts` — exports the single expected utility string
 
 ### Implementation
 
-- [ ] T011 Add motion + typography tokens and preference media queries to `frontend/src/styles/global.css`: `--ease-out|--ease-in-out|--ease-drawer`, `--motion-duration-press|fade|collapse|drawer`, `--tracking-display|--leading-display`, and `@media (prefers-reduced-motion: reduce)` / `(prefers-reduced-transparency: reduce)` / `(prefers-contrast: more)` blocks (per [research.md](./research.md) R2, R4, R6)
-- [ ] T012 Create `frontend/src/motion/tokens.ts` per [contracts/motion-layer.md](./contracts/motion-layer.md) (spring configs, `motionDuration`, `easing`, `dismiss`), `as const`
-- [ ] T013 [P] Create `frontend/src/motion/useFocusTrap.ts`
-- [ ] T014 [P] Create `frontend/src/motion/useScrollLock.ts` (ref-counted, scrollbar-width compensation, no layout shift)
-- [ ] T015 [P] Create `frontend/src/motion/useRestoreFocus.ts`
-- [ ] T016 [P] Create `frontend/src/components/ui/focusRing.ts` (single shared `focus-visible:ring-2 ring-primary ring-offset-2` constant)
-- [ ] T017 Create `frontend/src/motion/MotionProvider.tsx` — `<LazyMotion features={domAnimation} strict>` + `<MotionConfig reducedMotion="user">`
-- [ ] T018 Create `frontend/src/motion/Overlay.tsx` — composes `useFocusTrap` + `useScrollLock` + `useRestoreFocus` + `useEscapeKey`; scrim + `<Card>` surface; `AnimatePresence` enter/exit per variant (`center` scale+opacity, `end` slide on-axis); depends on T012–T017
-- [ ] T019 Create `frontend/src/motion/Sheet.tsx` — composes `Overlay variant="end"`; `m.div` drag on `dismissAxis`; release decision from `tokens.dismiss`; rubber-band; velocity hand-off to `spring.momentum`; depends on T018
-- [ ] T020 Fill `frontend/src/motion/index.ts` barrel (tokens, `MotionProvider`, `Overlay`, `Sheet`, hooks)
-- [ ] T021 Mount `<MotionProvider>` in `frontend/src/main.tsx` (or `App.tsx`) alongside `<ThemeProvider>`, above the router
+- [X] T011 Add motion + typography tokens and preference media queries to `frontend/src/styles/global.css`: `--ease-out|--ease-in-out|--ease-drawer`, `--motion-duration-press|fade|collapse|drawer`, `--tracking-display|--leading-display`, and `@media (prefers-reduced-motion: reduce)` / `(prefers-reduced-transparency: reduce)` / `(prefers-contrast: more)` blocks (per [research.md](./research.md) R2, R4, R6)
+- [X] T012 Create `frontend/src/motion/tokens.ts` per [contracts/motion-layer.md](./contracts/motion-layer.md) (spring configs, `motionDuration`, `easing`, `dismiss`), `as const`
+- [X] T013 [P] Create `frontend/src/motion/useFocusTrap.ts`
+- [X] T014 [P] Create `frontend/src/motion/useScrollLock.ts` (ref-counted, scrollbar-width compensation, no layout shift)
+- [X] T015 [P] Create `frontend/src/motion/useRestoreFocus.ts`
+- [X] T016 [P] Create `frontend/src/components/ui/focusRing.ts` (single shared `focus-visible:ring-2 ring-primary ring-offset-2` constant)
+- [X] T017 Create `frontend/src/motion/MotionProvider.tsx` — `<LazyMotion features={domAnimation} strict>` + `<MotionConfig reducedMotion="user">`
+- [X] T018 Create `frontend/src/motion/Overlay.tsx` — composes `useFocusTrap` + `useScrollLock` + `useRestoreFocus` + `useEscapeKey`; scrim + `<Card>` surface; `AnimatePresence` enter/exit per variant (`center` scale+opacity, `end` slide on-axis); depends on T012–T017
+- [X] T019 Create `frontend/src/motion/Sheet.tsx` — composes `Overlay variant="end"`; `m.div` drag on `dismissAxis`; release decision from `tokens.dismiss`; rubber-band; velocity hand-off to `spring.momentum`; depends on T018
+- [X] T020 Fill `frontend/src/motion/index.ts` barrel (tokens, `MotionProvider`, `Overlay`, `Sheet`, hooks)
+- [X] T021 Mount `<MotionProvider>` in `frontend/src/main.tsx` (or `App.tsx`) alongside `<ThemeProvider>`, above the router
 
 **Checkpoint**: `frontend` Vitest green for `motion/**`; import-boundary guard (T002) green; app boots with provider mounted, no scroll-lock leak.
 
