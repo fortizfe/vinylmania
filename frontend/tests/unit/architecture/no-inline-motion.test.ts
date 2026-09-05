@@ -23,18 +23,31 @@ const componentsDir = join(process.cwd(), 'src', 'components');
 /** Strip `//` line comments and `/* *\/` block comments so the explanatory
  * prose in a component file can't trip a rule. */
 function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
 const RULES: { re: RegExp; label: string }[] = [
-  { re: /cubic-bezier\(/, label: 'raw cubic-bezier() — use an easing token (easing.* / ease-out util)' },
-  { re: /transition-all|transition:\s*all/, label: 'transition-all — enumerate the animated properties instead' },
-  { re: /\bduration-\[/, label: 'arbitrary duration-[…] — use duration-(--motion-duration-*)' },
-  { re: /\bduration-\d/, label: 'hard-coded duration-<n> — use a --motion-duration-* token' },
+  {
+    re: /cubic-bezier\(/,
+    label: 'raw cubic-bezier() — use an easing token (easing.* / ease-out util)',
+  },
+  {
+    re: /transition-all|transition:\s*all/,
+    label: 'transition-all — enumerate the animated properties instead',
+  },
+  {
+    re: /\bduration-\[/,
+    label: 'arbitrary duration-[…] — use duration-(--motion-duration-*)',
+  },
+  {
+    re: /\bduration-\d/,
+    label: 'hard-coded duration-<n> — use a --motion-duration-* token',
+  },
   { re: /\bease-\[/, label: 'arbitrary ease-[…] — use an easing token' },
-  { re: /\bease-in(?![-\w])/, label: 'bare `ease-in` — use the ease-in-out / ease-out token utility' },
+  {
+    re: /\bease-in(?![-\w])/,
+    label: 'bare `ease-in` — use the ease-in-out / ease-out token utility',
+  },
   { re: /\bease-linear\b/, label: 'ease-linear — use an easing token' },
   { re: /\bease-initial\b/, label: 'ease-initial — use an easing token' },
 ];

@@ -23,9 +23,9 @@ describe('CollapsibleFilterPanel (feature 038, US1)', () => {
       </CollapsibleFilterPanel>,
     );
 
-    expect(
-      screen.getByRole('button', { name: /^filters$/i }).className,
-    ).toMatch(/active:scale-\[0\.97\]/);
+    expect(screen.getByRole('button', { name: /^filters$/i }).className).toMatch(
+      /active:scale-\[0\.97\]/,
+    );
   });
 
   it('shows no active-filter badge when activeCount is 0 (FR-005)', () => {

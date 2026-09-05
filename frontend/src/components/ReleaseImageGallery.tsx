@@ -7,7 +7,9 @@ import { GalleryFullscreenViewer } from './GalleryFullscreenViewer';
 /** Viewport-relative centre of `element`, in percentages — the point the
  * fullscreen viewer scales out from so it feels anchored to the thumbnail
  * the user tapped (spec 059 T055). */
-function viewportOriginPercent(element: HTMLElement | null): { x: number; y: number } | undefined {
+function viewportOriginPercent(
+  element: HTMLElement | null,
+): { x: number; y: number } | undefined {
   if (!element || typeof window === 'undefined') return undefined;
   const rect = element.getBoundingClientRect();
   const vw = window.innerWidth || 1;
@@ -31,7 +33,9 @@ function initialIndex(images: CatalogImage[]): number {
 export function ReleaseImageGallery({ images, alt }: ReleaseImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(() => initialIndex(images));
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
-  const [viewerOrigin, setViewerOrigin] = useState<{ x: number; y: number } | undefined>();
+  const [viewerOrigin, setViewerOrigin] = useState<
+    { x: number; y: number } | undefined
+  >();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = images[selectedIndex];
 

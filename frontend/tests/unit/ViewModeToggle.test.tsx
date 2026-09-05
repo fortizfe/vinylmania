@@ -100,7 +100,9 @@ describe('ViewModeToggle', () => {
     it('does not paint a static background on the active button (the pill owns it)', () => {
       render(<ViewModeToggle mode="grid" onChange={vi.fn()} screen="search" />);
 
-      expect(screen.getByTestId('view-mode-grid').className).not.toMatch(/\bbg-primary\b/);
+      expect(screen.getByTestId('view-mode-grid').className).not.toMatch(
+        /\bbg-primary\b/,
+      );
     });
   });
 

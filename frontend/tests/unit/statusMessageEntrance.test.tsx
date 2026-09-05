@@ -54,7 +54,9 @@ describe('status-message entrance (US5 / T086)', () => {
   it('FeedSourceStatusBanner fades its status role in', () => {
     render(
       <FeedSourceStatusBanner
-        sourceStatuses={[{ sourceId: 's1', sourceName: 'Loudwire', status: 'unavailable' }]}
+        sourceStatuses={[
+          { sourceId: 's1', sourceName: 'Loudwire', status: 'unavailable' },
+        ]}
       />,
     );
 

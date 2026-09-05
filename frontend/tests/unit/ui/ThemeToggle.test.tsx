@@ -44,9 +44,9 @@ describe('ThemeToggle', () => {
       render(<ThemeToggle theme="light" onToggle={() => {}} />);
 
       for (const cls of focusRing.split(' ')) {
-        expect(
-          screen.getByRole('switch', { name: 'Dark mode' }).className,
-        ).toContain(cls);
+        expect(screen.getByRole('switch', { name: 'Dark mode' }).className).toContain(
+          cls,
+        );
       }
     });
   });

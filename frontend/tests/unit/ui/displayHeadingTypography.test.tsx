@@ -44,6 +44,8 @@ describe('display-heading typography (FR-015 / US5)', () => {
     render(<UnderConstruction title="Dashboard" />);
 
     const heading = screen.getByRole('heading', { name: 'Dashboard' });
-    expect(heading.className).not.toMatch(/leading-tight|leading-none|leading-snug|leading-normal/);
+    expect(heading.className).not.toMatch(
+      /leading-tight|leading-none|leading-snug|leading-normal/,
+    );
   });
 });

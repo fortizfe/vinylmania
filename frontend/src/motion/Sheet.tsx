@@ -104,10 +104,7 @@ export function Sheet({
     dragControls.start(event);
   }
 
-  function handleDragEnd(
-    _event: PointerEvent | MouseEvent | TouchEvent,
-    info: PanInfo,
-  ) {
+  function handleDragEnd(_event: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) {
     const node = contentRef.current;
     const extent =
       dismissAxis === 'x' ? (node?.offsetWidth ?? 0) : (node?.offsetHeight ?? 0);

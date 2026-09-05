@@ -10,8 +10,7 @@ interface MotionProviderProps {
  * stays out of the initial payload (research.md R1). `domMax` (rather than
  * `domAnimation`) is required for the `drag` gesture behind FR-010 / FR-012.
  */
-const loadMotionFeatures = () =>
-  import('./motionFeatures').then((mod) => mod.default);
+const loadMotionFeatures = () => import('./motionFeatures').then((mod) => mod.default);
 
 /**
  * App-wide motion context. Mounted once, alongside `ThemeProvider`, above

@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MotionProvider } from '../../../src/motion/MotionProvider';
-import { Sheet, scrollBlocksDismiss, shouldDismissSheet } from '../../../src/motion/Sheet';
+import {
+  Sheet,
+  scrollBlocksDismiss,
+  shouldDismissSheet,
+} from '../../../src/motion/Sheet';
 
 describe('shouldDismissSheet — release decision (spec 059 R7 / FR-011)', () => {
   const extent = 400;
@@ -89,13 +93,7 @@ describe('Sheet — non-gesture parity (FR-013)', () => {
     const onClose = vi.fn();
     render(
       <MotionProvider>
-        <Sheet
-          open
-          onClose={onClose}
-          dismissAxis="x"
-          showHandle
-          labelledBy="sheet-title"
-        >
+        <Sheet open onClose={onClose} dismissAxis="x" showHandle labelledBy="sheet-title">
           <h2 id="sheet-title">Menu</h2>
           <button type="button" onClick={onClose}>
             Close menu

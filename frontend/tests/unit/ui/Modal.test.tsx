@@ -255,9 +255,7 @@ describe('Modal', () => {
       const backdrop = screen.getByTestId('modal-backdrop');
       expect(backdrop.className).toMatch(/(^|\s)overlay-scrim(\s|$)/);
       expect(backdrop.className).toMatch(/bg-stone-950\/60/);
-      expect(
-        screen.getByRole('dialog').querySelector('.overlay-surface'),
-      ).not.toBeNull();
+      expect(screen.getByRole('dialog').querySelector('.overlay-surface')).not.toBeNull();
     });
 
     it('end drawer also routes through the Overlay drawer variant', () => {

@@ -29,7 +29,11 @@ export function NestedOverlayHarness() {
           </Button>
         </div>
 
-        <Modal open={innerOpen} onClose={() => setInnerOpen(false)} title="Confirm action">
+        <Modal
+          open={innerOpen}
+          onClose={() => setInnerOpen(false)}
+          title="Confirm action"
+        >
           <div className="flex flex-col gap-3">
             <p className="text-stone-900 dark:text-stone-100">
               Are you sure you want to continue?

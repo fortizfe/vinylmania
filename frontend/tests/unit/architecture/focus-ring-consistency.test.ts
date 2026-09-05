@@ -31,11 +31,13 @@ const ALLOWED_FILES = new Set([join('ui', 'focusRing.ts')]);
 const RULES: { re: RegExp; label: string }[] = [
   {
     re: /focus-visible:ring-/,
-    label: 'inline focus-visible:ring-* — compose the shared `focusRing` constant instead',
+    label:
+      'inline focus-visible:ring-* — compose the shared `focusRing` constant instead',
   },
   {
     re: /focus-visible:outline-/,
-    label: 'inline focus-visible:outline-* — compose the shared `focusRing` constant instead',
+    label:
+      'inline focus-visible:outline-* — compose the shared `focusRing` constant instead',
   },
   {
     re: /\bfocus:ring-/,
@@ -43,15 +45,14 @@ const RULES: { re: RegExp; label: string }[] = [
   },
   {
     re: /outline-primary/,
-    label: 'legacy `outline-primary` focus treatment — compose the shared `focusRing` constant instead',
+    label:
+      'legacy `outline-primary` focus treatment — compose the shared `focusRing` constant instead',
   },
 ];
 
 /** Strip comments so explanatory prose (incl. the words above) can't trip a rule. */
 function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
 function collectSourceFiles(dir: string): string[] {
