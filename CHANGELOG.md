@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.6.0] - 2026-09-05
+
+### Added
+
+- add dedicated backend, frontend, QA, and docs subagents (#44) ([f8a091d])
+
 ## [1.5.0] - 2026-07-19
 
 ### Added
