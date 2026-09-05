@@ -35,7 +35,7 @@ export function MasterReleaseOtherDetailsSection({
         href={master.discogsUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-sm font-medium text-primary no-underline hover:underline"
+        className="text-sm font-medium text-primary no-underline hover:underline dark:text-primary-text"
       >
         View on Discogs
       </a>

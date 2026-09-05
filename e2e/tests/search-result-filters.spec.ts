@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
+import { assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 /**
@@ -1100,4 +1102,144 @@ test.describe('Filters behave identically in list mode (feature 052, US3)', () =
       page.getByText(/no results found for the active filters/i),
     ).toBeVisible();
   });
+});
+
+test.describe('Search result filters WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.route('**/api/discogs/search*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: [
+              {
+                discogsId: 501,
+                resultType: 'release',
+                title: 'Nevermind',
+                artist: 'Nirvana',
+                year: 1991,
+              },
+            ],
+            pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+          }),
+        });
+      });
+
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+      await page.getByLabel(/search discogs/i).fill('nirvana');
+      await page.getByRole('button', { name: /^search$/i }).click();
+      await expect(page).toHaveURL(/\/app\/search/);
+      await expect(page.getByText('Nevermind')).toBeVisible();
+
+      await expandFilters(page);
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
+});
+
+test.describe('Search result filter controls UI component contrast (spec 058, US2)', () => {
+  /**
+   * Each contrast check below runs as its own test rather than as chained
+   * assertions in one test — otherwise the first failing assertion would
+   * abort the test and hide whether the later ones pass or fail.
+   */
+  async function goToSearchResultsWithFilters(page: import('@playwright/test').Page) {
+    await page.route('**/api/discogs/search*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            {
+              discogsId: 501,
+              resultType: 'release',
+              title: 'Nevermind',
+              artist: 'Nirvana',
+              year: 1991,
+            },
+          ],
+          pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.getByLabel(/search discogs/i).fill('nirvana');
+    await page.getByRole('button', { name: /^search$/i }).click();
+    await expect(page).toHaveURL(/\/app\/search/);
+    await expect(page.getByText('Nevermind')).toBeVisible();
+  }
+
+  for (const theme of ['light', 'dark'] as const) {
+    // Collapsed state: CollapsibleFilterPanel.tsx renders the "Filters"
+    // trigger button inside a Card whose visible border is the panel's
+    // own boundary against the page background.
+    test(`collapsed filter panel border meets WCAG UI component contrast in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await goToSearchResultsWithFilters(page);
+
+      const filtersButton = page.getByRole('button', { name: /^filters$/i });
+      const collapsedPanelCard = filtersButton.locator('xpath=..');
+      await assertUiComponentContrast(
+        page,
+        collapsedPanelCard,
+        page.getByTestId('app-shell'),
+        `Collapsed filter panel border (${theme})`,
+      );
+    });
+
+    // Expanded state: the Format filter trigger (a secondary Button, real
+    // border) against the same Card, now wrapping the filter <form>.
+    test(`Format filter trigger border meets WCAG UI component contrast in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await goToSearchResultsWithFilters(page);
+      await expandFilters(page);
+
+      const formatTrigger = page.locator('#filter-format-trigger');
+      // Scoped from the trigger itself, not `page.locator('form')` — the
+      // header search box (HeaderSearchBox.tsx) is also a <form>, so an
+      // unscoped lookup hits 2 elements (strict-mode violation).
+      const expandedPanelCard = formatTrigger.locator('xpath=ancestor::form/parent::*');
+      await assertUiComponentContrast(
+        page,
+        formatTrigger,
+        expandedPanelCard,
+        `Format filter trigger border (${theme})`,
+      );
+    });
+
+    test(`Format option checkbox border meets WCAG UI component contrast in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await goToSearchResultsWithFilters(page);
+      await expandFilters(page);
+
+      const formatTrigger = page.locator('#filter-format-trigger');
+      await formatTrigger.click();
+      const dialog = page.getByRole('dialog');
+      const dialogSurface = dialog.locator('> div').first();
+      const formatCheckbox = dialog.getByLabel('Vinyl', { exact: true });
+      await assertUiComponentContrast(
+        page,
+        formatCheckbox,
+        dialogSurface,
+        `Format option checkbox border (${theme})`,
+      );
+      await page.keyboard.press('Escape');
+    });
+  }
 });

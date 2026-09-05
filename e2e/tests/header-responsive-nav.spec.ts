@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
+import { assertFocusIndicatorContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 test.describe('Responsive header navigation (US1, US2, US3)', () => {
@@ -183,4 +185,61 @@ test.describe('Responsive header navigation (US1, US2, US3)', () => {
       expect(ultraWideBox?.height).toBeCloseTo(desktopBox?.height ?? 0, 0);
     });
   });
+});
+
+test.describe('Header/navigation WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+      await expect(page.getByRole('banner')).toBeVisible();
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
+});
+
+test.describe('Header/navigation focus-indicator contrast (spec 058, US2)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`primary nav actions meet WCAG focus-indicator contrast in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+
+      await assertFocusIndicatorContrast(
+        page,
+        page.getByRole('link', { name: /^profile$/i }),
+        `Profile nav link focus indicator (${theme})`,
+      );
+      await assertFocusIndicatorContrast(
+        page,
+        page.getByRole('link', { name: /my wishlist/i }),
+        `Wishlist nav link focus indicator (${theme})`,
+      );
+      await assertFocusIndicatorContrast(
+        page,
+        page.getByRole('link', { name: /my library/i }),
+        `Library nav link focus indicator (${theme})`,
+      );
+
+      await page.setViewportSize({ width: 375, height: 812 });
+      const hamburger = page.getByRole('button', { name: /^menu$/i });
+      await expect(hamburger).toBeVisible();
+      await assertFocusIndicatorContrast(
+        page,
+        hamburger,
+        `Hamburger menu button focus indicator (${theme})`,
+      );
+    });
+  }
 });

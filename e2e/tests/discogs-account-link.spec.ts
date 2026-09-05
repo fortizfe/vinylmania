@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 async function goToProfile(page: Page): Promise<void> {
@@ -99,4 +100,27 @@ test.describe('Discogs account link (feature 015)', () => {
     await page.getByRole('button', { name: /connect discogs account/i }).click();
     await expect(page.getByRole('heading', { name: /discogs authorization/i })).toBeVisible();
   });
+});
+
+test.describe('Discogs account link WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+
+      await goToProfile(page);
+      await page.getByRole('button', { name: /connect discogs account/i }).click();
+      await expect(page.getByRole('heading', { name: /discogs authorization/i })).toBeVisible();
+      await page.locator('#authorize').click();
+      await expect(page).toHaveURL(/\/app\/profile$/);
+      await expect(page.getByText('e2e-discogs-user')).toBeVisible();
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
 });

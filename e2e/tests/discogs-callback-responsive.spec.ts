@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 // Transient loader page (spec 035, Scenario 13): no substantial content to
@@ -32,4 +33,21 @@ test.describe('Discogs callback page responsive layout (spec 035, US1, Scenario 
     );
     expect(hasHorizontalScroll).toBe(false);
   });
+});
+
+test.describe('Discogs callback WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+      await page.goto('/app/profile/discogs/callback');
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
 });

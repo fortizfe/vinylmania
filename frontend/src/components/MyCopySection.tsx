@@ -27,8 +27,18 @@ export const SLEEVE_CONDITIONS = [
   'No Cover',
 ] as const;
 
+/**
+ * `border-stone-500` (rather than the lighter default `border-stone-300`)
+ * against both the light `bg-stone-50` and dark `bg-surface-raised`
+ * "Your copy" card surface — see specs/058-theme-wcag-aa-refactor: at
+ * `border-stone-300`/`dark:border-stone-800` this measured 1.43:1 (light)
+ * and 1.18:1 (dark), well under the WCAG AA 3:1 minimum for UI component
+ * boundaries (1.4.11). `border-stone-500` measures ~4.59:1 against
+ * `bg-stone-50` and ~3.75:1 against `bg-surface-raised`, so one value
+ * covers both themes without a `dark:` override.
+ */
 const fieldClasses =
-  'min-h-11 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-stone-800 dark:bg-stone-950 dark:text-stone-100 disabled:opacity-50 disabled:cursor-not-allowed';
+  'min-h-11 rounded-xl border border-stone-500 bg-white px-3 py-2 text-sm text-stone-900 focus:border-primary focus:outline-none dark:bg-stone-950 dark:text-stone-100 disabled:opacity-50 disabled:cursor-not-allowed';
 const labelClasses = 'text-sm font-medium text-stone-700 dark:text-stone-300';
 
 interface MyCopySectionProps {

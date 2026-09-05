@@ -28,7 +28,21 @@ export function StarRating({ value, onChange, disabled = false }: StarRatingProp
             disabled={disabled}
             onClick={() => handleClick(star)}
             className={[
-              'flex min-h-11 min-w-11 items-center justify-center rounded transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+              // A raw `outline-primary` here previously measured as low as
+              // 1.56:1 (light) / 2.57:1 (dark) against the app shell in
+              // spec 058's WCAG contrast audit — not because indigo lacks
+              // contrast (it clears both easily), but because this
+              // element's `transition-colors` includes `outline-color`, and
+              // the contrast helper reads `getComputedStyle` synchronously
+              // right after `.focus()`, mid-transition, capturing the
+              // *pre*-focus outline-color (which resolves to `currentColor`,
+              // i.e. this button's own near-invisible unfilled-star gray).
+              // The shared `ring-*` focus pattern used by ThemeToggle/
+              // ViewModeToggle renders as a `box-shadow`, which isn't in
+              // `transition-colors`' property list, so it appears
+              // immediately with no such race — reusing it here sidesteps
+              // the issue instead of fighting the transition.
+              'flex min-h-11 min-w-11 items-center justify-center rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
               disabled
                 ? 'cursor-not-allowed opacity-40'
                 : 'cursor-pointer hover:text-accent',

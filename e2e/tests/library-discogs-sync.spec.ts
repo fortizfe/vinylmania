@@ -15,6 +15,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const STUB_URL = 'http://localhost:4571';
@@ -275,4 +276,22 @@ test.describe('Library ⇄ Discogs Collection Sync (feature 016)', () => {
         const collection = await getCollection();
         expect(collection.some((r) => r.basic_information.id === 3002)).toBe(true);
     });
+});
+
+test.describe('Library Discogs sync WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+    for (const theme of ['light', 'dark'] as const) {
+        test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+            page,
+        }) => {
+            await page.emulateMedia({ colorScheme: theme });
+            await page.goto('/');
+            await signInAsFakeGoogleUser(page);
+            await page.goto('/app/library');
+            await expect(page.getByText(/link your discogs account/i)).toBeVisible();
+
+            const seriousOrCritical = await runAxeScan(page);
+
+            expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+        });
+    }
 });

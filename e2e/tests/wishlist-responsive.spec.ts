@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 // Wishlist is still an "under construction" placeholder (spec 035, FR-009):
@@ -59,4 +60,22 @@ test.describe('Wishlist page responsive layout (spec 035, US1, Scenario 7)', () 
 
     await expect(page).toHaveURL(/\/app\/wishlist$/);
   });
+});
+
+test.describe('Wishlist WCAG 2.1 AA automated scan (spec 058, US1)', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto('/');
+      await signInAsFakeGoogleUser(page);
+      await page.goto('/app/wishlist');
+      await expect(page.getByRole('heading', { name: /my wishlist/i })).toBeVisible();
+
+      const seriousOrCritical = await runAxeScan(page);
+
+      expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+    });
+  }
 });

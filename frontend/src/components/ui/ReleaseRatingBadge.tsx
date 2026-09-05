@@ -12,8 +12,15 @@ const BACKGROUND_CLASSES: Record<RatingBand, string> = {
   medium: 'bg-rating-medium',
   high: 'bg-rating-high',
   // Unrated/error placeholder (feature 019): adapts per theme, unlike the
-  // fixed-color bands above — see research.md §2.
-  unrated: 'bg-rating-unrated dark:bg-stone-700',
+  // fixed-color bands above — see research.md §2. `border-stone-500` added
+  // (spec 058 T027 finding #5): this fill barely differs from the card
+  // surfaces it sits on (~1.41:1 light / ~1.75:1 dark against
+  // bg-stone-50/dark:bg-surface-raised), under the WCAG AA 3:1 minimum for
+  // UI component boundaries (1.4.11). A border (not a darker/lighter fill)
+  // is the fix here specifically so the already-AA-compliant fill/text
+  // pairing (research.md §2) stays untouched — border-stone-500 measures
+  // ~4.59:1 (light) / ~3.75:1 (dark) against those same card surfaces.
+  unrated: 'border border-stone-500 bg-rating-unrated dark:bg-stone-700',
 };
 
 // Text color per band chosen alongside the background tokens in
