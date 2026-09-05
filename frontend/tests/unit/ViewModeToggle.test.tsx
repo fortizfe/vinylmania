@@ -48,6 +48,17 @@ describe('ViewModeToggle', () => {
     expect(screen.getByTestId('view-mode-list')).toHaveClass('min-h-11', 'min-w-11');
   });
 
+  it('gives each option a pressed affordance and the shared focusRing (US1)', () => {
+    render(<ViewModeToggle mode="grid" onChange={vi.fn()} screen="search" />);
+
+    for (const testid of ['view-mode-grid', 'view-mode-list']) {
+      const option = screen.getByTestId(testid);
+      expect(option.className).toMatch(/active:scale-\[0\.97\]/);
+      expect(option.className).toMatch(/motion-reduce:active:scale-100/);
+      expect(option.className).toContain('focus-visible:ring-primary');
+    }
+  });
+
   it('only the active option is in the tab order (roving tabIndex)', () => {
     render(<ViewModeToggle mode="list" onChange={vi.fn()} screen="library" />);
 

@@ -1,6 +1,9 @@
 import type { ButtonHTMLAttributes } from 'react';
 import clsx from 'clsx';
 
+import { focusRing } from './focusRing';
+import { pressable } from './press';
+
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary';
   size?: 'md' | 'icon';
@@ -24,18 +27,20 @@ const sizeClasses: Record<NonNullable<ButtonProps['size']>, string> = {
   icon: 'inline-flex min-h-11 min-w-11 items-center justify-center p-0',
 };
 
-// Explicit focus-visible ring (not the native browser default outline):
-// with no focus styling at all, this element fell back to the platform's
-// own default `:focus` outline color, which is NOT guaranteed to meet the
-// WCAG AA 3:1 minimum for focus indicators (1.4.11) on every platform —
-// it measured fine in local (macOS) Chromium but only ~1.03:1 in CI's
-// Linux Chromium, failing spec 058's automated focus-indicator check
-// (e2e/tests/sign-in.spec.ts, header-responsive-nav.spec.ts). Reusing the
-// same `ring-2 ring-primary ring-offset-2` pattern already used by
-// ThemeToggle/ViewModeToggle/StarRating fixes it deterministically across
-// platforms instead of depending on an unspecified native default.
-const baseClassName =
-  'rounded-xl font-medium transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-60';
+// Focus indicator + pressed state both come from shared single-source
+// constants (spec 059 US1): `focusRing` (see focusRing.ts for the WCAG
+// 1.4.11 cross-platform history) and `pressable` (an `:active` scale +
+// brightness nudge, self-suppressing while `disabled` — which a loading
+// Button also sets — and under `prefers-reduced-motion`). `pressable`
+// already declares the transition on `transform,filter,…,opacity`, so the
+// old standalone `transition-opacity` (kept `hover:opacity-90` /
+// `disabled:opacity-60` smooth) is folded into it.
+const baseClassName = clsx(
+  'rounded-xl font-medium',
+  focusRing,
+  pressable,
+  'disabled:cursor-default disabled:opacity-60',
+);
 
 /**
  * Class string matching a given `Button` variant/size, for non-`<button>`

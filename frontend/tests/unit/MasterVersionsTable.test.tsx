@@ -67,6 +67,7 @@ describe('MasterVersionsTable', () => {
     const table = await screen.findByRole('table');
     const link = within(table).getByRole('link');
     expect(link).toHaveAttribute('href', '/app/releases/98765');
+    expect(link.className).toMatch(/active:brightness-95/);
   });
 
   it('calls onPageChange when paginating', async () => {

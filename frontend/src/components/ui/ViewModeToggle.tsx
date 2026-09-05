@@ -2,6 +2,8 @@ import type { KeyboardEvent, ReactElement } from 'react';
 import clsx from 'clsx';
 
 import type { ViewMode } from '../../hooks/useViewModePreference';
+import { focusRing } from './focusRing';
+import { pressable } from './press';
 
 interface ViewModeToggleProps {
   mode: ViewMode;
@@ -88,7 +90,9 @@ export function ViewModeToggle({ mode, onChange, screen }: ViewModeToggleProps) 
               if (!isActive) onChange(optionMode);
             }}
             className={clsx(
-              'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+              'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg',
+              focusRing,
+              pressable,
               isActive
                 ? 'bg-primary text-white'
                 : 'text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-900',

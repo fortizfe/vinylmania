@@ -1,7 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { Button, iconButtonClassName } from '../../../src/components/ui/Button';
+import {
+  Button,
+  buttonClassName,
+  iconButtonClassName,
+} from '../../../src/components/ui/Button';
+import { focusRing } from '../../../src/components/ui/focusRing';
 
 describe('Button', () => {
   it('renders the primary variant by default', () => {
@@ -70,5 +75,56 @@ describe('Button', () => {
     const className = iconButtonClassName();
     expect(className).toMatch(/min-h-11/);
     expect(className).toMatch(/min-w-11/);
+  });
+
+  describe('pressed-state feedback (US1)', () => {
+    it('carries the tokenized pressed-state utilities in its base class', () => {
+      render(<Button>Press me</Button>);
+
+      const button = screen.getByRole('button', { name: 'Press me' });
+      expect(button.className).toMatch(/active:scale-\[0\.97\]/);
+      expect(button.className).toMatch(/active:brightness-95/);
+      expect(button.className).toMatch(/dark:active:brightness-110/);
+      expect(button.className).toMatch(/duration-\(--motion-duration-press\)/);
+      expect(button.className).toMatch(/ease-out/);
+    });
+
+    it('neutralizes the press effect when disabled and when loading', () => {
+      render(
+        <>
+          <Button disabled>Disabled</Button>
+          <Button loading>Loading</Button>
+        </>,
+      );
+
+      for (const button of screen.getAllByRole('button')) {
+        expect(button).toBeDisabled();
+        expect(button.className).toMatch(/disabled:active:scale-100/);
+        expect(button.className).toMatch(/disabled:active:brightness-100/);
+      }
+    });
+
+    it('drops only the scale under prefers-reduced-motion, keeping the brightness shift', () => {
+      render(<Button>Reduced</Button>);
+
+      const button = screen.getByRole('button', { name: 'Reduced' });
+      expect(button.className).toMatch(/motion-reduce:active:scale-100/);
+      expect(button.className).not.toMatch(/motion-reduce:active:brightness/);
+    });
+
+    it('adopts the shared focusRing constant (no ad-hoc focus utilities)', () => {
+      render(<Button>Focus</Button>);
+
+      const button = screen.getByRole('button', { name: 'Focus' });
+      for (const cls of focusRing.split(' ')) {
+        expect(button.className).toContain(cls);
+      }
+    });
+
+    it('carries the same press + focus treatment through buttonClassName()/iconButtonClassName()', () => {
+      expect(buttonClassName()).toMatch(/active:scale-\[0\.97\]/);
+      expect(buttonClassName()).toContain('focus-visible:ring-2');
+      expect(iconButtonClassName()).toMatch(/active:scale-\[0\.97\]/);
+    });
   });
 });

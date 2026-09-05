@@ -97,6 +97,32 @@ describe('RecordListRow', () => {
     );
   });
 
+  it('gives the whole-row link a card press affordance (US1)', () => {
+    renderRow({
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+      discogs: null,
+    });
+
+    const link = screen.getByRole('link');
+    expect(link.className).toMatch(/active:scale-\[0\.99\]/);
+    expect(link.className).toMatch(/motion-reduce:active:scale-100/);
+  });
+
   it('shows the existing unavailable-catalog fallback with an Open record link', () => {
     renderRow({
       id: 'entry-2',

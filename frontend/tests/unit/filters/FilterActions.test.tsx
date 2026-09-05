@@ -15,6 +15,16 @@ describe('FilterActions (feature 023, US3)', () => {
     expect(clearButton.textContent?.trim()).toBe('');
   });
 
+  it('both actions inherit the shared pressed-state from Button (US1 T042)', () => {
+    render(<FilterActions onClear={vi.fn()} />);
+
+    for (const name of [/^apply filters$/i, /^clear filters$/i]) {
+      expect(screen.getByRole('button', { name }).className).toMatch(
+        /active:scale-\[0\.97\]/,
+      );
+    }
+  });
+
   it('renders two visually distinct icons for Apply and Clear (FR-012)', () => {
     render(<FilterActions onClear={vi.fn()} />);
 

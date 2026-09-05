@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 
 import { presentRating } from '../lib/releaseRating';
 import type { EnrichedLibraryEntry } from '../services/libraryApi';
 import { Card } from './ui/Card';
+import { pressableCard } from './ui/press';
 import { ReleaseRatingBadge } from './ui/ReleaseRatingBadge';
 
 interface RecordCardProps {
@@ -34,7 +36,10 @@ export function RecordCard({ entry }: RecordCardProps) {
   return (
     <li>
       <Card padding="sm" className="flex flex-col gap-2">
-        <Link to={`/app/library/records/${entry.id}`} className="flex flex-col gap-2">
+        <Link
+          to={`/app/library/records/${entry.id}`}
+          className={clsx('flex flex-col gap-2', pressableCard)}
+        >
           <div className="relative">
             {cover ? (
               <img

@@ -2,6 +2,9 @@ import type { KeyboardEvent, ReactNode } from 'react';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import clsx from 'clsx';
 
+import { focusRing } from './focusRing';
+import { pressable } from './press';
+
 export interface InlineEditableFieldHandle {
   /** Saves the current in-progress edit, if any, as if the field had lost focus. */
   commit: () => void;
@@ -100,7 +103,9 @@ export const InlineEditableField = forwardRef<
         onClick={startEditing}
         aria-label={`Edit ${fieldLabel}`}
         className={clsx(
-          'flex min-h-11 items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors',
+          'flex min-h-11 items-center gap-2 rounded-md px-1 py-0.5 text-left',
+          focusRing,
+          pressable,
           'hover:bg-stone-100 dark:hover:bg-stone-900',
           '[@media(hover:none)]:bg-stone-50 [@media(hover:none)]:dark:bg-stone-900/60',
           !savedValue && 'italic text-stone-400 dark:text-stone-500',

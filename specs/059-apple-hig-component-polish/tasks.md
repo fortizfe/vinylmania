@@ -81,29 +81,29 @@ description: "Task list for Apple HIG Component Polish"
 ### Tests (write first, must fail)
 
 - [ ] T022 [P] [US1] `e2e/tests/press-feedback.spec.ts` — pressed state on pointer-down (not click) for Button, filter chip, star, header nav icon, inline-edit trigger; disabled Button shows none; reduced-motion keeps a brightness/opacity shift but no scale
-- [ ] T023 [P] [US1] Extend `frontend/tests/unit/ui/Button.test.tsx` — asserts press utilities present in `baseClassName`, absent effect when `disabled`/`loading`, and `focusRing` applied
-- [ ] T024 [P] [US1] Extend `frontend/tests/unit/ui/StarRating.test.tsx` and `ThemeToggle.test.tsx` / `Checkbox.test.tsx` — press affordance + shared `focusRing`
+- [X] T023 [P] [US1] Extend `frontend/tests/unit/ui/Button.test.tsx` — asserts press utilities present in `baseClassName`, absent effect when `disabled`/`loading`, and `focusRing` applied
+- [X] T024 [P] [US1] Extend `frontend/tests/unit/ui/StarRating.test.tsx` and `ThemeToggle.test.tsx` / `Checkbox.test.tsx` — press affordance + shared `focusRing`
 
 ### Implementation
 
-- [ ] T025 [US1] Add pressed state (`active:scale-[0.97]` + `active:brightness`, tokenized `transition`, disabled/loading + reduced-motion guards) and adopt `focusRing` in `frontend/src/components/ui/Button.tsx` (also updates `buttonClassName`/`iconButtonClassName`)
-- [ ] T026 [P] [US1] Per-star press scale + `focusRing` (removes the legacy `outline-primary` race) in `frontend/src/components/ui/StarRating.tsx`
-- [ ] T027 [P] [US1] Track press feedback + `focusRing` in `frontend/src/components/ui/ThemeToggle.tsx`
-- [ ] T028 [P] [US1] Option press feedback + `focusRing` in `frontend/src/components/ui/ViewModeToggle.tsx`
-- [ ] T029 [P] [US1] Press nudge (`active:-translate-x-0.5`) + `focusRing` in `frontend/src/components/ui/BackLink.tsx`
-- [ ] T030 [P] [US1] Trigger-button press + `focusRing` in `frontend/src/components/ui/InlineEditableField.tsx`
-- [ ] T031 [P] [US1] Row press feedback in `frontend/src/components/ui/Checkbox.tsx` (keep spec-058 dark `bg-stone-300`)
-- [ ] T032 [P] [US1] Row press feedback + `multi-select-list` pattern conformance in `frontend/src/components/filters/SelectableListFilter.tsx`
-- [ ] T033 [P] [US1] Icon-button press + `focusRing` in `frontend/src/components/HeaderNavIcons.tsx`
-- [ ] T034 [P] [US1] Submit/clear control press in `frontend/src/components/HeaderSearchBox.tsx`
-- [ ] T035 [P] [US1] Action-button press in `frontend/src/components/ResultCardActions.tsx`
-- [ ] T036 [P] [US1] Press state in `frontend/src/components/GoogleSignInButton.tsx` (keep spec-032 AA indigo)
-- [ ] T037 [P] [US1] Whole-card press affordance (`active:scale-[0.99]` on the `<Link>`) in `frontend/src/components/RecordCard.tsx` and `frontend/src/components/RecordListRow.tsx` (skeleton parity unchanged)
-- [ ] T038 [P] [US1] Whole-card press affordance in `frontend/src/components/SearchResultCard.tsx` and `frontend/src/components/SearchResultListRow.tsx`
-- [ ] T039 [P] [US1] Card press affordance in `frontend/src/components/FeedArticleCard.tsx`
-- [ ] T040 [P] [US1] Chip press + single chip pattern in `frontend/src/components/FeedCategoryFilterBar.tsx` and `frontend/src/components/FeedSourceFilterBar.tsx`
-- [ ] T041 [P] [US1] Navigable-row press in `frontend/src/components/MasterVersionsTable.tsx`
-- [ ] T042 [P] [US1] Collapse-trigger + filter action buttons inherit `Button` press — verify and add press assertions in `frontend/src/components/filters/CollapsibleFilterPanel.tsx`, `frontend/src/components/filters/FilterActions.tsx`, `frontend/src/components/HamburgerMenu.tsx`
+- [X] T025 [US1] Add pressed state (`active:scale-[0.97]` + `active:brightness`, tokenized `transition`, disabled/loading + reduced-motion guards) and adopt `focusRing` in `frontend/src/components/ui/Button.tsx` (also updates `buttonClassName`/`iconButtonClassName`)
+- [X] T026 [P] [US1] Per-star press scale + `focusRing` (removes the legacy `outline-primary` race) in `frontend/src/components/ui/StarRating.tsx`
+- [X] T027 [P] [US1] Track press feedback + `focusRing` in `frontend/src/components/ui/ThemeToggle.tsx`
+- [X] T028 [P] [US1] Option press feedback + `focusRing` in `frontend/src/components/ui/ViewModeToggle.tsx`
+- [X] T029 [P] [US1] Press nudge (`active:-translate-x-0.5`) + `focusRing` in `frontend/src/components/ui/BackLink.tsx`
+- [X] T030 [P] [US1] Trigger-button press + `focusRing` in `frontend/src/components/ui/InlineEditableField.tsx`
+- [X] T031 [P] [US1] Row press feedback in `frontend/src/components/ui/Checkbox.tsx` (keep spec-058 dark `bg-stone-300`)
+- [X] T032 [P] [US1] Row press feedback + `multi-select-list` pattern conformance in `frontend/src/components/filters/SelectableListFilter.tsx`
+- [X] T033 [P] [US1] Icon-button press + `focusRing` in `frontend/src/components/HeaderNavIcons.tsx`
+- [X] T034 [P] [US1] Submit/clear control press in `frontend/src/components/HeaderSearchBox.tsx`
+- [X] T035 [P] [US1] Action-button press in `frontend/src/components/ResultCardActions.tsx`
+- [X] T036 [P] [US1] Press state in `frontend/src/components/GoogleSignInButton.tsx` (keep spec-032 AA indigo)
+- [X] T037 [P] [US1] Whole-card press affordance (`active:scale-[0.99]` on the `<Link>`) in `frontend/src/components/RecordCard.tsx` and `frontend/src/components/RecordListRow.tsx` (skeleton parity unchanged)
+- [X] T038 [P] [US1] Whole-card press affordance in `frontend/src/components/SearchResultCard.tsx` and `frontend/src/components/SearchResultListRow.tsx`
+- [X] T039 [P] [US1] Card press affordance in `frontend/src/components/FeedArticleCard.tsx`
+- [X] T040 [P] [US1] Chip press + single chip pattern in `frontend/src/components/FeedCategoryFilterBar.tsx` and `frontend/src/components/FeedSourceFilterBar.tsx`
+- [X] T041 [P] [US1] Navigable-row press in `frontend/src/components/MasterVersionsTable.tsx`
+- [X] T042 [P] [US1] Collapse-trigger + filter action buttons inherit `Button` press — verify and add press assertions in `frontend/src/components/filters/CollapsibleFilterPanel.tsx`, `frontend/src/components/filters/FilterActions.tsx`, `frontend/src/components/HamburgerMenu.tsx`
 - [ ] T043 [US1] Extend `e2e/tests/view-mode-toggle.spec.ts` and `e2e/tests/record-detail-inline-edit.spec.ts` with press-state assertions
 - [ ] T044 [US1] Run US1 validation (quickstart §US1): `press-feedback.spec.ts` + axe both themes green; update the US1 rows in [audit.md](./audit.md) to done
 

@@ -49,6 +49,23 @@ describe('InlineEditableField', () => {
     expect(screen.queryByLabelText('Condition')).not.toBeInTheDocument();
   });
 
+  it('gives the read-mode trigger a pressed affordance and the shared focusRing (US1)', () => {
+    render(
+      <InlineEditableField
+        value="Near Mint"
+        placeholder="Add a condition"
+        fieldLabel="Condition"
+        renderEditor={renderTextEditor}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const trigger = screen.getByRole('button', { name: /edit condition/i });
+    expect(trigger.className).toMatch(/active:scale-\[0\.97\]/);
+    expect(trigger.className).toMatch(/motion-reduce:active:scale-100/);
+    expect(trigger.className).toContain('focus-visible:ring-primary');
+  });
+
   it('shows the placeholder when the value is empty', () => {
     render(
       <InlineEditableField

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 
 import { presentRating } from '../lib/releaseRating';
 import type { CatalogSearchResult } from '../services/discogsApi';
@@ -6,6 +7,7 @@ import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { ReleaseRatingBadge } from './ui/ReleaseRatingBadge';
 import { ResultCardActions } from './ResultCardActions';
+import { pressableCard } from './ui/press';
 
 interface SearchResultListRowProps {
   result: CatalogSearchResult;
@@ -70,7 +72,7 @@ export function SearchResultListRow({
           <Link
             to={detailPath}
             state={{ from: searchPath }}
-            className="flex items-center gap-4"
+            className={clsx('flex items-center gap-4', pressableCard)}
           >
             {thumbnail}
             <div className="flex min-w-0 flex-col gap-1">

@@ -1,6 +1,8 @@
 import clsx from 'clsx';
 
 import type { Theme } from '../../theme/ThemeContext';
+import { focusRing } from './focusRing';
+import { pressable } from './press';
 
 interface ThemeToggleProps {
   theme: Theme;
@@ -63,7 +65,14 @@ export function ThemeToggle({ theme, onToggle, className }: ThemeToggleProps) {
       aria-label="Dark mode"
       onClick={onToggle}
       className={clsx(
-        'relative inline-flex min-h-11 h-9 w-16 shrink-0 items-center overflow-hidden rounded-full border transition-colors duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+        // `pressable` owns the track's `transform,filter,color,border-color`
+        // transition (tokenized 130ms/ease-out) and the press scale; the
+        // knob/sky crossfades keep their own `duration-300` spans below
+        // until US2 re-homes them on the spring layer. `focusRing` is the
+        // shared indicator.
+        'relative inline-flex min-h-11 h-9 w-16 shrink-0 items-center overflow-hidden rounded-full border',
+        focusRing,
+        pressable,
         // Light-state border is sky-600, not the sky-300 used in the fill
         // gradient — sky-300 measured only 1.60:1 against this switch's
         // `bg-stone-50` row surface (spec 058 WCAG audit), under the 3:1

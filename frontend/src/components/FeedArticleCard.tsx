@@ -1,6 +1,9 @@
+import clsx from 'clsx';
+
 import type { Article } from '../services/feedsApi';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
+import { pressableCard } from './ui/press';
 
 function formatPublishedAt(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -21,7 +24,10 @@ export function FeedArticleCard({ article }: FeedArticleCardProps) {
         href={article.link}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex h-full flex-row gap-3 no-underline sm:flex-col sm:gap-2"
+        className={clsx(
+          'flex h-full flex-row gap-3 no-underline sm:flex-col sm:gap-2',
+          pressableCard,
+        )}
       >
         {article.imageUrl ? (
           <img

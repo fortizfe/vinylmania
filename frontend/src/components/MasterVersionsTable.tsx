@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 
 import { useCatalogMasterVersions } from '../queries/discogsQueries';
 import { ApiError } from '../services/apiClient';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { pressableRow } from './ui/press';
 import { DiscogsRelinkNotice } from './DiscogsRelinkNotice';
 import { MasterVersionsTableSkeleton } from './MasterVersionsTableSkeleton';
 
@@ -59,7 +61,10 @@ export function MasterVersionsTable({
               <Link
                 to={`/app/releases/${version.discogsId}`}
                 state={{ from: `/app/masters/${discogsId}?page=${page}` }}
-                className="flex min-h-11 items-center font-medium text-stone-900 no-underline hover:text-primary dark:text-stone-100"
+                className={clsx(
+                  'flex min-h-11 items-center font-medium text-stone-900 no-underline hover:text-primary dark:text-stone-100',
+                  pressableRow,
+                )}
               >
                 {version.title}
               </Link>
@@ -95,7 +100,10 @@ export function MasterVersionsTable({
                   <Link
                     to={`/app/releases/${version.discogsId}`}
                     state={{ from: `/app/masters/${discogsId}?page=${page}` }}
-                    className="font-medium text-stone-900 no-underline hover:text-primary dark:text-stone-100"
+                    className={clsx(
+                      'font-medium text-stone-900 no-underline hover:text-primary dark:text-stone-100',
+                      pressableRow,
+                    )}
                   >
                     {version.title}
                   </Link>

@@ -59,6 +59,14 @@ describe('SearchResultListRow', () => {
     expect(screen.getByRole('link')).toHaveAttribute('href', '/app/releases/1');
   });
 
+  it('gives the whole-row link a card press affordance (US1)', () => {
+    renderRow(baseResult);
+
+    const link = screen.getByRole('link');
+    expect(link.className).toMatch(/active:scale-\[0\.99\]/);
+    expect(link.className).toMatch(/motion-reduce:active:scale-100/);
+  });
+
   describe('grouped (master) results', () => {
     const masterResult: CatalogSearchResult = {
       ...baseResult,

@@ -11,6 +11,18 @@ describe('ResultCardActions', () => {
     expect(screen.getByRole('button', { name: /add to library/i })).toBeInTheDocument();
   });
 
+  it('the add action inherits the shared pressed-state, suppressed while disabled (US1)', () => {
+    const { rerender } = render(
+      <ResultCardActions onAdd={() => {}} adding={false} added={false} />,
+    );
+    const button = screen.getByRole('button', { name: /add to library/i });
+    expect(button.className).toMatch(/active:scale-\[0\.97\]/);
+    expect(button.className).toMatch(/disabled:active:scale-100/);
+
+    rerender(<ResultCardActions onAdd={() => {}} adding={false} added />);
+    expect(screen.getByRole('button', { name: /added to library/i })).toBeDisabled();
+  });
+
   it('calls onAdd when activated', async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();

@@ -1,6 +1,8 @@
 import type { InputHTMLAttributes } from 'react';
 import clsx from 'clsx';
 
+import { pressableRow } from './press';
+
 interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label: string;
   id: string;
@@ -8,7 +10,10 @@ interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'typ
 
 export function Checkbox({ label, id, className, ...props }: CheckboxProps) {
   return (
-    <div className="flex min-h-11 items-center gap-2">
+    // Row-level press feedback: a brightness nudge only (no scale — a dense
+    // filter row scaling reads as jitter), suppressed under reduced motion
+    // by the global timing kill (spec 059 US1 / audit).
+    <div className={clsx('flex min-h-11 items-center gap-2 rounded-md', pressableRow)}>
       <input
         id={id}
         type="checkbox"
