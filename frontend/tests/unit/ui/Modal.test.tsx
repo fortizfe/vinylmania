@@ -242,6 +242,24 @@ describe('Modal', () => {
       expect(screen.getByText('Content')).toBeInTheDocument();
     });
 
+    it('flows the shared Overlay material through its backdrop (US3)', () => {
+      render(
+        <Modal open onClose={() => {}} title="Preview">
+          Content
+        </Modal>,
+      );
+
+      // Modal declares no scrim/blur of its own — it inherits Overlay's
+      // material, incl. the `.overlay-scrim` hook the global.css fallbacks
+      // (no-backdrop-filter / reduced-transparency / more-contrast) target.
+      const backdrop = screen.getByTestId('modal-backdrop');
+      expect(backdrop.className).toMatch(/(^|\s)overlay-scrim(\s|$)/);
+      expect(backdrop.className).toMatch(/bg-stone-950\/60/);
+      expect(
+        screen.getByRole('dialog').querySelector('.overlay-surface'),
+      ).not.toBeNull();
+    });
+
     it('end drawer also routes through the Overlay drawer variant', () => {
       render(
         <Modal open onClose={() => {}} position="end">

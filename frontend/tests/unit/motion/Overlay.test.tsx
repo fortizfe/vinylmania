@@ -178,4 +178,91 @@ describe('Overlay', () => {
     );
     expect(screen.getByRole('dialog')).toHaveAttribute('data-variant', 'end');
   });
+
+  describe('material treatment (US3 / FR-007)', () => {
+    it('renders the scrim with the dim + blur material hook classes', () => {
+      renderOverlay(
+        <Overlay open onClose={() => {}} variant="center">
+          <p>body</p>
+        </Overlay>,
+      );
+
+      const scrim = screen.getByTestId('overlay-scrim');
+      // `.overlay-scrim` is the CSS hook the global.css fallback blocks target.
+      expect(scrim.className).toMatch(/(^|\s)overlay-scrim(\s|$)/);
+      expect(scrim.className).toMatch(/bg-stone-950\/60/);
+    });
+
+    it('marks the opaque surface with the floating-element elevation + hook class', () => {
+      renderOverlay(
+        <Overlay open onClose={() => {}} variant="center">
+          <p>body</p>
+        </Overlay>,
+      );
+      const surface = screen.getByRole('dialog').querySelector('.overlay-surface');
+      expect(surface).not.toBeNull();
+      expect(surface!.className).toMatch(/shadow-2xl/);
+    });
+
+    it('uses the drawer elevation (shadow-xl) for the end variant', () => {
+      renderOverlay(
+        <Overlay open onClose={() => {}} variant="end">
+          <p>body</p>
+        </Overlay>,
+      );
+      const surface = screen.getByRole('dialog').querySelector('.overlay-surface');
+      expect(surface!.className).toMatch(/shadow-xl/);
+    });
+
+    it('lets a consumer override the scrim material (gallery uses a darker dim)', () => {
+      renderOverlay(
+        <Overlay
+          open
+          onClose={() => {}}
+          variant="center"
+          scrim={{ className: 'bg-stone-950/90', blurPx: 4 }}
+        >
+          <p>body</p>
+        </Overlay>,
+      );
+      const scrim = screen.getByTestId('overlay-scrim');
+      expect(scrim.className).toMatch(/bg-stone-950\/90/);
+      expect(scrim.className).not.toMatch(/bg-stone-950\/60/);
+    });
+
+    it('renders children bare (no Card chrome) when surface="bare"', () => {
+      renderOverlay(
+        <Overlay
+          open
+          onClose={() => {}}
+          variant="center"
+          surface="bare"
+          surfaceClassName="bare-surface"
+        >
+          <p>bare body</p>
+        </Overlay>,
+      );
+      const dialog = screen.getByRole('dialog');
+      expect(dialog.className).toMatch(/bare-surface/);
+      // No Card wrapper: none of Card's chrome utilities are present.
+      expect(dialog.innerHTML).not.toMatch(/bg-stone-50/);
+      expect(dialog.innerHTML).not.toMatch(/border-stone-500/);
+      expect(screen.getByText('bare body')).toBeInTheDocument();
+    });
+
+    it('applies surfaceStyle to the animating surface (thumbnail-anchored origin)', () => {
+      renderOverlay(
+        <Overlay
+          open
+          onClose={() => {}}
+          variant="center"
+          surface="bare"
+          surfaceStyle={{ transformOrigin: '20% 30%' }}
+        >
+          <p>body</p>
+        </Overlay>,
+      );
+      expect(screen.getByRole('dialog')).toHaveStyle({ transformOrigin: '20% 30%' });
+    });
+  });
 });

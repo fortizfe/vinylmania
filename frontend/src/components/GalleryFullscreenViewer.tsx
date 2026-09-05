@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
 import clsx from 'clsx';
 
-import { AnimatePresence, m, spring, usePrefersReducedMotion } from '../motion';
-import { useEscapeKey } from '../hooks/useEscapeKey';
+import { AnimatePresence, m, Overlay, spring, usePrefersReducedMotion } from '../motion';
 import type { CatalogImage } from '../services/libraryApi';
 import { Button } from './ui/Button';
 import { CloseIcon } from './ui/icons/CloseIcon';
@@ -28,6 +27,13 @@ const slideVariants = {
   exit: (direction: number) => ({ x: direction >= 0 ? '-100%' : '100%', opacity: 0 }),
 };
 
+/**
+ * Fullscreen image viewer. The dimmed + blurred backdrop, focus trap, focus
+ * restoration and background scroll lock all come from `motion/Overlay`
+ * (spec 059 US3 T064) — this component only supplies the immersive
+ * near-opaque scrim colour and its own children (image, thumbnail rail,
+ * close button). Escape + scrim-click dismissal are `Overlay`'s.
+ */
 export function GalleryFullscreenViewer({
   images,
   selectedIndex,
@@ -36,7 +42,6 @@ export function GalleryFullscreenViewer({
   onClose,
   originPercent,
 }: GalleryFullscreenViewerProps) {
-  useEscapeKey(onClose, true);
   const reduceMotion = usePrefersReducedMotion();
   const selected = images[selectedIndex];
 
@@ -52,23 +57,24 @@ export function GalleryFullscreenViewer({
   }, [selectedIndex]);
 
   return (
-    <div
-      data-testid="gallery-fullscreen-viewer"
-      className="fixed inset-0 z-50 bg-black/90 p-4"
-      onClick={onClose}
+    <Overlay
+      open
+      onClose={onClose}
+      variant="center"
+      surface="bare"
+      scrim={{ className: 'bg-stone-950/90', blurPx: 4 }}
+      scrimTestId="gallery-fullscreen-viewer"
+      surfaceClassName="h-full w-full"
+      surfaceStyle={{
+        transformOrigin: originPercent
+          ? `${originPercent.x}% ${originPercent.y}%`
+          : 'center',
+      }}
     >
-      <m.div
+      <div
         data-testid="gallery-viewer-surface"
         data-reduced-motion={reduceMotion ? 'true' : 'false'}
         className="flex h-full w-full items-center justify-center gap-3"
-        style={{
-          transformOrigin: originPercent
-            ? `${originPercent.x}% ${originPercent.y}%`
-            : 'center',
-        }}
-        initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.92 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={reduceMotion ? { duration: 0 } : spring.default}
       >
         <div
           onClick={(event) => event.stopPropagation()}
@@ -114,7 +120,7 @@ export function GalleryFullscreenViewer({
             ))}
           </div>
         )}
-      </m.div>
+      </div>
 
       <Button
         size="icon"
@@ -129,6 +135,6 @@ export function GalleryFullscreenViewer({
       >
         <CloseIcon />
       </Button>
-    </div>
+    </Overlay>
   );
 }

@@ -155,9 +155,9 @@ description: "Task list for Apple HIG Component Polish"
 
 ### Implementation
 
-- [ ] T062 [US3] Overlay material in `frontend/src/motion/Overlay.tsx` + `frontend/src/styles/global.css`: scrim `bg-stone-950/60` + `backdrop-blur-md backdrop-saturate-150`; `@supports not (backdrop-filter)` → `/80` no blur; `prefers-reduced-transparency` → `/95` solid; `prefers-contrast: more` → solid + bordered surface; materialize enter (blur+scale together)
-- [ ] T063 [US3] `aria-labelledby` on the title + consume `Overlay` material/focus contract in `frontend/src/components/ui/Modal.tsx`; drop its hand-rolled Escape handling
-- [ ] T064 [US3] Route `frontend/src/components/GalleryFullscreenViewer.tsx` through `Overlay` (focus trap + restore + scroll lock + blur backdrop with fallbacks); keep `bg-stone-950/90`
+- [X] T062 [US3] Overlay material in `frontend/src/motion/Overlay.tsx` + `frontend/src/styles/global.css`: scrim `bg-stone-950/60` + `backdrop-blur-md backdrop-saturate-150`; `@supports not (backdrop-filter)` → `/80` no blur; `prefers-reduced-transparency` → `/95` solid; `prefers-contrast: more` → solid + bordered surface; materialize enter (blur+scale together)
+- [X] T063 [US3] `aria-labelledby` on the title + consume `Overlay` material/focus contract in `frontend/src/components/ui/Modal.tsx`; drop its hand-rolled Escape handling
+- [X] T064 [US3] Route `frontend/src/components/GalleryFullscreenViewer.tsx` through `Overlay` (focus trap + restore + scroll lock + blur backdrop with fallbacks); keep `bg-stone-950/90`
 - [ ] T065 [P] [US3] Add a nested-overlay test fixture / story (confirm dialog opened from within a modal) and assert focus unwind in `overlay-focus-management.spec.ts`
 - [ ] T066 [US3] Extend `e2e/tests/release-detail-responsive.spec.ts` and `e2e/tests/dark-mode-contrast.spec.ts` for the overlay material + contrast
 - [ ] T067 [US3] Run US3 validation (quickstart §US3); update US3 rows in [audit.md](./audit.md)

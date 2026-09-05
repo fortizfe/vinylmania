@@ -148,10 +148,7 @@
  * global vestibular-safety guard — it neutralizes CSS animation/transition
  * timing everywhere so nothing moves, while final states still apply
  * instantly (the JS spring layer additionally honors
- * `MotionConfig reducedMotion="user"`). `prefers-reduced-transparency` and
- * `prefers-contrast` degrade the overlay material (the `.overlay-scrim` /
- * `.overlay-surface` hooks are applied by `frontend/src/motion/Overlay`);
- * the full material treatment is finished in US3.
+ * `MotionConfig reducedMotion="user"`).
  */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -163,31 +160,54 @@
   }
 }
 
+/*
+ * ── Overlay material fallbacks (feature 059 US3 — FR-007, research.md R4,
+ * data-model.md §3 "Elevation / Material Treatment") ────────────────────────
+ *
+ * Justified custom CSS: `motion/Overlay` renders the scrim with an *animated
+ * inline* `backdrop-filter` (blur + saturate ramp in with the surface scale —
+ * apple-design §12 "materialize, don't just fade"). These three blocks are
+ * the only way to degrade that inline material per user preference — Tailwind
+ * has no variant for "unsupported / reduced-transparency / more-contrast".
+ * `.overlay-scrim` is unlayered so it beats the `bg-stone-950/*` utility
+ * regardless of source order; `!important` beats the component's inline
+ * `backdropFilter`. Overlay text/controls always sit on the opaque `<Card>`
+ * surface, so spec-058 contrast pairings hold in every branch (FR-009).
+ */
+
+/* No `backdrop-filter` support at all → solid-dim fallback, no blur. The
+ * inline `backdropFilter` is simply ignored by these browsers; we only need
+ * to raise the dim so the layer still reads as a backdrop. */
 @supports not (
   (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
 ) {
   .overlay-scrim {
     background-color: rgb(12 10 9 / 0.8);
     backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 
+/* User asked for less transparency → near-solid scrim, blur dropped. */
 @media (prefers-reduced-transparency: reduce) {
   .overlay-scrim {
     background-color: rgb(12 10 9 / 0.95) !important;
     backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }
 
+/* User asked for more contrast → fully solid scrim + a defined 1px border on
+ * the overlay surface so its edge is unambiguous (WCAG 1.4.11). `currentColor`
+ * adapts per theme (dark text on light Card, light text on dark Card). */
 @media (prefers-contrast: more) {
   .overlay-scrim {
     background-color: rgb(12 10 9 / 1) !important;
     backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 
   .overlay-surface {
-    border-width: 1px;
-    border-style: solid;
-    border-color: currentColor;
+    border: 1px solid currentColor;
   }
 }
