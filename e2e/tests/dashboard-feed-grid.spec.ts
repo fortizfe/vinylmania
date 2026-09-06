@@ -408,13 +408,14 @@ test.describe('Dashboard consistent interaction & typography (spec 059 US5, T088
   }) => {
     await loadDashboard(page);
 
-    // Feature 060 replaced the old wishlist "under construction" placeholder
-    // with the real `WishlistPage`, whose `<h1>Your wishlist</h1>` uses the
-    // same `--font-display` h1 pattern the dashboard shell shares
-    // (`font-display tracking-display leading-display`).
-    await page.goto('/app/wishlist');
-    const heading = page.getByRole('heading', { level: 1, name: /your wishlist/i });
-    await assertDisplayHeadingTokens(heading, 'WishlistPage h1');
+    // Feature 060 removed the "under construction" placeholder this test used
+    // to sample. The Profile page carries the same `--font-display` h1 pattern
+    // (`font-display tracking-display leading-display`) and — unlike the data-gated
+    // library/wishlist pages — renders its `<h1>` in a single unconditional pass,
+    // so there is no loading→gate subtree swap to race `getComputedStyle`.
+    await page.goto('/app/profile');
+    const heading = page.getByRole('heading', { level: 1, name: /^profile$/i });
+    await assertDisplayHeadingTokens(heading, 'ProfilePage h1');
   });
 
   test('the feed-source status banner enters with an opacity-only fade — no transform, reduced-motion instant', async ({
