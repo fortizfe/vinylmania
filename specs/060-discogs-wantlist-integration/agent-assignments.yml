@@ -1,0 +1,242 @@
+# Agent Assignments
+# Feature: Discogs-Integrated Wantlist (Lista de Deseos)
+# Generated: 2026-09-06
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "backend-agent"
+    source: "project"
+    description: "Use for any work under backend/ — Express.js + TypeScript APIs, hexagonal architecture, Firebase Admin/Firestore, Discogs API client, Redis caching. Enforces TDD, YAGNI, SOLID, KISS."
+  - name: "frontend-agent"
+    source: "project"
+    description: "Use for any work under frontend/ — React 19 + TypeScript (Vite), Tailwind CSS v4, TanStack Query. Apple design skills + strict WCAG 2.1 AA, TDD via Vitest + React Testing Library."
+  - name: "qa-agent"
+    source: "project"
+    description: "Enforces Test-First/TDD discipline and test quality across backend, frontend, and e2e (Playwright). Test/quality work, not feature implementation."
+  - name: "docs-agent"
+    source: "project"
+    description: "End-user documentation for Vinylmania — manuals, getting-started guides, feature walkthroughs, FAQs for collectors, not developers."
+
+assignments:
+  T001:
+    agent: "backend-agent"
+    reason: "Creates backend/ slice + test directories (domain/application/adapters/wantlist)"
+  T002:
+    agent: "default"
+    reason: "Cross-cutting verification against both backend/ and frontend/ package.json; no single specialist scope"
+  T003:
+    agent: "backend-agent"
+    reason: "Domain types in backend/src/domain/discogsOauth/wantlistTypes.ts"
+  T004:
+    agent: "backend-agent"
+    reason: "Domain errors in backend/src/domain/wantlist/wantlistErrors.ts"
+  T005:
+    agent: "backend-agent"
+    reason: "Port interface in backend/src/ports/discogsOauth/discogsWantlistPort.ts"
+  T006:
+    agent: "backend-agent"
+    reason: "Adapter contract tests (backend Jest) — part of backend-agent's TDD cycle"
+  T007:
+    agent: "backend-agent"
+    reason: "Discogs wantlist adapter implementation in backend/src/adapters/discogsOauth/"
+  T008:
+    agent: "backend-agent"
+    reason: "Extract shared respondCollectionError helper in backend/src/adapters/discogs/"
+  T009:
+    agent: "backend-agent"
+    reason: "wantlistRouter skeleton + app.ts mount (backend Express wiring)"
+  T010:
+    agent: "frontend-agent"
+    reason: "frontend/src/services/wantlistApi.ts"
+  T011:
+    agent: "frontend-agent"
+    reason: "frontend/src/queries/wantlistQueries.ts (TanStack Query)"
+  T012:
+    agent: "qa-agent"
+    reason: "e2e/helpers/discogsOauthStub.ts extension for /wants — e2e test infrastructure"
+  T013:
+    agent: "backend-agent"
+    reason: "Unit test for listWantlist use case (backend Jest, TDD)"
+  T014:
+    agent: "backend-agent"
+    reason: "Integration test for GET /api/wantlist (backend supertest, TDD)"
+  T015:
+    agent: "frontend-agent"
+    reason: "RTL test frontend/tests/unit/WishlistPage.test.tsx"
+  T016:
+    agent: "frontend-agent"
+    reason: "RTL test frontend/tests/unit/WantlistCard.test.tsx"
+  T017:
+    agent: "qa-agent"
+    reason: "Playwright e2e for US1 in e2e/tests/wishlist-discogs-sync.spec.ts"
+  T018:
+    agent: "backend-agent"
+    reason: "enrichWantEntry use case in backend/src/application/wantlist/"
+  T019:
+    agent: "backend-agent"
+    reason: "listWantlist use case in backend/src/application/wantlist/"
+  T020:
+    agent: "backend-agent"
+    reason: "GET /api/wantlist route handler in backend/src/adapters/wantlist/"
+  T021:
+    agent: "frontend-agent"
+    reason: "frontend/src/components/WantlistCard.tsx"
+  T022:
+    agent: "frontend-agent"
+    reason: "frontend/src/components/WantlistLinkRequired.tsx"
+  T023:
+    agent: "frontend-agent"
+    reason: "Rebuild frontend/src/pages/WishlistPage.tsx"
+  T024:
+    agent: "frontend-agent"
+    reason: "Nav parity in frontend AppHeader/HamburgerMenu + their tests"
+  T025:
+    agent: "backend-agent"
+    reason: "Structured-logging review of the backend wantlist sync use case"
+  T026:
+    agent: "backend-agent"
+    reason: "Unit test for addToWantlist use case (backend Jest, TDD)"
+  T027:
+    agent: "backend-agent"
+    reason: "Integration test for POST /api/wantlist (backend, TDD)"
+  T028:
+    agent: "frontend-agent"
+    reason: "RTL test frontend/tests/unit/ResultCardActions.test.tsx"
+  T029:
+    agent: "frontend-agent"
+    reason: "RTL test frontend/tests/unit/ReleaseDetailPage.test.tsx"
+  T030:
+    agent: "qa-agent"
+    reason: "Playwright e2e for US2"
+  T031:
+    agent: "backend-agent"
+    reason: "addToWantlist use case in backend/src/application/wantlist/"
+  T032:
+    agent: "backend-agent"
+    reason: "POST /api/wantlist route handler"
+  T033:
+    agent: "backend-agent"
+    reason: "Composition-root wiring in backend/src/adapters/wantlist/wantlistRoutes.ts"
+  T034:
+    agent: "frontend-agent"
+    reason: "Extend frontend/src/components/ResultCardActions.tsx"
+  T035:
+    agent: "frontend-agent"
+    reason: "frontend SearchResultCard + SearchResultsPage wantlist wiring"
+  T036:
+    agent: "frontend-agent"
+    reason: "frontend/src/pages/ReleaseDetailPage.tsx add-to-wishlist button"
+  T037:
+    agent: "frontend-agent"
+    reason: "Frontend query invalidation on wishlist add"
+  T038:
+    agent: "backend-agent"
+    reason: "Unit test for getWantEntry + updateWantEntry (backend, TDD)"
+  T039:
+    agent: "backend-agent"
+    reason: "Integration test for GET/PATCH /api/wantlist/:releaseId (backend, TDD)"
+  T040:
+    agent: "frontend-agent"
+    reason: "RTL test frontend/tests/unit/WantlistPanel.test.tsx"
+  T041:
+    agent: "frontend-agent"
+    reason: "RTL test for the ReleaseDetailPage wantlist panel"
+  T042:
+    agent: "qa-agent"
+    reason: "Playwright e2e for US3"
+  T043:
+    agent: "backend-agent"
+    reason: "getWantEntry use case in backend/src/application/wantlist/"
+  T044:
+    agent: "backend-agent"
+    reason: "updateWantEntry use case in backend/src/application/wantlist/"
+  T045:
+    agent: "backend-agent"
+    reason: "GET/PATCH /api/wantlist/:releaseId route handlers"
+  T046:
+    agent: "frontend-agent"
+    reason: "frontend/src/components/WantlistPanel.tsx"
+  T047:
+    agent: "frontend-agent"
+    reason: "ReleaseDetailPage wantlist panel integration"
+  T048:
+    agent: "backend-agent"
+    reason: "Unit test for removeFromWantlist use case (backend, TDD)"
+  T049:
+    agent: "backend-agent"
+    reason: "Integration test for DELETE /api/wantlist/:releaseId (backend, TDD)"
+  T050:
+    agent: "frontend-agent"
+    reason: "RTL test frontend/tests/unit/RemoveFromWantlistDialog.test.tsx"
+  T051:
+    agent: "frontend-agent"
+    reason: "RTL test extending WantlistCard for the remove flow"
+  T052:
+    agent: "qa-agent"
+    reason: "Playwright e2e for US4"
+  T053:
+    agent: "backend-agent"
+    reason: "removeFromWantlist use case in backend/src/application/wantlist/"
+  T054:
+    agent: "backend-agent"
+    reason: "DELETE /api/wantlist/:releaseId route handler"
+  T055:
+    agent: "frontend-agent"
+    reason: "frontend/src/components/RemoveFromWantlistDialog.tsx"
+  T056:
+    agent: "frontend-agent"
+    reason: "Remove action on frontend/src/components/WantlistCard.tsx"
+  T057:
+    agent: "frontend-agent"
+    reason: "WishlistPage post-remove empty state"
+  T058:
+    agent: "backend-agent"
+    reason: "Unit test for createLibraryEntry wantlist-removal extension (backend, TDD)"
+  T059:
+    agent: "backend-agent"
+    reason: "Integration test for POST /api/library wantlistRemoval field (backend, TDD)"
+  T060:
+    agent: "frontend-agent"
+    reason: "RTL test for the wantlistRemoval='failed' notice"
+  T061:
+    agent: "qa-agent"
+    reason: "Playwright e2e for US5"
+  T062:
+    agent: "backend-agent"
+    reason: "Extend createLibraryEntry use case in backend/src/application/library/"
+  T063:
+    agent: "backend-agent"
+    reason: "backend library types + serializeEntry + composition root for wantlistRemoval"
+  T064:
+    agent: "frontend-agent"
+    reason: "frontend/src/services/libraryApi.ts + queries/libraryQueries.ts updates"
+  T065:
+    agent: "frontend-agent"
+    reason: "ReleaseDetailPage / SearchResultsPage wantlistRemoval notice"
+  T066:
+    agent: "frontend-agent"
+    reason: "WCAG 2.1 AA audit of new/changed frontend UI (Principle X)"
+  T067:
+    agent: "frontend-agent"
+    reason: "Apple HIG / motion pass on new frontend UI (Principle XI)"
+  T068:
+    agent: "qa-agent"
+    reason: "Update e2e/tests/wishlist-responsive.spec.ts (Playwright)"
+  T069:
+    agent: "frontend-agent"
+    reason: "Remove unused frontend/src/components/UnderConstruction.tsx if orphaned"
+  T070:
+    agent: "backend-agent"
+    reason: "Structured-logging review across the backend wantlist slice (Principle V)"
+  T071:
+    agent: "docs-agent"
+    reason: "End-user 'Wishlist' documentation under docs/"
+  T072:
+    agent: "default"
+    reason: "CHANGELOG entry + MINOR version bump — repo-level release chore, no single specialist scope"
+  T073:
+    agent: "qa-agent"
+    reason: "Run quickstart.md end-to-end validation (SC-001..SC-008)"
+  T074:
+    agent: "qa-agent"
+    reason: "Full-suite gate — backend Jest + frontend Vitest + e2e Playwright green, no WCAG regression"

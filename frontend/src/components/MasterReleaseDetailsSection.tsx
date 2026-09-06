@@ -5,7 +5,9 @@ interface MasterReleaseDetailsSectionProps {
 }
 
 /** Master's identity only (title/artist) — year/genres/styles live in `MasterReleaseOtherDetailsSection` instead (spec 057). */
-export function MasterReleaseDetailsSection({ master }: MasterReleaseDetailsSectionProps) {
+export function MasterReleaseDetailsSection({
+  master,
+}: MasterReleaseDetailsSectionProps) {
   return (
     <div>
       <h3 className="font-display text-lg leading-display tracking-display text-stone-900 dark:text-stone-100">

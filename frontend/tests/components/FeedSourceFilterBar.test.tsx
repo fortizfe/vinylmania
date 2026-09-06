@@ -6,7 +6,12 @@ import { FeedSourceFilterBar } from '../../src/components/FeedSourceFilterBar';
 import type { SourceStatus } from '../../src/services/feedsApi';
 
 const sourceStatuses: SourceStatus[] = [
-  { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok', priority: true },
+  {
+    sourceId: 'metal-injection',
+    sourceName: 'Metal Injection',
+    status: 'ok',
+    priority: true,
+  },
   { sourceId: 'metalsucks', sourceName: 'MetalSucks', status: 'ok', priority: true },
   { sourceId: 'louder-sound', sourceName: 'Louder Sound', status: 'ok', priority: true },
   {

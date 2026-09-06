@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 import { DiscogsRelinkNotice } from '../../src/components/DiscogsRelinkNotice';
 import { FeedSourceStatusBanner } from '../../src/components/FeedSourceStatusBanner';
 import { LibraryLinkRequired } from '../../src/components/LibraryLinkRequired';
-import { UnderConstruction } from '../../src/components/UnderConstruction';
 
 /**
  * Spec 059 US5 T086 (revised in Phase 8 polish, T097) — the gentle
@@ -15,8 +14,8 @@ import { UnderConstruction } from '../../src/components/UnderConstruction';
  * (apple-design §16). `FeedSourceStatusBanner` mounts when a news source
  * starts failing — a gentle entrance there earns its place.
  *
- * Permanent placeholders (`UnderConstruction`, `LibraryLinkRequired`,
- * `DiscogsRelinkNotice`) render on first paint as static wayfinding copy;
+ * Permanent placeholders (`LibraryLinkRequired`, `DiscogsRelinkNotice`)
+ * render on first paint as static wayfinding copy;
  * an entrance animation there adds no signal and put an ancestor `opacity`
  * ramp under the axe-core contrast scanner (axe folds ancestor opacity into
  * its contrast maths, so a mid-fade scan read the muted body text as a
@@ -34,15 +33,6 @@ describe('status-message entrance (US5 / T086, revised T097)', () => {
     );
 
     expect(screen.getByRole('status')).toHaveClass('status-fade-in');
-  });
-
-  it('UnderConstruction renders as static wayfinding copy — no entrance animation', () => {
-    render(<UnderConstruction title="Dashboard" />);
-
-    expect(screen.getByText(/under construction/i).closest('div')).not.toHaveClass(
-      'status-fade-in',
-    );
-    expect(screen.getByText(/check back soon/i)).toBeInTheDocument();
   });
 
   it('LibraryLinkRequired renders statically and points the user to a way out — no entrance animation', () => {

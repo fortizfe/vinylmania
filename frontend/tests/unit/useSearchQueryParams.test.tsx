@@ -54,7 +54,9 @@ describe('useSearchQueryParams', () => {
 
   it('parses a comma-joined genre/style URL param into a string[] of recognized values, in canonical catalog order (feature 038)', () => {
     const { result } = renderHook(() => useSearchQueryParams(), {
-      wrapper: wrapper(['/app/search?q=nirvana&genre=Rock,Electronic&style=Shoegaze,Grunge']),
+      wrapper: wrapper([
+        '/app/search?q=nirvana&genre=Rock,Electronic&style=Shoegaze,Grunge',
+      ]),
     });
 
     // "Rock,Electronic" in the URL, but GENRE_OPTIONS lists Electronic before Rock.
@@ -65,7 +67,9 @@ describe('useSearchQueryParams', () => {
 
   it('drops genre/style values not present in their catalogs while keeping recognized ones (feature 038)', () => {
     const { result } = renderHook(() => useSearchQueryParams(), {
-      wrapper: wrapper(['/app/search?q=nirvana&genre=Rock,NotAGenre&style=Grunge,NotAStyle']),
+      wrapper: wrapper([
+        '/app/search?q=nirvana&genre=Rock,NotAGenre&style=Grunge,NotAStyle',
+      ]),
     });
 
     expect(result.current.genre).toEqual(['Rock']);
@@ -130,9 +134,9 @@ describe('buildSearchPath', () => {
   });
 
   it('encodes non-empty genre/style arrays and omits unset ones (feature 038)', () => {
-    expect(
-      buildSearchPath('stockholm', 1, { genre: ['Rock'], style: ['Grunge'] }),
-    ).toBe('/app/search?q=stockholm&genre=Rock&style=Grunge');
+    expect(buildSearchPath('stockholm', 1, { genre: ['Rock'], style: ['Grunge'] })).toBe(
+      '/app/search?q=stockholm&genre=Rock&style=Grunge',
+    );
   });
 
   it('joins a genre/style array into a single comma-separated param, in canonical catalog order (feature 038)', () => {

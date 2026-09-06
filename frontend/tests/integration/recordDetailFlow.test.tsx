@@ -458,7 +458,9 @@ describe('Record detail flow (US3)', () => {
     expect(screen.getByTestId('record-detail-gallery-card')).toBeInTheDocument();
     expect(screen.getByTestId('record-detail-main-info-card')).toBeInTheDocument();
     expect(screen.getByTestId('record-detail-tracklist-card')).toBeInTheDocument();
-    expect(screen.queryByTestId('record-detail-other-details-card')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('record-detail-other-details-card'),
+    ).not.toBeInTheDocument();
   });
 
   it('shows every credited artist, format descriptor, genre, style, label, and date when there is more than one (US1)', async () => {

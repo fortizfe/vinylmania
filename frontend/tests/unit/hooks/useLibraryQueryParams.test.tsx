@@ -33,7 +33,9 @@ describe('useLibraryQueryParams (feature 038, US2, FR-010/FR-022)', () => {
 
   it('parses comma-joined genre/style/format params into arrays, in canonical catalog order', () => {
     const { result } = renderHook(() => useLibraryQueryParams(), {
-      wrapper: wrapper(['/app/library?genre=Rock,Electronic&style=Shoegaze,Grunge&format=CD,Vinyl']),
+      wrapper: wrapper([
+        '/app/library?genre=Rock,Electronic&style=Shoegaze,Grunge&format=CD,Vinyl',
+      ]),
     });
 
     expect(result.current.genre).toEqual(['Electronic', 'Rock']);

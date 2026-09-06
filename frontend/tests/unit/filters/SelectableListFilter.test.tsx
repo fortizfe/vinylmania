@@ -9,7 +9,12 @@ const OPTIONS = ['Vinyl', 'CD', 'Cassette', 'Reel-To-Reel', 'Betacam SP'];
 describe('SelectableListFilter (feature 038, US1)', () => {
   it('shows the neutral label when no value is selected (FR-005)', () => {
     render(
-      <SelectableListFilter label="Format" options={OPTIONS} value={[]} onChange={vi.fn()} />,
+      <SelectableListFilter
+        label="Format"
+        options={OPTIONS}
+        value={[]}
+        onChange={vi.fn()}
+      />,
     );
 
     expect(screen.getByRole('button', { name: /^format$/i })).toBeInTheDocument();
@@ -74,7 +79,12 @@ describe('SelectableListFilter (feature 038, US1)', () => {
   it('each selectable row carries the shared row press affordance (US1 multi-select-list)', async () => {
     const user = userEvent.setup();
     render(
-      <SelectableListFilter label="Format" options={OPTIONS} value={[]} onChange={vi.fn()} />,
+      <SelectableListFilter
+        label="Format"
+        options={OPTIONS}
+        value={[]}
+        onChange={vi.fn()}
+      />,
     );
 
     await user.click(screen.getByRole('button', { name: /^format$/i }));
@@ -105,7 +115,12 @@ describe('SelectableListFilter (feature 038, US1)', () => {
   it('does not render a search input when searchable is unset', async () => {
     const user = userEvent.setup();
     render(
-      <SelectableListFilter label="Genre" options={OPTIONS} value={[]} onChange={vi.fn()} />,
+      <SelectableListFilter
+        label="Genre"
+        options={OPTIONS}
+        value={[]}
+        onChange={vi.fn()}
+      />,
     );
 
     await user.click(screen.getByRole('button', { name: /^genre$/i }));

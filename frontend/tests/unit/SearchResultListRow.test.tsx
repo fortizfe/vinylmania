@@ -19,7 +19,15 @@ const baseResult: CatalogSearchResult = {
 function renderRow(
   result: CatalogSearchResult,
   searchPath = '/app/search?q=blue',
-  overrides: Partial<{ onAdd: () => void; adding: boolean; added: boolean }> = {},
+  overrides: Partial<{
+    onAdd: () => void;
+    adding: boolean;
+    added: boolean;
+    onAddToWantlist: () => void;
+    addingToWantlist: boolean;
+    inWantlist: boolean;
+    wantlistNote: string | null;
+  }> = {},
 ) {
   return render(
     <MemoryRouter>
@@ -29,6 +37,10 @@ function renderRow(
         onAdd={overrides.onAdd ?? (() => {})}
         adding={overrides.adding ?? false}
         added={overrides.added ?? false}
+        onAddToWantlist={overrides.onAddToWantlist ?? (() => {})}
+        addingToWantlist={overrides.addingToWantlist ?? false}
+        inWantlist={overrides.inWantlist ?? false}
+        wantlistNote={overrides.wantlistNote ?? null}
       />
     </MemoryRouter>,
   );
@@ -148,6 +160,26 @@ describe('SearchResultListRow', () => {
       await user.click(screen.getByRole('button', { name: /add to library/i }));
 
       expect(onAdd).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders a distinct "Add to wishlist" action and calls onAddToWantlist (feature 060, US2)', async () => {
+      const user = userEvent.setup();
+      const onAddToWantlist = vi.fn();
+      renderRow(fullResult, undefined, { onAddToWantlist });
+
+      const wishlist = screen.getByRole('button', { name: /add to wishlist/i });
+      await user.click(wishlist);
+
+      expect(onAddToWantlist).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: /add to library/i })).toBeInTheDocument();
+    });
+
+    it('does not render a wishlist action for a master result', () => {
+      renderRow({ ...fullResult, resultType: 'master' });
+
+      expect(
+        screen.queryByRole('button', { name: /add to wishlist/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('renders the community rating badge overlaid on the cover', () => {

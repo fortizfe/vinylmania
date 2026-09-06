@@ -14,6 +14,14 @@ describe('StarRating', () => {
     expect(stars[3]).toHaveAttribute('aria-pressed', 'false');
   });
 
+  it('names the group "Rating" by default and honours an explicit ariaLabel', () => {
+    const { rerender } = render(<StarRating value={0} onChange={() => {}} />);
+    expect(screen.getByRole('group', { name: 'Rating' })).toBeInTheDocument();
+
+    rerender(<StarRating value={0} onChange={() => {}} ariaLabel="Personal rating" />);
+    expect(screen.getByRole('group', { name: 'Personal rating' })).toBeInTheDocument();
+  });
+
   it('calls onChange with the clicked star value', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

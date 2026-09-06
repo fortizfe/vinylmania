@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { NAV_LINKS, type HeaderNavLink } from './headerNavLinks';
 import { iconButtonClassName } from './ui/Button';
+import { WishlistIcon } from './ui/icons/WishlistIcon';
 
 function ProfileIcon() {
   return (
@@ -18,24 +19,6 @@ function ProfileIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M3.5 17c1.2-3.5 4-5 6.5-5s5.3 1.5 6.5 5"
-      />
-    </svg>
-  );
-}
-
-function WishlistIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      className="h-4 w-4"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M10 17S3 12.5 3 7.8A3.3 3.3 0 0 1 10 6a3.3 3.3 0 0 1 7 1.8C17 12.5 10 17 10 17Z"
       />
     </svg>
   );

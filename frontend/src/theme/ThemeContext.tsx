@@ -41,7 +41,9 @@ function applyThemeClass(theme: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => readStoredTheme() ?? getSystemTheme());
+  const [theme, setThemeState] = useState<Theme>(
+    () => readStoredTheme() ?? getSystemTheme(),
+  );
   const [hasExplicitPreference, setHasExplicitPreference] = useState<boolean>(
     () => readStoredTheme() !== null,
   );

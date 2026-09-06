@@ -98,7 +98,9 @@ describe('ProfilePage', () => {
 
       const dismissButtons = screen.getAllByRole('button', { name: /dismiss/i });
       await user.click(dismissButtons[dismissButtons.length - 1]);
-      expect(screen.queryByText(/preference may not have been saved/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/preference may not have been saved/i),
+      ).not.toBeInTheDocument();
     });
 
     it('shows no failure banner when the save has not failed', () => {
@@ -110,7 +112,9 @@ describe('ProfilePage', () => {
 
       renderProfile();
 
-      expect(screen.queryByText(/preference may not have been saved/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/preference may not have been saved/i),
+      ).not.toBeInTheDocument();
     });
   });
 

@@ -33,7 +33,9 @@ test.describe('Responsive header navigation (US1, US2, US3)', () => {
 
     await wishlistIcon.click();
     await expect(page).toHaveURL(/\/app\/wishlist/);
-    await expect(page.getByRole('heading', { name: /my wishlist/i })).toBeVisible();
+    // Feature 060: the wishlist is now the real Discogs-synced page whose h1
+    // reads "Your wishlist" (matching "Your library"), not the old placeholder.
+    await expect(page.getByRole('heading', { name: /your wishlist/i })).toBeVisible();
 
     await profileIcon.click();
     await expect(page).toHaveURL(/\/app\/profile/);

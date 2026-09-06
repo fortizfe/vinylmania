@@ -18,12 +18,15 @@ export function FeedArticleBoard({ categories, sourceStatuses }: FeedArticleBoar
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
 
-  const { data: sourceFeed, isLoading: isSourceFeedLoading } = useSourceFeed(selectedSource);
+  const { data: sourceFeed, isLoading: isSourceFeedLoading } =
+    useSourceFeed(selectedSource);
 
   const aggregatedArticles = useMemo(() => {
     return categories
       .flatMap((group) => group.articles)
-      .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+      .sort(
+        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+      );
   }, [categories]);
 
   const categoryNames = categories.map((group) => group.category);

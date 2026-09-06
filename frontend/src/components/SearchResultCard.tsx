@@ -16,6 +16,14 @@ interface SearchResultCardProps {
   onAdd: () => void;
   adding: boolean;
   added: boolean;
+  onAddToWantlist: () => void;
+  addingToWantlist: boolean;
+  inWantlist: boolean;
+  /**
+   * Post-add note shown under the actions — e.g. "already in your library"
+   * after a successful wishlist add (feature 060, FR-007a). `null` = none.
+   */
+  wantlistNote?: string | null;
 }
 
 export function SearchResultCard({
@@ -24,6 +32,10 @@ export function SearchResultCard({
   onAdd,
   adding,
   added,
+  onAddToWantlist,
+  addingToWantlist,
+  inWantlist,
+  wantlistNote = null,
 }: SearchResultCardProps) {
   const format = result.formats?.[0];
   const rating = presentRating(result.communityRating);
@@ -89,7 +101,21 @@ export function SearchResultCard({
       {isGrouped ? (
         <Badge tone="muted">Multiple editions</Badge>
       ) : (
-        <ResultCardActions onAdd={onAdd} adding={adding} added={added} />
+        <>
+          <ResultCardActions
+            onAdd={onAdd}
+            adding={adding}
+            added={added}
+            onAddToWantlist={onAddToWantlist}
+            addingToWantlist={addingToWantlist}
+            inWantlist={inWantlist}
+          />
+          {wantlistNote && (
+            <p role="status" className="text-xs text-stone-500 dark:text-stone-400">
+              {wantlistNote}
+            </p>
+          )}
+        </>
       )}
     </Card>
   );

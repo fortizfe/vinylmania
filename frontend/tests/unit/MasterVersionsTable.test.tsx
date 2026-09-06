@@ -95,7 +95,9 @@ describe('MasterVersionsTable', () => {
 
     renderTable();
 
-    await waitFor(() => expect(screen.getAllByText('Only Version').length).toBeGreaterThan(0));
+    await waitFor(() =>
+      expect(screen.getAllByText('Only Version').length).toBeGreaterThan(0),
+    );
     expect(screen.queryByRole('button', { name: /^next$/i })).not.toBeInTheDocument();
   });
 
@@ -108,19 +110,25 @@ describe('MasterVersionsTable', () => {
     renderTable();
 
     await waitFor(() =>
-      expect(screen.getByText(/your discogs link is no longer valid/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/your discogs link is no longer valid/i),
+      ).toBeInTheDocument(),
     );
     expect(screen.getByRole('link', { name: /go to your profile/i })).toBeInTheDocument();
   });
 
   it('shows a generic error message for a non-relink failure', async () => {
     const { ApiError } = await import('../../src/services/apiClient');
-    mockGetMasterReleaseVersions.mockRejectedValue(new ApiError('boom', 500, 'internal_error'));
+    mockGetMasterReleaseVersions.mockRejectedValue(
+      new ApiError('boom', 500, 'internal_error'),
+    );
 
     renderTable();
 
     await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(/couldn.t load this master.s versions/i),
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /couldn.t load this master.s versions/i,
+      ),
     );
   });
 });

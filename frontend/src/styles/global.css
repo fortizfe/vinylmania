@@ -253,8 +253,8 @@
  *
  * Scoped (T097) to components that mount *in response to a state change* —
  * currently only `FeedSourceStatusBanner` (a news source started failing).
- * Permanent placeholders that render on first paint (`UnderConstruction`,
- * `LibraryLinkRequired`, `DiscogsRelinkNotice`) do NOT use this: the entrance
+ * Permanent placeholders that render on first paint (`LibraryLinkRequired`,
+ * `DiscogsRelinkNotice`) do NOT use this: the entrance
  * added no signal there and its ancestor opacity ramp tripped the axe-core
  * contrast scanner mid-fade (axe folds ancestor opacity into contrast maths).
  */

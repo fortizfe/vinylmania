@@ -51,6 +51,13 @@ const COLLECTION_FIELDS = [
 const collections = new Map<string, StubInstance[]>();
 let instanceCounter = 0;
 let collectionFailureMode: 'none' | 'auth' | 'unavailable' = 'none';
+// Feature 060 / FR-013: a NARROW failure mode that fails ONLY the wantlist
+// WRITE endpoints (PUT / DELETE /users/:username/wants/:id) with a 503, while
+// leaving the wantlist LIST (GET /users/:username/wants), every /collection
+// endpoint, and the catalog healthy. Lets an e2e assert "library add
+// succeeds, wantlist removal fails" — which `collectionFailureMode` cannot,
+// since it also gates the collection write the add depends on.
+let wantlistWriteFailureMode: 'none' | 'unavailable' = 'none';
 
 function userCollection(username: string): StubInstance[] {
   const existing = collections.get(username);
@@ -105,20 +112,123 @@ function seedInstance(seed: Record<string, unknown>): StubInstance {
   return makeInstance(Number(seed.releaseId), { rating: Number(seed.rating ?? 0), notes });
 }
 
+// ---------------------------------------------------------------------------
+// Feature 060: per-user Discogs wantlist state, mirroring the collection block
+// above. Specs seed and assert this through the /__stub/wants/* control
+// endpoints. The authenticated /users/:username/wants endpoints are OAuth-
+// signed and gated by the same `collectionFailureMode` toggle.
+// ---------------------------------------------------------------------------
+
+interface StubWant {
+  id: number;
+  rating: number;
+  notes: string;
+  date_added: string;
+  basic_information: {
+    id: number;
+    title: string;
+    year: number;
+    artists: { name: string }[];
+    thumb: string;
+  };
+}
+
+const wants = new Map<string, StubWant[]>();
+
+function userWants(username: string): StubWant[] {
+  const existing = wants.get(username);
+  if (existing) return existing;
+  const fresh: StubWant[] = [];
+  wants.set(username, fresh);
+  return fresh;
+}
+
+function makeWant(releaseId: number, overrides: Partial<StubWant> = {}): StubWant {
+  return {
+    id: releaseId,
+    rating: 0,
+    notes: '',
+    date_added: new Date().toISOString(),
+    basic_information: {
+      id: releaseId,
+      title: `Stub Release ${releaseId}`,
+      year: 2000,
+      artists: [{ name: 'Stub Artist' }],
+      thumb: '',
+    },
+    ...overrides,
+  };
+}
+
+function seedWant(raw: Record<string, unknown>): StubWant {
+  const releaseId = Number(raw.releaseId ?? raw.id);
+  const bi = (raw.basic_information as Record<string, unknown> | undefined) ?? {};
+  const rawArtists = bi.artists;
+  return makeWant(releaseId, {
+    rating: Number(raw.rating ?? 0),
+    notes: asText(raw.notes ?? ''),
+    ...(raw.date_added ? { date_added: asText(raw.date_added) } : {}),
+    basic_information: {
+      id: releaseId,
+      title: raw.title ? asText(raw.title) : asText(bi.title ?? `Stub Release ${releaseId}`),
+      year: Number(bi.year ?? raw.year ?? 2000),
+      artists: Array.isArray(rawArtists)
+        ? (rawArtists as Array<Record<string, unknown>>).map((a) => ({ name: asText(a.name) }))
+        : [{ name: raw.artist ? asText(raw.artist) : 'Stub Artist' }],
+      thumb: asText(bi.thumb ?? raw.thumb ?? ''),
+    },
+  });
+}
+
+function listWants(res: any, url: URL, entries: StubWant[]): void {
+  const perPage = Number(url.searchParams.get('per_page') ?? 100);
+  const page = Number(url.searchParams.get('page') ?? 1);
+  const pages = Math.max(1, Math.ceil(entries.length / perPage));
+  json(res, 200, {
+    pagination: { page, pages, per_page: perPage, items: entries.length },
+    wants: entries.slice((page - 1) * perPage, page * perPage),
+  });
+}
+
 /** Handles /__stub/* control endpoints (never part of the Discogs API). */
 async function handleControlRequest(req: any, res: any, url: URL): Promise<boolean> {
   if (url.pathname === '/__stub/reset' && req.method === 'POST') {
     collections.clear();
+    wants.clear();
     collectionFailureMode = 'none';
+    wantlistWriteFailureMode = 'none';
     json(res, 200, { ok: true });
     return true;
   }
 
   if (url.pathname === '/__stub/failure' && req.method === 'POST') {
     const body = await readJsonBody(req);
-    collectionFailureMode = (body.mode as typeof collectionFailureMode) ?? 'none';
+    if ('mode' in body) {
+      collectionFailureMode = (body.mode as typeof collectionFailureMode) ?? 'none';
+    }
+    if ('wantlistWrite' in body) {
+      wantlistWriteFailureMode =
+        (body.wantlistWrite as typeof wantlistWriteFailureMode) ?? 'none';
+    }
     json(res, 200, { ok: true });
     return true;
+  }
+
+  const wantsMatch = /^\/__stub\/wants\/([^/]+)$/.exec(url.pathname);
+  if (wantsMatch) {
+    const username = decodeURIComponent(wantsMatch[1]);
+    if (req.method === 'GET') {
+      json(res, 200, { wants: userWants(username) });
+      return true;
+    }
+    if (req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const seeds = (body.wants as Array<Record<string, unknown>>) ?? [];
+      wants.set(username, seeds.map(seedWant));
+      json(res, 200, { ok: true });
+      return true;
+    }
+    return false;
   }
 
   const match = /^\/__stub\/collections\/([^/]+)$/.exec(url.pathname);
@@ -235,6 +345,62 @@ function respondWithInjectedCatalogAuthFailure(req: any, res: any): boolean {
  */
 async function handleCollectionRequest(req: any, res: any, url: URL): Promise<boolean> {
   if (await handleControlRequest(req, res, url)) return true;
+
+  // --- Feature 060: authenticated wantlist endpoints, per the User Wantlist docs ---
+  const wantsPath = /^\/users\/([^/]+)\/wants(?:\/(\d+))?$/.exec(url.pathname);
+  if (wantsPath) {
+    if (respondWithInjectedFailure(res)) return true;
+
+    const username = decodeURIComponent(wantsPath[1]);
+    const releaseId = wantsPath[2] ? Number(wantsPath[2]) : null;
+    const entries = userWants(username);
+
+    if (releaseId === null && req.method === 'GET') {
+      listWants(res, url, entries);
+      return true;
+    }
+
+    // FR-013: fail ONLY the wantlist WRITE (PUT/DELETE) — the LIST above stays healthy.
+    if (
+      releaseId !== null &&
+      (req.method === 'PUT' || req.method === 'DELETE') &&
+      wantlistWriteFailureMode === 'unavailable'
+    ) {
+      json(res, 503, { message: 'Service unavailable.' });
+      return true;
+    }
+
+    if (releaseId !== null && req.method === 'PUT') {
+      const body = await readJsonBody(req);
+      let want = entries.find((candidate) => candidate.id === releaseId);
+      if (want) {
+        if (typeof body.notes === 'string') want.notes = body.notes;
+        if (typeof body.rating === 'number') want.rating = body.rating;
+      } else {
+        want = makeWant(releaseId, {
+          rating: typeof body.rating === 'number' ? body.rating : 0,
+          notes: typeof body.notes === 'string' ? body.notes : '',
+        });
+        entries.push(want);
+      }
+      json(res, 200, want);
+      return true;
+    }
+
+    if (releaseId !== null && req.method === 'DELETE') {
+      const index = entries.findIndex((candidate) => candidate.id === releaseId);
+      if (index === -1) {
+        json(res, 404, { message: 'Release not in wantlist' });
+        return true;
+      }
+      entries.splice(index, 1);
+      res.writeHead(204).end();
+      return true;
+    }
+
+    json(res, 404, { message: 'not found' });
+    return true;
+  }
 
   // --- Authenticated collection endpoints, per the User Collection docs ---
   const collectionPath = /^\/users\/([^/]+)\/collection(\/.*)?$/.exec(url.pathname);

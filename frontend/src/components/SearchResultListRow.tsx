@@ -16,6 +16,11 @@ interface SearchResultListRowProps {
   onAdd: () => void;
   adding: boolean;
   added: boolean;
+  onAddToWantlist: () => void;
+  addingToWantlist: boolean;
+  inWantlist: boolean;
+  /** Post-add note shown under the actions (feature 060, FR-007a). */
+  wantlistNote?: string | null;
 }
 
 export function SearchResultListRow({
@@ -24,6 +29,10 @@ export function SearchResultListRow({
   onAdd,
   adding,
   added,
+  onAddToWantlist,
+  addingToWantlist,
+  inWantlist,
+  wantlistNote = null,
 }: SearchResultListRowProps) {
   const isGrouped = result.resultType === 'master';
   const formats = result.formats?.join(', ');
@@ -97,7 +106,24 @@ export function SearchResultListRow({
           {isGrouped ? (
             <Badge tone="muted">Multiple editions</Badge>
           ) : (
-            <ResultCardActions onAdd={onAdd} adding={adding} added={added} />
+            <div className="flex flex-col items-end gap-1">
+              <ResultCardActions
+                onAdd={onAdd}
+                adding={adding}
+                added={added}
+                onAddToWantlist={onAddToWantlist}
+                addingToWantlist={addingToWantlist}
+                inWantlist={inWantlist}
+              />
+              {wantlistNote && (
+                <p
+                  role="status"
+                  className="text-right text-xs text-stone-500 dark:text-stone-400"
+                >
+                  {wantlistNote}
+                </p>
+              )}
+            </div>
           )}
         </div>
       </Card>

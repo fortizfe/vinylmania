@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { clearSessionToken, getSessionToken, setSessionToken } from '../../src/services/sessionStore';
+import {
+  clearSessionToken,
+  getSessionToken,
+  setSessionToken,
+} from '../../src/services/sessionStore';
 
 describe('sessionStore', () => {
   beforeEach(() => {

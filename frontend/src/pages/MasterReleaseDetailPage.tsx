@@ -29,12 +29,19 @@ export function MasterReleaseDetailPage() {
   const versionsPage =
     Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
-  const { data: master, isLoading, isError, error: masterError } = useCatalogMaster(parsedId);
+  const {
+    data: master,
+    isLoading,
+    isError,
+    error: masterError,
+  } = useCatalogMaster(parsedId);
   // The master fetch itself (not just an "add to library" mutation) can
   // fail with discogs_link_invalid when the caller's linked account was
   // revoked (spec 053, US3) — distinguished from a genuine 404.
   const relinkRequired =
-    isError && masterError instanceof ApiError && masterError.code === 'discogs_link_invalid';
+    isError &&
+    masterError instanceof ApiError &&
+    masterError.code === 'discogs_link_invalid';
   const notFound = isError && !relinkRequired;
 
   function setVersionsPage(nextPage: number) {
@@ -101,11 +108,19 @@ export function MasterReleaseDetailPage() {
           )}
         </div>
 
-        <Card data-testid="master-detail-tracklist-card" padding="sm" className="lg:col-span-2">
+        <Card
+          data-testid="master-detail-tracklist-card"
+          padding="sm"
+          className="lg:col-span-2"
+        >
           <ReleaseTracklistSection tracklist={master.tracklist} />
         </Card>
 
-        <Card data-testid="master-detail-versions-card" padding="sm" className="lg:col-span-2">
+        <Card
+          data-testid="master-detail-versions-card"
+          padding="sm"
+          className="lg:col-span-2"
+        >
           <MasterVersionsTable
             discogsId={parsedId}
             page={versionsPage}

@@ -122,7 +122,10 @@ describe('useThemePreference', () => {
 
   it('rapid toggles only ever send the latest pending value, never an overlapping stale one', async () => {
     const first = deferred<void>();
-    const mutateAsync = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue(undefined);
+    const mutateAsync = vi
+      .fn()
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValue(undefined);
     mocks.useAuth.mockReturnValue({ user: { uid: 'u1' } });
     mocks.useSetThemePreference.mockReturnValue({ mutateAsync });
 

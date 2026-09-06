@@ -10,21 +10,42 @@ interface LibraryLinkRequiredProps {
    * revoked access externally and must link again.
    */
   variant: 'not-linked' | 'relink';
+  /**
+   * Which synchronized section is gated. Only the body copy differs — the
+   * library mirrors the Discogs *collection*, the wishlist mirrors the
+   * Discogs *wantlist* (feature 060, FR-002).
+   */
+  context?: 'library' | 'wishlist';
 }
 
 const COPY = {
-  'not-linked': {
-    title: 'Link your Discogs account',
-    body: 'Your library is synchronized with your Discogs collection. Link your accounts from your profile to start using it.',
+  library: {
+    'not-linked': {
+      title: 'Link your Discogs account',
+      body: 'Your library is synchronized with your Discogs collection. Link your accounts from your profile to start using it.',
+    },
+    relink: {
+      title: 'Your Discogs link is no longer valid',
+      body: 'Discogs rejected the stored connection — it may have been revoked from your Discogs settings. Re-link your account from your profile to keep using your library.',
+    },
   },
-  relink: {
-    title: 'Your Discogs link is no longer valid',
-    body: 'Discogs rejected the stored connection — it may have been revoked from your Discogs settings. Re-link your account from your profile to keep using your library.',
+  wishlist: {
+    'not-linked': {
+      title: 'Link your Discogs account',
+      body: 'Your wishlist is synchronized with your Discogs wantlist. Link your accounts from your profile to start using it.',
+    },
+    relink: {
+      title: 'Your Discogs link is no longer valid',
+      body: 'Discogs rejected the stored connection — it may have been revoked from your Discogs settings. Re-link your account from your profile to keep using your wishlist.',
+    },
   },
 } as const;
 
-export function LibraryLinkRequired({ variant }: LibraryLinkRequiredProps) {
-  const copy = COPY[variant];
+export function LibraryLinkRequired({
+  variant,
+  context = 'library',
+}: LibraryLinkRequiredProps) {
+  const copy = COPY[context][variant];
 
   return (
     <Card className="flex min-h-48 flex-col items-start justify-center gap-3">

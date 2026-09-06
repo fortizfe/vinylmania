@@ -39,6 +39,10 @@ personal library, view/edit/remove them — see
 [specs/003-vinyl-library-crud/quickstart.md](specs/003-vinyl-library-crud/quickstart.md)
 for the manual validation script covering the full CRUD flow.
 
+The **wishlist** is the "records I want" counterpart, synchronized with your
+Discogs wantlist — see [docs/wishlist.md](docs/wishlist.md) for the end-user
+guide.
+
 Quick summary:
 
 ```bash

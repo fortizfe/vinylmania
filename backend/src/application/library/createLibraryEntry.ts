@@ -6,10 +6,18 @@ import {
   DiscogsUnavailableError,
 } from '../../discogs/discogsErrors';
 import type { Release } from '../../domain/discogsCatalog/types';
-import type { EntryDiscogsData, LibraryEntry } from '../../domain/library/types';
+import type { DiscogsConnection } from '../../domain/discogsOauth/types';
+import type {
+  EntryDiscogsData,
+  LibraryEntry,
+  WantlistRemovalOutcome,
+} from '../../domain/library/types';
+import type { CachePort } from '../../ports/cache/cachePort';
 import type { DiscogsCollectionPort } from '../../ports/discogsOauth/discogsCollectionPort';
 import type { DiscogsConnectionPort } from '../../ports/discogsOauth/discogsConnectionPort';
+import type { DiscogsWantlistPort } from '../../ports/discogsOauth/discogsWantlistPort';
 import type { LibraryRepositoryPort } from '../../ports/library/libraryRepositoryPort';
+import { wantlistCacheKey } from '../wantlist/listWantlist';
 import { requireConnection } from './syncLibrary';
 
 const ROUTE = 'librarySync';
@@ -40,14 +48,22 @@ export interface CreateLibraryEntryResult {
   entry: LibraryEntry;
   release: Release;
   discogs: EntryDiscogsData;
+  /**
+   * Outcome of the best-effort wantlist removal (FR-012/FR-013). Always
+   * computed for a linked user's add; optional so the field can be absent
+   * from serialized responses when no removal was attempted.
+   */
+  wantlistRemoval?: WantlistRemovalOutcome;
 }
 
 export function createCreateLibraryEntryUseCase(deps: {
   repository: LibraryRepositoryPort;
   discogsCollection: DiscogsCollectionPort;
   discogsConnection: DiscogsConnectionPort;
+  discogsWantlist: DiscogsWantlistPort;
+  cache: CachePort;
 }) {
-  const { repository, discogsCollection, discogsConnection } = deps;
+  const { repository, discogsCollection, discogsConnection, discogsWantlist, cache } = deps;
 
   async function createLibraryEntry(
     uid: string,
@@ -101,7 +117,50 @@ export function createCreateLibraryEntryUseCase(deps: {
       },
     };
 
-    return { entry, release, discogs };
+    // Best-effort wantlist cleanup, only once the collection write and the
+    // Firestore entry are confirmed (FR-012). A failure here is surfaced as a
+    // flag but never rolls back the add or fails the request (FR-013).
+    const wantlistRemoval = await removeFromWantlist(uid, connection, discogsReleaseId);
+
+    return { entry, release, discogs, wantlistRemoval };
+  }
+
+  /**
+   * Attempts `DELETE /wants/{releaseId}` as a secondary cleanup. A 404 means
+   * the release was never a want (benign); any other Discogs error is
+   * swallowed with a warn log — the library add has already succeeded
+   * (research.md Decision 5).
+   */
+  async function removeFromWantlist(
+    ownerUid: string,
+    connection: DiscogsConnection,
+    releaseId: number,
+  ): Promise<WantlistRemovalOutcome> {
+    try {
+      await discogsWantlist.deleteWant(connection, releaseId);
+    } catch (err) {
+      if (err instanceof DiscogsNotFoundError) {
+        return 'not_in_wantlist';
+      }
+      logger.warn({
+        route: ROUTE,
+        outcome: 'wantlist_removal_failed',
+        uid: ownerUid,
+        meta: { releaseId },
+      });
+      return 'failed';
+    }
+
+    // Keep `/api/wantlist`'s cached projection in step with the removal, the
+    // same way every explicit wantlist write busts the key (research Decision 2).
+    await cache.invalidate(wantlistCacheKey(ownerUid));
+    logger.info({
+      route: ROUTE,
+      outcome: 'wantlist_removed_on_purchase',
+      uid: ownerUid,
+      meta: { releaseId },
+    });
+    return 'removed';
   }
 
   return { createLibraryEntry };

@@ -41,7 +41,10 @@ export async function completeGoogleLogin(
     const body = await response
       .json()
       .catch(() => ({ error: 'unknown', message: 'Sign-in failed.' }));
-    throw new GoogleAuthApiError(body.message ?? 'Sign-in failed.', body.error ?? 'unknown');
+    throw new GoogleAuthApiError(
+      body.message ?? 'Sign-in failed.',
+      body.error ?? 'unknown',
+    );
   }
 
   return response.json();

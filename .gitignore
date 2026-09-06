@@ -67,3 +67,10 @@ Thumbs.db
 # The GUI reads it locally; it is not shared project state.
 specs/*/.spec-context.json
 specs/*/.spec-trace.jsonl
+
+# Python bytecode cache from the SpecKit extension scripts
+__pycache__/
+*.pyc
+
+# Claude Code scratch output (rendered skills, tool artifacts) — local only
+Claude outputs/

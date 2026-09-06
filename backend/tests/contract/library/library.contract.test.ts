@@ -520,6 +520,9 @@ describe('Library API contract: POST /api/library (write-through add, US3)', () 
       .post(`/users/${username}/collection/folders/1/releases/1`)
       .reply(201, { instance_id: 900 });
     stubCollectionFields(username);
+    const wantDelete = discogsScope()
+      .delete(`/users/${username}/wants/1`)
+      .reply(204);
 
     const res = await request(app)
       .post('/api/library')
@@ -528,16 +531,85 @@ describe('Library API contract: POST /api/library (write-through add, US3)', () 
 
     expect(res.status).toBe(201);
     expect(discogsAdd.isDone()).toBe(true);
+    expect(wantDelete.isDone()).toBe(true);
     expect(res.body).toMatchObject({
       discogsReleaseId: 1,
       catalogStatus: 'ok',
       release: expect.objectContaining({ title: 'Stockholm' }),
       discogs: expect.objectContaining({ instanceId: 900, folderId: 1, rating: 0 }),
+      wantlistRemoval: 'removed',
     });
     expect(res.body.condition).toBeUndefined();
 
     const persisted = await getEntry(uid, res.body.id);
     expect(persisted).toMatchObject({ discogsInstanceId: 900, discogsFolderId: 1 });
+  });
+
+  it('auto-removes a wanted release from the wantlist on purchase (US5, FR-012)', async () => {
+    const { sessionToken, uid } = await createTestSession('add-wanted-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+
+    discogsScope().get('/releases/1').reply(200, rawRelease);
+    discogsScope()
+      .post(`/users/${username}/collection/folders/1/releases/1`)
+      .reply(201, { instance_id: 900 });
+    stubCollectionFields(username);
+    const wantDelete = discogsScope().delete(`/users/${username}/wants/1`).reply(204);
+
+    const res = await request(app)
+      .post('/api/library')
+      .set('Authorization', `Bearer ${sessionToken}`)
+      .send({ discogsReleaseId: 1 });
+
+    expect(res.status).toBe(201);
+    expect(wantDelete.isDone()).toBe(true);
+    expect(res.body.wantlistRemoval).toBe('removed');
+  });
+
+  it('reports wantlistRemoval:"not_in_wantlist" when the release was never a want (no error)', async () => {
+    const { sessionToken, uid } = await createTestSession('add-not-wanted-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+
+    discogsScope().get('/releases/1').reply(200, rawRelease);
+    discogsScope()
+      .post(`/users/${username}/collection/folders/1/releases/1`)
+      .reply(201, { instance_id: 900 });
+    stubCollectionFields(username);
+    discogsScope()
+      .delete(`/users/${username}/wants/1`)
+      .reply(404, { message: 'Release not in wantlist.' });
+
+    const res = await request(app)
+      .post('/api/library')
+      .set('Authorization', `Bearer ${sessionToken}`)
+      .send({ discogsReleaseId: 1 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.wantlistRemoval).toBe('not_in_wantlist');
+  });
+
+  it('still returns 201 with wantlistRemoval:"failed" and keeps the library entry when the wantlist removal fails (FR-013)', async () => {
+    const { sessionToken, uid } = await createTestSession('add-want-fail-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+
+    discogsScope().get('/releases/1').reply(200, rawRelease);
+    discogsScope()
+      .post(`/users/${username}/collection/folders/1/releases/1`)
+      .reply(201, { instance_id: 900 });
+    stubCollectionFields(username);
+    discogsScope().delete(`/users/${username}/wants/1`).reply(500, { message: 'boom' });
+
+    const res = await request(app)
+      .post('/api/library')
+      .set('Authorization', `Bearer ${sessionToken}`)
+      .send({ discogsReleaseId: 1 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.wantlistRemoval).toBe('failed');
+
+    // The library add is not rolled back.
+    const persisted = await getEntry(uid, res.body.id);
+    expect(persisted).toMatchObject({ discogsInstanceId: 900 });
   });
 
   it('rejects legacy condition/notes keys with 400 invalid_request (breaking change)', async () => {

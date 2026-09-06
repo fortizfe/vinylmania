@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FeedArticleBoard } from '../../src/components/FeedArticleBoard';
-import type { CategoryGroup, SourceFeedResponse, SourceStatus } from '../../src/services/feedsApi';
+import type {
+  CategoryGroup,
+  SourceFeedResponse,
+  SourceStatus,
+} from '../../src/services/feedsApi';
 
 const mockUseSourceFeed = vi.fn();
 
@@ -39,8 +43,16 @@ const categories: CategoryGroup[] = [
   {
     category: 'News',
     articles: [
-      article({ id: 'news-old', title: 'Older News', publishedAt: '2026-07-01T00:00:00.000Z' }),
-      article({ id: 'news-new', title: 'Newer News', publishedAt: '2026-07-09T00:00:00.000Z' }),
+      article({
+        id: 'news-old',
+        title: 'Older News',
+        publishedAt: '2026-07-01T00:00:00.000Z',
+      }),
+      article({
+        id: 'news-new',
+        title: 'Newer News',
+        publishedAt: '2026-07-09T00:00:00.000Z',
+      }),
     ],
   },
   {
@@ -59,7 +71,12 @@ const categories: CategoryGroup[] = [
 ];
 
 const sourceStatuses: SourceStatus[] = [
-  { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok', priority: true },
+  {
+    sourceId: 'metal-injection',
+    sourceName: 'Metal Injection',
+    status: 'ok',
+    priority: true,
+  },
   {
     sourceId: 'sample-source',
     sourceName: 'Sample Source',
@@ -77,7 +94,9 @@ describe('FeedArticleBoard', () => {
   it('flattens every category into one list and sorts it by recency, newest first', () => {
     render(<FeedArticleBoard categories={categories} sourceStatuses={sourceStatuses} />);
 
-    const titles = screen.getAllByRole('heading', { level: 3 }).map((el) => el.textContent);
+    const titles = screen
+      .getAllByRole('heading', { level: 3 })
+      .map((el) => el.textContent);
     expect(titles).toEqual(['Newer News', 'Mid Review', 'Older News']);
   });
 
@@ -189,7 +208,11 @@ describe('FeedArticleBoard source filter queries the source directly (spec 041 U
         return {
           data: sourceFeed({
             articles: [
-              article({ id: 'direct-1', title: 'Direct Query Article', sourceId: 'sample-source' }),
+              article({
+                id: 'direct-1',
+                title: 'Direct Query Article',
+                sourceId: 'sample-source',
+              }),
             ],
           }),
           isLoading: false,
@@ -214,7 +237,10 @@ describe('FeedArticleBoard source filter queries the source directly (spec 041 U
   it('shows a distinct "unavailable" message when the direct query fails, different from the empty-articles message (FR-010)', async () => {
     mockUseSourceFeed.mockImplementation((sourceId: string | null) => {
       if (sourceId === 'sample-source') {
-        return { data: sourceFeed({ status: 'unavailable', articles: [] }), isLoading: false };
+        return {
+          data: sourceFeed({ status: 'unavailable', articles: [] }),
+          isLoading: false,
+        };
       }
       return { data: undefined, isLoading: false };
     });
@@ -285,8 +311,18 @@ describe('FeedArticleBoard combined category + source filtering (spec 041 US3, F
   ];
 
   const combinedSourceStatuses: SourceStatus[] = [
-    { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok', priority: true },
-    { sourceId: 'louder-sound', sourceName: 'Louder Sound', status: 'ok', priority: true },
+    {
+      sourceId: 'metal-injection',
+      sourceName: 'Metal Injection',
+      status: 'ok',
+      priority: true,
+    },
+    {
+      sourceId: 'louder-sound',
+      sourceName: 'Louder Sound',
+      status: 'ok',
+      priority: true,
+    },
     {
       sourceId: 'sample-source',
       sourceName: 'Sample Source',
@@ -342,7 +378,10 @@ describe('FeedArticleBoard combined category + source filtering (spec 041 US3, F
 
   it('narrows to the selected source’s own direct-query articles matching the active category (AND)', async () => {
     render(
-      <FeedArticleBoard categories={combinedCategories} sourceStatuses={combinedSourceStatuses} />,
+      <FeedArticleBoard
+        categories={combinedCategories}
+        sourceStatuses={combinedSourceStatuses}
+      />,
     );
 
     const user = userEvent.setup();
@@ -356,7 +395,10 @@ describe('FeedArticleBoard combined category + source filtering (spec 041 US3, F
 
   it('clearing the source filter restores the category-only aggregated view', async () => {
     render(
-      <FeedArticleBoard categories={combinedCategories} sourceStatuses={combinedSourceStatuses} />,
+      <FeedArticleBoard
+        categories={combinedCategories}
+        sourceStatuses={combinedSourceStatuses}
+      />,
     );
 
     const user = userEvent.setup();
@@ -371,7 +413,10 @@ describe('FeedArticleBoard combined category + source filtering (spec 041 US3, F
 
   it('shows the empty-state message when the source’s own articles don’t match the active category (edge case, FR-012)', async () => {
     render(
-      <FeedArticleBoard categories={combinedCategories} sourceStatuses={combinedSourceStatuses} />,
+      <FeedArticleBoard
+        categories={combinedCategories}
+        sourceStatuses={combinedSourceStatuses}
+      />,
     );
 
     const user = userEvent.setup();

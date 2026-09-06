@@ -458,7 +458,7 @@ export const STYLE_OPTIONS: readonly string[] = [
   'Midwest Emo',
   'Military',
   'Milonga',
-  'Min\'yō',
+  "Min'yō",
   'Minimal',
   'Minimal Techno',
   'Minimalism',

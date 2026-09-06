@@ -9,8 +9,15 @@ import {
 } from 'react';
 
 import { authorizedFetch, setUnauthorizedHandler } from '../services/apiClient';
-import { completeGoogleLogin, type CompleteGoogleLoginInput } from '../services/googleAuthApi';
-import { clearSessionToken, getSessionToken, setSessionToken } from '../services/sessionStore';
+import {
+  completeGoogleLogin,
+  type CompleteGoogleLoginInput,
+} from '../services/googleAuthApi';
+import {
+  clearSessionToken,
+  getSessionToken,
+  setSessionToken,
+} from '../services/sessionStore';
 
 export interface UserProfile {
   uid: string;
@@ -98,25 +105,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const completeSignIn = useCallback(async (input: CompleteGoogleLoginInput): Promise<LoginOutcome> => {
-    if (input.error) {
-      setError(friendlyOutcomeMessage('denied'));
-      return 'denied';
-    }
+  const completeSignIn = useCallback(
+    async (input: CompleteGoogleLoginInput): Promise<LoginOutcome> => {
+      if (input.error) {
+        setError(friendlyOutcomeMessage('denied'));
+        return 'denied';
+      }
 
-    try {
-      const { sessionToken, user: profile } = await completeGoogleLogin(input);
-      setSessionToken(sessionToken);
-      setUser(profile);
-      setError(null);
-      return 'success';
-    } catch (err) {
-      const code = (err as { code?: string } | null)?.code;
-      const outcome: 'expired' | 'error' = code === 'expired_state' ? 'expired' : 'error';
-      setError(friendlyOutcomeMessage(outcome));
-      return outcome;
-    }
-  }, []);
+      try {
+        const { sessionToken, user: profile } = await completeGoogleLogin(input);
+        setSessionToken(sessionToken);
+        setUser(profile);
+        setError(null);
+        return 'success';
+      } catch (err) {
+        const code = (err as { code?: string } | null)?.code;
+        const outcome: 'expired' | 'error' =
+          code === 'expired_state' ? 'expired' : 'error';
+        setError(friendlyOutcomeMessage(outcome));
+        return outcome;
+      }
+    },
+    [],
+  );
 
   const value = useMemo(
     () => ({ user, loading, error, signIn, signOut, completeSignIn }),

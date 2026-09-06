@@ -59,7 +59,9 @@ function OutcomeMessage({
   onDismiss,
 }: Readonly<{ outcome: DiscogsOutcome; onDismiss: () => void }>) {
   const message = OUTCOME_MESSAGES[outcome];
-  return <DismissibleBanner tone={message.tone} text={message.text} onDismiss={onDismiss} />;
+  return (
+    <DismissibleBanner tone={message.tone} text={message.text} onDismiss={onDismiss} />
+  );
 }
 
 export function ProfilePage() {
@@ -124,7 +126,10 @@ export function ProfilePage() {
             <ThemeToggle theme={theme} onToggle={toggle} />
           </div>
         </section>
-        <section aria-label="Connected services" className="flex flex-col gap-4 xl:flex-1">
+        <section
+          aria-label="Connected services"
+          className="flex flex-col gap-4 xl:flex-1"
+        >
           <DiscogsConnectionCard />
         </section>
       </div>

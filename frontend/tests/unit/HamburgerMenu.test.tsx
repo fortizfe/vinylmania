@@ -56,6 +56,18 @@ describe('HamburgerMenu', () => {
     expect(links[2]).toHaveAttribute('href', '/app/profile');
   });
 
+  it('keeps the wishlist reachable from the mobile menu (feature 060, FR-001)', async () => {
+    const user = userEvent.setup();
+    renderMenu();
+
+    await user.click(screen.getByRole('button', { name: /menu/i }));
+
+    expect(screen.getByRole('link', { name: /my wishlist/i })).toHaveAttribute(
+      'href',
+      '/app/wishlist',
+    );
+  });
+
   it('closes when a link is selected', async () => {
     const user = userEvent.setup();
     renderMenu();

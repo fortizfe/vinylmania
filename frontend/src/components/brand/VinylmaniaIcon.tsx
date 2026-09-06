@@ -19,7 +19,12 @@ export function VinylmaniaIcon({ size, className }: VinylmaniaIconProps) {
       focusable="false"
       className={clsx('shrink-0', className)}
     >
-      <circle cx="100" cy="100" r="85" className="fill-surface dark:fill-brand-icon-dark-bg" />
+      <circle
+        cx="100"
+        cy="100"
+        r="85"
+        className="fill-surface dark:fill-brand-icon-dark-bg"
+      />
       <circle
         cx="100"
         cy="100"

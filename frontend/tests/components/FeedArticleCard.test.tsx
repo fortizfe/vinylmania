@@ -118,9 +118,19 @@ describe('FeedArticleCard', () => {
 
   describe('equal prominence across sources (feature 033, US3, FR-010, SC-004, SC-007)', () => {
     const priorityArticles = [
-      { ...baseArticle, id: 'mi-1', sourceId: 'metal-injection', sourceName: 'Metal Injection' },
+      {
+        ...baseArticle,
+        id: 'mi-1',
+        sourceId: 'metal-injection',
+        sourceName: 'Metal Injection',
+      },
       { ...baseArticle, id: 'ms-1', sourceId: 'metalsucks', sourceName: 'MetalSucks' },
-      { ...baseArticle, id: 'ls-1', sourceId: 'louder-sound', sourceName: 'Louder Sound' },
+      {
+        ...baseArticle,
+        id: 'ls-1',
+        sourceId: 'louder-sound',
+        sourceName: 'Louder Sound',
+      },
     ];
     const nonPriorityArticle = {
       ...baseArticle,
