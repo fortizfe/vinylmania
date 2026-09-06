@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.7.0] - 2026-09-06
+
+### Added
+
+- Apple HIG component polish — motion, depth, gestures, consistency (#47) ([fbd7387])
+
 ## [1.6.1] - 2026-09-05
 
 ### Fixed
