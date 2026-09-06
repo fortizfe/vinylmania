@@ -155,7 +155,7 @@ other focus-visible treatment in `components/**`.
 pull the eye from its copy). Scoped to it alone: the banner mounts *in response
 to a news source failing*, so the entrance is genuine status feedback
 (apple-design §16). First-paint placeholders that just describe a state
-(`UnderConstruction`, `LibraryLinkRequired`, `DiscogsRelinkNotice`) render
+(`LibraryLinkRequired`, `DiscogsRelinkNotice`) render
 statically — an entrance there communicates nothing and its ancestor `opacity`
 ramp tripped the axe-core contrast scanner mid-fade (see spec 059 T097 /
 `e2e/helpers/settleEntrance.ts`). The header scroll-edge

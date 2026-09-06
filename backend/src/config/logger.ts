@@ -25,6 +25,7 @@ export type LogOutcome =
   | 'first_sync_migrated'
   | 'entry_added'
   | 'entry_removed'
+  | 'entry_updated'
   | 'migration_failed'
   // Search-result rating enrichment degradation (feature 017)
   | 'omitted'
@@ -43,7 +44,10 @@ export type LogOutcome =
   | 'login_started'
   | 'login_completed'
   | 'login_failed'
-  | 'logged_out';
+  | 'logged_out'
+  // Wantlist auto-removal on purchase (feature 060)
+  | 'wantlist_removed_on_purchase'
+  | 'wantlist_removal_failed';
 
 export interface LogEvent {
   route: string;

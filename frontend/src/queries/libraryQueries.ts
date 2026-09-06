@@ -13,6 +13,7 @@ import type {
   PaginatedLibraryEntries,
   UpdateCopyDataPatch,
 } from '../services/libraryApi';
+import { wantlistKeys } from './wantlistQueries';
 
 export const libraryKeys = {
   all: ['library'] as const,
@@ -106,6 +107,9 @@ export function useCreateLibraryEntry(): UseMutationResult<
       libraryApi.create(discogsReleaseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+      // Feature 060, FR-012: a purchased release is auto-removed from the
+      // Discogs wantlist, so drop the cached wantlist immediately.
+      queryClient.invalidateQueries({ queryKey: wantlistKeys.all });
     },
   });
 }

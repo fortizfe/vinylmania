@@ -121,7 +121,7 @@ describe('libraryQueries', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: libraryKeys.all });
   });
 
-  it('useCreateLibraryEntry invalidates library queries on success', async () => {
+  it('useCreateLibraryEntry invalidates both library and wantlist queries on success', async () => {
     mockCreate.mockResolvedValue({ id: 'entry-2', discogsReleaseId: 2 });
 
     const client = createTestQueryClient();
@@ -132,12 +132,16 @@ describe('libraryQueries', () => {
 
     const { useCreateLibraryEntry, libraryKeys } =
       await import('../../../src/queries/libraryQueries');
+    const { wantlistKeys } = await import('../../../src/queries/wantlistQueries');
     const { result } = renderHook(() => useCreateLibraryEntry(), {
       wrapper: localWrapper,
     });
 
     await result.current.mutateAsync({ discogsReleaseId: 2 });
 
+    // FR-012: buying a wanted record drops it from the wishlist, so the
+    // wantlist cache must be invalidated alongside the library cache.
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: libraryKeys.all });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: wantlistKeys.all });
   });
 });

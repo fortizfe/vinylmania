@@ -1,6 +1,8 @@
+import type { ComponentProps } from 'react';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { SearchResultCard } from '../../src/components/SearchResultCard';
 import type { CatalogSearchResult } from '../../src/services/discogsApi';
@@ -15,7 +17,11 @@ const baseResult: CatalogSearchResult = {
   formats: ['Vinyl'],
 };
 
-function renderCard(result: CatalogSearchResult, searchPath = '/app/search?q=blue') {
+function renderCard(
+  result: CatalogSearchResult,
+  searchPath = '/app/search?q=blue',
+  overrides: Partial<ComponentProps<typeof SearchResultCard>> = {},
+) {
   return render(
     <MemoryRouter>
       <SearchResultCard
@@ -24,6 +30,10 @@ function renderCard(result: CatalogSearchResult, searchPath = '/app/search?q=blu
         onAdd={() => {}}
         adding={false}
         added={false}
+        onAddToWantlist={() => {}}
+        addingToWantlist={false}
+        inWantlist={false}
+        {...overrides}
       />
     </MemoryRouter>,
   );
@@ -60,6 +70,51 @@ describe('SearchResultCard', () => {
     renderCard(baseResult);
 
     expect(screen.getByRole('button', { name: /add to library/i })).toBeInTheDocument();
+  });
+
+  describe('wishlist action (feature 060, US2)', () => {
+    it('renders a distinct "Add to wishlist" action alongside the library one', () => {
+      renderCard(baseResult);
+
+      expect(screen.getByRole('button', { name: /add to library/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /add to wishlist/i }),
+      ).toBeInTheDocument();
+    });
+
+    it('calls onAddToWantlist when the wishlist action is activated', async () => {
+      const user = userEvent.setup();
+      const onAddToWantlist = vi.fn();
+      renderCard(baseResult, undefined, { onAddToWantlist });
+
+      await user.click(screen.getByRole('button', { name: /add to wishlist/i }));
+
+      expect(onAddToWantlist).toHaveBeenCalledTimes(1);
+    });
+
+    it('reflects the in-wishlist state', () => {
+      renderCard(baseResult, undefined, { inWantlist: true });
+
+      expect(screen.getByRole('button', { name: /in your wishlist/i })).toBeDisabled();
+    });
+
+    it('shows an inline note when the added release is already in the library (FR-007a)', () => {
+      renderCard(baseResult, undefined, {
+        wantlistNote: 'Added to your wishlist — already in your library.',
+      });
+
+      expect(
+        screen.getByText(/added to your wishlist — already in your library/i),
+      ).toBeInTheDocument();
+    });
+
+    it('does not render a wishlist action for a master (grouped) result', () => {
+      renderCard({ ...baseResult, resultType: 'master', discogsId: 999 });
+
+      expect(
+        screen.queryByRole('button', { name: /add to wishlist/i }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe('navigation (feature 026, US2)', () => {

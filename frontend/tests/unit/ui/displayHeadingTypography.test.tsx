@@ -2,7 +2,25 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { LandingPillarSection } from '../../../src/components/LandingPillarSection';
-import { UnderConstruction } from '../../../src/components/UnderConstruction';
+import { ReleaseDetailsSection } from '../../../src/components/ReleaseDetailsSection';
+import type { Release } from '../../../src/services/libraryApi';
+
+function buildRelease(overrides: Partial<Release> = {}): Release {
+  return {
+    discogsId: 1,
+    title: 'Stockholm',
+    artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+    labels: [],
+    formats: [],
+    genres: [],
+    styles: [],
+    identifiers: [],
+    tracklist: [],
+    images: [],
+    discogsUrl: 'https://www.discogs.com/release/1',
+    ...overrides,
+  };
+}
 
 /**
  * Spec 059 FR-015 / US5 — display/large text (page, pillar and showcase
@@ -30,10 +48,10 @@ describe('display-heading typography (FR-015 / US5)', () => {
     expect(heading.className).toMatch(/\btext-(xs|sm|base|lg|xl|\dxl)\b/);
   });
 
-  it('UnderConstruction heading pairs font-display with the tracking + leading tokens', () => {
-    render(<UnderConstruction title="Dashboard" />);
+  it('ReleaseDetailsSection heading pairs font-display with the tracking + leading tokens', () => {
+    render(<ReleaseDetailsSection release={buildRelease()} />);
 
-    const heading = screen.getByRole('heading', { name: 'Dashboard' });
+    const heading = screen.getByRole('heading', { name: 'Stockholm' });
     expect(heading).toHaveClass('font-display');
     expect(heading).toHaveClass('tracking-display');
     expect(heading).toHaveClass('leading-display');
@@ -41,9 +59,9 @@ describe('display-heading typography (FR-015 / US5)', () => {
   });
 
   it('does not stack a second leading-* utility alongside leading-display', () => {
-    render(<UnderConstruction title="Dashboard" />);
+    render(<ReleaseDetailsSection release={buildRelease()} />);
 
-    const heading = screen.getByRole('heading', { name: 'Dashboard' });
+    const heading = screen.getByRole('heading', { name: 'Stockholm' });
     expect(heading.className).not.toMatch(
       /leading-tight|leading-none|leading-snug|leading-normal/,
     );

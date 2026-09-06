@@ -66,6 +66,17 @@ export interface EnrichedLibraryEntry extends LibraryEntry {
   discogs: EntryDiscogsData | null;
 }
 
+/**
+ * Outcome of the best-effort wantlist removal performed when a wanted release
+ * is bought into the library (feature 060, FR-012/FR-013):
+ * - `'removed'` — the release was in the Discogs wantlist and was deleted.
+ * - `'not_in_wantlist'` — nothing to remove; not an error.
+ * - `'failed'` — the library add succeeded but the wantlist removal failed;
+ *   the add is neither rolled back nor reported as failed. The frontend shows
+ *   a non-blocking notice.
+ */
+export type WantlistRemovalOutcome = 'removed' | 'not_in_wantlist' | 'failed';
+
 export interface CreateLibraryEntryInput {
   discogsReleaseId: number;
   discogsInstanceId: number;

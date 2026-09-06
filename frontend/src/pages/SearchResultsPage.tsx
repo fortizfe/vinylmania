@@ -9,6 +9,7 @@ import { SearchResultListRow } from '../components/SearchResultListRow';
 import { SearchResultListRowSkeleton } from '../components/SearchResultListRowSkeleton';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { focusRing } from '../components/ui/focusRing';
 import { ViewModeToggle } from '../components/ui/ViewModeToggle';
 import {
   buildSearchPath,
@@ -18,9 +19,32 @@ import {
 import { useViewModePreference } from '../hooks/useViewModePreference';
 import { useCatalogSearchInfinite } from '../queries/discogsQueries';
 import { useCreateLibraryEntry } from '../queries/libraryQueries';
+import { useAddToWantlist } from '../queries/wantlistQueries';
 import { ApiError } from '../services/apiClient';
 
 const SKELETON_COUNT = 8;
+
+/**
+ * Feature 060, FR-013: the library add succeeded but the automatic wantlist
+ * removal did not — non-blocking, the user just needs to tidy their wishlist.
+ */
+const WISHLIST_REMOVAL_FAILED_NOTICE =
+  "Added to your library. We couldn't remove it from your wishlist — remove it there when you can.";
+
+/**
+ * The Discogs-link gate can be tripped by either add action (feature 060,
+ * US2). The two destinations carry their own copy so the message names the
+ * section the user was actually adding to — never the wrong one.
+ */
+type GateError = { variant: 'not-linked' | 'relink'; context: 'library' | 'wishlist' };
+
+function gateMessage({ variant, context }: GateError): string {
+  const target = context === 'wishlist' ? 'your wishlist' : 'your library';
+  return variant === 'relink'
+    ? `Your Discogs link is no longer valid. Please re-link your account to add records to ${target}.`
+    : `You need to link your Discogs account before adding records to ${target}.`;
+}
+
 const PAGE_SIZE = 20;
 const resultsGridClasses =
   'grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
@@ -53,14 +77,25 @@ export function SearchResultsPage() {
   const [addingId, setAddingId] = useState<number | null>(null);
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
   const [addError, setAddError] = useState<string | null>(null);
-  const [gateError, setGateError] = useState<'not-linked' | 'relink' | null>(null);
+  const [gateError, setGateError] = useState<GateError | null>(null);
+  const [addingWantlistId, setAddingWantlistId] = useState<number | null>(null);
+  const [wantlistIds, setWantlistIds] = useState<Set<number>>(new Set());
+  const [wantlistNotes, setWantlistNotes] = useState<Map<number, string>>(new Map());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const { mode, setMode } = useViewModePreference('vinylmania:view-mode:search');
 
   const searchQuery = useCatalogSearchInfinite(query, 'release', PAGE_SIZE, filters);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage, data, isLoading, isError, error: searchError } =
-    searchQuery;
+  const {
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    data,
+    isLoading,
+    isError,
+    error: searchError,
+  } = searchQuery;
   const createEntry = useCreateLibraryEntry();
+  const addToWantlist = useAddToWantlist();
 
   const searched = query.trim().length > 0;
   const loading = isLoading;
@@ -74,7 +109,9 @@ export function SearchResultsPage() {
   // now fail with discogs_link_invalid when the caller's linked account was
   // revoked (spec 053, US3) — surfaced with the same relink prompt.
   const searchRelinkRequired =
-    initialLoadError && searchError instanceof ApiError && searchError.code === 'discogs_link_invalid';
+    initialLoadError &&
+    searchError instanceof ApiError &&
+    searchError.code === 'discogs_link_invalid';
   const nextPageError = Boolean(data) && isError;
   const error =
     addError ??
@@ -114,18 +151,53 @@ export function SearchResultsPage() {
     setAddError(null);
     setGateError(null);
     try {
-      await createEntry.mutateAsync({ discogsReleaseId: discogsId });
+      const entry = await createEntry.mutateAsync({ discogsReleaseId: discogsId });
       setAddedIds((prev) => new Set(prev).add(discogsId));
+      if (entry.wantlistRemoval === 'failed') {
+        setWantlistNotes((prev) =>
+          new Map(prev).set(discogsId, WISHLIST_REMOVAL_FAILED_NOTICE),
+        );
+      }
     } catch (err) {
       if (err instanceof ApiError && err.code === 'discogs_not_linked') {
-        setGateError('not-linked');
+        setGateError({ variant: 'not-linked', context: 'library' });
       } else if (err instanceof ApiError && err.code === 'discogs_link_invalid') {
-        setGateError('relink');
+        setGateError({ variant: 'relink', context: 'library' });
       } else {
         setAddError('Something went wrong while adding this record. Please try again.');
       }
     } finally {
       setAddingId(null);
+    }
+  }
+
+  async function handleAddToWantlist(discogsId: number) {
+    setAddingWantlistId(discogsId);
+    setAddError(null);
+    setGateError(null);
+    try {
+      const result = await addToWantlist.mutateAsync({ discogsReleaseId: discogsId });
+      setWantlistIds((prev) => new Set(prev).add(discogsId));
+      if (result.alreadyInLibrary) {
+        setWantlistNotes((prev) =>
+          new Map(prev).set(
+            discogsId,
+            'Added to your wishlist — already in your library.',
+          ),
+        );
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'discogs_not_linked') {
+        setGateError({ variant: 'not-linked', context: 'wishlist' });
+      } else if (err instanceof ApiError && err.code === 'discogs_link_invalid') {
+        setGateError({ variant: 'relink', context: 'wishlist' });
+      } else {
+        setAddError(
+          'Something went wrong while adding this record to your wishlist. Please try again.',
+        );
+      }
+    } finally {
+      setAddingWantlistId(null);
     }
   }
 
@@ -148,14 +220,12 @@ export function SearchResultsPage() {
 
       {gateError && (
         <Card>
-          <p className="text-stone-700 dark:text-stone-300">
-            {gateError === 'not-linked'
-              ? 'You need to link your Discogs account before adding records to your library.'
-              : 'Your Discogs link is no longer valid. Please re-link your account to add records.'}
+          <p role="status" className="text-stone-700 dark:text-stone-300">
+            {gateMessage(gateError)}
           </p>
           <Link
             to="/app/profile"
-            className="mt-2 inline-block text-sm font-medium text-primary hover:opacity-80 dark:text-primary-text"
+            className={`mt-2 inline-block rounded text-sm font-medium text-primary hover:opacity-80 dark:text-primary-text ${focusRing}`}
           >
             Go to your profile
           </Link>
@@ -207,6 +277,10 @@ export function SearchResultsPage() {
                   onAdd={() => handleAdd(result.discogsId)}
                   adding={addingId === result.discogsId}
                   added={addedIds.has(result.discogsId)}
+                  onAddToWantlist={() => handleAddToWantlist(result.discogsId)}
+                  addingToWantlist={addingWantlistId === result.discogsId}
+                  inWantlist={wantlistIds.has(result.discogsId)}
+                  wantlistNote={wantlistNotes.get(result.discogsId) ?? null}
                 />
               ))}
             </ul>
@@ -220,6 +294,10 @@ export function SearchResultsPage() {
                     onAdd={() => handleAdd(result.discogsId)}
                     adding={addingId === result.discogsId}
                     added={addedIds.has(result.discogsId)}
+                    onAddToWantlist={() => handleAddToWantlist(result.discogsId)}
+                    addingToWantlist={addingWantlistId === result.discogsId}
+                    inWantlist={wantlistIds.has(result.discogsId)}
+                    wantlistNote={wantlistNotes.get(result.discogsId) ?? null}
                   />
                 </li>
               ))}

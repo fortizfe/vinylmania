@@ -1,9 +1,13 @@
 import { Button } from './ui/Button';
+import { WishlistIcon, WishlistIconFilled } from './ui/icons/WishlistIcon';
 
 interface ResultCardActionsProps {
   onAdd: () => void;
   adding: boolean;
   added: boolean;
+  onAddToWantlist: () => void;
+  addingToWantlist: boolean;
+  inWantlist: boolean;
 }
 
 function PlusIcon() {
@@ -34,7 +38,21 @@ function CheckIcon() {
   );
 }
 
-export function ResultCardActions({ onAdd, adding, added }: ResultCardActionsProps) {
+/**
+ * The two independent add actions on a search result (feature 060, FR-005):
+ * "Add to library" (plus / check icon) and "Add to wishlist" (outline /
+ * filled heart). They are told apart by icon shape + accessible name, never
+ * by colour alone (Constitution X) — both use the same `secondary` icon
+ * button and inherit `Button`'s shared press + loading behaviour.
+ */
+export function ResultCardActions({
+  onAdd,
+  adding,
+  added,
+  onAddToWantlist,
+  addingToWantlist,
+  inWantlist,
+}: ResultCardActionsProps) {
   return (
     <div className="flex items-center gap-2">
       <Button
@@ -46,6 +64,16 @@ export function ResultCardActions({ onAdd, adding, added }: ResultCardActionsPro
         aria-label={added ? 'Added to library' : 'Add to library'}
       >
         {added ? <CheckIcon /> : <PlusIcon />}
+      </Button>
+      <Button
+        size="icon"
+        variant="secondary"
+        onClick={onAddToWantlist}
+        loading={addingToWantlist}
+        disabled={inWantlist}
+        aria-label={inWantlist ? 'In your wishlist' : 'Add to wishlist'}
+      >
+        {inWantlist ? <WishlistIconFilled /> : <WishlistIcon />}
       </Button>
     </div>
   );

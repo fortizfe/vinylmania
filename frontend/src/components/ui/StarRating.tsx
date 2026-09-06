@@ -8,20 +8,31 @@ interface StarRatingProps {
   value: number;
   onChange: (rating: number) => void;
   disabled?: boolean;
+  /**
+   * Accessible name for the rating group. Defaults to `Rating`; pass the
+   * control's visible label when it differs (WCAG 2.5.3 Label in Name) — e.g.
+   * the wantlist panel's "Personal rating".
+   */
+  ariaLabel?: string;
 }
 
 /**
  * Atomic 5-star rating control. Tapping the currently-active star clears the
  * rating to 0 (R5). Dark-mode aware via Tailwind v4 utilities.
  */
-export function StarRating({ value, onChange, disabled = false }: StarRatingProps) {
+export function StarRating({
+  value,
+  onChange,
+  disabled = false,
+  ariaLabel = 'Rating',
+}: StarRatingProps) {
   function handleClick(star: number) {
     if (disabled) return;
     onChange(value === star ? 0 : star);
   }
 
   return (
-    <div role="group" aria-label="Rating" className="flex items-center gap-1">
+    <div role="group" aria-label={ariaLabel} className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((star) => {
         const filled = star <= value;
         return (

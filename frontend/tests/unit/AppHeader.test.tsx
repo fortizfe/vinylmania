@@ -1,4 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -27,6 +28,19 @@ describe('AppHeader', () => {
     const iconsContainer = libraryIcon.parentElement;
     expect(iconsContainer).toHaveClass('hidden');
     expect(iconsContainer).toHaveClass('md:flex');
+  });
+
+  it('exposes "My wishlist" in the mobile hamburger menu, not only the desktop icon nav (feature 060, FR-001)', async () => {
+    const user = userEvent.setup();
+    renderHeader();
+
+    await user.click(screen.getByRole('button', { name: /menu/i }));
+
+    const menu = screen.getByRole('dialog');
+    expect(within(menu).getByRole('link', { name: /my wishlist/i })).toHaveAttribute(
+      'href',
+      '/app/wishlist',
+    );
   });
 
   it('keeps the "Sign out" button present and unchanged alongside both nav presentations (FR-010)', () => {

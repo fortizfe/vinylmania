@@ -100,6 +100,12 @@ export interface EnrichedLibraryEntry {
   genre?: string[];
   style?: string[];
   format?: string[];
+  /**
+   * Outcome of the automatic wantlist removal when the added release was in
+   * the user's wantlist (feature 060, FR-012/FR-013). Only present on the
+   * `POST /api/library` (create) response. Absent means "no action".
+   */
+  wantlistRemoval?: 'removed' | 'not_in_wantlist' | 'failed';
 }
 
 export interface PaginatedLibraryEntries {
