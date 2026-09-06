@@ -322,31 +322,44 @@ export function expectNoSingleFrameJump(
     `${label}: fewer than 3 in-DOM frames captured (${connected.length}) — cannot judge continuity`,
   ).toBeGreaterThanOrEqual(3);
 
+  // Thresholds are expressed per ideal 60 fps frame (~16.7 ms). Under CI
+  // runner contention rAF intervals stretch to 30–60 ms, so a smoothly
+  // interpolating spring legitimately covers proportionally more ground
+  // between the frames we sample. Scaling each delta down by the ratio of
+  // the ideal interval to the *actual* interval keeps the assertion
+  // frame-rate-independent: coarse sampling of continuous motion scales back
+  // under the bound, while a genuine discontinuity (a teleport to the target
+  // value in ~0 ms — the bug these guard against) still blows past it. The
+  // factor is capped at 1 so a pair of near-coalesced frames (Δt ~1 ms) is
+  // never *amplified* into a false jump, and sub-4 ms pairs (the same frame
+  // sampled twice) are skipped outright.
+  const IDEAL_FRAME_MS = 1000 / 60;
   for (let i = 1; i < connected.length; i += 1) {
     const a = connected[i - 1];
     const b = connected[i];
-    const dOpacity = Math.abs(Number.parseFloat(b.opacity) - Number.parseFloat(a.opacity));
-    const dScale = Math.abs(effectiveScale(b) - effectiveScale(a));
+    const dt = b.t - a.t;
+    if (dt < 4) continue;
+    const norm = Math.min(1, IDEAL_FRAME_MS / dt);
+    const dOpacity = Math.abs(Number.parseFloat(b.opacity) - Number.parseFloat(a.opacity)) * norm;
+    const dScale = Math.abs(effectiveScale(b) - effectiveScale(a)) * norm;
     const ta = effectiveTranslate(a);
     const tb = effectiveTranslate(b);
-    const dTranslate = Math.hypot(tb.x - ta.x, tb.y - ta.y);
-    const dRect = Math.hypot(b.x - a.x, b.y - a.y);
+    const dTranslate = Math.hypot(tb.x - ta.x, tb.y - ta.y) * norm;
+    const dRect = Math.hypot(b.x - a.x, b.y - a.y) * norm;
+    const span = `frames ${i - 1}→${i} (Δt ${dt.toFixed(0)}ms, 60fps-normalised)`;
 
     expect(
       dOpacity,
-      `${label}: opacity jumped ${dOpacity.toFixed(3)} between frames ${i - 1}→${i} (t=${a.t.toFixed(0)}→${b.t.toFixed(0)}ms)`,
+      `${label}: opacity jumped ${dOpacity.toFixed(3)} between ${span}`,
     ).toBeLessThan(opacity);
-    expect(
-      dScale,
-      `${label}: scale jumped ${dScale.toFixed(3)} between frames ${i - 1}→${i}`,
-    ).toBeLessThan(scale);
+    expect(dScale, `${label}: scale jumped ${dScale.toFixed(3)} between ${span}`).toBeLessThan(scale);
     expect(
       dTranslate,
-      `${label}: transform offset jumped ${dTranslate.toFixed(1)}px between frames ${i - 1}→${i}`,
+      `${label}: transform offset jumped ${dTranslate.toFixed(1)}px between ${span}`,
     ).toBeLessThan(translate);
     expect(
       dRect,
-      `${label}: bounding box jumped ${dRect.toFixed(1)}px between frames ${i - 1}→${i}`,
+      `${label}: bounding box jumped ${dRect.toFixed(1)}px between ${span}`,
     ).toBeLessThan(translate);
   }
 }

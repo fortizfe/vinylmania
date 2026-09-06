@@ -38,7 +38,16 @@ export default defineConfig({
   // only starts counting once emulators:exec itself begins (spec 042,
   // FR-007/FR-008).
   timeout: 30_000,
-  globalTimeout: 900_000,
+  // Whole-run ceiling. Raised from 900_000 (15 min) with spec 059, which
+  // added ~56 e2e tests (pressed-state, reduced-motion, overlay focus/
+  // interruptibility, drag-to-dismiss, gallery swipe, overlay contrast,
+  // motion performance) plus assertions to ~10 existing specs — the suite
+  // grew from ~7–11 min to ~15+ min and was hitting this ceiling exactly,
+  // which Playwright reports as a run failure. 25 min leaves headroom for
+  // CI runner variance while still bounding a genuinely stuck run well
+  // inside the 30-min GitHub job limit and under the `run-with-timeout.js`
+  // wrapper in package.json.
+  globalTimeout: 1_500_000,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: FRONTEND_URL,
