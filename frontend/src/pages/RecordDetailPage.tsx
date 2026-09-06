@@ -120,7 +120,11 @@ export function RecordDetailPage() {
           </Card>
         </div>
 
-        <Card data-testid="record-detail-tracklist-card" padding="sm" className="lg:col-span-2">
+        <Card
+          data-testid="record-detail-tracklist-card"
+          padding="sm"
+          className="lg:col-span-2"
+        >
           <ReleaseTracklistSection tracklist={release.tracklist} />
         </Card>
 

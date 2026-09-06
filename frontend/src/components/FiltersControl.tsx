@@ -38,8 +38,12 @@ export function FiltersControl<T extends FilterValues>({
   onApply,
   onClear,
 }: FiltersControlProps<T>) {
-  const [selectedGenres, setSelectedGenres] = useState<string[]>(() => filters.genre ?? []);
-  const [selectedStyles, setSelectedStyles] = useState<string[]>(() => filters.style ?? []);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>(
+    () => filters.genre ?? [],
+  );
+  const [selectedStyles, setSelectedStyles] = useState<string[]>(
+    () => filters.style ?? [],
+  );
   const [selectedFormats, setSelectedFormats] = useState<string[]>(
     () => filters.format ?? [],
   );

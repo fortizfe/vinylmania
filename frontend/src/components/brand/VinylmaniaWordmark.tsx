@@ -9,7 +9,10 @@ interface VinylmaniaWordmarkProps {
 // `grunge` applies the shared VinylmaniaGrungeFilter's distressed effect —
 // large-format placements only (landing hero, general logo), per the
 // Clarifications session; header/landing-header lockups always pass false.
-export function VinylmaniaWordmark({ grunge = false, className }: VinylmaniaWordmarkProps) {
+export function VinylmaniaWordmark({
+  grunge = false,
+  className,
+}: VinylmaniaWordmarkProps) {
   return (
     <span
       className={clsx('font-display', className)}

@@ -54,7 +54,11 @@ describe('LoginCallbackPage', () => {
     renderCallback('?code=auth-code&state=abc');
 
     await waitFor(() => {
-      expect(completeSignIn).toHaveBeenCalledWith({ state: 'abc', code: 'auth-code', error: undefined });
+      expect(completeSignIn).toHaveBeenCalledWith({
+        state: 'abc',
+        code: 'auth-code',
+        error: undefined,
+      });
     });
     await waitFor(() => {
       expect(screen.getByTestId('app-probe')).toBeInTheDocument();
@@ -68,7 +72,11 @@ describe('LoginCallbackPage', () => {
     renderCallback('?error=access_denied&state=abc');
 
     await waitFor(() => {
-      expect(completeSignIn).toHaveBeenCalledWith({ state: 'abc', code: undefined, error: 'access_denied' });
+      expect(completeSignIn).toHaveBeenCalledWith({
+        state: 'abc',
+        code: undefined,
+        error: 'access_denied',
+      });
     });
     await waitFor(() => {
       expect(screen.getByTestId('landing-probe')).toBeInTheDocument();

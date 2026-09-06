@@ -264,7 +264,9 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     expect(
       screen.queryByRole('button', { name: /previous articles/i }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /next articles/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /next articles/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders articles from Reviews, Interviews, Articles, and Staff Picks together in the grid, filterable by category (feature 033 US1)', async () => {
@@ -392,8 +394,18 @@ describe('Dashboard page flow (feature 024, US1)', () => {
         },
       ],
       sourceStatuses: [
-        { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok', priority: true },
-        { sourceId: 'louder-sound', sourceName: 'Louder Sound', status: 'ok', priority: true },
+        {
+          sourceId: 'metal-injection',
+          sourceName: 'Metal Injection',
+          status: 'ok',
+          priority: true,
+        },
+        {
+          sourceId: 'louder-sound',
+          sourceName: 'Louder Sound',
+          status: 'ok',
+          priority: true,
+        },
         {
           sourceId: 'sample-source',
           sourceName: 'Sample Source',
@@ -431,14 +443,18 @@ describe('Dashboard page flow (feature 024, US1)', () => {
     });
 
     renderPage();
-    await waitFor(() => expect(screen.getByText('Metal Injection News')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('Metal Injection News')).toBeInTheDocument(),
+    );
 
     const user = userEvent.setup();
 
     // Source-only filter — now backed by a direct query to that source's feed.
     await user.click(screen.getByRole('button', { name: 'Louder Sound' }));
     await waitFor(() => expect(mockGetSourceFeed).toHaveBeenCalledWith('louder-sound'));
-    await waitFor(() => expect(screen.getByText('Louder Sound News')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('Louder Sound News')).toBeInTheDocument(),
+    );
     expect(screen.queryByText('Metal Injection News')).not.toBeInTheDocument();
     expect(screen.queryByText('Sample Source Review')).not.toBeInTheDocument();
 

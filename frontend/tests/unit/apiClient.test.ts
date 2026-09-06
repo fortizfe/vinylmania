@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, authorizedFetch, setUnauthorizedHandler } from '../../src/services/apiClient';
-import { clearSessionToken, getSessionToken, setSessionToken } from '../../src/services/sessionStore';
+import {
+  ApiError,
+  authorizedFetch,
+  setUnauthorizedHandler,
+} from '../../src/services/apiClient';
+import {
+  clearSessionToken,
+  getSessionToken,
+  setSessionToken,
+} from '../../src/services/sessionStore';
 
 const originalFetch = global.fetch;
 
@@ -17,7 +25,9 @@ describe('authorizedFetch', () => {
 
   it('attaches Authorization from the session store when a token is present', async () => {
     setSessionToken('stored-token');
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }) as unknown as typeof fetch;
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({}) }) as unknown as typeof fetch;
 
     await authorizedFetch('/api/library');
 
@@ -32,7 +42,9 @@ describe('authorizedFetch', () => {
   });
 
   it('sends no Authorization header when no token is stored', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }) as unknown as typeof fetch;
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({}) }) as unknown as typeof fetch;
 
     await authorizedFetch('/api/library');
 
@@ -47,7 +59,10 @@ describe('authorizedFetch', () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 401,
-      json: async () => ({ error: 'unauthorized', message: 'Sign-in required or session expired.' }),
+      json: async () => ({
+        error: 'unauthorized',
+        message: 'Sign-in required or session expired.',
+      }),
     }) as unknown as typeof fetch;
 
     await expect(authorizedFetch('/api/library')).rejects.toBeInstanceOf(ApiError);
@@ -65,11 +80,14 @@ describe('authorizedFetch', () => {
       status: 401,
       json: async () => ({
         error: 'discogs_link_invalid',
-        message: 'Your Discogs link is no longer valid. Please re-link your account from your profile.',
+        message:
+          'Your Discogs link is no longer valid. Please re-link your account from your profile.',
       }),
     }) as unknown as typeof fetch;
 
-    await expect(authorizedFetch('/api/discogs/releases/1')).rejects.toBeInstanceOf(ApiError);
+    await expect(authorizedFetch('/api/discogs/releases/1')).rejects.toBeInstanceOf(
+      ApiError,
+    );
 
     expect(getSessionToken()).toBe('stored-token');
     expect(handler).not.toHaveBeenCalled();

@@ -13,7 +13,12 @@ const paddingClasses: Record<NonNullable<CardProps['padding']>, string> = {
   md: 'p-6',
 };
 
-export function Card({ children, className, padding = 'md', 'data-testid': testId }: CardProps) {
+export function Card({
+  children,
+  className,
+  padding = 'md',
+  'data-testid': testId,
+}: CardProps) {
   return (
     <div
       data-testid={testId}

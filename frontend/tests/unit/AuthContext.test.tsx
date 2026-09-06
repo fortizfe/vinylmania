@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider, useAuth } from '../../src/auth/AuthContext';
-import { clearSessionToken, getSessionToken, setSessionToken } from '../../src/services/sessionStore';
+import {
+  clearSessionToken,
+  getSessionToken,
+  setSessionToken,
+} from '../../src/services/sessionStore';
 
 const originalFetch = global.fetch;
 const originalAssign = window.location.assign;
@@ -52,7 +56,9 @@ describe('AuthContext', () => {
       </AuthProvider>,
     );
 
-    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
+    await waitFor(() =>
+      expect(screen.getByTestId('user')).toHaveTextContent('anonymous'),
+    );
   });
 
   it('signIn() performs a full-page navigation to the backend authorize URL, not a fetch/SDK call', async () => {
@@ -61,7 +67,9 @@ describe('AuthContext', () => {
         <TestConsumer />
       </AuthProvider>,
     );
-    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
+    await waitFor(() =>
+      expect(screen.getByTestId('user')).toHaveTextContent('anonymous'),
+    );
 
     const user = userEvent.setup();
     await user.click(screen.getByText('sign-in'));
@@ -103,7 +111,9 @@ describe('AuthContext', () => {
       </AuthProvider>,
     );
 
-    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
+    await waitFor(() =>
+      expect(screen.getByTestId('user')).toHaveTextContent('anonymous'),
+    );
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -112,7 +122,11 @@ describe('AuthContext', () => {
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => PROFILE })
-      .mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) }) as unknown as typeof fetch;
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        json: async () => ({}),
+      }) as unknown as typeof fetch;
 
     render(
       <AuthProvider>
@@ -130,7 +144,9 @@ describe('AuthContext', () => {
       expect.stringContaining('/api/auth/session'),
       expect.objectContaining({ method: 'DELETE' }),
     );
-    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
+    await waitFor(() =>
+      expect(screen.getByTestId('user')).toHaveTextContent('anonymous'),
+    );
     expect(getSessionToken()).toBeNull();
   });
 
@@ -142,7 +158,10 @@ describe('AuthContext', () => {
       .mockResolvedValueOnce({
         ok: false,
         status: 401,
-        json: async () => ({ error: 'unauthorized', message: 'Sign-in required or session expired.' }),
+        json: async () => ({
+          error: 'unauthorized',
+          message: 'Sign-in required or session expired.',
+        }),
       }) as unknown as typeof fetch;
 
     render(
@@ -157,7 +176,9 @@ describe('AuthContext', () => {
       await authorizedFetch('/api/library').catch(() => undefined);
     });
 
-    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('anonymous'));
+    await waitFor(() =>
+      expect(screen.getByTestId('user')).toHaveTextContent('anonymous'),
+    );
   });
 
   it('exposes no signingIn state — that UX now lives on the login callback page, not AuthContext', () => {

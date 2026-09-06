@@ -49,7 +49,9 @@ export function SelectableListFilter({
 
   const slug = slugify(label);
   const visibleOptions = searchable
-    ? options.filter((option) => option.toLowerCase().includes(search.trim().toLowerCase()))
+    ? options.filter((option) =>
+        option.toLowerCase().includes(search.trim().toLowerCase()),
+      )
     : options;
 
   function toggleOption(option: string) {

@@ -68,7 +68,9 @@ describe('Sign-out flow (US3)', () => {
       await user.click(screen.getByRole('button', { name: /sign out/i }));
     });
 
-    await waitFor(() => expect(screen.getByTestId('landing-viewport')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId('landing-viewport')).toBeInTheDocument(),
+    );
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/auth/session'),
       expect.objectContaining({ method: 'DELETE' }),

@@ -7,10 +7,15 @@ import type { ThemePreference } from '../services/themePreferenceApi';
 // save is considered "ultimately failed" (FR-011).
 const RETRY_DELAYS_MS = [1000, 2000, 4000];
 
-export function useSetThemePreference(): UseMutationResult<void, unknown, ThemePreference> {
+export function useSetThemePreference(): UseMutationResult<
+  void,
+  unknown,
+  ThemePreference
+> {
   return useMutation({
     mutationFn: themePreferenceApi.setThemePreference,
     retry: RETRY_DELAYS_MS.length,
-    retryDelay: (attemptIndex) => RETRY_DELAYS_MS[attemptIndex] ?? RETRY_DELAYS_MS.at(-1)!,
+    retryDelay: (attemptIndex) =>
+      RETRY_DELAYS_MS[attemptIndex] ?? RETRY_DELAYS_MS.at(-1)!,
   });
 }

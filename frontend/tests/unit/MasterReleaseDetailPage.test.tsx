@@ -105,7 +105,9 @@ describe('MasterReleaseDetailPage', () => {
     await waitFor(() => expect(screen.getByText('Hybrid Theory')).toBeInTheDocument());
 
     expect(screen.getByTestId('master-detail-main-info-card')).toBeInTheDocument();
-    expect(screen.queryByTestId('master-detail-other-details-card')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('master-detail-other-details-card'),
+    ).not.toBeInTheDocument();
   });
 
   it('shows a not-found message when the master lookup fails', async () => {
@@ -132,12 +134,16 @@ describe('MasterReleaseDetailPage', () => {
     renderPage();
 
     await waitFor(() =>
-      expect(screen.getByText(/your discogs link is no longer valid/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/your discogs link is no longer valid/i),
+      ).toBeInTheDocument(),
     );
-    expect(screen.queryByText(/couldn.t find that master release/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/couldn.t find that master release/i),
+    ).not.toBeInTheDocument();
   });
 
-  it("shows the relink notice inline in the versions table when only that fetch fails with discogs_link_invalid, without hiding the rest of the page", async () => {
+  it('shows the relink notice inline in the versions table when only that fetch fails with discogs_link_invalid, without hiding the rest of the page', async () => {
     const { ApiError } = await import('../../src/services/apiClient');
     mockGetMasterRelease.mockResolvedValue(fullMaster);
     mockGetMasterReleaseVersions.mockRejectedValue(
@@ -148,7 +154,9 @@ describe('MasterReleaseDetailPage', () => {
 
     await waitFor(() => expect(screen.getByText('Hybrid Theory')).toBeInTheDocument());
     await waitFor(() =>
-      expect(screen.getByText(/your discogs link is no longer valid/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/your discogs link is no longer valid/i),
+      ).toBeInTheDocument(),
     );
   });
 });

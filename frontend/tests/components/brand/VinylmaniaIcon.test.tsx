@@ -38,9 +38,7 @@ describe('VinylmaniaIcon', () => {
   });
 
   it('accepts a passthrough className for responsive sizing overrides', () => {
-    const { container } = render(
-      <VinylmaniaIcon size={28} className="md:h-9 md:w-9" />,
-    );
+    const { container } = render(<VinylmaniaIcon size={28} className="md:h-9 md:w-9" />);
     const svg = container.querySelector('svg');
 
     expect(svg).toHaveClass('md:h-9');

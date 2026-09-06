@@ -9,7 +9,7 @@
 export const GENRE_OPTIONS: readonly string[] = [
   'Blues',
   'Brass & Military',
-  'Children\'s',
+  "Children's",
   'Classical',
   'Electronic',
   'Folk, World, & Country',

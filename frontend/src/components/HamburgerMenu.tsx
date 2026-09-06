@@ -58,7 +58,11 @@ export function HamburgerMenu({ onSignOut }: HamburgerMenuProps) {
               {link.label}
             </Link>
           ))}
-          <button type="button" onClick={handleSignOut} className={`${navRowClassName} text-left`}>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className={`${navRowClassName} text-left`}
+          >
             Sign out
           </button>
         </nav>
