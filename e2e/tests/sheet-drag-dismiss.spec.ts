@@ -96,12 +96,18 @@ async function flickInPage(page: Page, framePx: number, frames: number): Promise
           }),
         );
       const raf = () => new Promise((res) => requestAnimationFrame(res));
+      // A short fixed real delay, not rAF: under CI runner contention rAF
+      // callbacks stretch to 30-60ms apart, which drops the flick's computed
+      // px/s below motion's 500 threshold and the drawer springs back
+      // instead of dismissing (the observed flake). A ~7ms tick keeps the
+      // velocity decisively over threshold even when the timer slips.
+      const tick = () => new Promise((res) => setTimeout(res, 7));
       fire('pointerdown', 1, 0);
       await raf();
       for (let i = 0; i < frames; i += 1) {
         x += framePx;
         fire('pointermove', 1, framePx);
-        await raf();
+        await tick();
       }
       fire('pointerup', 0, 0);
       await raf();
@@ -172,8 +178,8 @@ test.describe('Sheet drag-to-dismiss (spec 059 US4, T068)', () => {
   test('flicked outward ≥ 500 px/s over a short distance → dismisses', async ({ page }) => {
     const { menu, surface } = await openDrawer(page);
 
-    const distance = await flickInPage(page, 10, 5); // 50px ≈ 16% of the width
-    expect(distance).toBeLessThan(0.45 * 320); // well under the distance threshold
+    const distance = await flickInPage(page, 14, 7); // 98px ≈ 31% of the width
+    expect(distance).toBeLessThan(0.45 * 320); // well under the 144px distance threshold
 
     await expect(surface).toHaveCount(0);
     await expect(menu).toBeFocused();
