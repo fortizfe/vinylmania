@@ -23,6 +23,14 @@ describe('HamburgerMenu', () => {
     expect(screen.queryByRole('link', { name: /my library/i })).not.toBeInTheDocument();
   });
 
+  it('the trigger inherits the shared pressed-state from Button (US1 T042)', () => {
+    renderMenu();
+
+    expect(screen.getByRole('button', { name: /menu/i }).className).toMatch(
+      /active:scale-\[0\.97\]/,
+    );
+  });
+
   it('opening the trigger does not itself navigate anywhere', async () => {
     const user = userEvent.setup();
     renderMenu();

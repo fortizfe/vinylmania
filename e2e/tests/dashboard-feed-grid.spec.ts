@@ -2,6 +2,12 @@ import { expect, Page, test } from '@playwright/test';
 
 import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
+import {
+  assertHeaderScrollEdge,
+  assertHeaderScrollEdgeInstant,
+} from '../helpers/scrollEdge';
+import { settleStatusFadeIn } from '../helpers/settleEntrance';
+import { assertDisplayHeadingTokens } from '../helpers/typography';
 
 function buildArticle(
   category: string,
@@ -360,6 +366,138 @@ test.describe('Dashboard responsive grid & new sources (feature 033)', () => {
   });
 });
 
+// Spec 059 — User Story 5 (FR-014 / FR-015, SC-007). Consistent interaction &
+// typography language on the authenticated dashboard shell: the app header's
+// scroll-edge treatment, the display-heading tokens on the placeholder-page
+// heading reachable from here, and the opacity-only status-banner entrance.
+test.describe('Dashboard consistent interaction & typography (spec 059 US5, T088)', () => {
+  async function loadDashboard(page: Page): Promise<void> {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.route('**/api/feeds/dashboard', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildDashboardResponse()),
+      });
+    });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await expect(page.getByTestId('feed-article-grid')).toBeVisible();
+  }
+
+  test('the app header shows the scroll-edge shadow only after scroll, with no layout shift (FR-014)', async ({
+    page,
+  }) => {
+    await loadDashboard(page);
+    await assertHeaderScrollEdge(page, page.getByRole('banner'), 'AppHeader');
+  });
+
+  test('under prefers-reduced-motion the app-header scroll-edge appears instantly', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await loadDashboard(page);
+
+    const header = page.getByRole('banner');
+    await assertHeaderScrollEdgeInstant(header, 'AppHeader');
+    await assertHeaderScrollEdge(page, header, 'AppHeader (reduced motion)');
+  });
+
+  test('the placeholder-page display heading carries the tracking-display / leading-display tokens (FR-015)', async ({
+    page,
+  }) => {
+    await loadDashboard(page);
+
+    // The "under construction" placeholder (`UnderConstruction`) renders the
+    // same `--font-display` h1 pattern the dashboard shell shares.
+    await page.goto('/app/wishlist');
+    const heading = page.getByRole('heading', { level: 1, name: /my wishlist/i });
+    await assertDisplayHeadingTokens(heading, 'UnderConstruction h1');
+  });
+
+  test('the feed-source status banner enters with an opacity-only fade — no transform, reduced-motion instant', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.route('**/api/feeds/dashboard', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          categories: [
+            {
+              category: 'News',
+              articles: [buildArticle('News', 'metal-injection', 'Metal Injection', 0, 0)],
+            },
+          ],
+          sourceStatuses: [
+            { sourceId: 'metal-injection', sourceName: 'Metal Injection', status: 'ok', priority: true },
+            { sourceId: 'metalsucks', sourceName: 'MetalSucks', status: 'unavailable', priority: true },
+          ],
+          generatedAt: '2026-07-08T00:00:00.000Z',
+        }),
+      });
+    });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    const banner = page.getByRole('status');
+    await expect(banner).toContainText('MetalSucks');
+    await expect(banner).toHaveClass(/status-fade-in/);
+
+    // The entrance animates opacity only — the element never carries a
+    // transform/translate/scale, and the `status-fade-in` keyframes touch
+    // only `opacity` (emil-design-eng — status messages don't move).
+    const entrance = await banner.evaluate((el) => {
+      const s = getComputedStyle(el);
+      let keyframeText = '';
+      for (const sheet of Array.from(document.styleSheets)) {
+        let rules: CSSRule[] = [];
+        try {
+          rules = Array.from(sheet.cssRules);
+        } catch {
+          continue;
+        }
+        for (const rule of rules) {
+          if (
+            rule.constructor.name === 'CSSKeyframesRule' &&
+            rule.cssText.includes('vinyl-status-fade-in')
+          ) {
+            keyframeText = rule.cssText;
+          }
+        }
+      }
+      return {
+        animationName: s.animationName,
+        transform: s.transform,
+        translate: s.translate,
+        scale: s.scale,
+        keyframeText,
+      };
+    });
+
+    expect(entrance.animationName).toContain('vinyl-status-fade-in');
+    expect(entrance.transform).toBe('none');
+    expect(['none', '']).toContain(entrance.translate);
+    expect(['none', '']).toContain(entrance.scale);
+    expect(entrance.keyframeText).toMatch(/opacity/);
+    expect(entrance.keyframeText).not.toMatch(/transform|translate|scale/);
+
+    // Reduced motion: the fade collapses to instant via the global guard.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const reducedDuration = await banner.evaluate(
+      (el) => getComputedStyle(el).animationDuration,
+    );
+    const maxSeconds = Math.max(
+      ...reducedDuration.split(',').map((part) => Number.parseFloat(part) || 0),
+    );
+    expect(
+      maxSeconds,
+      `status-fade-in not collapsed under reduced motion (animation-duration ${reducedDuration})`,
+    ).toBeLessThanOrEqual(0.005);
+  });
+});
+
 test.describe('Dashboard WCAG 2.1 AA automated scan (spec 058, US1)', () => {
   for (const theme of ['light', 'dark'] as const) {
     test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
@@ -368,10 +506,16 @@ test.describe('Dashboard WCAG 2.1 AA automated scan (spec 058, US1)', () => {
       await page.emulateMedia({ colorScheme: theme });
       await page.setViewportSize({ width: 1280, height: 800 });
       await page.route('**/api/feeds/dashboard', async (route) => {
+        // One source unavailable so the `FeedSourceStatusBanner`
+        // (`.status-fade-in`) renders and is covered by this scan.
+        const response = buildDashboardResponse();
+        response.sourceStatuses = response.sourceStatuses.map((source, index) =>
+          index === 0 ? { ...source, status: 'unavailable' } : source,
+        );
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(buildDashboardResponse()),
+          body: JSON.stringify(response),
         });
       });
 
@@ -380,6 +524,11 @@ test.describe('Dashboard WCAG 2.1 AA automated scan (spec 058, US1)', () => {
 
       const grid = page.getByTestId('feed-article-grid');
       await expect(grid).toBeVisible();
+      await expect(page.getByRole('status')).toContainText('unavailable');
+
+      // The banner's 200 ms opacity entrance would otherwise be folded into
+      // axe's contrast maths mid-fade (see `settleStatusFadeIn`).
+      await settleStatusFadeIn(page);
 
       const seriousOrCritical = await runAxeScan(page);
 

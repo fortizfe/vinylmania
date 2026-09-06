@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AppHeader } from '../../src/components/AppHeader';
 
@@ -43,6 +43,43 @@ describe('AppHeader', () => {
     expect(header).toHaveClass('top-0');
     expect(header).toHaveClass('bg-white');
     expect(header).toHaveClass('dark:bg-surface-raised');
+  });
+
+  describe('scroll-edge treatment (spec 059 US5 — T084)', () => {
+    afterEach(() => {
+      Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+      window.dispatchEvent(new Event('scroll'));
+    });
+
+    it('has no permanent hard divider and animates the edge on a motion token', () => {
+      renderHeader();
+
+      const header = screen.getByRole('banner');
+      // The hard 1px bottom border is gone (apple-design §12).
+      expect(header.className).not.toMatch(/border-b/);
+      expect(header.className).not.toMatch(/border-stone-200/);
+      // The edge shadow fades in/out on the shared fade token — no ad-hoc timing.
+      expect(header.className).toMatch(/transition-shadow/);
+      expect(header.className).toMatch(/duration-\(--motion-duration-fade\)/);
+    });
+
+    it('shows the edge shadow only once content has scrolled under it', () => {
+      renderHeader();
+      const header = screen.getByRole('banner');
+      expect(header).not.toHaveClass('header-scroll-edge');
+
+      act(() => {
+        Object.defineProperty(window, 'scrollY', { value: 120, configurable: true });
+        window.dispatchEvent(new Event('scroll'));
+      });
+      expect(header).toHaveClass('header-scroll-edge');
+
+      act(() => {
+        Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+        window.dispatchEvent(new Event('scroll'));
+      });
+      expect(header).not.toHaveClass('header-scroll-edge');
+    });
   });
 
   describe('brand mark (feature 034)', () => {

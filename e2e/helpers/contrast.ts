@@ -73,6 +73,98 @@ export async function getResolvedComputedStyle(
   throw new Error(`Computed ${property} never resolved to a non-empty value`);
 }
 
+/**
+ * Alpha channel (0–1) of any CSS color string, resolved through the browser.
+ * `rgb(...)` / named / hex → 1; `rgba(r,g,b,a)` / `color(... / a)` → a.
+ */
+export async function colorAlpha(page: Page, cssColor: string): Promise<number> {
+  return page.evaluate((color) => {
+    const probe = document.createElement('span');
+    probe.style.color = color;
+    document.body.appendChild(probe);
+    const resolved = getComputedStyle(probe).color;
+    probe.remove();
+    const match = resolved.match(/rgba?\(([^)]+)\)/);
+    if (!match) return 1;
+    const parts = match[1].split(/[,/]/).map((p) => Number.parseFloat(p.trim()));
+    return parts.length >= 4 && !Number.isNaN(parts[3]) ? parts[3] : 1;
+  }, cssColor);
+}
+
+/**
+ * Spec 059 US3 / T061 — "over-blur worst-case" overlay content contrast.
+ *
+ * FR-009: every text string and control rendered on an overlay MUST meet
+ * WCAG 2.1 AA even when the scrim behind it is blurring busy cover art.
+ * That guarantee holds only because overlay content sits on the *opaque*
+ * `.overlay-surface` (Modal's `<Card>`: `bg-stone-50` / `dark:bg-surface-raised`),
+ * never on the translucent scrim (apple-design §12 — "no two stacked
+ * translucent layers").
+ *
+ * This helper enforces exactly that invariant regardless of what imagery is
+ * behind the overlay:
+ *   1. resolves `.overlay-surface`'s own background and asserts it is fully
+ *      opaque — content is never measured against, nor allowed to depend on,
+ *      the scrim;
+ *   2. every visible text node on the surface is >= 4.5:1 against it;
+ *   3. every `<button>` control boundary on the surface is >= 3:1 against it.
+ */
+export async function assertOverlayContentContrast(
+  page: Page,
+  surfaceLocator: Locator,
+  label: string,
+): Promise<void> {
+  const surfaceBg = await getResolvedComputedStyle(surfaceLocator, 'backgroundColor');
+  const alpha = await colorAlpha(page, surfaceBg);
+  expect(
+    alpha,
+    `${label}: overlay surface background ${surfaceBg} is not opaque (alpha ${alpha}) — overlay content would sit on a translucent layer over the blurred scrim (apple-design §12, FR-009)`,
+  ).toBeGreaterThanOrEqual(0.99);
+
+  const surfaceRgb = await toRgb(page, surfaceBg);
+
+  const textColors: string[] = await surfaceLocator.evaluate((root) => {
+    const seen = new Set<string>();
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = (node.textContent ?? '').trim();
+      const el = node.parentElement;
+      if (!text || !el) continue;
+      const style = getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      if (style.visibility === 'hidden' || style.display === 'none') continue;
+      if (rect.width <= 0 || rect.height <= 0) continue;
+      seen.add(style.color);
+    }
+    return Array.from(seen);
+  });
+
+  expect(
+    textColors.length,
+    `${label}: no visible text found on the overlay surface to measure`,
+  ).toBeGreaterThan(0);
+
+  for (const color of textColors) {
+    const fg = await toRgb(page, color);
+    const ratio = getContrastRatio(fg, surfaceRgb);
+    expect(
+      ratio,
+      `${label}: overlay text ${color} on opaque surface ${surfaceBg} is ${ratio.toFixed(2)}:1 (< ${WCAG_AA_NORMAL_TEXT_RATIO}:1)`,
+    ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT_RATIO);
+  }
+
+  const controls = surfaceLocator.locator('button:visible');
+  const controlCount = await controls.count();
+  for (let i = 0; i < controlCount; i += 1) {
+    await assertUiComponentContrast(
+      page,
+      controls.nth(i),
+      surfaceLocator,
+      `${label}: control #${i + 1} boundary`,
+    );
+  }
+}
+
 export async function assertReadableContrast(page: Page, locator: Locator, label: string) {
   const [textColor, backgroundColor] = await Promise.all([
     getResolvedComputedStyle(locator, 'color'),

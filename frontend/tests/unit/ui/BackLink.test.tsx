@@ -35,4 +35,17 @@ describe('BackLink', () => {
 
     expect(screen.getByRole('link', { name: /back/i }).className).toMatch(/min-h-11/);
   });
+
+  it('nudges toward the chevron on press and adopts the shared focusRing (US1)', () => {
+    render(
+      <MemoryRouter>
+        <BackLink to="/app/library" />
+      </MemoryRouter>,
+    );
+
+    const link = screen.getByRole('link', { name: /back/i });
+    expect(link.className).toMatch(/active:-translate-x-0\.5/);
+    expect(link.className).toMatch(/motion-reduce:active:translate-x-0/);
+    expect(link.className).toContain('focus-visible:ring-primary');
+  });
 });

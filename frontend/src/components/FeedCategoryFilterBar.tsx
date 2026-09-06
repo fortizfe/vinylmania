@@ -1,13 +1,19 @@
 import clsx from 'clsx';
 
+import { focusRing } from './ui/focusRing';
+import { pressable } from './ui/press';
+
 interface FeedCategoryFilterBarProps {
   categories: string[];
   selectedCategory: string | null;
   onSelectCategory: (category: string | null) => void;
 }
 
-const baseButtonClassName =
-  'flex min-h-11 min-w-11 items-center justify-center rounded-full px-3 py-1 text-sm font-medium transition-colors';
+const baseButtonClassName = clsx(
+  'flex min-h-11 min-w-11 items-center justify-center rounded-full px-3 py-1 text-sm font-medium',
+  focusRing,
+  pressable,
+);
 const activeClassName = 'bg-primary text-white';
 const inactiveClassName =
   'bg-stone-100 text-stone-700 hover:bg-stone-200 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800';

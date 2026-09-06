@@ -1,6 +1,9 @@
 import type { InputHTMLAttributes } from 'react';
 import clsx from 'clsx';
 
+import { focusRing } from './focusRing';
+import { pressableRow } from './press';
+
 interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label: string;
   id: string;
@@ -8,7 +11,10 @@ interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'typ
 
 export function Checkbox({ label, id, className, ...props }: CheckboxProps) {
   return (
-    <div className="flex min-h-11 items-center gap-2">
+    // Row-level press feedback: a brightness nudge only (no scale — a dense
+    // filter row scaling reads as jitter), suppressed under reduced motion
+    // by the global timing kill (spec 059 US1 / audit).
+    <div className={clsx('flex min-h-11 items-center gap-2 rounded-md', pressableRow)}>
       <input
         id={id}
         type="checkbox"
@@ -31,7 +37,8 @@ export function Checkbox({ label, id, className, ...props }: CheckboxProps) {
           // accessible outcome there (the native OS checkbox chrome is
           // reliably visible against light surfaces by platform convention)
           // — see specs/058-theme-wcag-aa-refactor (T028 finding #10).
-          'h-4 w-4 rounded border-stone-300 text-primary focus:ring-primary dark:border-stone-800 dark:bg-stone-300',
+          'h-4 w-4 rounded border-stone-300 text-primary dark:border-stone-800 dark:bg-stone-300',
+          focusRing,
           className,
         )}
       />

@@ -1,3 +1,8 @@
+import clsx from 'clsx';
+
+import { focusRing } from './focusRing';
+import { pressable } from './press';
+
 interface StarRatingProps {
   /** Current rating 0–5; 0 = unrated. */
   value: number;
@@ -27,27 +32,23 @@ export function StarRating({ value, onChange, disabled = false }: StarRatingProp
             aria-pressed={filled}
             disabled={disabled}
             onClick={() => handleClick(star)}
-            className={[
-              // A raw `outline-primary` here previously measured as low as
-              // 1.56:1 (light) / 2.57:1 (dark) against the app shell in
-              // spec 058's WCAG contrast audit — not because indigo lacks
-              // contrast (it clears both easily), but because this
-              // element's `transition-colors` includes `outline-color`, and
-              // the contrast helper reads `getComputedStyle` synchronously
-              // right after `.focus()`, mid-transition, capturing the
-              // *pre*-focus outline-color (which resolves to `currentColor`,
-              // i.e. this button's own near-invisible unfilled-star gray).
-              // The shared `ring-*` focus pattern used by ThemeToggle/
-              // ViewModeToggle renders as a `box-shadow`, which isn't in
-              // `transition-colors`' property list, so it appears
-              // immediately with no such race — reusing it here sidesteps
-              // the issue instead of fighting the transition.
-              'flex min-h-11 min-w-11 items-center justify-center rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+            className={clsx(
+              // `focusRing` (shared box-shadow ring) instead of a raw
+              // `outline-primary`: the old outline sat in `transition-colors`'
+              // property list and the spec-058 contrast helper read it
+              // mid-transition as this button's near-invisible unfilled-star
+              // gray (1.56:1 light / 2.57:1 dark). A box-shadow ring is not in
+              // any transition list, so it resolves immediately — see
+              // focusRing.ts. `pressable` adds the per-star press scale and
+              // owns the `transform,filter,color,…` transition.
+              'flex min-h-11 min-w-11 items-center justify-center rounded',
+              focusRing,
+              pressable,
               disabled
                 ? 'cursor-not-allowed opacity-40'
                 : 'cursor-pointer hover:text-accent',
               filled ? 'text-accent' : 'text-stone-300 dark:text-stone-600',
-            ].join(' ')}
+            )}
           >
             <svg
               viewBox="0 0 20 20"

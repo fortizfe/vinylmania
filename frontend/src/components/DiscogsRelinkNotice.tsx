@@ -17,7 +17,9 @@ const DEFAULT_MESSAGE =
  * to the pre-existing "add to library" gate error, per the Constitution's
  * "extract once a pattern repeats" rule.
  */
-export function DiscogsRelinkNotice({ message = DEFAULT_MESSAGE }: DiscogsRelinkNoticeProps) {
+export function DiscogsRelinkNotice({
+  message = DEFAULT_MESSAGE,
+}: DiscogsRelinkNoticeProps) {
   return (
     <Card>
       <p className="text-stone-700 dark:text-stone-300">{message}</p>

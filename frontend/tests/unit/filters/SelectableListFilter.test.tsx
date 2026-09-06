@@ -71,6 +71,18 @@ describe('SelectableListFilter (feature 038, US1)', () => {
     expect(within(dialog).getByLabelText('CD')).not.toBeChecked();
   });
 
+  it('each selectable row carries the shared row press affordance (US1 multi-select-list)', async () => {
+    const user = userEvent.setup();
+    render(
+      <SelectableListFilter label="Format" options={OPTIONS} value={[]} onChange={vi.fn()} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /^format$/i }));
+    const dialog = screen.getByRole('dialog');
+    const row = within(dialog).getByLabelText('Vinyl').closest('div');
+    expect(row?.className).toMatch(/active:brightness-95/);
+  });
+
   it('calls onChange with the toggled option when a checkbox is clicked', async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();

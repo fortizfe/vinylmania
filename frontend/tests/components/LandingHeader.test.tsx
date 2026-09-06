@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { LandingHeader } from '../../src/components/LandingHeader';
 
@@ -19,6 +19,29 @@ describe('LandingHeader', () => {
     const header = screen.getByRole('banner');
     expect(header.className).toMatch(/sticky/);
     expect(header.className).toMatch(/top-0/);
+  });
+
+  describe('scroll-edge treatment (spec 059 US5 — T084)', () => {
+    afterEach(() => {
+      Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+      window.dispatchEvent(new Event('scroll'));
+    });
+
+    it('drops the hard divider for a token-timed edge shadow that appears on scroll', () => {
+      render(<LandingHeader onClick={() => undefined} />);
+
+      const header = screen.getByRole('banner');
+      expect(header.className).not.toMatch(/border-b/);
+      expect(header.className).toMatch(/transition-shadow/);
+      expect(header.className).toMatch(/duration-\(--motion-duration-fade\)/);
+      expect(header).not.toHaveClass('header-scroll-edge');
+
+      act(() => {
+        Object.defineProperty(window, 'scrollY', { value: 120, configurable: true });
+        window.dispatchEvent(new Event('scroll'));
+      });
+      expect(header).toHaveClass('header-scroll-edge');
+    });
   });
 
   it('renders no navigation or anchor links', () => {

@@ -16,7 +16,7 @@ export function FeedSourceStatusBanner({ sourceStatuses }: FeedSourceStatusBanne
   return (
     <p
       role="status"
-      className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200"
+      className="status-fade-in rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200"
     >
       {names} {unavailable.length === 1 ? 'is' : 'are'} temporarily unavailable — showing
       the rest of the news for now.

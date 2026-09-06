@@ -75,6 +75,14 @@ describe('SearchResultCard', () => {
 
       expect(screen.getByRole('link')).toHaveTextContent('Kind Of Blue');
     });
+
+    it('gives the card link a card press affordance (US1)', () => {
+      renderCard(baseResult);
+
+      const link = screen.getByRole('link');
+      expect(link.className).toMatch(/active:scale-\[0\.99\]/);
+      expect(link.className).toMatch(/motion-reduce:active:scale-100/);
+    });
   });
 
   describe('grouped (master release) results (feature 026, US1)', () => {

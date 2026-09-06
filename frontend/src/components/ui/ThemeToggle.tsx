@@ -1,6 +1,9 @@
 import clsx from 'clsx';
 
+import { m, spring } from '../../motion';
 import type { Theme } from '../../theme/ThemeContext';
+import { focusRing } from './focusRing';
+import { pressable } from './press';
 
 interface ThemeToggleProps {
   theme: Theme;
@@ -63,7 +66,14 @@ export function ThemeToggle({ theme, onToggle, className }: ThemeToggleProps) {
       aria-label="Dark mode"
       onClick={onToggle}
       className={clsx(
-        'relative inline-flex min-h-11 h-9 w-16 shrink-0 items-center overflow-hidden rounded-full border transition-colors duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+        // `pressable` owns the track's `transform,filter,color,border-color`
+        // transition (tokenized 130ms/ease-out) and the press scale. The
+        // knob translate rides `spring.default` (US2); the sky/stars
+        // crossfade uses the shared `--motion-duration-fade` + `ease-out`
+        // tokens. `focusRing` is the shared indicator.
+        'relative inline-flex min-h-11 h-9 w-16 shrink-0 items-center overflow-hidden rounded-full border',
+        focusRing,
+        pressable,
         // Light-state border is sky-600, not the sky-300 used in the fill
         // gradient — sky-300 measured only 1.60:1 against this switch's
         // `bg-stone-50` row surface (spec 058 WCAG audit), under the 3:1
@@ -80,7 +90,7 @@ export function ThemeToggle({ theme, onToggle, className }: ThemeToggleProps) {
       {/* Decorative sky elements (clouds / stars) */}
       <span
         className={clsx(
-          'pointer-events-none absolute inset-0 transition-opacity duration-300',
+          'pointer-events-none absolute inset-0 transition-opacity duration-(--motion-duration-fade) ease-out',
           isDark ? 'opacity-0' : 'opacity-100',
         )}
         aria-hidden="true"
@@ -90,7 +100,7 @@ export function ThemeToggle({ theme, onToggle, className }: ThemeToggleProps) {
       </span>
       <span
         className={clsx(
-          'pointer-events-none absolute inset-0 transition-opacity duration-300',
+          'pointer-events-none absolute inset-0 transition-opacity duration-(--motion-duration-fade) ease-out',
           isDark ? 'opacity-100' : 'opacity-0',
         )}
         aria-hidden="true"
@@ -100,14 +110,17 @@ export function ThemeToggle({ theme, onToggle, className }: ThemeToggleProps) {
         <span className="absolute left-3 top-6 h-px w-px rounded-full bg-white" />
       </span>
 
-      <span
+      <m.span
+        initial={false}
+        animate={{ x: isDark ? 32 : 4 }}
+        transition={spring.default}
         className={clsx(
-          'relative z-10 flex h-7 w-7 items-center justify-center rounded-full shadow-md transition-transform duration-300 ease-in-out',
-          isDark ? 'translate-x-8 bg-stone-700' : 'translate-x-1 bg-white',
+          'relative z-10 flex h-7 w-7 items-center justify-center rounded-full shadow-md',
+          isDark ? 'bg-stone-700' : 'bg-white',
         )}
       >
         {isDark ? <MoonArtwork /> : <SunArtwork />}
-      </span>
+      </m.span>
     </button>
   );
 }

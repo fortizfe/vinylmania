@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 
 import { runAxeScan } from '../helpers/axe';
+import {
+  assertHeaderScrollEdge,
+  assertHeaderScrollEdgeInstant,
+} from '../helpers/scrollEdge';
+import { assertDisplayHeadingTokens } from '../helpers/typography';
 
 // Unauthenticated landing page: dual layout + 44px touch targets
 // (spec 035, Acceptance Scenarios 1-2). No sign-in needed — this is the
@@ -82,6 +87,44 @@ test.describe('Landing page responsive layout (spec 035, US1)', () => {
 
     // Confirm no navigation/reload happened across the resizes.
     await expect(page).toHaveURL(/\/$/);
+  });
+});
+
+test.describe('Landing page consistent typography & scroll-edge header (spec 059 US5, T088)', () => {
+  test('the pillar-section display heading carries the tracking-display / leading-display tokens (FR-015)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+
+    const pillarGrid = page.getByTestId('landing-pillar-grid');
+    await expect(pillarGrid).toBeVisible();
+
+    const heading = pillarGrid.getByRole('heading', { level: 2 }).first();
+    await assertDisplayHeadingTokens(heading, 'LandingPillarSection h2');
+  });
+
+  test('the sticky header shows a soft scroll-edge shadow only after content scrolls under it, with no layout shift (FR-014)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/');
+
+    await assertHeaderScrollEdge(page, page.getByRole('banner'), 'LandingHeader');
+  });
+
+  test('under prefers-reduced-motion the scroll-edge appears instantly (no fade)', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/');
+
+    const header = page.getByRole('banner');
+    await expect(header).toBeVisible();
+    await assertHeaderScrollEdgeInstant(header, 'LandingHeader');
+    // The edge still toggles — only the transition is neutralised.
+    await assertHeaderScrollEdge(page, header, 'LandingHeader (reduced motion)');
   });
 });
 

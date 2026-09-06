@@ -38,6 +38,14 @@ describe('HeaderSearchBox', () => {
     ).toBeInTheDocument();
   });
 
+  it('the submit control inherits the shared pressed-state from Button (US1)', () => {
+    renderBox();
+
+    expect(screen.getByRole('button', { name: /search/i }).className).toMatch(
+      /active:scale-\[0\.97\]/,
+    );
+  });
+
   it('navigates to the search results page with the trimmed query on submit', async () => {
     const user = userEvent.setup();
     renderBox(['/app']);

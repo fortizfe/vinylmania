@@ -46,4 +46,14 @@ describe('Checkbox', () => {
     const row = screen.getByLabelText('Vinyl').closest('div');
     expect(row?.className).toMatch(/min-h-11/);
   });
+
+  it('gives the row a pressed-state affordance (US1)', () => {
+    render(
+      <Checkbox id="format-vinyl" label="Vinyl" checked={false} onChange={() => {}} />,
+    );
+
+    const row = screen.getByLabelText('Vinyl').closest('div');
+    expect(row?.className).toMatch(/active:brightness-95/);
+    expect(row?.className).toMatch(/duration-\(--motion-duration-press\)/);
+  });
 });

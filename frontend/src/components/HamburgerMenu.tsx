@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 
 import { NAV_LINKS } from './headerNavLinks';
 import { Button } from './ui/Button';
+import { focusRing } from './ui/focusRing';
 import { Modal } from './ui/Modal';
+import { pressableRow } from './ui/press';
 
 function HamburgerIcon() {
   return (
@@ -23,8 +25,7 @@ interface HamburgerMenuProps {
   onSignOut: () => void;
 }
 
-const navRowClassName =
-  'flex min-h-11 items-center rounded-xl px-3 py-2 font-medium text-stone-900 no-underline hover:bg-stone-100 dark:text-stone-100 dark:hover:bg-stone-900';
+const navRowClassName = `flex min-h-11 items-center rounded-xl px-3 py-2 font-medium text-stone-900 no-underline hover:bg-stone-100 dark:text-stone-100 dark:hover:bg-stone-900 ${pressableRow} ${focusRing}`;
 
 export function HamburgerMenu({ onSignOut }: HamburgerMenuProps) {
   const [open, setOpen] = useState(false);

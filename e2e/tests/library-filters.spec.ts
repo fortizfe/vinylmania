@@ -3,6 +3,14 @@ import { expect, type Page, test } from '@playwright/test';
 import { runAxeScan } from '../helpers/axe';
 import { assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
+import {
+  collectMotionFrames,
+  connectedFrames,
+  expectGradualMotion,
+  expectNoTransformMotion,
+  startMotionRecorder,
+} from '../helpers/motion';
+import { settleEntranceOpacity } from '../helpers/settleEntrance';
 
 function record(
   id: string,
@@ -340,6 +348,64 @@ test.describe('Filters behave identically in list mode (feature 052, US2)', () =
   });
 });
 
+test.describe('Filter panel disclosure motion (spec 059 US2)', () => {
+  async function goToLibrary(page: Page) {
+    await page.route('**/api/library*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [record('entry-1', 'Stockholm')],
+          page: 1,
+          pageSize: 20,
+          totalItems: 1,
+        }),
+      });
+    });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByText('Stockholm')).toBeVisible();
+  }
+
+  test('expanding animates the body open (height + opacity) over several frames', async ({
+    page,
+  }) => {
+    await goToLibrary(page);
+
+    await startMotionRecorder(page, { body: '[data-testid="collapsible-filter-body"]' }, 900);
+    await page.getByRole('button', { name: /^filters$/i }).click();
+    const frames = await collectMotionFrames(page);
+
+    await expect(page.getByTestId('collapsible-filter-body')).toHaveAttribute(
+      'data-reduced-motion',
+      'false',
+    );
+    expectGradualMotion(frames.body, 'CollapsibleFilterPanel disclosure (library)');
+  });
+
+  test('under prefers-reduced-motion the body reveals with no transform (opacity only)', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await goToLibrary(page);
+
+    await startMotionRecorder(page, { body: '[data-testid="collapsible-filter-body"]' }, 700);
+    await page.getByRole('button', { name: /^filters$/i }).click();
+    const frames = await collectMotionFrames(page);
+
+    await expect(page.getByTestId('collapsible-filter-body')).toHaveAttribute(
+      'data-reduced-motion',
+      'true',
+    );
+    // SC-004: no translate/scale from the disclosure — a brief opacity change
+    // is the only motion permitted.
+    expectNoTransformMotion(frames.body, 'CollapsibleFilterPanel disclosure (reduced motion)');
+    const seen = connectedFrames(frames.body);
+    expect(Number.parseFloat(seen.at(-1)!.opacity)).toBeGreaterThan(0.99);
+  });
+});
+
 test.describe('Library filters WCAG 2.1 AA automated scan (spec 058, US1)', () => {
   for (const theme of ['light', 'dark'] as const) {
     test(`has no automatically detectable WCAG 2.1 AA violations in ${theme} mode`, async ({
@@ -364,6 +430,11 @@ test.describe('Library filters WCAG 2.1 AA automated scan (spec 058, US1)', () =
       await page.goto('/app/library');
       await expect(page.getByText('Stockholm')).toBeVisible();
       await expandFilters(page);
+
+      // The US2 disclosure animates the panel body's opacity 0→1; axe folds a
+      // mid-animation ancestor opacity into its contrast maths and reports a
+      // false-positive `color-contrast`. Wait for the resting state.
+      await settleEntranceOpacity(page, '[data-testid="collapsible-filter-body"]');
 
       const seriousOrCritical = await runAxeScan(page);
 

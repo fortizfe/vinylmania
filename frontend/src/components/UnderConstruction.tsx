@@ -7,7 +7,7 @@ interface UnderConstructionProps {
 export function UnderConstruction({ title }: UnderConstructionProps) {
   return (
     <Card className="flex flex-col gap-2">
-      <h1 className="font-display text-2xl leading-tight text-stone-900 dark:text-stone-100">
+      <h1 className="font-display text-2xl leading-display tracking-display text-stone-900 dark:text-stone-100">
         {title}
       </h1>
       <p className="text-stone-500 dark:text-stone-400">

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { runAxeScan } from '../helpers/axe';
-import { assertUiComponentContrast } from '../helpers/contrast';
+import { assertUiComponentContrast, colorAlpha } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const RELEASE_ID = 1;
@@ -207,6 +207,86 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );
     expect(hasHorizontalScroll).toBe(false);
+  });
+});
+
+test.describe('Fullscreen gallery overlay depth & material (spec 059 US3, T066)', () => {
+  const multiImageRelease = {
+    ...releaseResponse,
+    images: [
+      { url: 'https://example.com/cover-front.jpg', imageType: 'primary' },
+      { url: 'https://example.com/cover-back.jpg', imageType: 'secondary' },
+      { url: 'https://example.com/cover-sleeve.jpg', imageType: 'secondary' },
+    ],
+  };
+
+  async function openViewer(page: import('@playwright/test').Page) {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.route(`**/api/discogs/releases/${RELEASE_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(multiImageRelease),
+      });
+    });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/releases/${RELEASE_ID}`);
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+
+    await page.getByRole('button', { name: /view stockholm fullscreen/i }).click();
+    const scrim = page.getByTestId('gallery-fullscreen-viewer');
+    await expect(scrim).toBeVisible();
+    return scrim;
+  }
+
+  test('the viewer scrim dims + blurs the page and the surface reads as a floating layer', async ({
+    page,
+  }) => {
+    const scrim = await openViewer(page);
+
+    const material = await scrim.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return {
+        backgroundColor: s.backgroundColor,
+        backdropFilter:
+          s.backdropFilter ||
+          (s as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter ||
+          'none',
+      };
+    });
+
+    // Immersive near-opaque dim (kept at bg-stone-950/90 through the Overlay
+    // rehome — FR-007 / audit US3 row).
+    const alpha = await colorAlpha(page, material.backgroundColor);
+    expect(
+      alpha,
+      `gallery scrim ${material.backgroundColor} is not a near-opaque dim (alpha ${alpha})`,
+    ).toBeGreaterThanOrEqual(0.8);
+
+    // Blur is applied where supported; on a build without backdrop-filter the
+    // @supports fallback drops it and raises the dim instead — both acceptable.
+    const blurs = /blur\(\s*([1-9]\d*(?:\.\d+)?|0?\.\d*[1-9])/.test(material.backdropFilter);
+    expect(
+      blurs || alpha >= 0.8,
+      `gallery scrim neither blurs nor solid-dims (backdrop-filter ${material.backdropFilter})`,
+    ).toBe(true);
+
+    // The surface is the design-system floating layer.
+    await expect(scrim.locator('[role="dialog"].overlay-surface')).toHaveCount(1);
+    await expect(scrim.locator('[role="dialog"]')).toHaveAttribute('aria-modal', 'true');
+  });
+
+  test('the viewer close control meets WCAG UI-component contrast against the scrim', async ({
+    page,
+  }) => {
+    const scrim = await openViewer(page);
+    await assertUiComponentContrast(
+      page,
+      page.getByTestId('gallery-fullscreen-close'),
+      scrim,
+      'Gallery fullscreen close control vs the viewer scrim',
+    );
   });
 });
 

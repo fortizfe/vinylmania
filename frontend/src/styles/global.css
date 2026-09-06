@@ -113,3 +113,161 @@
     display: none;
   }
 }
+
+/*
+ * Motion & display-typography tokens (feature 059 — Apple HIG component
+ * polish). The easings are exposed as Tailwind `ease-*` utilities; the
+ * durations back both CSS-only transitions (press, fades, disclosure) and
+ * the JS spring layer in `frontend/src/motion/`. Every value here is
+ * mirrored 1:1 by a typed constant in `frontend/src/motion/tokens.ts` — a
+ * Vitest parity test (`tests/unit/motion/tokens.test.ts`) fails if they
+ * drift. Exact values come from specs/059-apple-hig-component-polish/
+ * research.md R2 (motion) and R6 (typography); do not hand-tune them here.
+ */
+@theme {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --motion-duration-press: 130ms;
+  --motion-duration-fade: 200ms;
+  --motion-duration-collapse: 200ms;
+  --motion-duration-drawer: 250ms;
+
+  /*
+   * Size-specific tracking/leading for the `--font-display` (Anton)
+   * headings only — negative tracking + tight leading as large display
+   * text grows (apple-design §15). Body text keeps browser defaults.
+   */
+  --tracking-display: -0.02em;
+  --leading-display: 1.05;
+}
+
+/*
+ * User preference media queries (FR-005). `prefers-reduced-motion` is the
+ * global vestibular-safety guard — it neutralizes CSS animation/transition
+ * timing everywhere so nothing moves, while final states still apply
+ * instantly (the JS spring layer additionally honors
+ * `MotionConfig reducedMotion="user"`).
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/*
+ * ── Overlay material fallbacks (feature 059 US3 — FR-007, research.md R4,
+ * data-model.md §3 "Elevation / Material Treatment") ────────────────────────
+ *
+ * Justified custom CSS: `motion/Overlay` renders the scrim with an *animated
+ * inline* `backdrop-filter` (blur + saturate ramp in with the surface scale —
+ * apple-design §12 "materialize, don't just fade"). These three blocks are
+ * the only way to degrade that inline material per user preference — Tailwind
+ * has no variant for "unsupported / reduced-transparency / more-contrast".
+ * `.overlay-scrim` is unlayered so it beats the `bg-stone-950/*` utility
+ * regardless of source order; `!important` beats the component's inline
+ * `backdropFilter`. Overlay text/controls always sit on the opaque `<Card>`
+ * surface, so spec-058 contrast pairings hold in every branch (FR-009).
+ */
+
+/* No `backdrop-filter` support at all → solid-dim fallback, no blur. The
+ * inline `backdropFilter` is simply ignored by these browsers; we only need
+ * to raise the dim so the layer still reads as a backdrop. */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .overlay-scrim {
+    background-color: rgb(12 10 9 / 0.8);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* User asked for less transparency → near-solid scrim, blur dropped. */
+@media (prefers-reduced-transparency: reduce) {
+  .overlay-scrim {
+    background-color: rgb(12 10 9 / 0.95) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* User asked for more contrast → fully solid scrim + a defined 1px border on
+ * the overlay surface so its edge is unambiguous (WCAG 1.4.11). `currentColor`
+ * adapts per theme (dark text on light Card, light text on dark Card). */
+@media (prefers-contrast: more) {
+  .overlay-scrim {
+    background-color: rgb(12 10 9 / 1) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .overlay-surface {
+    border: 1px solid currentColor;
+  }
+}
+
+/*
+ * ── Sticky-header scroll-edge treatment (feature 059 US5 — T084,
+ * research.md R5, contracts §AppHeader/LandingHeader) ───────────────────────
+ *
+ * The header keeps its opaque near-black surface token (the constitution's
+ * dark-surface rule wins over full HIG translucency). Instead of a permanent
+ * hard 1px divider it carries a soft shadow that fades in (via
+ * `transition-shadow` + `--motion-duration-fade` on the element) only once
+ * page content has scrolled under it (apple-design §12 — "scroll edge
+ * effects, not hard dividers"). The `prefers-reduced-motion` block above
+ * collapses the transition so it appears instantly for those users.
+ *
+ * Justified custom CSS: it is a `box-shadow` — never a border — so the header
+ * box never changes size (no layout shift), and it needs a distinct per-theme
+ * value (a hairline + a soft ambient drop) that no single Tailwind elevation
+ * utility expresses. `.header-scroll-edge` is unlayered so it wins over the
+ * component's `shadow-*` reset regardless of source order.
+ */
+.header-scroll-edge {
+  box-shadow:
+    0 1px 0 0 rgb(0 0 0 / 0.08),
+    0 6px 16px -8px rgb(0 0 0 / 0.18);
+}
+
+.dark .header-scroll-edge {
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.08),
+    0 6px 16px -8px rgb(0 0 0 / 0.6);
+}
+
+/*
+ * ── Status-banner entrance (feature 059 US5 — T086, scoped in T097) ────────
+ *
+ * A single gentle opacity fade (`--motion-duration-fade`, `--ease-out`) with
+ * NO translate/scale — status feedback announces itself without pulling the
+ * eye with movement (emil-design-eng — status messages don't move). The
+ * global `prefers-reduced-motion` block above collapses the timing so it
+ * resolves instantly for those users.
+ *
+ * Scoped (T097) to components that mount *in response to a state change* —
+ * currently only `FeedSourceStatusBanner` (a news source started failing).
+ * Permanent placeholders that render on first paint (`UnderConstruction`,
+ * `LibraryLinkRequired`, `DiscogsRelinkNotice`) do NOT use this: the entrance
+ * added no signal there and its ancestor opacity ramp tripped the axe-core
+ * contrast scanner mid-fade (axe folds ancestor opacity into contrast maths).
+ */
+@keyframes vinyl-status-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@utility status-fade-in {
+  animation: vinyl-status-fade-in var(--motion-duration-fade) var(--ease-out) both;
+}

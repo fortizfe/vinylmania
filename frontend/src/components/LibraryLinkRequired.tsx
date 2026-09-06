@@ -32,7 +32,10 @@ export function LibraryLinkRequired({ variant }: LibraryLinkRequiredProps) {
         {copy.title}
       </h2>
       <p className="text-stone-500 dark:text-stone-400">{copy.body}</p>
-      <Link to="/app/profile" className={buttonClassName('primary', 'md', 'inline-flex items-center')}>
+      <Link
+        to="/app/profile"
+        className={buttonClassName('primary', 'md', 'inline-flex items-center')}
+      >
         Go to your profile
       </Link>
     </Card>

@@ -2,6 +2,13 @@ import { expect, test } from '@playwright/test';
 
 import { assertFocusIndicatorContrast, assertUiComponentContrast } from '../helpers/contrast';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
+import {
+  collectMotionFrames,
+  connectedFrames,
+  expectGradualMotion,
+  startMotionRecorder,
+} from '../helpers/motion';
+import { expectPressed, samplePress } from '../helpers/press';
 
 function buildLibraryResponse(count: number) {
   return {
@@ -126,6 +133,70 @@ test.describe('View mode toggle (feature 052, US1)', () => {
     expect(listBox?.height).toBeGreaterThanOrEqual(44);
   });
 
+  // Spec 059 US1 (T043): each option acknowledges a pointer-down with the
+  // shared `pressable` scale-down + brightness nudge, before release.
+  test('each toggle option depresses on pointer-down (spec 059 US1)', async ({ page }) => {
+    await mockLibrary(page);
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByTestId('library-record-grid')).toBeVisible();
+
+    // The inactive option — pressing it must not switch mode yet (released
+    // off-target), only show the pressed state.
+    const listOption = page.getByTestId('view-mode-list');
+    const sample = await samplePress(page, listOption);
+    expectPressed(sample);
+    await expect(page.getByTestId('library-record-grid')).toBeVisible();
+    await expect(listOption).toHaveAttribute('aria-checked', 'false');
+
+    // The active option depresses too.
+    expectPressed(await samplePress(page, page.getByTestId('view-mode-grid')));
+  });
+
+  // Spec 059 US2 (T051/T057): the active-option background is a shared
+  // sliding pill on `spring.default`, not a colour snapping between buttons.
+  test('the active pill slides between options rather than snapping', async ({ page }) => {
+    await mockLibrary(page);
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByTestId('library-record-grid')).toBeVisible();
+    await expect(page.getByTestId('view-mode-pill')).toBeVisible();
+
+    await startMotionRecorder(page, { pill: '[data-testid="view-mode-pill"]' }, 900);
+    await page.getByTestId('view-mode-list').click();
+    const frames = await collectMotionFrames(page);
+
+    await expect(page.getByTestId('view-mode-pill')).toHaveAttribute('data-reduced-motion', 'false');
+    await expect(page.getByTestId('view-mode-list')).toHaveAttribute('aria-checked', 'true');
+    expectGradualMotion(frames.pill, 'ViewModeToggle sliding pill');
+  });
+
+  test('under prefers-reduced-motion the pill jumps to the new option', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await mockLibrary(page);
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByTestId('library-record-grid')).toBeVisible();
+
+    await startMotionRecorder(page, { pill: '[data-testid="view-mode-pill"]' }, 700);
+    await page.getByTestId('view-mode-list').click();
+    const frames = await collectMotionFrames(page);
+
+    await expect(page.getByTestId('view-mode-pill')).toHaveAttribute('data-reduced-motion', 'true');
+    await expect(page.getByTestId('view-mode-list')).toHaveAttribute('aria-checked', 'true');
+    // Its position may change once (the jump) but it must not glide across
+    // many frames.
+    const seen = connectedFrames(frames.pill);
+    let movingFrames = 0;
+    for (let i = 1; i < seen.length; i += 1) {
+      if (Math.abs(seen[i].x - seen[i - 1].x) > 1) movingFrames += 1;
+    }
+    expect(movingFrames, 'the pill glided under reduced motion').toBeLessThanOrEqual(1);
+  });
+
   test('the toggle can be reached and operated with keyboard only', async ({ page }) => {
     await mockLibrary(page);
     await page.goto('/');
@@ -182,12 +253,15 @@ test.describe('View mode toggle (feature 052, US1)', () => {
         await goToLibraryForContrastChecks(page);
 
         const toggleContainer = page.getByTestId('view-mode-toggle');
-        const activeOption = page.getByTestId('view-mode-grid');
+        // Spec 059 US2: the active-option fill is now a single shared sliding
+        // pill (`view-mode-pill`), no longer a `bg-primary` class on the
+        // active `<button>` itself.
+        const activePill = page.getByTestId('view-mode-pill');
         await assertUiComponentContrast(
           page,
-          activeOption,
+          activePill,
           toggleContainer,
-          `ViewModeToggle active option fill (${theme})`,
+          `ViewModeToggle active pill fill (${theme})`,
         );
       });
 

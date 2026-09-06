@@ -39,6 +39,32 @@ describe('RecordCard', () => {
     expect(screen.getByText('The Persuader')).toBeInTheDocument();
   });
 
+  it('gives the whole-card link a card press affordance (US1)', () => {
+    renderCard({
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+      discogs: null,
+    });
+
+    const link = screen.getByRole('link');
+    expect(link.className).toMatch(/active:scale-\[0\.99\]/);
+    expect(link.className).toMatch(/motion-reduce:active:scale-100/);
+  });
+
   it('renders an unavailable state when the catalog could not be fetched', () => {
     renderCard({
       id: 'entry-2',

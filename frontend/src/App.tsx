@@ -9,6 +9,7 @@ import { DiscogsCallbackPage } from './pages/DiscogsCallbackPage';
 import { LandingPage } from './pages/LandingPage';
 import { LibraryListPage } from './pages/LibraryListPage';
 import { LoginCallbackPage } from './pages/LoginCallbackPage';
+import { NestedOverlayHarness } from './pages/dev/NestedOverlayHarness';
 import { ProfilePage } from './pages/ProfilePage';
 import { RecordDetailPage } from './pages/RecordDetailPage';
 import { MasterReleaseDetailPage } from './pages/MasterReleaseDetailPage';
@@ -41,6 +42,9 @@ function App() {
       <VinylmaniaGrungeFilter />
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        {import.meta.env.DEV && (
+          <Route path="/__dev/nested-overlay" element={<NestedOverlayHarness />} />
+        )}
         <Route path="/login/callback" element={<LoginCallbackPage />} />
         <Route
           path="/app"

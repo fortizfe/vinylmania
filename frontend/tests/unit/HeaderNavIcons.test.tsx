@@ -27,6 +27,15 @@ describe('HeaderNavIcons', () => {
     expect(links[2]).toHaveAttribute('href', '/app/profile');
   });
 
+  it('each icon link inherits the shared pressed-state + focusRing from iconButtonClassName (US1)', () => {
+    renderIcons();
+
+    for (const link of screen.getAllByRole('link')) {
+      expect(link.className).toMatch(/active:scale-\[0\.97\]/);
+      expect(link.className).toContain('focus-visible:ring-primary');
+    }
+  });
+
   it('is reachable via Tab in DOM order and activatable with Enter', async () => {
     const user = userEvent.setup();
     renderIcons();

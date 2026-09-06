@@ -42,4 +42,32 @@ describe('StarRating', () => {
       expect(star.className).toMatch(/min-w-11/);
     }
   });
+
+  describe('pressed-state feedback (US1)', () => {
+    it('gives each star a pressed affordance that is dropped under reduced motion', () => {
+      render(<StarRating value={0} onChange={() => {}} />);
+
+      for (const star of screen.getAllByRole('button')) {
+        expect(star.className).toMatch(/active:scale-\[0\.97\]/);
+        expect(star.className).toMatch(/motion-reduce:active:scale-100/);
+      }
+    });
+
+    it('suppresses the pressed affordance while disabled', () => {
+      render(<StarRating value={0} onChange={() => {}} disabled />);
+
+      for (const star of screen.getAllByRole('button')) {
+        expect(star.className).toMatch(/disabled:active:scale-100/);
+      }
+    });
+
+    it('uses the shared focusRing and no legacy outline-primary', () => {
+      render(<StarRating value={0} onChange={() => {}} />);
+
+      for (const star of screen.getAllByRole('button')) {
+        expect(star.className).toContain('focus-visible:ring-primary');
+        expect(star.className).not.toMatch(/outline-primary/);
+      }
+    });
+  });
 });

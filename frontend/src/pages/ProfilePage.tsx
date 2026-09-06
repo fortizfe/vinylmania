@@ -89,7 +89,7 @@ export function ProfilePage() {
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8 xl:max-w-5xl">
       <header>
-        <h1 className="font-display text-xl leading-tight text-stone-900 dark:text-stone-100">
+        <h1 className="font-display text-xl leading-display tracking-display text-stone-900 dark:text-stone-100">
           Profile
         </h1>
         <p className="text-sm text-stone-600 dark:text-stone-400">
