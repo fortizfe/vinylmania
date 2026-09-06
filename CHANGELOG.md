@@ -17,6 +17,13 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.8.0] - 2026-09-06
+
+### Added
+
+- add pre-execution checks for extension hooks in speckit command (#50) ([3ccb61c])
+- Discogs-integrated wantlist (lista de deseos) (#49) ([0e280c2])
+
 ## [1.7.0] - 2026-09-06
 
 ### Added
