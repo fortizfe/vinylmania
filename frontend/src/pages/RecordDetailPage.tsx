@@ -6,6 +6,7 @@ import { ReleaseAdditionalInfoSection } from '../components/ReleaseAdditionalInf
 import { ReleaseDetailsSection } from '../components/ReleaseDetailsSection';
 import { ReleaseImageGallery } from '../components/ReleaseImageGallery';
 import { ReleaseTracklistSection } from '../components/ReleaseTracklistSection';
+import { StreamingLinksSection } from '../components/StreamingLinksSection';
 import { BackLink } from '../components/ui/BackLink';
 import { Card } from '../components/ui/Card';
 import {
@@ -141,6 +142,19 @@ export function RecordDetailPage() {
             />
           </Card>
         )}
+
+        {/*
+          Feature 062 — "Escúchalo en streaming". The same reusable section as on
+          ReleaseDetailPage / MasterReleaseDetailPage (FR-002, SC-007). Only
+          reached in this branch, where `entry.release` exists; the no-release
+          branch above never renders it. Mounted LAST so a skeleton -> collapsed
+          transition reflows only empty space below it (FR-017).
+        */}
+        <StreamingLinksSection
+          identifiers={release.identifiers}
+          artist={release.artists[0]?.name}
+          title={release.title}
+        />
       </div>
     </main>
   );

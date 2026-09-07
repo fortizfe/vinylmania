@@ -9,6 +9,7 @@ import { feedsRouter } from './adapters/feeds/feedsRoutes';
 import { googleAuthRouter } from './adapters/googleAuth/googleAuthRoutes';
 import { collectionStatsRouter } from './adapters/collectionStats/collectionStatsRoutes';
 import { libraryRouter } from './adapters/library/libraryRoutes';
+import { streamingRouter } from './adapters/streaming/streamingRoutes';
 import { wantlistRouter } from './adapters/wantlist/wantlistRoutes';
 
 export function createApp(): express.Express {
@@ -36,6 +37,7 @@ export function createApp(): express.Express {
   app.use('/api/wantlist', wantlistRouter);
   app.use('/api/collection-stats', collectionStatsRouter);
   app.use('/api/feeds', feedsRouter);
+  app.use('/api/streaming', streamingRouter);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

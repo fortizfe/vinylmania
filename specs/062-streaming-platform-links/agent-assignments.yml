@@ -1,0 +1,149 @@
+# Agent Assignments
+# Feature: "Escúchalo en Streaming" — Direct Streaming Platform Links on Record Detail
+# Generated: 2026-09-07
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "backend-agent"
+    source: "project"
+    description: "Use for any work under backend/ — Express.js + TypeScript APIs, hexagonal architecture (domain/application/ports/adapters), Firebase Admin/Firestore, Discogs API client, Redis caching. Enforces TDD, YAGNI, SOLID, and KISS on every change."
+  - name: "frontend-agent"
+    source: "project"
+    description: "Use for any work under frontend/ — React 19 + TypeScript (Vite), Tailwind CSS v4, TanStack Query. Builds every interface with the installed Apple design skills and strictly enforces WCAG 2.1 AA accessibility, with TDD via Vitest + React Testing Library."
+  - name: "qa-agent"
+    source: "project"
+    description: "Use for enforcing Test-First/TDD discipline and overall test quality across the whole Vinylmania codebase (backend, frontend, e2e). Owns Playwright e2e. Use for TDD/quality audits and test work, not feature implementation."
+  - name: "docs-agent"
+    source: "project"
+    description: "Use for end-user documentation for Vinylmania — user manuals, getting-started guides, feature walkthroughs, and FAQs. Not for developer/API docs, specs/, or code changes."
+
+assignments:
+  T001:
+    agent: "backend-agent"
+    reason: "backend/src/domain/streaming/ type declarations — backend hexagonal domain layer."
+  T002:
+    agent: "backend-agent"
+    reason: "backend/src/domain/streaming/ error hierarchy mirroring discogsErrors.ts — backend domain layer."
+  T003:
+    agent: "frontend-agent"
+    reason: "frontend/src/components/ui/icons/ inline-SVG React component."
+  T004:
+    agent: "backend-agent"
+    reason: "backend/tests/unit/streaming/ pure-domain test; backend-agent runs its own test-first flow."
+  T005:
+    agent: "backend-agent"
+    reason: "backend/tests/unit/streaming/ storefront-mapping test."
+  T006:
+    agent: "backend-agent"
+    reason: "backend/tests/unit/streaming/ use-case isolation/caching test."
+  T007:
+    agent: "backend-agent"
+    reason: "backend/tests/contract/streaming/ route contract test for GET /api/streaming/links."
+  T008:
+    agent: "backend-agent"
+    reason: "backend/tests/integration/streaming/ adapter test with nock at the iTunes HTTP boundary."
+  T009:
+    agent: "backend-agent"
+    reason: "backend/src/domain/streaming/matching.ts — pure backend domain logic."
+  T010:
+    agent: "backend-agent"
+    reason: "backend/src/adapters/streaming/storefront.ts — backend adapter helper."
+  T011:
+    agent: "backend-agent"
+    reason: "backend/src/ports/streaming/ port interface — backend ports layer."
+  T012:
+    agent: "backend-agent"
+    reason: "backend/src/adapters/streaming/itunesSearchAdapter.ts — backend adapter using axios."
+  T013:
+    agent: "backend-agent"
+    reason: "backend/src/application/streaming/resolveStreamingLinks.ts — backend application use case."
+  T014:
+    agent: "backend-agent"
+    reason: "backend/src/adapters/streaming/streamingRoutes.ts + app.ts wiring — backend driving adapter."
+  T015:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/services/ Vitest test; frontend-agent runs its own test-first flow."
+  T016:
+    agent: "frontend-agent"
+    reason: "frontend/src/services/streamingApi.ts — frontend API client following discogsApi conventions."
+  T017:
+    agent: "frontend-agent"
+    reason: "frontend/src/queries/streamingQueries.ts — TanStack Query hook."
+  T018:
+    agent: "frontend-agent"
+    reason: "frontend/tests/unit/components/ React Testing Library component test."
+  T019:
+    agent: "qa-agent"
+    reason: "e2e/tests/ Playwright spec — frontend-agent is explicitly excluded from e2e; qa-agent owns Playwright."
+  T020:
+    agent: "frontend-agent"
+    reason: "frontend/tests/integration/ page-render integration test."
+  T021:
+    agent: "frontend-agent"
+    reason: "frontend/src/components/StreamingLinksSection.tsx — core UI component; needs apple-design + WCAG skills."
+  T022:
+    agent: "frontend-agent"
+    reason: "frontend/src/pages/ReleaseDetailPage.tsx — mount point."
+  T023:
+    agent: "backend-agent"
+    reason: "Extends backend/tests/contract/streaming/ to assert structured logging."
+  T024:
+    agent: "frontend-agent"
+    reason: "frontend/tests/integration/ MasterReleaseDetailPage render test."
+  T025:
+    agent: "frontend-agent"
+    reason: "frontend/tests/integration/ RecordDetailPage render test."
+  T026:
+    agent: "qa-agent"
+    reason: "Extends e2e/tests/streaming-links.spec.ts — Playwright e2e."
+  T027:
+    agent: "frontend-agent"
+    reason: "frontend/src/pages/MasterReleaseDetailPage.tsx — mount point."
+  T028:
+    agent: "frontend-agent"
+    reason: "frontend/src/pages/RecordDetailPage.tsx — mount point."
+  T029:
+    agent: "backend-agent"
+    reason: "Extends backend/tests/unit/streaming/ for cache-vs-transient semantics."
+  T030:
+    agent: "backend-agent"
+    reason: "Extends backend/tests/integration/streaming/ for mismatched/ambiguous match rejection."
+  T031:
+    agent: "backend-agent"
+    reason: "backend/tests/unit/streaming/itunesThrottle.test.ts — adapter throttle test."
+  T032:
+    agent: "frontend-agent"
+    reason: "Extends frontend/tests/unit/components/ for error state and no-layout-shift."
+  T033:
+    agent: "backend-agent"
+    reason: "backend/src/adapters/streaming/itunesSearchAdapter.ts — in-process throttle implementation."
+  T034:
+    agent: "backend-agent"
+    reason: "backend/src/domain/streaming/matching.ts + itunesSearchAdapter.ts — mismatch hardening."
+  T035:
+    agent: "frontend-agent"
+    reason: "frontend/src/components/StreamingLinksSection.tsx — fixed reserved height + null branch."
+  T036:
+    agent: "backend-agent"
+    reason: "backend/tests/unit/streaming/resolverExtensibility.test.ts — second-resolver isolation test."
+  T037:
+    agent: "frontend-agent"
+    reason: "Extends frontend component test for generic multi-platform rendering."
+  T038:
+    agent: "backend-agent"
+    reason: "JSDoc 'add a platform' checklists on backend port + resolver array; the frontend metadata map is already generic from T021/T037."
+  T039:
+    agent: "qa-agent"
+    reason: "Full quickstart.md validation spanning backend Jest, frontend Vitest, and Playwright e2e."
+  T040:
+    agent: "frontend-agent"
+    reason: "Accessibility sign-off (axe, focus, touch targets, heading structure, reduced-motion) — frontend WCAG mandate."
+  T041:
+    agent: "frontend-agent"
+    reason: "Apple-design sign-off using apple-design + emil-design-eng skills — frontend design review."
+  T042:
+    agent: "backend-agent"
+    reason: "Backend observability check — structured logger lines, no internal error leakage."
+  T043:
+    agent: "backend-agent"
+    reason: "Backend developer note for the test-only ITUNES_SEARCH_BASE_URL env var."

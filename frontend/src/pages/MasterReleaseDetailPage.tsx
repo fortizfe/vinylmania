@@ -10,6 +10,7 @@ import { MasterVersionsTable } from '../components/MasterVersionsTable';
 import { RecordDetailSkeleton } from '../components/RecordDetailSkeleton';
 import { ReleaseImageGallery } from '../components/ReleaseImageGallery';
 import { ReleaseTracklistSection } from '../components/ReleaseTracklistSection';
+import { StreamingLinksSection } from '../components/StreamingLinksSection';
 import { BackLink } from '../components/ui/BackLink';
 import { Card } from '../components/ui/Card';
 import { useCatalogMaster } from '../queries/discogsQueries';
@@ -127,6 +128,19 @@ export function MasterReleaseDetailPage() {
             onPageChange={setVersionsPage}
           />
         </Card>
+
+        {/*
+          Feature 062 — "Escúchalo en streaming". The same reusable section as on
+          ReleaseDetailPage / RecordDetailPage (FR-002, SC-007). Mounted LAST so a
+          skeleton -> collapsed transition reflows only empty space below it
+          (FR-017). A `MasterRelease` carries no `identifiers`, so `undefined` is
+          passed and resolution falls back to the artist + title text search.
+        */}
+        <StreamingLinksSection
+          identifiers={undefined}
+          artist={master.artists[0]?.name}
+          title={master.title}
+        />
       </div>
     </main>
   );
