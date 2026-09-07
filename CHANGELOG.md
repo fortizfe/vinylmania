@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.9.0] - 2026-09-07
+
+### Added
+
+- "Mi colección en cifras" — collection statistics & estimated market value (#51) ([c13f9f8])
+
 ## [1.8.0] - 2026-09-06
 
 ### Added
