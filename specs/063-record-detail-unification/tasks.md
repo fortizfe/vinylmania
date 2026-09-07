@@ -128,13 +128,13 @@ search or wishlist views.
 
 ### Tests for User Story 3 (write first, must FAIL)
 
-- [ ] T029 [P] [US3] Failing test `frontend/src/components/MyCopySection.test.tsx` per §C5: no control with an accessible name matching "Rating"/"Valoración"; no "Remove from library" button; changing media/sleeve condition calls the respective `onSave*`; notes blur calls `onSaveNotes`; `editable.notes=false` + `discogs != null` → "not available on this collection" note shown and field disabled.
+- [X] T029 [P] [US3] Failing test `frontend/src/components/MyCopySection.test.tsx` per §C5: no control with an accessible name matching "Rating"/"Valoración"; no "Remove from library" button; changing media/sleeve condition calls the respective `onSave*`; notes blur calls `onSaveNotes`; `editable.notes=false` + `discogs != null` → "not available on this collection" note shown and field disabled.
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Trim `frontend/src/components/MyCopySection.tsx` per §C5: remove the Rating label + `StarRating` + `onSaveRating` prop, and remove the "Remove from library" `<Button>` + `onRemove` prop. Keep the heading, the two condition `<select>`s, the notes `InlineEditableField`, all `editable.*` disabled states and messaging, and `data-testid` YOUR_COPY_CARD. Make T029 pass.
-- [ ] T031 [US3] `frontend/src/pages/RecordDetailPage.tsx`: stop passing `onSaveRating` and `onRemove` to `<MyCopySection>` (Remove is already in `RecordDetailActions` from US1; rating is already in `RatingCard` from US2); delete the now-unused `saveRating` wrapper.
-- [ ] T032 [US3] Update `e2e/tests/record-detail-inline-edit.spec.ts`: the rating assertion targets the Rating card; the condition/notes assertions target `record-detail-your-copy-card` and stay green.
+- [X] T030 [US3] Trim `frontend/src/components/MyCopySection.tsx` per §C5: remove the Rating label + `StarRating` + `onSaveRating` prop, and remove the "Remove from library" `<Button>` + `onRemove` prop. Keep the heading, the two condition `<select>`s, the notes `InlineEditableField`, all `editable.*` disabled states and messaging, and `data-testid` YOUR_COPY_CARD. Make T029 pass.
+- [X] T031 [US3] `frontend/src/pages/RecordDetailPage.tsx`: stop passing `onSaveRating` and `onRemove` to `<MyCopySection>` (Remove is already in `RecordDetailActions` from US1; rating is already in `RatingCard` from US2); delete the now-unused `saveRating` wrapper.
+- [X] T032 [US3] Update `e2e/tests/record-detail-inline-edit.spec.ts`: the rating assertion targets the Rating card; the condition/notes assertions target `record-detail-your-copy-card` and stay green. — DONE: the personal-rating tests already scope to `record-detail-rating-card` (US2). Tightened the `(T032)` media-condition test: added `record-detail-your-copy-card` → `getByRole('button', { name: /stars/i })` count 0 and `getByRole('button', { name: /remove from library/i })` count 0, and scoped the Media Condition `<select>` locator (both the edit and the post-reload assertion) to `record-detail-your-copy-card`. Media/sleeve/notes inline-edit + press-feedback + focus-contrast assertions unchanged and green.
 
 **Checkpoint**: US3 done — "Estado de mi copia" is condition + notes only; personal rating has exactly one home.
 
@@ -153,14 +153,14 @@ undisturbed.
 
 ### Tests for User Story 4 (write first, must FAIL)
 
-- [ ] T033 [P] [US4] Update `frontend/src/components/StreamingLinksSection.test.tsx`: the rendered card no longer carries `lg:col-span-2`; the resolving skeleton still renders at a reserved height; no-match / error still renders `null`.
-- [ ] T034 [P] [US4] Failing e2e in `e2e/tests/release-detail.spec.ts`: `record-detail-streaming-card` appears immediately after `record-detail-rating-card` and immediately before `record-detail-tracklist-card` in the search, wishlist and library views; on a no-match fixture the streaming card is absent and the rating card still sits directly above the tracklist.
+- [X] T033 [P] [US4] Update `frontend/src/components/StreamingLinksSection.test.tsx`: the rendered card no longer carries `lg:col-span-2`; the resolving skeleton still renders at a reserved height; no-match / error still renders `null`.
+- [X] T034 [P] [US4] Failing e2e in `e2e/tests/release-detail.spec.ts`: `record-detail-streaming-card` appears immediately after `record-detail-rating-card` and immediately before `record-detail-tracklist-card` in the search, wishlist and library views; on a no-match fixture the streaming card is absent and the rating card still sits directly above the tracklist. — DONE: new `test.describe('Streaming card contract position (feature 063, US4 — T034)')`. Parametrized over `['search','wishlist','library']` with a `stubStreamingMatch` stub — each asserts the full document-ordered section-testid list equals the §C1 expected list for that view (which proves streaming is adjacent-after rating and adjacent-before tracklist AND every section above is unmoved), plus explicit `order[i-1]===rating` / `order[i+1]===tracklist` checks. Two no-match tests (search + library) with `stubStreamingNoMatch`: `record-detail-streaming-card` → count 0, rating immediately followed by tracklist, sections above unmoved, `your-copy` card undisturbed in the library case. New `openDetailForView` helper stubs catalog + `GET /api/wantlist/1` (wishlist) or `GET /api/library/:id` (library).
 
 ### Implementation for User Story 4
 
-- [ ] T035 [US4] `frontend/src/components/StreamingLinksSection.tsx`: remove the hard-coded `CARD_SPAN = 'lg:col-span-2'` usage so `RecordDetailLayout` controls placement; keep `RESERVED_HEIGHT`, the resolving skeleton, and the collapse-to-`null` behavior (FR-014/FR-015). Make T033 pass.
-- [ ] T036 [US4] Update `specs/063-record-detail-unification/spec.md` User Story 4 acceptance scenario 3 and the `quickstart.md` §4.7 note to read: a cache-miss streaming skeleton collapsing to nothing reflows the sections **below** it once, without disturbing the sections above (research R4) — replacing "only empty space below it reflows".
-- [ ] T037 [US4] Make T034 pass.
+- [X] T035 [US4] `frontend/src/components/StreamingLinksSection.tsx`: remove the hard-coded `CARD_SPAN = 'lg:col-span-2'` usage so `RecordDetailLayout` controls placement; keep `RESERVED_HEIGHT`, the resolving skeleton, and the collapse-to-`null` behavior (FR-014/FR-015). Make T033 pass.
+- [X] T036 [US4] Update `specs/063-record-detail-unification/spec.md` User Story 4 acceptance scenario 3 and the `quickstart.md` §4.7 note to read: a cache-miss streaming skeleton collapsing to nothing reflows the sections **below** it once, without disturbing the sections above (research R4) — replacing "only empty space below it reflows". — DONE (spec.md US4 AS3 + quickstart.md §4.7 both updated; scoped to "left column" per the shipped media-left layout).
+- [X] T037 [US4] Make T034 pass. — DONE: T035 already removed `lg:col-span-2` from `StreamingLinksSection` and `RecordDetailLayout` places `streaming` in the §4 slot for all three views, so the position is already shipped structurally. Lifted `stubStreamingMatch` to module scope in `release-detail.spec.ts` (was nested in the US1 describe) and added `stubStreamingNoMatch`; the US1 test's call site resolves to the module-scope helper unchanged.
 
 **Checkpoint**: US4 done — streaming card is in its contract position everywhere. (Most of this landed structurally in US1; this phase pins the component change and the tests.)
 
@@ -177,12 +177,12 @@ Rating card; inspecting the wantlist entry in Discogs shows the note value uncha
 
 ### Tests for User Story 5 (write first, must FAIL)
 
-- [ ] T038 [P] [US5] Failing e2e in `e2e/tests/wishlist-discogs-sync.spec.ts`: on a wishlist record whose fixture has a non-empty wantlist note, the detail view renders no textarea / no notes label / no note text anywhere, and no `PATCH /api/wantlist/:releaseId` request carrying a `notes` field is issued while on the view.
+- [X] T038 [P] [US5] Failing e2e in `e2e/tests/wishlist-discogs-sync.spec.ts`: on a wishlist record whose fixture has a non-empty wantlist note, the detail view renders no textarea / no notes label / no note text anywhere, and no `PATCH /api/wantlist/:releaseId` request carrying a `notes` field is issued while on the view. — DONE: un-`fixme`'d `T0YY-2`, now a real test. Seeds wantlist 222 with `notes: 'Original UK pressing — sleeve VG+'`, opens the detail view, asserts the wishlist Rating card is present + editable, then: `page.locator('textarea')` count 0, `getByRole('textbox', { name: /nota[s]?/i })` count 0, `getByText(/^\s*nota(s)?\s*$/i)` count 0, `getByText(/your wishlist notes/i)` count 0, the seeded note string not visible anywhere. Route-intercepts `**/api/wantlist/**`, records every PATCH body, clicks 4 stars (asserts the observed PATCH body is exactly `{ rating: 4 }`), then asserts no recorded PATCH body has a `notes` property and the stub wantlist note is byte-for-byte the seed. T039/T040 already removed every `notes` read/write path from the detail flow, so it passes.
 
 ### Implementation for User Story 5
 
-- [ ] T039 [US5] Audit `frontend/src/pages/ReleaseDetailPage.tsx` and `frontend/src/queries/wantlistQueries.ts` usage: remove `handleSaveWantlistNotes`, any `notes` read from `wantlistEntry.data`, and any `useUpdateWantEntry({ notes })` path reachable from the detail view (FR-016). Leave the wantlist API client and its `notes` type intact (other surfaces may use it). Make T038 pass.
-- [ ] T040 [US5] Grep `frontend/src` for remaining references to a wishlist note in the detail flow (`wantlistNote` state used for the note, `WantEntryDetail.notes` in a detail component) and delete the dead code.
+- [X] T039 [US5] Audit `frontend/src/pages/ReleaseDetailPage.tsx` and `frontend/src/queries/wantlistQueries.ts` usage: remove `handleSaveWantlistNotes`, any `notes` read from `wantlistEntry.data`, and any `useUpdateWantEntry({ notes })` path reachable from the detail view (FR-016). Leave the wantlist API client and its `notes` type intact (other surfaces may use it). Make T038 pass.
+- [X] T040 [US5] Grep `frontend/src` for remaining references to a wishlist note in the detail flow (`wantlistNote` state used for the note, `WantEntryDetail.notes` in a detail component) and delete the dead code.
 
 **Checkpoint**: US5 done — SC-007 satisfied.
 

@@ -1,12 +1,10 @@
 import { useRef } from 'react';
 
 import type { EntryDiscogsData } from '../services/libraryApi';
-import { Button } from './ui/Button';
 import {
   InlineEditableField,
   type InlineEditableFieldHandle,
 } from './ui/InlineEditableField';
-import { StarRating } from './ui/StarRating';
 
 /** Discogs grading vocabulary (R6). Must match backend conditionGrading.ts exactly. */
 export const MEDIA_CONDITIONS = [
@@ -43,20 +41,16 @@ const labelClasses = 'text-sm font-medium text-stone-700 dark:text-stone-300';
 
 interface MyCopySectionProps {
   discogs: EntryDiscogsData | null;
-  onSaveRating: (rating: number) => Promise<void>;
   onSaveMediaCondition: (value: string | null) => Promise<void>;
   onSaveSleeveCondition: (value: string | null) => Promise<void>;
   onSaveNotes: (value: string) => Promise<void>;
-  onRemove: () => void;
 }
 
 export function MyCopySection({
   discogs,
-  onSaveRating,
   onSaveMediaCondition,
   onSaveSleeveCondition,
   onSaveNotes,
-  onRemove,
 }: MyCopySectionProps) {
   const notesFieldRef = useRef<InlineEditableFieldHandle>(null);
 
@@ -80,16 +74,6 @@ export function MyCopySection({
         Your copy
       </h2>
       <div className="flex flex-col gap-4">
-        {/* Rating */}
-        <div className="flex flex-col gap-1">
-          <span className={labelClasses}>Rating</span>
-          <StarRating
-            value={discogs?.rating ?? 0}
-            onChange={onSaveRating}
-            disabled={discogs === null}
-          />
-        </div>
-
         {/* Media Condition */}
         <div className="flex flex-col gap-1">
           <span className={labelClasses}>Media Condition</span>
@@ -166,12 +150,6 @@ export function MyCopySection({
               />
             )}
           />
-        </div>
-
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={onRemove}>
-            Remove from library
-          </Button>
         </div>
       </div>
     </div>

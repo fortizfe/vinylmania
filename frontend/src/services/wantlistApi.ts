@@ -13,7 +13,7 @@ export interface EnrichedWantEntry {
   release: Release | null;
 }
 
-/** Single-entry response for the release detail page's wantlist panel. */
+/** Single-entry response for the release detail page's Rating card (personal rating). */
 export interface WantEntryDetail {
   discogsReleaseId: number;
   rating: number;

@@ -86,18 +86,29 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await page.goto(`/app/library/records/${ENTRY_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
+    // Feature 063 US3 (contracts/ui-contracts.md §C5): "Estado de mi copia" is
+    // condition + notes only — it carries NO rating control (the sole personal
+    // rating lives in `record-detail-rating-card`, US2) and NO "Remove from
+    // library" button (Remove moved to `record-detail-actions`, US1).
+    const yourCopy = page.getByTestId('record-detail-your-copy-card');
+    await expect(yourCopy.getByRole('button', { name: /stars/i })).toHaveCount(0);
+    await expect(
+      yourCopy.getByRole('button', { name: /remove from library/i }),
+    ).toHaveCount(0);
+
     const patchRequest = page.waitForRequest(
       (request) => request.url().includes(`/api/library/${ENTRY_ID}`) && request.method() === 'PATCH',
     );
 
-    await page.getByLabel('Media Condition').selectOption('Mint (M)');
+    // The media/sleeve/notes inline-edit controls stay in "Estado de mi copia".
+    await yourCopy.getByLabel('Media Condition').selectOption('Mint (M)');
 
     const request = await patchRequest;
     expect(request.postDataJSON()).toEqual({ mediaCondition: 'Mint (M)' });
 
     // After reload the select should reflect the saved value.
     await page.reload();
-    await expect(page.getByLabel('Media Condition')).toHaveValue('Mint (M)');
+    await expect(yourCopy.getByLabel('Media Condition')).toHaveValue('Mint (M)');
   });
 
   test('setting a star rating in the Rating card autosaves via PATCH /api/library/:id and survives a reload (feature 063 US2, T022)', async ({

@@ -440,9 +440,10 @@ test.describe('US2 - add to wantlist (feature 060, FR-005/006/007/007a)', () => 
 // "Sin valorar" text (contracts/ui-contracts.md §C4). Backend
 // `PATCH /api/wantlist/:releaseId` still takes `{rating}` (feat-063 US2/T025).
 //
-// The one former note assertion (T0YY-2) is superseded by feat-063 US5 / T038
-// (the wishlist detail must render no notes field at all) and is left as a
-// `test.fixme` marker below.
+// The one former note-autosave assertion (T0YY-2) is replaced in place by
+// feat-063 US5 / T038: T0YY-2 below now asserts the inverse — the wishlist
+// detail renders no notes field / label / text anywhere and issues no
+// `notes`-bearing PATCH /api/wantlist/:releaseId.
 //
 // Autosave persistence is asserted the durable way — reload the page, then
 // read the stub wantlist — in addition to observing the PATCH.
@@ -516,19 +517,76 @@ test.describe('US3 - edit wantlist entry rating (feature 060 + feat-063 US2, FR-
         expect(wants.find((w) => w.id === 222)?.rating).toBe(4);
     });
 
-    // --- SUPERSEDED by feat-063 US5 / T038 ---
-    //
-    // feat-063 US2 removed the wishlist note UI entirely (not deferred). This
-    // per-field notes-autosave assertion no longer has a UI to exercise; feat-063
-    // US5 / T038 replaces it with the inverse assertion (the wishlist detail
-    // renders NO notes field / label / text anywhere and issues no `notes`
-    // PATCH). Left as a fixme marker so the removal is traceable.
-    test.fixme(
-        'T0YY-2 / feat-063 US5: editing the wantlist notes field autosaves — superseded, wishlist note UI removed in US2 (see T038)',
-        async () => {
-            // Intentionally empty — replaced by e2e/tests T038 (feat-063 US5).
-        },
-    );
+    // --- feat-063 US5 / T038 + SC-007 (replaces the former T0YY-2 notes-autosave
+    //     assertion, whose UI was removed in US2): the wishlist detail view
+    //     renders NO notes field, NO "Notes"/"Notas" label, does not display the
+    //     stored wantlist note anywhere, and issues no `notes`-bearing
+    //     PATCH /api/wantlist/:releaseId while on the view (FR-016). ---
+
+    test('T0YY-2 / feat-063 US5 (T038): a wishlist record with a non-empty wantlist note shows no notes field, no note text, and issues no notes PATCH', async ({
+        page,
+    }) => {
+        const NOTE_TEXT = 'Original UK pressing — sleeve VG+';
+        await seedWantlist([{ releaseId: 222, rating: 3, notes: NOTE_TEXT }]);
+
+        // Record every PATCH /api/wantlist/:releaseId body seen while on the
+        // view; assert none of them carries a `notes` field (FR-016).
+        const wantlistPatchBodies: unknown[] = [];
+        await page.route('**/api/wantlist/**', async (route) => {
+            const request = route.request();
+            if (request.method() === 'PATCH') {
+                wantlistPatchBodies.push(request.postDataJSON());
+            }
+            await route.continue();
+        });
+
+        await signInAndLinkDiscogs(page);
+        await openReleaseDetail(page, 222);
+
+        const ratingCard = page.getByTestId('record-detail-rating-card');
+        await expect(ratingCard).toBeVisible({ timeout: 15_000 });
+        // This IS the wishlist view (personal rating is editable).
+        const personalRating = ratingCard.getByRole('group', { name: 'Tu valoración' });
+        await expect(personalRating).toBeVisible();
+
+        // No notes UI anywhere: no textarea, no "Notes"/"Notas" label, no
+        // "your wishlist notes" heading, and the stored note text is nowhere on
+        // the page (contracts §C4 — the wishlist detail has no notes surface).
+        await expect(page.locator('textarea')).toHaveCount(0);
+        await expect(page.getByRole('textbox', { name: /nota[s]?/i })).toHaveCount(0);
+        await expect(page.getByText(/^\s*nota(s)?\s*$/i)).toHaveCount(0);
+        await expect(page.getByText(/your wishlist notes/i)).toHaveCount(0);
+        await expect(page.getByText(NOTE_TEXT)).toHaveCount(0);
+
+        // Positively exercise the one PATCH the view CAN issue — the rating
+        // autosave — and confirm it is rating-only, never a notes write.
+        const patchRequest = page.waitForRequest(
+            (request) =>
+                /\/api\/wantlist\/222(?:\?|$)/.test(request.url()) &&
+                request.method() === 'PATCH',
+        );
+        await personalRating.getByRole('button', { name: '4 stars' }).click();
+        const request = await patchRequest;
+        expect(request.postDataJSON()).toEqual({ rating: 4 });
+
+        // Let any (non-existent) trailing note write attempt settle, then
+        // assert: not one PATCH carried a `notes` field.
+        await expect(
+            page
+                .getByTestId('record-detail-rating-card')
+                .getByRole('group', { name: 'Tu valoración' })
+                .getByRole('button', { name: '4 stars' }),
+        ).toHaveAttribute('aria-pressed', 'true');
+
+        expect(wantlistPatchBodies.length).toBeGreaterThan(0);
+        for (const body of wantlistPatchBodies) {
+            expect(body).not.toHaveProperty('notes');
+        }
+
+        // The Discogs wantlist note itself was never touched (still the seed).
+        const wants = await getStubWants();
+        expect(wants.find((w) => w.id === 222)?.notes).toBe(NOTE_TEXT);
+    });
 
     // --- feat-063 US2 / FR-009: the Rating card autosaves with no Save button ---
 

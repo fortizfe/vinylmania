@@ -45,6 +45,11 @@ describe('StreamingLinksSection (feature 062, US1)', () => {
     expect(screen.getByTestId('record-detail-streaming-card').className).toMatch(
       /min-h-/,
     );
+    // Placement is the layout's job now (feature 063 US4 / T035): the card must
+    // not carry its own grid-span override.
+    expect(screen.getByTestId('record-detail-streaming-card').className).not.toMatch(
+      /col-span/,
+    );
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
@@ -57,6 +62,11 @@ describe('StreamingLinksSection (feature 062, US1)', () => {
     );
 
     render(<StreamingLinksSection artist="Metallica" title="Master of Puppets" />);
+
+    // No hard-coded `lg:col-span-2` — `RecordDetailLayout` owns placement (T035).
+    expect(screen.getByTestId('record-detail-streaming-card').className).not.toMatch(
+      /col-span/,
+    );
 
     const heading = screen.getByRole('heading', { name: /streaming/i });
     const region = screen.getByRole('region', { name: /streaming/i });

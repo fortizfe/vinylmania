@@ -265,7 +265,11 @@ the tracklist in all three.
    **Then** the streaming card collapses to nothing (existing feature 062 behavior)
    and the sections below reflow without disturbing the sections above.
 3. **Given** the streaming card is still resolving on first view, **When** its
-   skeleton is shown then collapses, **Then** only empty space below it reflows.
+   skeleton is shown then collapses (no match), **Then** the sections below it in
+   its column reflow upward once, without disturbing the sections above it or the
+   other column. (A permanent reserved gap is not acceptable — FR-015 — so a
+   one-time upward reflow of the content below is the accepted trade-off for
+   placing the card in its contract position; see research R4.)
 
 ---
 

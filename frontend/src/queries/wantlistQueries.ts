@@ -81,8 +81,9 @@ export function useAddToWantlist(): UseMutationResult<
 }
 
 /**
- * Persists one wantlist-entry field (rating or notes) to the user's Discogs
- * wantlist — the detail panel autosaves per field.
+ * Persists one wantlist-entry field to the user's Discogs wantlist. The detail
+ * view only ever sends `{ rating }` (the Rating card autosaves); the `notes`
+ * field on the patch type is retained for other surfaces (FR-016).
  */
 export function useUpdateWantEntry(
   releaseId: number,

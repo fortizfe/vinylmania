@@ -46,6 +46,37 @@ const releaseResponse = {
 // e2e suites — the live Discogs API is rate-limited and token-gated, and CI
 // has no access to it. This still drives the real search page, the real
 // release detail page, and real click/navigation interactions in a browser.
+
+/**
+ * Stubs `GET /api/streaming/links` with a single Apple Music match so the
+ * `record-detail-streaming-card` resolves and its contract position (§C1 §4 —
+ * immediately after the rating card, immediately before the tracklist) can be
+ * asserted. Feature 063 US1/US4 shared helper — reused by the US4 position
+ * suite below.
+ */
+async function stubStreamingMatch(page: import('@playwright/test').Page) {
+  await page.route('**/api/streaming/links**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        links: [{ platform: 'apple_music', url: 'https://music.apple.com/es/album/x/123' }],
+      }),
+    });
+  });
+}
+
+/** Stubs `GET /api/streaming/links` with a confirmed no-match (empty links). */
+async function stubStreamingNoMatch(page: import('@playwright/test').Page) {
+  await page.route('**/api/streaming/links**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ links: [] }),
+    });
+  });
+}
+
 test.describe('Release detail page (feature 026, US2)', () => {
   async function stubSearchAndRelease(page: import('@playwright/test').Page) {
     await page.route('**/api/discogs/search**', async (route) => {
@@ -161,20 +192,6 @@ test.describe('Release detail page (feature 026, US2)', () => {
     'record-detail-tracklist-card',
     'record-detail-other-details-card',
   ];
-
-  async function stubStreamingMatch(page: import('@playwright/test').Page) {
-    await page.route('**/api/streaming/links**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          links: [
-            { platform: 'apple_music', url: 'https://music.apple.com/es/album/x/123' },
-          ],
-        }),
-      });
-    });
-  }
 
   test('the search view renders the unified record-detail sections in contract DOM order with the action bar under the back-link (feature 063, US1)', async ({
     page,
@@ -353,5 +370,212 @@ test.describe('Release detail page (feature 026, US2)', () => {
         expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
       });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Feature 063 US4 (contracts/ui-contracts.md §C1 §4 / §C8, quickstart §3):
+// the streaming card renders at position 4 — immediately AFTER the rating card
+// and immediately BEFORE the tracklist card — placed by `RecordDetailLayout`,
+// not by its own hard-coded grid span (T035 removed `lg:col-span-2`). This must
+// hold in all three views (search, wishlist, library). On a confirmed no-match
+// the card collapses to `null` and the rating card is then immediately followed
+// by the tracklist, with every section above streaming unmoved.
+// ---------------------------------------------------------------------------
+
+const LIBRARY_ENTRY_ID = 'e2e-063-us4-lib';
+
+const libraryEntryResponse = {
+  id: LIBRARY_ENTRY_ID,
+  discogsReleaseId: RELEASE_ID,
+  addedAt: '2026-07-04T00:00:00.000Z',
+  catalogStatus: 'ok',
+  release: releaseResponse,
+  discogs: {
+    instanceId: 100,
+    folderId: 1,
+    rating: 0,
+    mediaCondition: 'Good (G)',
+    sleeveCondition: null,
+    notes: 'Bought at a record fair',
+    editable: { mediaCondition: true, sleeveCondition: true, notes: true },
+  },
+};
+
+const wantEntryResponse = {
+  discogsReleaseId: RELEASE_ID,
+  rating: 3,
+  notes: null,
+  addedAt: '2026-07-04T00:00:00.000Z',
+};
+
+/** All record-detail section testids, in contract §C1 top-to-bottom order. */
+const ALL_SECTION_TESTIDS = [
+  'record-detail-actions',
+  'record-detail-gallery-card',
+  'record-detail-main-info-card',
+  'record-detail-your-copy-card',
+  'record-detail-rating-card',
+  'record-detail-streaming-card',
+  'record-detail-tracklist-card',
+  'record-detail-other-details-card',
+];
+
+/** The section testids actually present in the DOM, in document order. */
+async function presentSectionOrder(page: import('@playwright/test').Page): Promise<string[]> {
+  return page.evaluate((ids: string[]) => {
+    const seen = new Set<string>();
+    return Array.from(document.querySelectorAll('[data-testid]'))
+      .map((el) => el.getAttribute('data-testid') ?? '')
+      .filter((id) => ids.includes(id) && !seen.has(id) && (seen.add(id), true));
+  }, ALL_SECTION_TESTIDS);
+}
+
+type DetailView = 'search' | 'wishlist' | 'library';
+
+/**
+ * Stubs the catalog / library / wantlist endpoints for `view` and navigates to
+ * the corresponding detail page. Streaming is left to the caller so each test
+ * picks the match / no-match stub. Reuses the same `releaseResponse` fixture as
+ * the rest of this spec.
+ */
+async function openDetailForView(
+  page: import('@playwright/test').Page,
+  view: DetailView,
+): Promise<void> {
+  await page.route(`**/api/discogs/releases/${RELEASE_ID}`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(releaseResponse),
+    });
+  });
+
+  if (view === 'wishlist') {
+    await page.route(`**/api/wantlist/${RELEASE_ID}`, async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(wantEntryResponse),
+      });
+    });
+  }
+
+  if (view === 'library') {
+    await page.route(`**/api/library/${LIBRARY_ENTRY_ID}`, async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(libraryEntryResponse),
+      });
+    });
+  }
+
+  await page.goto('/');
+  await signInAsFakeGoogleUser(page);
+  await page.goto(
+    view === 'library'
+      ? `/app/library/records/${LIBRARY_ENTRY_ID}`
+      : `/app/releases/${RELEASE_ID}`,
+  );
+  await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+}
+
+test.describe('Streaming card contract position (feature 063, US4 — T034)', () => {
+  for (const view of ['search', 'wishlist', 'library'] as const) {
+    test(`${view} view: streaming card sits immediately after the rating card and immediately before the tracklist (streaming match stubbed)`, async ({
+      page,
+    }) => {
+      await stubStreamingMatch(page);
+      await openDetailForView(page, view);
+
+      // The streaming card resolves so its contract position is assertable.
+      await expect(page.getByTestId('record-detail-streaming-card')).toBeVisible();
+
+      const order = await presentSectionOrder(page);
+
+      const expected =
+        view === 'library'
+          ? [
+              'record-detail-actions',
+              'record-detail-gallery-card',
+              'record-detail-main-info-card',
+              'record-detail-your-copy-card',
+              'record-detail-rating-card',
+              'record-detail-streaming-card',
+              'record-detail-tracklist-card',
+              'record-detail-other-details-card',
+            ]
+          : [
+              'record-detail-actions',
+              'record-detail-gallery-card',
+              'record-detail-main-info-card',
+              'record-detail-rating-card',
+              'record-detail-streaming-card',
+              'record-detail-tracklist-card',
+              'record-detail-other-details-card',
+            ];
+      // Full ordered list ⇒ streaming is adjacent to rating (before) and
+      // tracklist (after), AND every section above it is unmoved.
+      expect(order).toEqual(expected);
+
+      const streamingIndex = order.indexOf('record-detail-streaming-card');
+      expect(order[streamingIndex - 1]).toBe('record-detail-rating-card');
+      expect(order[streamingIndex + 1]).toBe('record-detail-tracklist-card');
+    });
+  }
+
+  test('search view: a no-match streaming stub collapses the card — rating is then immediately followed by tracklist, sections above unmoved', async ({
+    page,
+  }) => {
+    await stubStreamingNoMatch(page);
+    await openDetailForView(page, 'search');
+
+    // The rest of the page has settled: the tracklist card is present.
+    await expect(page.getByTestId('record-detail-tracklist-card')).toBeVisible();
+    // The streaming card collapsed to nothing (FR-014 / §C1 §4 "may render null").
+    await expect(page.getByTestId('record-detail-streaming-card')).toHaveCount(0);
+
+    const order = await presentSectionOrder(page);
+    expect(order).toEqual([
+      'record-detail-actions',
+      'record-detail-gallery-card',
+      'record-detail-main-info-card',
+      'record-detail-rating-card',
+      'record-detail-tracklist-card',
+      'record-detail-other-details-card',
+    ]);
+
+    const ratingIndex = order.indexOf('record-detail-rating-card');
+    expect(order[ratingIndex + 1]).toBe('record-detail-tracklist-card');
+  });
+
+  test('library view: a no-match streaming stub collapses the card without disturbing "Estado de mi copia" or the sections above', async ({
+    page,
+  }) => {
+    await stubStreamingNoMatch(page);
+    await openDetailForView(page, 'library');
+
+    await expect(page.getByTestId('record-detail-tracklist-card')).toBeVisible();
+    await expect(page.getByTestId('record-detail-streaming-card')).toHaveCount(0);
+
+    const order = await presentSectionOrder(page);
+    expect(order).toEqual([
+      'record-detail-actions',
+      'record-detail-gallery-card',
+      'record-detail-main-info-card',
+      'record-detail-your-copy-card',
+      'record-detail-rating-card',
+      'record-detail-tracklist-card',
+      'record-detail-other-details-card',
+    ]);
   });
 });

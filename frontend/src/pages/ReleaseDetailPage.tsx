@@ -69,10 +69,11 @@ export function ReleaseDetailPage() {
   const notFound = isError && !relinkRequired;
   const createEntry = useCreateLibraryEntry();
   const addToWantlist = useAddToWantlist();
-  // FR-008: the wantlist panel is shown only when this release is in the
-  // user's wantlist. GET /api/wantlist/:releaseId 404s (not_in_wantlist) as a
-  // query error otherwise; `useAddToWantlist` invalidates `wantlistKeys.all`,
-  // so this query refetches and the panel appears after an add — no reload.
+  // FR-008: the editable personal rating in the Rating card is shown only when
+  // this release is in the user's wantlist. GET /api/wantlist/:releaseId 404s
+  // (not_in_wantlist) as a query error otherwise; `useAddToWantlist` invalidates
+  // `wantlistKeys.all`, so this query refetches and the personal rating turns
+  // editable after an add — no reload.
   const wantlistEntry = useWantlistEntry(Number.isNaN(parsedId) ? undefined : parsedId);
   const updateWantEntry = useUpdateWantEntry(parsedId);
 

@@ -91,17 +91,15 @@ export function RecordDetailPage() {
     );
   }
 
-  // `MyCopySection` keeps its full prop set this phase — its rating field and
-  // Remove button are trimmed in US3 (T030). The action bar's Remove is the
-  // canonical one (FR-012); the transient duplicate is accepted per the plan.
+  // `MyCopySection` is condition + notes only (US3 / §C5). The personal rating
+  // lives solely in `RatingCard` (US2); Remove lives solely in
+  // `RecordDetailActions` (US1 / FR-012).
   const myCopySection = (
     <MyCopySection
       discogs={entry.discogs}
-      onSaveRating={saveRating}
       onSaveMediaCondition={saveMediaCondition}
       onSaveSleeveCondition={saveSleeveCondition}
       onSaveNotes={saveNotes}
-      onRemove={handleRemove}
     />
   );
 

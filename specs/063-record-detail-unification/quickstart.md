@@ -95,9 +95,10 @@ Run the dev server (`npm run dev` in `frontend`) and, for each of the three view
 6. **Touch targets**: at 375px width, every action-bar button and each star ≥ 44px.
 7. **No layout shift**: throttle network, reload a detail view; the skeleton
    footprint matches the populated card footprint (gallery, rating, streaming,
-   tracklist) — nothing jumps when data lands. The one accepted exception: a
-   cache-miss streaming card collapsing to nothing reflows the tracklist below it
-   once (research R4).
+   tracklist) — nothing jumps when data lands. The one accepted exception: on a
+   cache-miss with no streaming match, the streaming card's skeleton collapses to
+   nothing and the cards below it *in the left column* reflow upward once — the
+   right column and the sections above are undisturbed (research R4, spec US4 AS3).
 8. **Cross-view consistency**: open the same release from search and from the
    wishlist side by side — identical layout, identical card styling, only the
    action bar contents differ.
