@@ -18,6 +18,24 @@ const PORT = Number(process.env.DISCOGS_STUB_PORT ?? 4571);
 const STUB_USERNAME = 'e2e-discogs-user';
 const STUB_USER_ID = 4242;
 
+// The single OAuth access token every linked stub user receives from
+// /oauth/access_token. Feature 061 keys the "no seller settings" flag by it.
+const STUB_ACCESS_TOKEN = 'stub-access-token';
+
+// ---------------------------------------------------------------------------
+// Feature 061: "Mi colección en cifras" — collection statistics & valuation.
+// Designated release ids the collection-stats / valuation e2e specs
+// (T027 / T040 / T051) depend on. Keep these stable.
+// ---------------------------------------------------------------------------
+// basic_information.year is OMITTED for this release → "Año desconocido" bucket.
+const STATS_RELEASE_NO_YEAR = 6100;
+// GET /marketplace/price_suggestions/:releaseId → 404 (no market data) unless a
+// /__stub/price-suggestions seed overrides it. Drives "estimado sobre X de Y".
+const VALUATION_RELEASE_NO_MARKET_DATA = 6101;
+// Fixed early date_added → the growth chart's earliest month (FR-010).
+const STATS_RELEASE_EARLY_ADDED = 6102;
+const STATS_EARLY_ADDED_DATE = '2021-02-05T00:00:00.000Z';
+
 // One in-flight request token at a time is enough for serial e2e runs.
 const pendingCallbacks = new Map<string, string>();
 let tokenCounter = 0;
@@ -33,14 +51,66 @@ interface StubNoteValue {
   value: string;
 }
 
+// Feature 061: the collection-folder rows now carry the `basic_information`
+// facets the real Discogs payload includes and that Block-1 statistics are
+// built from — see specs/061-collection-stats-valuation/research.md decision 1
+// and data-model.md §2. `year` is optional (omitted for the designated
+// "unknown year" release; `0` elsewhere also means unknown).
+interface StubReleaseLabel {
+  name: string;
+  catno: string;
+  id: number;
+}
+
+interface StubReleaseArtist {
+  name: string;
+  id: number;
+  join: string;
+}
+
+interface StubBasicInformation {
+  id: number;
+  title: string;
+  year?: number;
+  labels: StubReleaseLabel[];
+  artists: StubReleaseArtist[];
+  genres: string[];
+  styles: string[];
+  thumb: string;
+}
+
 interface StubInstance {
   instance_id: number;
   folder_id: number;
   rating: number;
   date_added: string;
-  basic_information: { id: number; title: string; year: number };
+  basic_information: StubBasicInformation;
   notes: StubNoteValue[];
 }
+
+// A varied facet spread so the Block-1 breakdowns (decade / genre / style /
+// label / artist) render deterministically without every spec spelling out a
+// full `basic_information`. Indexed by `releaseId % DERIVED_FACETS.length`.
+// Includes multi-valued genres/labels, a `"Various"` artist (excluded from the
+// artist breakdown, FR-009), a `" (2)"` disambiguation suffix, and a `year: 0`
+// (unknown) slot.
+const DERIVED_FACETS: ReadonlyArray<{
+  year: number;
+  genres: string[];
+  styles: string[];
+  labels: string[];
+  artists: string[];
+}> = [
+  { year: 1968, genres: ['Rock'], styles: ['Psychedelic Rock'], labels: ['Parlophone'], artists: ['The Beatles'] },
+  { year: 1973, genres: ['Rock', 'Prog Rock'], styles: ['Progressive Rock'], labels: ['Harvest'], artists: ['Pink Floyd'] },
+  { year: 1979, genres: ['Rock'], styles: ['Heavy Metal'], labels: ['Roadrunner Records'], artists: ['Iron Maiden'] },
+  { year: 1984, genres: ['Electronic'], styles: ['Synth-pop'], labels: ['Mute'], artists: ['Depeche Mode'] },
+  { year: 1988, genres: ['Electronic'], styles: ['Techno'], labels: ['Warp Records'], artists: ['Aphex Twin'] },
+  { year: 1994, genres: ['Rock'], styles: ['Grunge'], labels: ['DGC'], artists: ['Nirvana'] },
+  { year: 2001, genres: ['Electronic', 'Rock'], styles: ['IDM'], labels: ['Warp Records'], artists: ['Radiohead (2)'] },
+  { year: 2013, genres: ['Jazz'], styles: ['Modal'], labels: ['Blue Note', 'Blue Note Records'], artists: ['Various'] },
+  { year: 0, genres: [], styles: [], labels: ['Not On Label'], artists: ['Unknown Artist'] },
+];
 
 const COLLECTION_FIELDS = [
   { id: 1, name: 'Media Condition', type: 'dropdown' },
@@ -67,14 +137,63 @@ function userCollection(username: string): StubInstance[] {
   return fresh;
 }
 
+/**
+ * Feature 061: builds the enriched `basic_information` for a release, applying
+ * the deterministic `DERIVED_FACETS` spread and letting explicit seed values
+ * win. `omitYear` drops the `year` key entirely (the "unknown year" shape).
+ */
+function deriveBasicInformation(
+  releaseId: number,
+  overrides: Partial<StubBasicInformation> = {},
+  omitYear = false,
+): StubBasicInformation {
+  const facet = DERIVED_FACETS[releaseId % DERIVED_FACETS.length];
+  const base: StubBasicInformation = {
+    id: releaseId,
+    title: `Stub Release ${releaseId}`,
+    year: facet.year,
+    labels: facet.labels.map((name, i) => ({
+      name,
+      catno: `CAT-${releaseId}-${i}`,
+      id: 9_000_000 + releaseId * 10 + i,
+    })),
+    artists: facet.artists.map((name, i) => ({
+      name,
+      id: 8_000_000 + releaseId * 10 + i,
+      join: i === 0 ? '' : ',',
+    })),
+    genres: [...facet.genres],
+    styles: [...facet.styles],
+    thumb: '',
+    ...overrides,
+  };
+  if (omitYear || (releaseId === STATS_RELEASE_NO_YEAR && overrides.year === undefined)) {
+    delete base.year;
+  }
+  return base;
+}
+
+/**
+ * Feature 061: a deterministic `date_added` so the growth chart has several
+ * populated months with zero-fill gaps between them, plus a fixed early anchor
+ * for the designated release (FR-010).
+ */
+function deriveDateAdded(releaseId: number): string {
+  if (releaseId === STATS_RELEASE_EARLY_ADDED) return STATS_EARLY_ADDED_DATE;
+  const now = new Date();
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (releaseId % 12), 5),
+  ).toISOString();
+}
+
 function makeInstance(releaseId: number, overrides: Partial<StubInstance> = {}): StubInstance {
   instanceCounter += 1;
   return {
     instance_id: instanceCounter,
     folder_id: 1,
     rating: 0,
-    date_added: new Date().toISOString(),
-    basic_information: { id: releaseId, title: `Stub Release ${releaseId}`, year: 2000 },
+    date_added: deriveDateAdded(releaseId),
+    basic_information: deriveBasicInformation(releaseId),
     notes: [],
     ...overrides,
   };
@@ -109,7 +228,140 @@ function seedInstance(seed: Record<string, unknown>): StubInstance {
   if (seed.mediaCondition) notes.push({ field_id: 1, value: asText(seed.mediaCondition) });
   if (seed.sleeveCondition) notes.push({ field_id: 2, value: asText(seed.sleeveCondition) });
   if (seed.notes) notes.push({ field_id: 3, value: asText(seed.notes) });
-  return makeInstance(Number(seed.releaseId), { rating: Number(seed.rating ?? 0), notes });
+
+  const releaseId = Number(seed.releaseId);
+  // Feature 061: `basic_information` facet overrides may be given either flat on
+  // the seed or nested under `basic_information` (mirrors `seedWant`).
+  const bi = (seed.basic_information as Record<string, unknown> | undefined) ?? {};
+  const pick = (key: string): unknown => seed[key] ?? bi[key];
+
+  const biOverrides: Partial<StubBasicInformation> = {};
+  const titleRaw = pick('title');
+  if (titleRaw !== undefined) biOverrides.title = asText(titleRaw);
+
+  const yearRaw = pick('year');
+  const omitYear = seed.year === null || bi.year === null;
+  if (yearRaw !== undefined && yearRaw !== null) biOverrides.year = Number(yearRaw);
+
+  const labelsRaw = pick('labels');
+  if (Array.isArray(labelsRaw)) {
+    biOverrides.labels = labelsRaw.map((entry, i) => {
+      const rec = (entry ?? {}) as Record<string, unknown>;
+      return {
+        name: typeof entry === 'string' ? entry : asText(rec.name),
+        catno: rec.catno !== undefined ? asText(rec.catno) : `CAT-${releaseId}-${i}`,
+        id: rec.id !== undefined ? Number(rec.id) : 9_000_000 + releaseId * 10 + i,
+      };
+    });
+  }
+
+  const artistsRaw = pick('artists');
+  if (Array.isArray(artistsRaw)) {
+    biOverrides.artists = artistsRaw.map((entry, i) => {
+      const rec = (entry ?? {}) as Record<string, unknown>;
+      return {
+        name: typeof entry === 'string' ? entry : asText(rec.name),
+        id: rec.id !== undefined ? Number(rec.id) : 8_000_000 + releaseId * 10 + i,
+        join: rec.join !== undefined ? asText(rec.join) : i === 0 ? '' : ',',
+      };
+    });
+  }
+
+  const genresRaw = pick('genres');
+  if (Array.isArray(genresRaw)) biOverrides.genres = genresRaw.map(asText);
+  const stylesRaw = pick('styles');
+  if (Array.isArray(stylesRaw)) biOverrides.styles = stylesRaw.map(asText);
+  const thumbRaw = pick('thumb');
+  if (thumbRaw !== undefined) biOverrides.thumb = asText(thumbRaw);
+
+  const overrides: Partial<StubInstance> = {
+    rating: Number(seed.rating ?? 0),
+    notes,
+    basic_information: deriveBasicInformation(releaseId, biOverrides, omitYear),
+  };
+  const dateAdded = seed.date_added ?? bi.date_added;
+  if (dateAdded !== undefined) overrides.date_added = asText(dateAdded);
+
+  return makeInstance(releaseId, overrides);
+}
+
+// ---------------------------------------------------------------------------
+// Feature 061: GET /marketplace/price_suggestions/:releaseId state.
+// ---------------------------------------------------------------------------
+// Exact grade strings from backend/src/domain/discogsOauth/conditionGrading.ts
+// (`MEDIA_CONDITIONS`) — the price_suggestions response keys must match verbatim
+// so the valuation use case can do a direct lookup with no mapping.
+const MEDIA_CONDITION_GRADES = [
+  'Mint (M)',
+  'Near Mint (NM or M-)',
+  'Very Good Plus (VG+)',
+  'Very Good (VG)',
+  'Good Plus (G+)',
+  'Good (G)',
+  'Fair (F)',
+  'Poor (P)',
+] as const;
+
+type MediaConditionGrade = (typeof MEDIA_CONDITION_GRADES)[number];
+
+interface StubConditionPrice {
+  currency: string;
+  value: number;
+}
+
+type StubPriceSuggestions = Partial<Record<MediaConditionGrade, StubConditionPrice>>;
+
+const GRADE_FACTOR: Record<MediaConditionGrade, number> = {
+  'Mint (M)': 1,
+  'Near Mint (NM or M-)': 0.82,
+  'Very Good Plus (VG+)': 0.55,
+  'Very Good (VG)': 0.34,
+  'Good Plus (G+)': 0.2,
+  'Good (G)': 0.12,
+  'Fair (F)': 0.06,
+  'Poor (P)': 0.03,
+};
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** Deterministic per-grade EUR price map for a release (currency = the user's Discogs seller currency). */
+function derivePriceSuggestions(releaseId: number): StubPriceSuggestions {
+  const mint = 8 + (releaseId % 47); // spread 8.00–54.00 EUR at Mint
+  const map: StubPriceSuggestions = {};
+  for (const grade of MEDIA_CONDITION_GRADES) {
+    map[grade] = { currency: 'EUR', value: round2(mint * GRADE_FACTOR[grade]) };
+  }
+  return map;
+}
+
+// Explicit per-release price seeds win over the deterministic map. A `null`
+// seed → 404 (no market data). See /__stub/price-suggestions.
+const priceSuggestionSeeds = new Map<number, StubPriceSuggestions | null>();
+// How many times GET /marketplace/price_suggestions was hit per release — lets
+// a spec assert a warm re-open issues zero new calls (SC-005 / T051).
+const priceSuggestionHits = new Map<number, number>();
+// OAuth access tokens whose owner has NOT completed Discogs seller settings →
+// GET /marketplace/price_suggestions responds 403 (SellerSettingsRequiredError).
+const noSellerSettingsTokens = new Set<string>();
+// Narrow failure injection for the marketplace endpoint (mirrors
+// `collectionFailureMode` but scoped to price_suggestions) so a scale/outage
+// spec can force 503 or paced responses without touching /collection.
+let priceSuggestionsFailureMode: 'none' | 'unavailable' | 'slow' = 'none';
+const PRICE_SUGGESTIONS_SLOW_MS = 150;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/** Extracts the OAuth 1.0a `oauth_token` from the Authorization header, if present. */
+function oauthTokenOf(req: any): string | null {
+  const authHeader = req.headers.authorization ?? '';
+  const match = /oauth_token="?([^",\s]+)"?/.exec(authHeader);
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -197,6 +449,11 @@ async function handleControlRequest(req: any, res: any, url: URL): Promise<boole
     wants.clear();
     collectionFailureMode = 'none';
     wantlistWriteFailureMode = 'none';
+    // Feature 061.
+    priceSuggestionSeeds.clear();
+    priceSuggestionHits.clear();
+    noSellerSettingsTokens.clear();
+    priceSuggestionsFailureMode = 'none';
     json(res, 200, { ok: true });
     return true;
   }
@@ -209,6 +466,61 @@ async function handleControlRequest(req: any, res: any, url: URL): Promise<boole
     if ('wantlistWrite' in body) {
       wantlistWriteFailureMode =
         (body.wantlistWrite as typeof wantlistWriteFailureMode) ?? 'none';
+    }
+    // Feature 061: 'unavailable' → 503 on every price call; 'slow' → paced
+    // responses (so a scale spec can prove the shared breaker never trips).
+    if ('priceSuggestions' in body) {
+      priceSuggestionsFailureMode =
+        (body.priceSuggestions as typeof priceSuggestionsFailureMode) ?? 'none';
+    }
+    json(res, 200, { ok: true });
+    return true;
+  }
+
+  // Feature 061: seed / clear per-release price-suggestion data.
+  //   POST /__stub/price-suggestions { seeds: { "<releaseId>": <map> | null }, reset?: true }
+  //   GET  /__stub/price-suggestions  → current seeds, per-release hit counts
+  if (url.pathname === '/__stub/price-suggestions') {
+    if (req.method === 'GET') {
+      json(res, 200, {
+        seeds: Object.fromEntries(priceSuggestionSeeds),
+        hits: Object.fromEntries(priceSuggestionHits),
+        totalHits: [...priceSuggestionHits.values()].reduce((sum, n) => sum + n, 0),
+        noSellerSettingsTokens: [...noSellerSettingsTokens],
+        failureMode: priceSuggestionsFailureMode,
+      });
+      return true;
+    }
+    if (req.method === 'POST') {
+      const body = await readJsonBody(req);
+      if (body.reset === true) {
+        priceSuggestionSeeds.clear();
+        priceSuggestionHits.clear();
+      }
+      const seeds = (body.seeds as Record<string, unknown> | undefined) ?? {};
+      for (const [releaseId, value] of Object.entries(seeds)) {
+        priceSuggestionSeeds.set(
+          Number(releaseId),
+          value === null ? null : (value as StubPriceSuggestions),
+        );
+      }
+      json(res, 200, { ok: true });
+      return true;
+    }
+    return false;
+  }
+
+  // Feature 061: mark / unmark an account as lacking Discogs seller settings.
+  //   POST /__stub/seller-settings { missing: boolean, token?: string }
+  // `token` defaults to STUB_ACCESS_TOKEN (the single token every linked stub
+  // user gets), so a spec can just POST { missing: true }.
+  if (url.pathname === '/__stub/seller-settings' && req.method === 'POST') {
+    const body = await readJsonBody(req);
+    const token = typeof body.token === 'string' ? body.token : STUB_ACCESS_TOKEN;
+    if (body.missing === true) {
+      noSellerSettingsTokens.add(token);
+    } else {
+      noSellerSettingsTokens.delete(token);
     }
     json(res, 200, { ok: true });
     return true;
@@ -337,6 +649,64 @@ function respondWithInjectedCatalogAuthFailure(req: any, res: any): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Feature 061 — GET {DISCOGS_OAUTH_BASE_URL}/marketplace/price_suggestions/:releaseId
+ * (OAuth-signed). Returns true when the request was handled here. Mapping, per
+ * specs/061-collection-stats-valuation/contracts/discogs-marketplace-client.md:
+ *  - shared / endpoint-scoped failure injection → 401 / 503
+ *  - caller without seller settings                → 403 (SellerSettingsRequiredError)
+ *  - `null` seed or VALUATION_RELEASE_NO_MARKET_DATA → 404 (no market data)
+ *  - explicit seed                                  → that map
+ *  - anything else                                  → deterministic EUR per-grade map
+ */
+async function handlePriceSuggestionsRequest(req: any, res: any, url: URL): Promise<boolean> {
+  const match = /^\/marketplace\/price_suggestions\/(\d+)$/.exec(url.pathname);
+  if (!match || req.method !== 'GET') return false;
+
+  const releaseId = Number(match[1]);
+  priceSuggestionHits.set(releaseId, (priceSuggestionHits.get(releaseId) ?? 0) + 1);
+
+  // Shared revoke/outage injection (same toggle as /collection).
+  if (respondWithInjectedFailure(res)) return true;
+  // Endpoint-scoped injection (FR-021 scale / outage specs).
+  if (priceSuggestionsFailureMode === 'unavailable') {
+    json(res, 503, { message: 'Service unavailable.' });
+    return true;
+  }
+  if (priceSuggestionsFailureMode === 'slow') {
+    await delay(PRICE_SUGGESTIONS_SLOW_MS);
+  }
+
+  // A linked account without completed Discogs seller settings cannot read
+  // price suggestions — Discogs answers 403 (→ SellerSettingsRequiredError).
+  const token = oauthTokenOf(req);
+  if (token && noSellerSettingsTokens.has(token)) {
+    json(res, 403, {
+      message:
+        "You must set your seller settings before you can access price suggestions.",
+    });
+    return true;
+  }
+
+  if (priceSuggestionSeeds.has(releaseId)) {
+    const seeded = priceSuggestionSeeds.get(releaseId) ?? null;
+    if (seeded === null) {
+      json(res, 404, { message: 'No price suggestions for this release.' });
+      return true;
+    }
+    json(res, 200, seeded);
+    return true;
+  }
+
+  if (releaseId === VALUATION_RELEASE_NO_MARKET_DATA) {
+    json(res, 404, { message: 'No price suggestions for this release.' });
+    return true;
+  }
+
+  json(res, 200, derivePriceSuggestions(releaseId));
+  return true;
 }
 
 /**
@@ -518,6 +888,11 @@ const server = createServer(async (req: any, res: any) => {
     return;
   }
 
+  // Feature 061: marketplace price suggestions (OAuth-signed).
+  if (await handlePriceSuggestionsRequest(req, res, url)) {
+    return;
+  }
+
   // Catalog endpoints (used by library enrichment when DISCOGS_BASE_URL points here).
   const releaseMatch = /^\/releases\/(\d+)$/.exec(url.pathname);
   if (releaseMatch && req.method === 'GET') {
@@ -576,7 +951,7 @@ const server = createServer(async (req: any, res: any) => {
   if (url.pathname === '/oauth/access_token' && req.method === 'POST') {
     res.writeHead(200, { 'Content-Type': 'application/x-www-form-urlencoded' }).end(
       urlencoded({
-        oauth_token: 'stub-access-token',
+        oauth_token: STUB_ACCESS_TOKEN,
         oauth_token_secret: 'stub-access-secret',
       }),
     );

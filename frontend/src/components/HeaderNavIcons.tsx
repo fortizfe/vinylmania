@@ -64,9 +64,25 @@ function LibraryIcon() {
   );
 }
 
+function StatsIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="h-4 w-4"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 16v-3M10 16V9M15 16V6" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 17h14" />
+    </svg>
+  );
+}
+
 const ICONS: Record<HeaderNavLink['key'], () => ReactElement> = {
   library: LibraryIcon,
   wishlist: WishlistIcon,
+  stats: StatsIcon,
   profile: ProfileIcon,
 };
 

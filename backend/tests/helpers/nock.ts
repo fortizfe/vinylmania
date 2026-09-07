@@ -50,6 +50,13 @@ export interface RawInstanceOverrides {
   mediaCondition?: string;
   sleeveCondition?: string;
   notes?: string;
+  /** feature 061 — `basic_information` facets the sync write-back reads. */
+  title?: string;
+  year?: number;
+  labels?: Array<{ name: string; catno?: string; id?: number }>;
+  artists?: Array<{ name: string; id?: number; join?: string }>;
+  genres?: string[];
+  styles?: string[];
 }
 
 /** Builds an instance payload as returned by Discogs' collection listings. */
@@ -71,7 +78,15 @@ export function rawCollectionInstance(
     folder_id: overrides.folderId ?? 1,
     rating: overrides.rating ?? 0,
     date_added: overrides.dateAdded ?? '2026-01-01T00:00:00-08:00',
-    basic_information: { id: releaseId, title: `Release ${releaseId}`, year: 2000 },
+    basic_information: {
+      id: releaseId,
+      title: overrides.title ?? `Release ${releaseId}`,
+      year: overrides.year ?? 2000,
+      labels: overrides.labels ?? [{ name: `Label ${releaseId}`, catno: 'CAT-1', id: 1 }],
+      artists: overrides.artists ?? [{ name: `Artist ${releaseId}`, id: 1, join: '' }],
+      genres: overrides.genres ?? ['Rock'],
+      styles: overrides.styles ?? ['Heavy Metal'],
+    },
     notes: noteValues,
   };
 }

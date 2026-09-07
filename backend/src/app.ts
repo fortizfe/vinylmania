@@ -7,6 +7,7 @@ import { discogsRouter } from './adapters/discogsCatalog/discogsRoutes';
 import { discogsOauthRouter } from './adapters/discogsOauth/discogsRoutes';
 import { feedsRouter } from './adapters/feeds/feedsRoutes';
 import { googleAuthRouter } from './adapters/googleAuth/googleAuthRoutes';
+import { collectionStatsRouter } from './adapters/collectionStats/collectionStatsRoutes';
 import { libraryRouter } from './adapters/library/libraryRoutes';
 import { wantlistRouter } from './adapters/wantlist/wantlistRoutes';
 
@@ -33,6 +34,7 @@ export function createApp(): express.Express {
   app.use('/api/discogs', discogsRouter);
   app.use('/api/library', libraryRouter);
   app.use('/api/wantlist', wantlistRouter);
+  app.use('/api/collection-stats', collectionStatsRouter);
   app.use('/api/feeds', feedsRouter);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

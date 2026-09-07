@@ -33,6 +33,60 @@ function syncMarkerKey(uid: string): string {
   return `discogs:libsync:${uid}`;
 }
 
+/**
+ * The subset of `basic_information` facets (feature 061) worth persisting for
+ * an instance — omits a key entirely when Discogs gave nothing for it, so a
+ * facet-less instance produces `{}` and its entry keeps whatever it had.
+ */
+type CollectionFacetPatch = {
+  year?: number;
+  label?: string[];
+  primaryArtist?: string;
+  genre?: string[];
+  style?: string[];
+};
+
+function nonEmpty(values: string[] | undefined): boolean {
+  return Array.isArray(values) && values.length > 0;
+}
+
+function collectionFacets(
+  instance: CollectionInstance,
+  existing?: Pick<LibraryEntry, 'genre' | 'style'>,
+): CollectionFacetPatch {
+  const facets: CollectionFacetPatch = {};
+  if (instance.year !== null) {
+    facets.year = instance.year;
+  }
+  if (instance.labelNames.length > 0) {
+    facets.label = instance.labelNames;
+  }
+  if (instance.artistNames.length > 0) {
+    facets.primaryArtist = instance.artistNames[0];
+  }
+  // `genre`/`style` feed the Block 1 breakdowns (FR-007) and reuse the very
+  // `LibraryEntry.genre`/`.style` fields feature 038's catalog enrichment
+  // writes. Two guards keep the two writers coherent:
+  //  - an empty `basic_information` array is never persisted (skip-empty, same
+  //    rule as `year`/`label`);
+  //  - a value already present on the entry is left alone — enrichment stays
+  //    the authority once it has run; the sync only *backfills* never-enriched
+  //    entries so the stats screen works without the enrichment path (FR-004).
+  if (instance.genres.length > 0 && !nonEmpty(existing?.genre)) {
+    facets.genre = instance.genres;
+  }
+  if (instance.styles.length > 0 && !nonEmpty(existing?.style)) {
+    facets.style = instance.styles;
+  }
+  return facets;
+}
+
+function sameInstant(a: string, b: string): boolean {
+  const timeA = new Date(a).getTime();
+  const timeB = new Date(b).getTime();
+  return Number.isNaN(timeA) || Number.isNaN(timeB) ? a === b : timeA === timeB;
+}
+
 /** Picks the instance Vinylmania manages for a release: the oldest one (R8). */
 function pickManagedInstances(
   instances: CollectionInstance[],
@@ -135,6 +189,16 @@ export function createSyncLibraryUseCase(deps: {
         discogsInstanceId: managed.instanceId,
         discogsFolderId: managed.folderId,
       });
+    }
+
+    // feature 061 — mirror the collection facets and the real date_added onto
+    // the entry so Block 1 aggregates with zero new Discogs requests (FR-010).
+    const facets = collectionFacets(managed, entry);
+    if (Object.keys(facets).length > 0) {
+      await repository.persistCollectionFacets(uid, entry.id, facets);
+    }
+    if (!sameInstant(entry.addedAt, managed.dateAdded)) {
+      await repository.reconcileAddedAt(uid, entry.id, new Date(managed.dateAdded));
     }
 
     if (firstSync && (entry.legacyCondition || entry.legacyNotes)) {
@@ -299,6 +363,10 @@ export function createSyncLibraryUseCase(deps: {
         discogsFolderId: managed.folderId,
         addedAt: new Date(managed.dateAdded),
       });
+      const facets = collectionFacets(managed);
+      if (Object.keys(facets).length > 0) {
+        await repository.persistCollectionFacets(uid, created.id, facets);
+      }
       result.added += 1;
       logger.info({
         route: ROUTE,

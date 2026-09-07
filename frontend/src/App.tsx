@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import { AppHeader } from './components/AppHeader';
 import { VinylmaniaGrungeFilter } from './components/brand/VinylmaniaGrungeFilter';
+import { CollectionStatsPage } from './pages/CollectionStatsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DiscogsCallbackPage } from './pages/DiscogsCallbackPage';
 import { LandingPage } from './pages/LandingPage';
@@ -99,6 +100,14 @@ function App() {
           element={
             <AuthenticatedLayout>
               <WishlistPage />
+            </AuthenticatedLayout>
+          }
+        />
+        <Route
+          path="/app/stats"
+          element={
+            <AuthenticatedLayout>
+              <CollectionStatsPage />
             </AuthenticatedLayout>
           }
         />

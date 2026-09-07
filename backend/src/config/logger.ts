@@ -47,7 +47,12 @@ export type LogOutcome =
   | 'logged_out'
   // Wantlist auto-removal on purchase (feature 060)
   | 'wantlist_removed_on_purchase'
-  | 'wantlist_removal_failed';
+  | 'wantlist_removal_failed'
+  // Collection stats & estimated market value (feature 061)
+  | 'seller_settings_required'
+  | 'stats_computed'
+  | 'valuation_batch'
+  | 'price_suggestion_missing';
 
 export interface LogEvent {
   route: string;

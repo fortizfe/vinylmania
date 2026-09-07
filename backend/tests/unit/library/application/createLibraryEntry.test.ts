@@ -74,6 +74,8 @@ function fakeRepository(): jest.Mocked<LibraryRepositoryPort> {
     listEntries: jest.fn(),
     listAllEntries: jest.fn().mockResolvedValue([]),
     persistCatalogFields: jest.fn(),
+    persistCollectionFacets: jest.fn().mockResolvedValue(undefined),
+    reconcileAddedAt: jest.fn().mockResolvedValue(undefined),
     updateEntryInstance: jest.fn().mockResolvedValue(undefined),
     clearLegacyFields: jest.fn().mockResolvedValue(undefined),
     deleteEntry: jest.fn().mockResolvedValue(true),

@@ -29,6 +29,9 @@ function toLibraryEntry(id: string, data: FirebaseFirestore.DocumentData): Libra
     ...(data.genre !== undefined ? { genre: data.genre } : {}),
     ...(data.style !== undefined ? { style: data.style } : {}),
     ...(data.format !== undefined ? { format: data.format } : {}),
+    ...(data.year !== undefined ? { year: data.year } : {}),
+    ...(data.label !== undefined ? { label: data.label } : {}),
+    ...(data.primaryArtist !== undefined ? { primaryArtist: data.primaryArtist } : {}),
   };
 }
 
@@ -104,6 +107,57 @@ export async function persistCatalogFields(
   await entriesCollection(uid).doc(entryId).set(fields, { merge: true });
 }
 
+/**
+ * Upserts the feature-061 collection facets (year/label/primaryArtist).
+ * set+merge for the same reason as `persistCatalogFields` — the entry
+ * document may not exist yet in an edge case, and `update()` would throw.
+ * Only the keys actually supplied are written.
+ */
+export async function persistCollectionFacets(
+  uid: string,
+  entryId: string,
+  facets: {
+    year?: number;
+    label?: string[];
+    primaryArtist?: string;
+    genre?: string[];
+    style?: string[];
+  },
+): Promise<void> {
+  const patch: Record<string, unknown> = {};
+  if (facets.year !== undefined) {
+    patch.year = facets.year;
+  }
+  if (facets.label !== undefined) {
+    patch.label = facets.label;
+  }
+  if (facets.primaryArtist !== undefined) {
+    patch.primaryArtist = facets.primaryArtist;
+  }
+  // `genre`/`style` share the fields feature 038's enrichment writes via
+  // `persistCatalogFields`; an empty array from `basic_information` is omitted
+  // upstream so it never clobbers an enriched value (FR-007).
+  if (facets.genre !== undefined) {
+    patch.genre = facets.genre;
+  }
+  if (facets.style !== undefined) {
+    patch.style = facets.style;
+  }
+  if (Object.keys(patch).length === 0) {
+    return;
+  }
+  await entriesCollection(uid).doc(entryId).set(patch, { merge: true });
+}
+
+/** Corrects an entry's `addedAt` to the real Discogs `date_added` (FR-010). */
+export async function reconcileAddedAt(
+  uid: string,
+  entryId: string,
+  addedAt: Date,
+): Promise<void> {
+  await entriesCollection(uid).doc(entryId).set({ addedAt }, { merge: true });
+}
+
 /** Points an entry at its managed Discogs collection instance. */
 export async function updateEntryInstance(
   uid: string,
@@ -140,6 +194,8 @@ export const firestoreLibraryRepository: LibraryRepositoryPort = {
   listEntries,
   listAllEntries,
   persistCatalogFields,
+  persistCollectionFacets,
+  reconcileAddedAt,
   updateEntryInstance,
   clearLegacyFields,
   deleteEntry,

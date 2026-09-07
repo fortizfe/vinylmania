@@ -13,9 +13,10 @@ interface LibraryLinkRequiredProps {
   /**
    * Which synchronized section is gated. Only the body copy differs — the
    * library mirrors the Discogs *collection*, the wishlist mirrors the
-   * Discogs *wantlist* (feature 060, FR-002).
+   * Discogs *wantlist* (feature 060, FR-002), and the collection stats are
+   * computed from the Discogs *collection* (feature 061).
    */
-  context?: 'library' | 'wishlist';
+  context?: 'library' | 'wishlist' | 'stats';
 }
 
 const COPY = {
@@ -37,6 +38,16 @@ const COPY = {
     relink: {
       title: 'Your Discogs link is no longer valid',
       body: 'Discogs rejected the stored connection — it may have been revoked from your Discogs settings. Re-link your account from your profile to keep using your wishlist.',
+    },
+  },
+  stats: {
+    'not-linked': {
+      title: 'Link your Discogs account',
+      body: 'Your collection stats are built from your Discogs collection. Link your accounts from your profile to start using it.',
+    },
+    relink: {
+      title: 'Your Discogs link is no longer valid',
+      body: 'Discogs rejected the stored connection — it may have been revoked from your Discogs settings. Re-link your account from your profile to keep using your collection stats.',
     },
   },
 } as const;
