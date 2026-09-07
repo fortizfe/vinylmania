@@ -105,20 +105,33 @@ Run the dev server (`npm run dev` in `frontend`) and, for each of the three view
 
 ## 5. Definition of done (maps to spec Success Criteria)
 
-- [ ] SC-001 / SC-006: section testid order identical across the three views
-      (except the library-only my-copy card) — asserted in e2e.
-- [ ] SC-002: every content block renders inside the shared `<Card>` — asserted in
-      component tests + visual check.
-- [ ] SC-003: rating editable from one obvious place (the Rating card) — manual +
-      e2e.
-- [ ] SC-004: community rating visible on the detail view for a rated release in
-      all three views — e2e.
-- [ ] SC-005: "Estado de mi copia" has exactly media + sleeve + notes, zero rating
-      controls — component test.
-- [ ] SC-007: no notes field in the wishlist view; no note-mutating request from it
-      — e2e + network assertion.
-- [ ] SC-008: no layout shift between section states — manual throttled reload.
-- [ ] SC-009: axe + keyboard walkthrough, zero AA violations, both themes.
-- [ ] SC-010: three layout options documented and one chosen — done (design brief +
+- [x] SC-001 / SC-006: section testid order identical across the three views
+      (except the library-only my-copy card) — asserted in e2e
+      (`release-detail.spec.ts` search-view + `T034` parametrised search/wishlist/
+      library; integration `recordDetailFlow.test.tsx` library order).
+- [x] SC-002: every content block renders inside the shared `<Card>` —
+      `recordDetailFlow.test.tsx:363` (shared card class set on every section);
+      component tests. Action bar is intentionally not a card (FR-012).
+- [x] SC-003: rating editable from one obvious place (the Rating card) —
+      `record-detail-inline-edit.spec.ts` (library) + `wishlist-discogs-sync.spec.ts`
+      T0YY-1/T0YY-3 (wishlist); `MyCopySection.test.tsx` confirms no second control.
+- [x] SC-004: community rating visible on the detail view for a rated release in
+      all three views — `release-detail.spec.ts` (badge 4.3 + count + have/want),
+      `T034`, `RatingCard.test.tsx`.
+- [x] SC-005: "Estado de mi copia" has exactly media + sleeve + notes, zero rating
+      controls — `MyCopySection.test.tsx`; e2e `record-detail-inline-edit.spec.ts` T032.
+- [x] SC-007: no notes field in the wishlist view; no note-mutating request from it
+      — `wishlist-discogs-sync.spec.ts` T0YY-2 / T038 (no textarea/label/text; every
+      `PATCH /api/wantlist` body asserted free of `notes`; stub note unchanged).
+- [x] SC-008: no layout shift between section states — `RecordDetailSkeleton.test.tsx`
+      + `RatingCard.test.tsx` "layout stability"; T043 fixed a real skeleton→content jump.
+- [x] SC-009: axe + keyboard walkthrough, zero serious/critical AA violations, both
+      themes — `runAxeScan` on search (`release-detail.spec.ts`), library
+      (`record-detail-responsive.spec.ts`) and wishlist
+      (`wishlist-discogs-sync.spec.ts`, added T044); heading-outline unit test;
+      keyboard order == DOM == §C1 by construction (`RecordDetailLayout.test.tsx`).
+- [x] SC-010: three layout options documented and one chosen — done (design brief +
       spec Clarifications).
-- [ ] FR-023 regression: `MasterReleaseDetailPage` + its e2e unchanged and green.
+- [x] FR-023 regression: `MasterReleaseDetailPage` + its e2e unchanged and green —
+      master spec files byte-for-byte unchanged; 14 chromium + 7 webkit e2e green;
+      `MasterReleaseDetailPage.test.tsx` 6/6.

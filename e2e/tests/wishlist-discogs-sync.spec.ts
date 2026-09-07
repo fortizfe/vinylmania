@@ -23,6 +23,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const STUB_URL = 'http://localhost:4571';
@@ -929,4 +930,43 @@ test.describe('US5 - buy removes from wishlist (feature 060, FR-012/FR-013)', ()
         const wants = await getWantlist();
         expect(wants).toHaveLength(0);
     });
+});
+
+// ---------------------------------------------------------------------------
+// feat-063 US1/US2 + spec 058 — WCAG 2.1 AA automated scan of the WISHLIST
+// DETAIL view (T044, closing the axe gap the frontend polish agent flagged
+// under T042). The existing axe call sites cover the search view
+// (`release-detail.spec.ts`) and the library view
+// (`record-detail-responsive.spec.ts`); the wishlist detail view — the
+// release route with `GET /api/wantlist/:releaseId` resolving so the shared
+// `RatingCard` renders its editable personal half ("Tu valoración") — had no
+// scan. Mirrors the `runAxeScan` pattern: serious/critical only, both themes.
+// ---------------------------------------------------------------------------
+
+test.describe('Wishlist detail view WCAG 2.1 AA automated scan (feat-063 / spec 058, T044)', () => {
+    for (const theme of ['light', 'dark'] as const) {
+        test(`the wishlist detail view has no serious/critical WCAG 2.1 AA violations in ${theme} mode`, async ({
+            page,
+        }) => {
+            await page.emulateMedia({ colorScheme: theme });
+            // rating 3 → the RatingCard personal half is pre-filled and editable.
+            await seedWantlist([{ releaseId: 222, rating: 3, notes: '' }]);
+
+            await signInAndLinkDiscogs(page);
+            await openReleaseDetail(page, 222);
+
+            // Gate on the wishlist-only editable personal rating so the scan
+            // runs against the fully-resolved detail view (GET /api/wantlist/222
+            // has landed and RatingCard shows its editable half).
+            const ratingCard = page.getByTestId('record-detail-rating-card');
+            await expect(ratingCard).toBeVisible({ timeout: 15_000 });
+            await expect(
+                ratingCard.getByRole('group', { name: 'Tu valoración' }),
+            ).toBeVisible();
+
+            const seriousOrCritical = await runAxeScan(page);
+
+            expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+        });
+    }
 });
