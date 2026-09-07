@@ -14,7 +14,6 @@ import { ReleaseTracklistSection } from '../components/ReleaseTracklistSection';
 import { StreamingLinksSection } from '../components/StreamingLinksSection';
 import { BackLink } from '../components/ui/BackLink';
 import { Card } from '../components/ui/Card';
-import { WantlistPanel } from '../components/WantlistPanel';
 import { presentRating } from '../lib/releaseRating';
 import { useCatalogRelease } from '../queries/discogsQueries';
 import { useCreateLibraryEntry } from '../queries/libraryQueries';
@@ -115,9 +114,14 @@ export function ReleaseDetailPage() {
     try {
       const result = await addToWantlist.mutateAsync({ discogsReleaseId: parsedId });
       setAddedToWantlist(true);
-      if (result.alreadyInLibrary) {
-        setWantlistNote('This is already in your library.');
-      }
+      // Once the wantlist query refetches, the action bar swaps to its
+      // `view="wishlist"` variant and the "Added to wishlist" button unmounts,
+      // so the confirmation has to live in the status line instead (FR-020).
+      setWantlistNote(
+        result.alreadyInLibrary
+          ? 'This is already in your library.'
+          : 'Added to your wishlist.',
+      );
     } catch (err) {
       if (err instanceof ApiError && err.code === 'discogs_not_linked') {
         setGateError({ variant: 'not-linked', context: 'wishlist' });
@@ -129,14 +133,6 @@ export function ReleaseDetailPage() {
         );
       }
     }
-  }
-
-  async function handleSaveWantlistRating(rating: number) {
-    await updateWantEntry.mutateAsync({ rating });
-  }
-
-  async function handleSaveWantlistNotes(notes: string) {
-    await updateWantEntry.mutateAsync({ notes });
   }
 
   const gateNote = gateError ? gateMessage(gateError) : null;
@@ -206,29 +202,25 @@ export function ReleaseDetailPage() {
     Boolean(release.notes) || (release.identifiers?.length ?? 0) > 0;
 
   const rating = (
-    <>
-      <RatingCard
-        community={{
-          presentation: presentRating(release.community?.rating),
-          count: release.community?.rating.count ?? 0,
-          have: release.community?.have ?? null,
-          want: release.community?.want ?? null,
-        }}
-      />
-      {isInWantlist && wantlistEntry.data && (
-        <Card
-          data-testid="release-detail-wantlist-panel-card"
-          padding="sm"
-          className="mt-4"
-        >
-          <WantlistPanel
-            entry={wantlistEntry.data}
-            onSaveRating={handleSaveWantlistRating}
-            onSaveNotes={handleSaveWantlistNotes}
-          />
-        </Card>
-      )}
-    </>
+    <RatingCard
+      community={{
+        presentation: presentRating(release.community?.rating),
+        count: release.community?.rating.count ?? 0,
+        have: release.community?.have ?? null,
+        want: release.community?.want ?? null,
+      }}
+      personal={
+        isInWantlist && wantlistEntry.data
+          ? {
+              value: wantlistEntry.data.rating,
+              onSave: async (rating: number) => {
+                await updateWantEntry.mutateAsync({ rating });
+              },
+              saving: updateWantEntry.isPending,
+            }
+          : undefined
+      }
+    />
   );
 
   return (

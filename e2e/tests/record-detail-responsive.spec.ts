@@ -197,7 +197,12 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     );
     expect(hasHorizontalScroll).toBe(false);
 
-    const starBox = await page.getByRole('button', { name: '4 stars' }).boundingBox();
+    // Feature 063 US2: scope to the RatingCard's star group — the library view
+    // transiently renders a second star group in MyCopySection (removed in US3).
+    const starBox = await page
+      .getByTestId('record-detail-rating-card')
+      .getByRole('button', { name: '4 stars' })
+      .boundingBox();
     expect(starBox?.width).toBeGreaterThanOrEqual(44);
     expect(starBox?.height).toBeGreaterThanOrEqual(44);
 

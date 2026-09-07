@@ -155,6 +155,15 @@ export function RecordDetailPage() {
             have: release.community?.have ?? null,
             want: release.community?.want ?? null,
           }}
+          personal={
+            entry.discogs
+              ? {
+                  value: entry.discogs.rating,
+                  onSave: saveRating,
+                  saving: updateEntry.isPending,
+                }
+              : undefined
+          }
         />
       }
       streaming={
