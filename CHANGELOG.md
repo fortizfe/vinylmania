@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.10.0] - 2026-09-07
+
+### Added
+
+- "Escúchalo en streaming" — Apple Music links on record detail (#52) ([55caedc])
+
 ## [1.9.0] - 2026-09-07
 
 ### Added
