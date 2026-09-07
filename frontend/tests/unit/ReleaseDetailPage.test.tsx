@@ -377,6 +377,57 @@ describe('ReleaseDetailPage', () => {
     });
   });
 
+  describe('accessibility — heading outline (feature 063, T042 / §C7)', () => {
+    const wantEntry = {
+      discogsReleaseId: 1,
+      rating: 3,
+      notes: null,
+      addedAt: '2026-09-06T00:00:00.000Z',
+    };
+
+    async function expectCleanHeadingOutline() {
+      // Exactly one <h1>, and it is the record title.
+      const h1s = await screen.findAllByRole('heading', { level: 1 });
+      expect(h1s).toHaveLength(1);
+      expect(h1s[0]).toHaveTextContent('Stockholm');
+
+      // Every content card is an <h2>: rating, tracklist and the catalog-info
+      // card (notes + identifiers are present in `fullRelease`).
+      const h2Names = screen
+        .getAllByRole('heading', { level: 2 })
+        .map((h) => h.textContent);
+      expect(h2Names).toEqual(
+        expect.arrayContaining(['Valoración', 'Tracklist', 'Más información']),
+      );
+
+      // No skipped level anywhere on the page (WCAG 1.3.1).
+      expect(screen.queryAllByRole('heading', { level: 3 })).toHaveLength(0);
+      expect(screen.queryAllByRole('heading', { level: 4 })).toHaveLength(0);
+    }
+
+    it('search view (not in wantlist): h1 title then h2 cards, no skipped level', async () => {
+      mockGetRelease.mockResolvedValue(fullRelease);
+
+      renderPage();
+
+      await expectCleanHeadingOutline();
+    });
+
+    it('wishlist view (in wantlist): same clean outline, with the editable personal rating reachable by name', async () => {
+      mockGetRelease.mockResolvedValue(fullRelease);
+      mockGetWantEntry.mockResolvedValue(wantEntry);
+
+      renderPage();
+
+      await expectCleanHeadingOutline();
+      // The wishlist view adds the editable personal half the search view lacks;
+      // it keeps its accessible name.
+      expect(
+        screen.getByRole('group', { name: /tu valoraci[oó]n/i }),
+      ).toBeInTheDocument();
+    });
+  });
+
   it('shows a not-found message when the release lookup fails', async () => {
     const { ApiError } = await import('../../src/services/apiClient');
     mockGetRelease.mockRejectedValue(new ApiError('not found', 404, 'release_not_found'));

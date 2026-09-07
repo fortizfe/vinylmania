@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import type { RatingPresentation } from '../../lib/releaseRating';
 import { Card } from '../ui/Card';
 import { focusRing } from '../ui/focusRing';
+import { pressable } from '../ui/press';
 import { ReleaseRatingBadge } from '../ui/ReleaseRatingBadge';
 import { StarRating } from '../ui/StarRating';
 import { RECORD_DETAIL_TESTIDS } from './testIds';
@@ -136,7 +137,13 @@ export function RatingCard({ community, personal }: RatingCardProps) {
                         }
                       }}
                       className={clsx(
-                        'rounded font-medium underline underline-offset-2',
+                        // Shared press feedback + focus ring (tokenised
+                        // timing, reduced-motion safe) so the retry affordance
+                        // feels like every other control — no bespoke easing
+                        // (Principle XI / T041). `-mx-1 px-1` widens the tap
+                        // area without nudging the surrounding sentence.
+                        '-mx-1 rounded px-1 font-medium underline underline-offset-2',
+                        pressable,
                         focusRing,
                       )}
                     >

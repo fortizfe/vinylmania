@@ -10,6 +10,20 @@ import { ReleaseAdditionalInfoSection } from './ReleaseAdditionalInfoSection';
  * identifiers only.
  */
 describe('ReleaseAdditionalInfoSection (trimmed — feature 063)', () => {
+  it('is a section with a single <h2> so heading navigation does not skip it (§C7)', () => {
+    render(
+      <ReleaseAdditionalInfoSection
+        notes="Recorded at Stockholm Sound Studio."
+        identifiers={[]}
+      />,
+    );
+
+    const heading = screen.getByRole('heading', { level: 2 });
+    expect(screen.getByRole('region', { name: heading.textContent ?? '' }).tagName).toBe(
+      'SECTION',
+    );
+  });
+
   it('renders identifiers when passed', () => {
     render(
       <ReleaseAdditionalInfoSection

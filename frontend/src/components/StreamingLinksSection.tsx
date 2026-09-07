@@ -120,9 +120,15 @@ export function StreamingLinksSection({
       data-testid={RECORD_DETAIL_TESTIDS.STREAMING_CARD}
     >
       <section aria-labelledby={HEADING_ID} className="flex flex-col gap-3">
-        <h4 id={HEADING_ID} className="font-semibold text-stone-900 dark:text-stone-100">
+        {/*
+          <h2>: on the record-detail views (feature 063 §C7) every content card
+          carries an <h2> under the page <h1>, no skipped level. Shared with the
+          master page, whose <h3> title then <h2> here is still valid (only
+          skipping a level *down* fails WCAG 1.3.1).
+        */}
+        <h2 id={HEADING_ID} className="font-semibold text-stone-900 dark:text-stone-100">
           Escúchalo en streaming
-        </h4>
+        </h2>
         <ul className="flex flex-wrap gap-2">
           {links.map((link) => {
             const { label, Icon, ariaLabel } = PLATFORM_META[link.platform];

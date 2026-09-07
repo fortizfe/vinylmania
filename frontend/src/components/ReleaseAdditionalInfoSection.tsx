@@ -12,7 +12,13 @@ interface ReleaseAdditionalInfoSectionProps {
  * its "{have} have / {want} want · rating …" line; the Discogs community
  * rating and the have/want counts now live in `RatingCard`. This section
  * renders `null` when there is nothing left to show.
+ *
+ * It is a `<section>` with a single `<h2>` like every other detail card
+ * (§C7) so screen-reader users navigating by heading do not skip straight
+ * from the tracklist past the catalog notes / pressing identifiers.
  */
+const HEADING_ID = 'release-additional-info-heading';
+
 export function ReleaseAdditionalInfoSection({
   notes,
   identifiers,
@@ -26,7 +32,17 @@ export function ReleaseAdditionalInfoSection({
   if (!hasContent) return null;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-stone-200 pt-4 dark:border-stone-900">
+    <section
+      aria-labelledby={HEADING_ID}
+      className="flex flex-col gap-3 border-t border-stone-200 pt-4 dark:border-stone-900"
+    >
+      <h2
+        id={HEADING_ID}
+        className="font-semibold text-stone-900 dark:text-stone-100"
+      >
+        Más información
+      </h2>
+
       {notes && <p className="text-sm text-stone-700 dark:text-stone-300">{notes}</p>}
 
       {safeIdentifiers.length > 0 && (
@@ -39,6 +55,6 @@ export function ReleaseAdditionalInfoSection({
           ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 }

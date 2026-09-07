@@ -65,6 +65,15 @@ describe('RecordDetailSkeleton', () => {
     expect(aspectNode).toBeTruthy();
   });
 
+  it('reserves the RatingCard footprint (heading + min-h-[7.5rem] inner region) so content does not shift', () => {
+    render(<RecordDetailSkeleton />);
+    const rating = screen.getByTestId('record-detail-skeleton-rating');
+    // Same reserve RatingCard puts on its inner two-column region.
+    expect(rating.querySelector('[class*="min-h-[7.5rem]"]')).not.toBeNull();
+    // A heading-height placeholder (h-7) matching RatingCard's <h2 class="mb-3 …">.
+    expect(rating.querySelector('[class*="h-7"]')).not.toBeNull();
+  });
+
   it('reserves the streaming card height so a late resolve does not shift layout', () => {
     render(<RecordDetailSkeleton />);
     const streaming = screen.getByTestId('record-detail-skeleton-streaming');

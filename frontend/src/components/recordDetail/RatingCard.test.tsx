@@ -179,4 +179,43 @@ describe('RatingCard (personal half — feature 063 US2)', () => {
     expect(onSave).toHaveBeenCalledTimes(2);
     expect(onSave).toHaveBeenLastCalledWith(5);
   });
+
+  it('gives the "Reintentar" button the shared press + focus tokens, not a bespoke style (T041)', async () => {
+    const onSave = vi.fn().mockRejectedValue(new Error('network'));
+    renderCard({ personal: personalModel({ value: 2, onSave }) });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /5 stars/i }));
+
+    const retry = await screen.findByRole('button', { name: /reintentar/i });
+    // `pressable` → an `:active` scale with a reduced-motion guard; `focusRing`
+    // → the shared visible focus indicator.
+    expect(retry.className).toMatch(/active:scale-\[0\.97\]/);
+    expect(retry.className).toMatch(/motion-reduce:active:scale-100/);
+    expect(retry.className).toMatch(/focus-visible:ring/);
+  });
+});
+
+describe('RatingCard — layout stability (feature 063 §C4 / SC-008 / T043)', () => {
+  const RESERVE = '[class*="min-h-[7.5rem]"]';
+
+  it('reserves the same min-height in the empty (search) state', () => {
+    const { container } = renderCard();
+    expect(container.querySelector(RESERVE)).not.toBeNull();
+  });
+
+  it('reserves the same min-height with an editable personal rating', () => {
+    const { container } = renderCard({ personal: personalModel({ value: 4 }) });
+    expect(container.querySelector(RESERVE)).not.toBeNull();
+  });
+
+  it('reserves the same min-height in the save-error state (no jump when the alert appears)', async () => {
+    const onSave = vi.fn().mockRejectedValue(new Error('network'));
+    const { container } = renderCard({ personal: personalModel({ value: 2, onSave }) });
+
+    await userEvent.setup().click(screen.getByRole('button', { name: /3 stars/i }));
+    await screen.findByRole('alert');
+
+    expect(container.querySelector(RESERVE)).not.toBeNull();
+  });
 });

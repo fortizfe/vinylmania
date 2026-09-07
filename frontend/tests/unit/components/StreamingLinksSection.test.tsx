@@ -68,7 +68,9 @@ describe('StreamingLinksSection (feature 062, US1)', () => {
       /col-span/,
     );
 
-    const heading = screen.getByRole('heading', { name: /streaming/i });
+    // <h2>: on the record-detail views every content card carries an <h2>
+    // under the page <h1>, no skipped level (feature 063 §C7).
+    const heading = screen.getByRole('heading', { level: 2, name: /streaming/i });
     const region = screen.getByRole('region', { name: /streaming/i });
     expect(region.tagName).toBe('SECTION');
     expect(region).toContainElement(heading);

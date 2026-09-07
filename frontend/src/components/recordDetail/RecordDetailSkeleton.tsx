@@ -65,19 +65,22 @@ export function RecordDetailSkeleton() {
       </Block>
 
       {/*
-        §3 — rating card. Reserves the RatingCard's shared min-height so the
-        empty/populated/error states never shift (contracts §C4). Keep this
-        value in sync with RatingCard when it lands (feature 063 Phase 3).
+        §3 — rating card. Mirrors RatingCard's exact footprint so the
+        skeleton → content swap causes no layout shift (FR-021 / SC-008 / T043):
+        the `h-7 mb-3` heading placeholder matches its `<h2 class="mb-3 text-lg">`
+        and the `min-h-[7.5rem]` lives on the INNER two-column region — same as
+        RatingCard — not on the outer Card. Keep both in sync with RatingCard.
       */}
-      <Block
-        testId="record-detail-skeleton-rating"
-        className={clsx(railSlot, 'min-h-[7.5rem]')}
-      >
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-5 w-24" />
-          <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
+      <Block testId="record-detail-skeleton-rating" className={railSlot}>
+        <Skeleton className="mb-3 h-7 w-28" />
+        <div className="flex min-h-[7.5rem] flex-col gap-4 sm:flex-row sm:gap-8">
+          <div className="flex flex-1 flex-col gap-2">
+            <Skeleton className="h-4 w-36" />
             <Skeleton className="h-8 w-28" />
-            <Skeleton className="h-8 w-28" />
+          </div>
+          <div className="flex flex-1 flex-col gap-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-11 w-44" />
           </div>
         </div>
       </Block>
@@ -93,7 +96,9 @@ export function RecordDetailSkeleton() {
       >
         <div className="flex flex-col gap-3">
           <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-9 w-full" />
+          {/* h-11: matches StreamingLinksSection's resolved 44px link row and
+              its loading-state `h-11` bar, so a late resolve does not jump. */}
+          <Skeleton className="h-11 w-36" />
         </div>
       </Block>
 

@@ -22,6 +22,14 @@ function buildRelease(overrides: Partial<Release> = {}): Release {
 }
 
 describe('ReleaseDetailsSection', () => {
+  it('renders the record title as the page <h1> (feature 063 §C7)', () => {
+    render(<ReleaseDetailsSection release={buildRelease()} />);
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Stockholm' }),
+    ).toBeInTheDocument();
+  });
+
   it('renders label, catalogue number, country, release date, genres, and styles when present', () => {
     render(
       <ReleaseDetailsSection
