@@ -17,6 +17,12 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.11.0] - 2026-09-07
+
+### Added
+
+- unified record-detail views (search / library / wishlist) (#53) ([dfd0d8c])
+
 ## [1.10.0] - 2026-09-07
 
 ### Added
