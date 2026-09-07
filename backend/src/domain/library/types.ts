@@ -29,6 +29,18 @@ export interface LibraryEntry {
   genre?: string[];
   style?: string[];
   format?: string[];
+  /**
+   * Collection facets persisted by `syncLibrary` from each row's
+   * `basic_information` (feature 061), so "Mi colección en cifras" (Block 1)
+   * aggregates with zero new Discogs requests. Additive & backfilled — same
+   * rule as `genre`/`style`/`format` above: absent until the entry's next
+   * sync, left untouched on a failed sync. `year` is `undefined` when
+   * `basic_information.year` is `0` / missing ("Año desconocido").
+   * `primaryArtist` keeps `"Various"` / `"Various Artists"` verbatim.
+   */
+  year?: number;
+  label?: string[];
+  primaryArtist?: string;
 }
 
 /** Genre/Style/Format selection for filtering the library listing (FR-015/FR-017). */

@@ -85,6 +85,12 @@ describe('collectionClient: listAllInstances', () => {
       sleeveCondition: 'Generic',
       notes: 'First pressing',
       dateAdded: expect.any(String),
+      title: 'Release 101',
+      year: 2000,
+      labelNames: ['Label 101'],
+      artistNames: ['Artist 101'],
+      genres: ['Rock'],
+      styles: ['Heavy Metal'],
     });
     expect(instances[1]).toMatchObject({
       releaseId: 202,
@@ -145,6 +151,84 @@ describe('collectionClient: listAllInstances', () => {
       DiscogsUnavailableError,
     );
   }, 8_000);
+});
+
+describe('collectionClient: mapInstance basic_information facets (feature 061)', () => {
+  async function firstInstanceFor(
+    overrides: Parameters<typeof rawCollectionInstance>[1],
+  ) {
+    stubCollectionFields('testuser');
+    stubCollectionPage('testuser', [rawCollectionInstance(700, overrides)]);
+    const [mapped] = await listAllInstances(connection);
+    return mapped;
+  }
+
+  it('maps year, labels[].name, artists[].name, genres and styles onto the instance', async () => {
+    const mapped = await firstInstanceFor({
+      title: 'Master of Puppets',
+      year: 1986,
+      labels: [
+        { name: 'Music For Nations' },
+        { name: 'Music For Nations' },
+        { name: 'Elektra' },
+      ],
+      artists: [{ name: 'Metallica' }],
+      genres: ['Rock'],
+      styles: ['Thrash', 'Heavy Metal'],
+    });
+
+    expect(mapped).toMatchObject({
+      releaseId: 700,
+      title: 'Master of Puppets',
+      year: 1986,
+      // deduped, order preserved
+      labelNames: ['Music For Nations', 'Elektra'],
+      artistNames: ['Metallica'],
+      genres: ['Rock'],
+      styles: ['Thrash', 'Heavy Metal'],
+    });
+  });
+
+  it('maps year 0 to null', async () => {
+    const mapped = await firstInstanceFor({ year: 0 });
+    expect(mapped.year).toBeNull();
+  });
+
+  it('defaults missing genres/styles to []', async () => {
+    stubCollectionFields('testuser');
+    stubCollectionPage('testuser', [
+      {
+        instance_id: 12,
+        folder_id: 1,
+        rating: 0,
+        date_added: '2026-01-01T00:00:00-08:00',
+        basic_information: {
+          id: 701,
+          title: 'No Facets',
+          year: 1999,
+          labels: [{ name: 'Indie' }],
+          artists: [{ name: 'Nobody' }],
+        },
+        notes: [],
+      } as unknown as ReturnType<typeof rawCollectionInstance>,
+    ]);
+
+    const [mapped] = await listAllInstances(connection);
+    expect(mapped.genres).toEqual([]);
+    expect(mapped.styles).toEqual([]);
+  });
+
+  it('trims the Discogs disambiguation suffix from artist names', async () => {
+    const mapped = await firstInstanceFor({
+      artists: [{ name: 'Nirvana (2)' }, { name: 'Slayer (3)' }],
+    });
+    expect(mapped.artistNames).toEqual(['Nirvana', 'Slayer']);
+  });
+
+  it('preserves "Various" verbatim', async () => {
+    const mapped = await firstInstanceFor({ artists: [{ name: 'Various' }] });
+    expect(mapped.artistNames).toEqual(['Various']);
+  });
 });
 
 describe('collectionClient: getFieldMap', () => {

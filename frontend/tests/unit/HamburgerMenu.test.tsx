@@ -40,20 +40,34 @@ describe('HamburgerMenu', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('shows exactly three links, in order, pointing at the right destinations', async () => {
+  it('shows exactly four links, in order, pointing at the right destinations', async () => {
     const user = userEvent.setup();
     renderMenu();
 
     await user.click(screen.getByRole('button', { name: /menu/i }));
 
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(4);
     expect(links[0]).toHaveAccessibleName(/my library/i);
     expect(links[0]).toHaveAttribute('href', '/app/library');
     expect(links[1]).toHaveAccessibleName(/my wishlist/i);
     expect(links[1]).toHaveAttribute('href', '/app/wishlist');
-    expect(links[2]).toHaveAccessibleName(/profile/i);
-    expect(links[2]).toHaveAttribute('href', '/app/profile');
+    expect(links[2]).toHaveAccessibleName(/collection stats/i);
+    expect(links[2]).toHaveAttribute('href', '/app/stats');
+    expect(links[3]).toHaveAccessibleName(/profile/i);
+    expect(links[3]).toHaveAttribute('href', '/app/profile');
+  });
+
+  it('exposes the collection-stats entry (feature 061)', async () => {
+    const user = userEvent.setup();
+    renderMenu();
+
+    await user.click(screen.getByRole('button', { name: /menu/i }));
+
+    expect(screen.getByRole('link', { name: /collection stats/i })).toHaveAttribute(
+      'href',
+      '/app/stats',
+    );
   });
 
   it('keeps the wishlist reachable from the mobile menu (feature 060, FR-001)', async () => {

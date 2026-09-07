@@ -1,0 +1,200 @@
+# Agent Assignments
+# Feature: Mi colección en cifras — Collection Stats & Estimated Market Value
+# Generated: 2026-09-06
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "backend-agent"
+    source: "project"
+    description: "Use for any work under backend/ — Express.js + TypeScript APIs, hexagonal architecture, Discogs API client, Redis caching. Enforces TDD, YAGNI, SOLID, KISS."
+  - name: "frontend-agent"
+    source: "project"
+    description: "Use for any work under frontend/ — React 19 + TypeScript (Vite), Tailwind CSS v4, TanStack Query. Apple design skills + WCAG 2.1 AA, TDD via Vitest + RTL."
+  - name: "qa-agent"
+    source: "project"
+    description: "Enforces Test-First/TDD discipline and test quality across backend, frontend, e2e; gates changes against the constitution's quality gates."
+  - name: "docs-agent"
+    source: "project"
+    description: "End-user documentation for Vinylmania — user manuals, feature walkthroughs, FAQs in docs/. Not for developer/API docs or code."
+
+assignments:
+  T001:
+    agent: "backend-agent"
+    reason: "Creates backend slice + test directory structure under backend/src and backend/tests"
+  T002:
+    agent: "default"
+    reason: "Cross-cutting dependency/env audit against both package.json files; no specialist needed"
+  T003:
+    agent: "backend-agent"
+    reason: "Domain types in backend/src/domain/collectionStats/types.ts"
+  T004:
+    agent: "backend-agent"
+    reason: "Domain error module in backend/src/domain/collectionStats/statsErrors.ts"
+  T005:
+    agent: "backend-agent"
+    reason: "Port interface in backend/src/ports/discogsOauth/discogsMarketplacePort.ts"
+  T006:
+    agent: "backend-agent"
+    reason: "Extends CollectionInstance domain type in backend/src/domain/discogsOauth/collectionTypes.ts"
+  T007:
+    agent: "backend-agent"
+    reason: "Backend contract tests for the collection adapter (test-first)"
+  T008:
+    agent: "backend-agent"
+    reason: "Discogs collection adapter implementation in backend/src/adapters/discogsOauth"
+  T009:
+    agent: "backend-agent"
+    reason: "Backend contract tests for the marketplace adapter (test-first)"
+  T010:
+    agent: "backend-agent"
+    reason: "Discogs marketplace adapter implementation with resilience + Redis cache"
+  T011:
+    agent: "backend-agent"
+    reason: "Adds fields to LibraryEntry domain type in backend/src/domain/library/types.ts"
+  T012:
+    agent: "backend-agent"
+    reason: "Extends LibraryRepositoryPort and backend test fakes"
+  T013:
+    agent: "backend-agent"
+    reason: "Backend unit tests for the syncLibrary facet write-back (test-first)"
+  T014:
+    agent: "backend-agent"
+    reason: "syncLibrary use case + Firestore repository implementation"
+  T015:
+    agent: "backend-agent"
+    reason: "Express route skeleton + app.ts mount under backend/src/adapters/collectionStats"
+  T016:
+    agent: "frontend-agent"
+    reason: "frontend/src/services/collectionStatsApi.ts client + DTOs"
+  T017:
+    agent: "frontend-agent"
+    reason: "frontend/src/queries/collectionStatsQueries.ts TanStack Query hooks"
+  T018:
+    agent: "frontend-agent"
+    reason: "Adds 'stats' context copy to frontend/src/components/LibraryLinkRequired.tsx"
+  T019:
+    agent: "frontend-agent"
+    reason: "Nav wiring in headerNavLinks.ts / HeaderNavIcons.tsx + HamburgerMenu test"
+  T020:
+    agent: "frontend-agent"
+    reason: "Route registration in frontend/src/App.tsx"
+  T021:
+    agent: "qa-agent"
+    reason: "E2E Discogs stub extension in e2e/helpers/discogsOauthStub.ts"
+  T022:
+    agent: "backend-agent"
+    reason: "Backend unit tests for aggregateStatistics (test-first)"
+  T023:
+    agent: "backend-agent"
+    reason: "Backend unit tests for the getCollectionStatistics use case (test-first)"
+  T024:
+    agent: "backend-agent"
+    reason: "Backend supertest integration test for GET /statistics (test-first)"
+  T025:
+    agent: "frontend-agent"
+    reason: "RTL tests for CollectionStatsPage statistics block (test-first)"
+  T026:
+    agent: "frontend-agent"
+    reason: "RTL tests for CollectionGrowthChart incl. a11y table (test-first)"
+  T027:
+    agent: "qa-agent"
+    reason: "US1 Playwright e2e spec"
+  T028:
+    agent: "backend-agent"
+    reason: "Pure aggregateStatistics implementation in backend/src/domain/collectionStats"
+  T029:
+    agent: "backend-agent"
+    reason: "getCollectionStatistics use case implementation"
+  T030:
+    agent: "backend-agent"
+    reason: "GET /statistics route handler + error mapping + logging"
+  T031:
+    agent: "frontend-agent"
+    reason: "frontend/src/pages/CollectionStatsPage.tsx"
+  T032:
+    agent: "frontend-agent"
+    reason: "CollectionTotals + StatBreakdownList components (WCAG-sensitive)"
+  T033:
+    agent: "frontend-agent"
+    reason: "TopArtistsList component"
+  T034:
+    agent: "frontend-agent"
+    reason: "CollectionGrowthChart inline-SVG component + motion + a11y alt table"
+  T035:
+    agent: "frontend-agent"
+    reason: "Assembles Block 1 in CollectionStatsPage with loading/empty states"
+  T036:
+    agent: "backend-agent"
+    reason: "Backend unit tests for computeValuation (test-first)"
+  T037:
+    agent: "backend-agent"
+    reason: "Backend unit tests for the chunked getCollectionValuation use case (test-first)"
+  T038:
+    agent: "backend-agent"
+    reason: "Backend supertest integration test for GET /valuation (test-first)"
+  T039:
+    agent: "frontend-agent"
+    reason: "RTL tests for the progressive valuation UI (test-first)"
+  T040:
+    agent: "qa-agent"
+    reason: "US2 Playwright e2e spec"
+  T041:
+    agent: "backend-agent"
+    reason: "Pure computeValuation implementation"
+  T042:
+    agent: "backend-agent"
+    reason: "Chunked getCollectionValuation use case (concurrency, cache fold)"
+  T043:
+    agent: "backend-agent"
+    reason: "GET /valuation route handler (422 seller-settings, graceful outage)"
+  T044:
+    agent: "frontend-agent"
+    reason: "useProgressiveValuation hook — chunk loop + notices"
+  T045:
+    agent: "frontend-agent"
+    reason: "CollectionValuationCard + MostValuableRecords components"
+  T046:
+    agent: "frontend-agent"
+    reason: "ValuationBreakdownDialog + ValuationUnavailableNotice components"
+  T047:
+    agent: "frontend-agent"
+    reason: "Fills the Block 2 slot in CollectionStatsPage; keeps Block 1 independent"
+  T048:
+    agent: "backend-agent"
+    reason: "Backend unit test for large-collection valuation loop (test-first)"
+  T049:
+    agent: "backend-agent"
+    reason: "Backend integration test for paced/scale valuation + cache reuse (test-first)"
+  T050:
+    agent: "frontend-agent"
+    reason: "RTL test for the long-running valuation state + resume (test-first)"
+  T051:
+    agent: "qa-agent"
+    reason: "US3 scale Playwright e2e spec"
+  T052:
+    agent: "backend-agent"
+    reason: "Hardens getCollectionValuation — retryable failures, stable cursor ordering"
+  T053:
+    agent: "frontend-agent"
+    reason: "Long-running 'come back later' UX + failed-disc retry action"
+  T054:
+    agent: "backend-agent"
+    reason: "Verifies the marketplace adapter shares the global throttle/circuit breaker"
+  T055:
+    agent: "frontend-agent"
+    reason: "WCAG 2.1 AA audit of /app/stats — the frontend-agent owns accessibility"
+  T056:
+    agent: "frontend-agent"
+    reason: "Apple-design / emil-design-eng review of layout, chart, motion"
+  T057:
+    agent: "docs-agent"
+    reason: "End-user documentation for the section in docs/"
+  T058:
+    agent: "default"
+    reason: "CHANGELOG.md / frontend CHANGELOG.md housekeeping; no specialist needed"
+  T059:
+    agent: "qa-agent"
+    reason: "Runs the full quickstart.md validation checklist"
+  T060:
+    agent: "qa-agent"
+    reason: "Full test/lint/typecheck/e2e gate + constitution re-check"

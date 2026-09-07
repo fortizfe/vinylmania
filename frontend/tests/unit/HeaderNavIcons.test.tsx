@@ -14,17 +14,19 @@ function renderIcons() {
 }
 
 describe('HeaderNavIcons', () => {
-  it('renders exactly three icon links, in order, pointing at the right destinations', () => {
+  it('renders exactly four icon links, in order, pointing at the right destinations', () => {
     renderIcons();
 
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(4);
     expect(links[0]).toHaveAccessibleName(/my library/i);
     expect(links[0]).toHaveAttribute('href', '/app/library');
     expect(links[1]).toHaveAccessibleName(/my wishlist/i);
     expect(links[1]).toHaveAttribute('href', '/app/wishlist');
-    expect(links[2]).toHaveAccessibleName(/profile/i);
-    expect(links[2]).toHaveAttribute('href', '/app/profile');
+    expect(links[2]).toHaveAccessibleName(/collection stats/i);
+    expect(links[2]).toHaveAttribute('href', '/app/stats');
+    expect(links[3]).toHaveAccessibleName(/profile/i);
+    expect(links[3]).toHaveAttribute('href', '/app/profile');
   });
 
   it('each icon link inherits the shared pressed-state + focusRing from iconButtonClassName (US1)', () => {
@@ -45,6 +47,9 @@ describe('HeaderNavIcons', () => {
 
     await user.tab();
     expect(screen.getByRole('link', { name: /my wishlist/i })).toHaveFocus();
+
+    await user.tab();
+    expect(screen.getByRole('link', { name: /collection stats/i })).toHaveFocus();
 
     await user.tab();
     expect(screen.getByRole('link', { name: /profile/i })).toHaveFocus();

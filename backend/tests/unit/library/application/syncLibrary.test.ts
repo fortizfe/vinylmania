@@ -36,6 +36,12 @@ function instance(
     sleeveCondition: null,
     notes: null,
     dateAdded: '2026-01-02T00:00:00.000Z',
+    title: `Release ${releaseId}`,
+    year: 2000,
+    labelNames: [],
+    artistNames: [],
+    genres: [],
+    styles: [],
     ...overrides,
   };
 }
@@ -65,6 +71,8 @@ function fakeRepository(): jest.Mocked<LibraryRepositoryPort> {
     listEntries: jest.fn(),
     listAllEntries: jest.fn().mockResolvedValue([]),
     persistCatalogFields: jest.fn(),
+    persistCollectionFacets: jest.fn().mockResolvedValue(undefined),
+    reconcileAddedAt: jest.fn().mockResolvedValue(undefined),
     updateEntryInstance: jest.fn().mockResolvedValue(undefined),
     clearLegacyFields: jest.fn().mockResolvedValue(undefined),
     deleteEntry: jest.fn().mockResolvedValue(true),

@@ -77,6 +77,12 @@ function collectionInstance(releaseId: number): CollectionInstance {
     sleeveCondition: null,
     notes: null,
     dateAdded: '2026-01-01T00:00:00.000Z',
+    title: `Release ${releaseId}`,
+    year: 2000,
+    labelNames: [],
+    artistNames: [],
+    genres: [],
+    styles: [],
   };
 }
 

@@ -13,6 +13,19 @@ export interface CollectionInstance {
   sleeveCondition: string | null;
   notes: string | null;
   dateAdded: string;
+  /**
+   * Release facets carried on each collection row's `basic_information`
+   * object (feature 061, data-model §2). Mapped from the same collection
+   * walk the sync already performs — no extra request. Used by the sync
+   * write-back (`year`/`label`/`primaryArtist` onto the `LibraryEntry`) and
+   * by the valuation use case (title/artist for the per-disc breakdown).
+   */
+  year: number | null;
+  labelNames: string[];
+  artistNames: string[];
+  genres: string[];
+  styles: string[];
+  title: string;
 }
 
 /** Coordinates every instance-level Discogs write needs. */

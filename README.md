@@ -43,6 +43,11 @@ The **wishlist** is the "records I want" counterpart, synchronized with your
 Discogs wantlist — see [docs/wishlist.md](docs/wishlist.md) for the end-user
 guide.
 
+**Collection stats** ("Mi colección en cifras") shows the whole collection at
+once — breakdowns by decade, genre, style, label and artist, growth over time,
+and an estimated market value — see [docs/collection-stats.md](docs/collection-stats.md)
+for the end-user guide.
+
 Quick summary:
 
 ```bash

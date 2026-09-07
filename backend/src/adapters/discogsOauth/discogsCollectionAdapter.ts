@@ -201,13 +201,61 @@ interface RawNoteValue {
   value: string;
 }
 
+interface RawBasicInformation {
+  id: number;
+  title?: string;
+  year?: number;
+  labels?: Array<{ name?: string }>;
+  artists?: Array<{ name?: string }>;
+  genres?: string[];
+  styles?: string[];
+}
+
 interface RawInstance {
   instance_id: number;
   folder_id: number;
   rating: number;
   date_added: string;
-  basic_information: { id: number };
+  basic_information: RawBasicInformation;
   notes?: RawNoteValue[];
+}
+
+/** Strips the Discogs disambiguation suffix (`" (2)"`, `" (12)"`) from a name. */
+function trimArtistSuffix(name: string): string {
+  return name.replace(/\s+\(\d+\)$/, '');
+}
+
+function mapBasicInformation(basic: RawBasicInformation): {
+  title: string;
+  year: number | null;
+  labelNames: string[];
+  artistNames: string[];
+  genres: string[];
+  styles: string[];
+} {
+  const labelNames = Array.from(
+    new Set(
+      (basic.labels ?? [])
+        .map((label) => label.name?.trim())
+        .filter((name): name is string => Boolean(name)),
+    ),
+  );
+  const artistNames = Array.from(
+    new Set(
+      (basic.artists ?? [])
+        .map((artist) => artist.name?.trim())
+        .filter((name): name is string => Boolean(name))
+        .map(trimArtistSuffix),
+    ),
+  );
+  return {
+    title: basic.title ?? '',
+    year: basic.year && basic.year > 0 ? basic.year : null,
+    labelNames,
+    artistNames,
+    genres: basic.genres ?? [],
+    styles: basic.styles ?? [],
+  };
 }
 
 interface RawCollectionPage {
@@ -233,6 +281,7 @@ function mapInstance(raw: RawInstance, fieldMap: CollectionFieldMap): Collection
     sleeveCondition: fieldValue(raw, fieldMap.sleeveConditionFieldId),
     notes: fieldValue(raw, fieldMap.notesFieldId),
     dateAdded: raw.date_added,
+    ...mapBasicInformation(raw.basic_information),
   };
 }
 
