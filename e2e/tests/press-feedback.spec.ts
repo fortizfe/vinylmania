@@ -196,7 +196,12 @@ test.describe('Pressed-state feedback (spec 059 US1)', () => {
     await page.goto(`/app/library/records/${RECORD_ENTRY_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
-    const star = page.getByRole('button', { name: '3 stars' });
+    // Feature 063 US2: the personal rating moved into the RatingCard; the
+    // library view transiently renders a second star group in MyCopySection
+    // (removed in US3), so scope to `record-detail-rating-card`.
+    const star = page
+      .getByTestId('record-detail-rating-card')
+      .getByRole('button', { name: '3 stars' });
     const sample = await samplePress(page, star);
 
     expect(sample.widthRatio).toBeGreaterThan(0.93);

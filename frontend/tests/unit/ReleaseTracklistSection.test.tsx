@@ -13,7 +13,11 @@ describe('ReleaseTracklistSection', () => {
   it('renders each track position, title, and duration when present', () => {
     render(<ReleaseTracklistSection tracklist={tracklist} />);
 
-    expect(screen.getByText('Tracklist')).toBeInTheDocument();
+    // <h2> so it sits under the page <h1> with the other detail cards
+    // (feature 063 §C7, no skipped level).
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Tracklist' }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/A\. Östermalm \(4:45\)/)).toBeInTheDocument();
     expect(screen.getByText(/B\. Södermalm/)).toBeInTheDocument();
   });

@@ -27,9 +27,19 @@ export function ReleaseDetailsSection({ release }: ReleaseDetailsSectionProps) {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <h3 className="font-display text-lg leading-display tracking-display text-stone-900 dark:text-stone-100">
+        {/*
+          The record title is the page's single <h1> (contracts/ui-contracts.md
+          §C7 — "page <h1> is the record title in ReleaseDetailsSection"),
+          matching every other Vinylmania page which owns its own <h1>. Each
+          detail card below is an <h2>, so the heading outline is
+          h1 → h2 (rating) → h2 (streaming) → h2 (tracklist) → h2 (catalog)
+          with no skipped level (WCAG 1.3.1). Only ReleaseDetailPage /
+          RecordDetailPage render this component — the master page uses
+          MasterReleaseDetailsSection, so its heading structure is untouched.
+        */}
+        <h1 className="font-display text-lg leading-display tracking-display text-stone-900 dark:text-stone-100">
           {release.title}
-        </h3>
+        </h1>
         {release.artists.map((artist) => (
           <p key={artist.discogsArtistId} className="text-stone-500 dark:text-stone-400">
             {artist.name}

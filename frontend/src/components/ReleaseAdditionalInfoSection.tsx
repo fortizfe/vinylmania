@@ -1,26 +1,48 @@
-import type { CommunityStats, ReleaseIdentifier } from '../services/libraryApi';
+import type { ReleaseIdentifier } from '../services/libraryApi';
 
 interface ReleaseAdditionalInfoSectionProps {
   notes?: string;
   identifiers: ReleaseIdentifier[];
-  community?: CommunityStats;
 }
+
+/**
+ * "Rest of catalog information" — catalog notes + pressing identifiers only.
+ *
+ * Feature 063 (contracts/ui-contracts.md §C6) removed the `community` prop and
+ * its "{have} have / {want} want · rating …" line; the Discogs community
+ * rating and the have/want counts now live in `RatingCard`. This section
+ * renders `null` when there is nothing left to show.
+ *
+ * It is a `<section>` with a single `<h2>` like every other detail card
+ * (§C7) so screen-reader users navigating by heading do not skip straight
+ * from the tracklist past the catalog notes / pressing identifiers.
+ */
+const HEADING_ID = 'release-additional-info-heading';
 
 export function ReleaseAdditionalInfoSection({
   notes,
   identifiers,
-  community,
 }: ReleaseAdditionalInfoSectionProps) {
   // `identifiers` is typed as required, but an incomplete API response (or
   // a stale test fixture) can still deliver `undefined` at runtime — guard
   // defensively rather than crashing the whole page render (spec 036).
   const safeIdentifiers = identifiers ?? [];
-  const hasContent = Boolean(notes) || safeIdentifiers.length > 0 || Boolean(community);
+  const hasContent = Boolean(notes) || safeIdentifiers.length > 0;
 
   if (!hasContent) return null;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-stone-200 pt-4 dark:border-stone-900">
+    <section
+      aria-labelledby={HEADING_ID}
+      className="flex flex-col gap-3 border-t border-stone-200 pt-4 dark:border-stone-900"
+    >
+      <h2
+        id={HEADING_ID}
+        className="font-semibold text-stone-900 dark:text-stone-100"
+      >
+        Más información
+      </h2>
+
       {notes && <p className="text-sm text-stone-700 dark:text-stone-300">{notes}</p>}
 
       {safeIdentifiers.length > 0 && (
@@ -33,13 +55,6 @@ export function ReleaseAdditionalInfoSection({
           ))}
         </ul>
       )}
-
-      {community && (
-        <p className="text-sm text-stone-500 dark:text-stone-400">
-          {community.have} have / {community.want} want · rating{' '}
-          {community.rating.average} ({community.rating.count})
-        </p>
-      )}
-    </div>
+    </section>
   );
 }

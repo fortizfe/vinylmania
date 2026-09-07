@@ -1,13 +1,13 @@
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { DiscogsRelinkNotice } from '../components/DiscogsRelinkNotice';
+import { MasterReleaseDetailSkeleton } from '../components/MasterReleaseDetailSkeleton';
 import { MasterReleaseDetailsSection } from '../components/MasterReleaseDetailsSection';
 import {
   MasterReleaseOtherDetailsSection,
   masterHasOtherDetails,
 } from '../components/MasterReleaseOtherDetailsSection';
 import { MasterVersionsTable } from '../components/MasterVersionsTable';
-import { RecordDetailSkeleton } from '../components/RecordDetailSkeleton';
 import { ReleaseImageGallery } from '../components/ReleaseImageGallery';
 import { ReleaseTracklistSection } from '../components/ReleaseTracklistSection';
 import { StreamingLinksSection } from '../components/StreamingLinksSection';
@@ -85,7 +85,7 @@ export function MasterReleaseDetailPage() {
     return (
       <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
         <BackLink to={backTo} />
-        <RecordDetailSkeleton />
+        <MasterReleaseDetailSkeleton />
       </main>
     );
   }

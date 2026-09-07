@@ -1,7 +1,17 @@
 import { Card } from './ui/Card';
 import { Skeleton } from './ui/Skeleton';
 
-export function RecordDetailSkeleton() {
+/**
+ * Loading placeholder for the master-release detail view (feature 063,
+ * FR-023 / contracts/ui-contracts.md §C9).
+ *
+ * Feature 063 reworked the shared `recordDetail/RecordDetailSkeleton` into the
+ * new release/library rail layout. The master page is explicitly out of scope
+ * for that redesign, so it keeps this pre-063 single-card skeleton shape — its
+ * loading visual (and `MasterReleaseDetailPage.test.tsx`) stay unchanged. The
+ * `data-testid` is preserved so existing selectors keep matching.
+ */
+export function MasterReleaseDetailSkeleton() {
   return (
     <Card>
       <div

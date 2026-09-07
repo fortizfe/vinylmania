@@ -42,8 +42,13 @@ describe('StreamingLinksSection (feature 062, US1)', () => {
     expect(screen.getByTestId('streaming-links-skeleton')).toBeInTheDocument();
     // A single reserved height on the outer Card so the skeleton -> populated /
     // collapsed transition does not shift the surrounding detail (FR-017).
-    expect(screen.getByTestId('release-detail-streaming-card').className).toMatch(
+    expect(screen.getByTestId('record-detail-streaming-card').className).toMatch(
       /min-h-/,
+    );
+    // Placement is the layout's job now (feature 063 US4 / T035): the card must
+    // not carry its own grid-span override.
+    expect(screen.getByTestId('record-detail-streaming-card').className).not.toMatch(
+      /col-span/,
     );
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
@@ -58,7 +63,14 @@ describe('StreamingLinksSection (feature 062, US1)', () => {
 
     render(<StreamingLinksSection artist="Metallica" title="Master of Puppets" />);
 
-    const heading = screen.getByRole('heading', { name: /streaming/i });
+    // No hard-coded `lg:col-span-2` — `RecordDetailLayout` owns placement (T035).
+    expect(screen.getByTestId('record-detail-streaming-card').className).not.toMatch(
+      /col-span/,
+    );
+
+    // <h2>: on the record-detail views every content card carries an <h2>
+    // under the page <h1>, no skipped level (feature 063 §C7).
+    const heading = screen.getByRole('heading', { level: 2, name: /streaming/i });
     const region = screen.getByRole('region', { name: /streaming/i });
     expect(region.tagName).toBe('SECTION');
     expect(region).toContainElement(heading);
@@ -191,7 +203,7 @@ describe('StreamingLinksSection (feature 062, US3 — never a broken or misleadi
       <StreamingLinksSection artist="Metallica" title="Master of Puppets" />,
     );
 
-    const loadingCard = screen.getByTestId('release-detail-streaming-card');
+    const loadingCard = screen.getByTestId('record-detail-streaming-card');
     expect(loadingCard.className).toMatch(/min-h-\[4\.5rem\]/);
     expect(screen.getByTestId('streaming-links-skeleton')).toBeInTheDocument();
 
@@ -203,7 +215,7 @@ describe('StreamingLinksSection (feature 062, US3 — never a broken or misleadi
     );
     rerender(<StreamingLinksSection artist="Metallica" title="Master of Puppets" />);
 
-    const populatedCard = screen.getByTestId('release-detail-streaming-card');
+    const populatedCard = screen.getByTestId('record-detail-streaming-card');
     expect(populatedCard.className).toMatch(/min-h-\[4\.5rem\]/);
     // The single shared reserved-height class means the skeleton -> populated
     // swap cannot push the surrounding detail around.

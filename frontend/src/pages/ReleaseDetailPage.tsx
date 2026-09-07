@@ -2,16 +2,19 @@ import { useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
 import { DiscogsRelinkNotice } from '../components/DiscogsRelinkNotice';
-import { RecordDetailSkeleton } from '../components/RecordDetailSkeleton';
+import { RecordDetailActions } from '../components/recordDetail/RecordDetailActions';
+import { RecordDetailLayout } from '../components/recordDetail/RecordDetailLayout';
+import { RecordDetailSkeleton } from '../components/recordDetail/RecordDetailSkeleton';
+import { RECORD_DETAIL_TESTIDS } from '../components/recordDetail/testIds';
+import { RatingCard } from '../components/recordDetail/RatingCard';
 import { ReleaseAdditionalInfoSection } from '../components/ReleaseAdditionalInfoSection';
 import { ReleaseDetailsSection } from '../components/ReleaseDetailsSection';
 import { ReleaseImageGallery } from '../components/ReleaseImageGallery';
 import { ReleaseTracklistSection } from '../components/ReleaseTracklistSection';
 import { StreamingLinksSection } from '../components/StreamingLinksSection';
 import { BackLink } from '../components/ui/BackLink';
-import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { WantlistPanel } from '../components/WantlistPanel';
+import { presentRating } from '../lib/releaseRating';
 import { useCatalogRelease } from '../queries/discogsQueries';
 import { useCreateLibraryEntry } from '../queries/libraryQueries';
 import {
@@ -66,10 +69,11 @@ export function ReleaseDetailPage() {
   const notFound = isError && !relinkRequired;
   const createEntry = useCreateLibraryEntry();
   const addToWantlist = useAddToWantlist();
-  // FR-008: the wantlist panel is shown only when this release is in the
-  // user's wantlist. GET /api/wantlist/:releaseId 404s (not_in_wantlist) as a
-  // query error otherwise; `useAddToWantlist` invalidates `wantlistKeys.all`,
-  // so this query refetches and the panel appears after an add — no reload.
+  // FR-008: the editable personal rating in the Rating card is shown only when
+  // this release is in the user's wantlist. GET /api/wantlist/:releaseId 404s
+  // (not_in_wantlist) as a query error otherwise; `useAddToWantlist` invalidates
+  // `wantlistKeys.all`, so this query refetches and the personal rating turns
+  // editable after an add — no reload.
   const wantlistEntry = useWantlistEntry(Number.isNaN(parsedId) ? undefined : parsedId);
   const updateWantEntry = useUpdateWantEntry(parsedId);
 
@@ -79,6 +83,9 @@ export function ReleaseDetailPage() {
   const [addedToWantlist, setAddedToWantlist] = useState(false);
   const [wantlistError, setWantlistError] = useState<string | null>(null);
   const [wantlistNote, setWantlistNote] = useState<string | null>(null);
+
+  const isInWantlist = Boolean(wantlistEntry.data) && !wantlistEntry.isError;
+  const view: 'search' | 'wishlist' = isInWantlist ? 'wishlist' : 'search';
 
   async function handleAdd() {
     setAddError(null);
@@ -108,9 +115,14 @@ export function ReleaseDetailPage() {
     try {
       const result = await addToWantlist.mutateAsync({ discogsReleaseId: parsedId });
       setAddedToWantlist(true);
-      if (result.alreadyInLibrary) {
-        setWantlistNote('This is already in your library.');
-      }
+      // Once the wantlist query refetches, the action bar swaps to its
+      // `view="wishlist"` variant and the "Added to wishlist" button unmounts,
+      // so the confirmation has to live in the status line instead (FR-020).
+      setWantlistNote(
+        result.alreadyInLibrary
+          ? 'This is already in your library.'
+          : 'Added to your wishlist.',
+      );
     } catch (err) {
       if (err instanceof ApiError && err.code === 'discogs_not_linked') {
         setGateError({ variant: 'not-linked', context: 'wishlist' });
@@ -124,18 +136,41 @@ export function ReleaseDetailPage() {
     }
   }
 
-  async function handleSaveWantlistRating(rating: number) {
-    await updateWantEntry.mutateAsync({ rating });
-  }
+  const gateNote = gateError ? gateMessage(gateError) : null;
 
-  async function handleSaveWantlistNotes(notes: string) {
-    await updateWantEntry.mutateAsync({ notes });
-  }
+  // The action bar renders in every branch (FR-012 / FR-020), so build it once.
+  const actions =
+    view === 'wishlist' ? (
+      <RecordDetailActions
+        view="wishlist"
+        onAddToLibrary={handleAdd}
+        addingToLibrary={createEntry.isPending}
+        addedToLibrary={added}
+        gateMessage={gateNote}
+        notice={wantlistNote}
+        libraryError={addError}
+      />
+    ) : (
+      <RecordDetailActions
+        view="search"
+        onAddToLibrary={handleAdd}
+        onAddToWishlist={handleAddToWantlist}
+        addingToLibrary={createEntry.isPending}
+        addingToWishlist={addToWantlist.isPending}
+        addedToLibrary={added}
+        addedToWishlist={addedToWantlist}
+        gateMessage={gateNote}
+        notice={wantlistNote}
+        libraryError={addError}
+        wishlistError={wantlistError}
+      />
+    );
 
   if (relinkRequired) {
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
         <BackLink to={backTo} />
+        {actions}
         <DiscogsRelinkNotice />
       </main>
     );
@@ -145,6 +180,7 @@ export function ReleaseDetailPage() {
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
         <BackLink to={backTo} />
+        {actions}
         <Card>
           <p className="text-stone-500 dark:text-stone-400">
             Couldn&apos;t find that release in the catalog.
@@ -164,112 +200,67 @@ export function ReleaseDetailPage() {
   }
 
   const hasOtherDetails =
-    Boolean(release.notes) ||
-    (release.identifiers?.length ?? 0) > 0 ||
-    Boolean(release.community);
+    Boolean(release.notes) || (release.identifiers?.length ?? 0) > 0;
+
+  const rating = (
+    <RatingCard
+      community={{
+        presentation: presentRating(release.community?.rating),
+        count: release.community?.rating.count ?? 0,
+        have: release.community?.have ?? null,
+        want: release.community?.want ?? null,
+      }}
+      personal={
+        isInWantlist && wantlistEntry.data
+          ? {
+              value: wantlistEntry.data.rating,
+              onSave: async (rating: number) => {
+                await updateWantEntry.mutateAsync({ rating });
+              },
+              saving: updateWantEntry.isPending,
+            }
+          : undefined
+      }
+    />
+  );
 
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
-      <BackLink to={backTo} />
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <Card data-testid="release-detail-gallery-card" padding="sm">
+    <RecordDetailLayout
+      backTo={backTo}
+      actions={actions}
+      gallery={
+        <Card data-testid={RECORD_DETAIL_TESTIDS.GALLERY_CARD} padding="sm">
           <ReleaseImageGallery images={release.images} alt={release.title} />
         </Card>
-
-        <Card data-testid="release-detail-main-info-card" padding="sm">
-          <div className="flex flex-col gap-4">
-            <ReleaseDetailsSection release={release} />
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={handleAdd}
-                  loading={createEntry.isPending}
-                  disabled={added}
-                >
-                  {added ? 'Added to library' : 'Add to library'}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={handleAddToWantlist}
-                  loading={addToWantlist.isPending}
-                  disabled={addedToWantlist}
-                >
-                  {addedToWantlist ? 'Added to wishlist' : 'Add to wishlist'}
-                </Button>
-              </div>
-              {gateError && (
-                <p role="status" className="text-sm text-stone-500 dark:text-stone-400">
-                  {gateMessage(gateError)}
-                </p>
-              )}
-              {wantlistNote && (
-                <p role="status" className="text-sm text-stone-500 dark:text-stone-400">
-                  {wantlistNote}
-                </p>
-              )}
-              {addError && (
-                <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-                  {addError}
-                </p>
-              )}
-              {wantlistError && (
-                <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-                  {wantlistError}
-                </p>
-              )}
-            </div>
-          </div>
+      }
+      generalInfo={
+        <Card data-testid={RECORD_DETAIL_TESTIDS.MAIN_INFO_CARD} padding="sm">
+          <ReleaseDetailsSection release={release} />
         </Card>
-
-        {wantlistEntry.data && !wantlistEntry.isError && (
-          <Card
-            data-testid="release-detail-wantlist-panel-card"
-            padding="sm"
-            className="lg:col-span-2"
-          >
-            <WantlistPanel
-              entry={wantlistEntry.data}
-              onSaveRating={handleSaveWantlistRating}
-              onSaveNotes={handleSaveWantlistNotes}
-            />
-          </Card>
-        )}
-
-        <Card
-          data-testid="release-detail-tracklist-card"
-          padding="sm"
-          className="lg:col-span-2"
-        >
-          <ReleaseTracklistSection tracklist={release.tracklist} />
-        </Card>
-
-        {hasOtherDetails && (
-          <Card
-            data-testid="release-detail-other-details-card"
-            padding="sm"
-            className="lg:col-span-2"
-          >
-            <ReleaseAdditionalInfoSection
-              notes={release.notes}
-              identifiers={release.identifiers}
-              community={release.community}
-            />
-          </Card>
-        )}
-
-        {/*
-          Feature 062 — "Escúchalo en streaming". Mounted LAST so that its
-          first-view skeleton collapsing to nothing (no Apple Music match)
-          reflows only the empty space below it, never the detail above
-          (FR-017 / research.md §7). The component renders `null` unless a
-          real match resolved.
-        */}
+      }
+      rating={rating}
+      streaming={
         <StreamingLinksSection
           identifiers={release.identifiers}
           artist={release.artists[0]?.name}
           title={release.title}
         />
-      </div>
-    </main>
+      }
+      tracklist={
+        <Card data-testid={RECORD_DETAIL_TESTIDS.TRACKLIST_CARD} padding="sm">
+          <ReleaseTracklistSection tracklist={release.tracklist} />
+        </Card>
+      }
+      catalogInfo={
+        hasOtherDetails ? (
+          <Card data-testid={RECORD_DETAIL_TESTIDS.OTHER_DETAILS_CARD} padding="sm">
+            <ReleaseAdditionalInfoSection
+              notes={release.notes}
+              identifiers={release.identifiers}
+            />
+          </Card>
+        ) : null
+      }
+    />
   );
 }

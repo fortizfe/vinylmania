@@ -3,6 +3,7 @@ import clsx from 'clsx';
 
 import { useStreamingLinks } from '../queries/streamingQueries';
 import type { ReleaseIdentifier } from '../services/libraryApi';
+import { RECORD_DETAIL_TESTIDS } from './recordDetail/testIds';
 import { Card } from './ui/Card';
 import { focusRing } from './ui/focusRing';
 import { pressable } from './ui/press';
@@ -47,18 +48,12 @@ const HEADING_ID = 'streaming-links-heading';
 /**
  * Single reserved height carried by the outer Card in BOTH the skeleton and the
  * populated state, so the first-view skeleton -> populated swap introduces zero
- * layout shift (FR-017). The section is mounted last on every detail surface, so
- * the skeleton -> collapsed (`null`) transition only reflows empty space below
- * it — the accepted collapse (research.md §7).
+ * layout shift (FR-017). On a confirmed no-match / error the card collapses to
+ * `null`; per research R4 that reflows only the sections placed below it in the
+ * layout, once — the accepted collapse. Grid placement is the layout's job
+ * (feature 063): this component carries no column-span class of its own.
  */
 const RESERVED_HEIGHT = 'min-h-[4.5rem]';
-
-/**
- * All three detail-page mount points lay their content out in the same
- * `lg:grid-cols-2` grid with full-width cards below the fold. `lg:col-span-2` is
- * inert anywhere else, so the one class keeps the component drop-in.
- */
-const CARD_SPAN = 'lg:col-span-2';
 
 interface StreamingLinksSectionProps {
   /** Release identifiers; `Barcode`-typed values feed the barcode lookup. */
@@ -99,8 +94,8 @@ export function StreamingLinksSection({
     return (
       <Card
         padding="sm"
-        className={clsx(CARD_SPAN, RESERVED_HEIGHT)}
-        data-testid="release-detail-streaming-card"
+        className={RESERVED_HEIGHT}
+        data-testid={RECORD_DETAIL_TESTIDS.STREAMING_CARD}
       >
         <div data-testid="streaming-links-skeleton" className="flex flex-col gap-3">
           <Skeleton className="h-5 w-44" />
@@ -121,13 +116,19 @@ export function StreamingLinksSection({
   return (
     <Card
       padding="sm"
-      className={clsx(CARD_SPAN, RESERVED_HEIGHT)}
-      data-testid="release-detail-streaming-card"
+      className={RESERVED_HEIGHT}
+      data-testid={RECORD_DETAIL_TESTIDS.STREAMING_CARD}
     >
       <section aria-labelledby={HEADING_ID} className="flex flex-col gap-3">
-        <h4 id={HEADING_ID} className="font-semibold text-stone-900 dark:text-stone-100">
+        {/*
+          <h2>: on the record-detail views (feature 063 §C7) every content card
+          carries an <h2> under the page <h1>, no skipped level. Shared with the
+          master page, whose <h3> title then <h2> here is still valid (only
+          skipping a level *down* fails WCAG 1.3.1).
+        */}
+        <h2 id={HEADING_ID} className="font-semibold text-stone-900 dark:text-stone-100">
           Escúchalo en streaming
-        </h4>
+        </h2>
         <ul className="flex flex-wrap gap-2">
           {links.map((link) => {
             const { label, Icon, ariaLabel } = PLATFORM_META[link.platform];

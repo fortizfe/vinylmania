@@ -86,21 +86,34 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await page.goto(`/app/library/records/${ENTRY_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
+    // Feature 063 US3 (contracts/ui-contracts.md §C5): "Estado de mi copia" is
+    // condition + notes only — it carries NO rating control (the sole personal
+    // rating lives in `record-detail-rating-card`, US2) and NO "Remove from
+    // library" button (Remove moved to `record-detail-actions`, US1).
+    const yourCopy = page.getByTestId('record-detail-your-copy-card');
+    await expect(yourCopy.getByRole('button', { name: /stars/i })).toHaveCount(0);
+    await expect(
+      yourCopy.getByRole('button', { name: /remove from library/i }),
+    ).toHaveCount(0);
+
     const patchRequest = page.waitForRequest(
       (request) => request.url().includes(`/api/library/${ENTRY_ID}`) && request.method() === 'PATCH',
     );
 
-    await page.getByLabel('Media Condition').selectOption('Mint (M)');
+    // The media/sleeve/notes inline-edit controls stay in "Estado de mi copia".
+    await yourCopy.getByLabel('Media Condition').selectOption('Mint (M)');
 
     const request = await patchRequest;
     expect(request.postDataJSON()).toEqual({ mediaCondition: 'Mint (M)' });
 
     // After reload the select should reflect the saved value.
     await page.reload();
-    await expect(page.getByLabel('Media Condition')).toHaveValue('Mint (M)');
+    await expect(yourCopy.getByLabel('Media Condition')).toHaveValue('Mint (M)');
   });
 
-  test('editing the rating via star buttons autosaves (T032)', async ({ page }) => {
+  test('setting a star rating in the Rating card autosaves via PATCH /api/library/:id and survives a reload (feature 063 US2, T022)', async ({
+    page,
+  }) => {
     let currentRating = 0;
 
     await page.route(`**/api/library/${ENTRY_ID}`, async (route) => {
@@ -126,14 +139,32 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
     await page.goto(`/app/library/records/${ENTRY_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
+    // Feature 063 US2: the personal rating is edited in the RatingCard's
+    // "Tu valoración" group. The library view transiently renders a second
+    // star group inside MyCopySection (removed in US3), so scope strictly to
+    // `record-detail-rating-card`.
+    const personalRating = page
+      .getByTestId('record-detail-rating-card')
+      .getByRole('group', { name: 'Tu valoración' });
+
     const patchRequest = page.waitForRequest(
       (request) => request.url().includes(`/api/library/${ENTRY_ID}`) && request.method() === 'PATCH',
     );
 
-    await page.getByRole('button', { name: '4 stars' }).click();
+    await personalRating.getByRole('button', { name: '4 stars' }).click();
 
     const request = await patchRequest;
     expect(request.postDataJSON()).toEqual({ rating: 4 });
+
+    // The saved value survives a reload (the mock now serves rating: 4).
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+    await expect(
+      page
+        .getByTestId('record-detail-rating-card')
+        .getByRole('group', { name: 'Tu valoración' })
+        .getByRole('button', { name: '4 stars' }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('renders the gallery, key details, tracklist, and additional info in the correct layout (US1)', async ({
@@ -300,7 +331,16 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
       await page.goto(`/app/library/records/${ENTRY_ID}`);
       await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
-      expectPressed(await samplePress(page, page.getByRole('button', { name: '3 stars' })));
+      // Feature 063 US2: scope to the RatingCard's star group — the library
+      // view transiently renders a second star group in MyCopySection.
+      expectPressed(
+        await samplePress(
+          page,
+          page
+            .getByTestId('record-detail-rating-card')
+            .getByRole('button', { name: '3 stars' }),
+        ),
+      );
       // Released off the control (acceptance scenario 3) — no rating change.
       expect(sawPatch).toBe(false);
     });
@@ -365,7 +405,11 @@ test.describe('Record detail per-copy edits (US2 – feature 016)', () => {
         await page.emulateMedia({ colorScheme: theme });
         await goToRecordDetailForContrastChecks(page);
 
-        const ratingButton = page.getByRole('button', { name: '4 stars' });
+        // Feature 063 US2: scope to the RatingCard — MyCopySection renders a
+        // transient second star group until US3.
+        const ratingButton = page
+          .getByTestId('record-detail-rating-card')
+          .getByRole('button', { name: '4 stars' });
         await assertFocusIndicatorContrast(
           page,
           ratingButton,

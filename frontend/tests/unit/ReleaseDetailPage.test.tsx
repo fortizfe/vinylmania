@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -91,7 +91,10 @@ describe('ReleaseDetailPage', () => {
     expect(screen.getByText(/Östermalm/)).toBeInTheDocument();
     expect(screen.getByText(/Recorded at Stockholm Sound Studio/)).toBeInTheDocument();
     expect(screen.getByText(/7 39051 23421 6/)).toBeInTheDocument();
-    expect(screen.getByText(/214 have/)).toBeInTheDocument();
+    // Feature 063 §C6: the community have/want moved out of the catalog-info
+    // card and into the standalone RatingCard.
+    expect(screen.getByText(/214 lo tienen/)).toBeInTheDocument();
+    expect(screen.getByText(/58 lo quieren/)).toBeInTheDocument();
     expect(mockGetRelease).toHaveBeenCalledWith(1);
   });
 
@@ -294,7 +297,7 @@ describe('ReleaseDetailPage', () => {
     });
   });
 
-  describe('wantlist panel (feature 060, US3)', () => {
+  describe('personal rating in the Rating card (feature 063, US2)', () => {
     const wantEntry = {
       discogsReleaseId: 1,
       rating: 3,
@@ -302,21 +305,19 @@ describe('ReleaseDetailPage', () => {
       addedAt: '2026-09-06T00:00:00.000Z',
     };
 
-    it('renders the wantlist panel in its own card when the release is in the wantlist', async () => {
+    it('shows an editable personal rating in the Rating card when the release is in the wantlist', async () => {
       mockGetRelease.mockResolvedValue(fullRelease);
       mockGetWantEntry.mockResolvedValue(wantEntry);
 
       renderPage();
 
-      await waitFor(() =>
-        expect(
-          screen.getByRole('heading', { name: /your wishlist notes/i }),
-        ).toBeInTheDocument(),
-      );
-      expect(screen.getByText('First pressing only')).toBeInTheDocument();
+      const group = await screen.findByRole('group', { name: /tu valoraci[oó]n/i });
+      const stars = within(group).getAllByRole('button', { name: /stars/i });
+      expect(stars[2]).toHaveAttribute('aria-pressed', 'true');
+      expect(stars[3]).toHaveAttribute('aria-pressed', 'false');
     });
 
-    it('does not render the wantlist panel when the release is not in the wantlist', async () => {
+    it('shows the read-only "Sin valorar" state when the release is not in the wantlist', async () => {
       mockGetRelease.mockResolvedValue(fullRelease);
       // beforeEach already stubs GET as 404 not_in_wantlist.
 
@@ -329,11 +330,12 @@ describe('ReleaseDetailPage', () => {
         ).toBeInTheDocument(),
       );
       expect(
-        screen.queryByRole('heading', { name: /your wishlist notes/i }),
+        screen.queryByRole('group', { name: /tu valoraci[oó]n/i }),
       ).not.toBeInTheDocument();
+      expect(screen.getByText(/sin valorar/i)).toBeInTheDocument();
     });
 
-    it('reveals the panel after a successful add to wishlist without a reload', async () => {
+    it('reveals the editable personal rating after a successful add to wishlist without a reload', async () => {
       mockGetRelease.mockResolvedValue(fullRelease);
       mockGetWantEntry
         .mockRejectedValueOnce(new ApiError('not in wantlist', 404, 'not_in_wantlist'))
@@ -355,11 +357,7 @@ describe('ReleaseDetailPage', () => {
       const user = userEvent.setup();
       await user.click(screen.getByRole('button', { name: /add to wishlist/i }));
 
-      await waitFor(() =>
-        expect(
-          screen.getByRole('heading', { name: /your wishlist notes/i }),
-        ).toBeInTheDocument(),
-      );
+      await screen.findByRole('group', { name: /tu valoraci[oó]n/i });
     });
 
     it('saves the personal rating through the update mutation', async () => {
@@ -368,18 +366,65 @@ describe('ReleaseDetailPage', () => {
       mockUpdateWantEntry.mockResolvedValue({ ...wantEntry, rating: 4 });
 
       renderPage();
-      await waitFor(() =>
-        expect(
-          screen.getByRole('heading', { name: /your wishlist notes/i }),
-        ).toBeInTheDocument(),
-      );
+      const group = await screen.findByRole('group', { name: /tu valoraci[oó]n/i });
 
       const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /4 stars/i }));
+      await user.click(within(group).getByRole('button', { name: /4 stars/i }));
 
       await waitFor(() =>
         expect(mockUpdateWantEntry).toHaveBeenCalledWith(1, { rating: 4 }),
       );
+    });
+  });
+
+  describe('accessibility — heading outline (feature 063, T042 / §C7)', () => {
+    const wantEntry = {
+      discogsReleaseId: 1,
+      rating: 3,
+      notes: null,
+      addedAt: '2026-09-06T00:00:00.000Z',
+    };
+
+    async function expectCleanHeadingOutline() {
+      // Exactly one <h1>, and it is the record title.
+      const h1s = await screen.findAllByRole('heading', { level: 1 });
+      expect(h1s).toHaveLength(1);
+      expect(h1s[0]).toHaveTextContent('Stockholm');
+
+      // Every content card is an <h2>: rating, tracklist and the catalog-info
+      // card (notes + identifiers are present in `fullRelease`).
+      const h2Names = screen
+        .getAllByRole('heading', { level: 2 })
+        .map((h) => h.textContent);
+      expect(h2Names).toEqual(
+        expect.arrayContaining(['Valoración', 'Tracklist', 'Más información']),
+      );
+
+      // No skipped level anywhere on the page (WCAG 1.3.1).
+      expect(screen.queryAllByRole('heading', { level: 3 })).toHaveLength(0);
+      expect(screen.queryAllByRole('heading', { level: 4 })).toHaveLength(0);
+    }
+
+    it('search view (not in wantlist): h1 title then h2 cards, no skipped level', async () => {
+      mockGetRelease.mockResolvedValue(fullRelease);
+
+      renderPage();
+
+      await expectCleanHeadingOutline();
+    });
+
+    it('wishlist view (in wantlist): same clean outline, with the editable personal rating reachable by name', async () => {
+      mockGetRelease.mockResolvedValue(fullRelease);
+      mockGetWantEntry.mockResolvedValue(wantEntry);
+
+      renderPage();
+
+      await expectCleanHeadingOutline();
+      // The wishlist view adds the editable personal half the search view lacks;
+      // it keeps its accessible name.
+      expect(
+        screen.getByRole('group', { name: /tu valoraci[oó]n/i }),
+      ).toBeInTheDocument();
     });
   });
 

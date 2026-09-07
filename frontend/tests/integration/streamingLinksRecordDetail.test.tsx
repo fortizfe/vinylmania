@@ -94,10 +94,15 @@ describe('StreamingLinksSection on RecordDetailPage (feature 062, T025)', () => 
       }),
     );
 
-    // Mounted last: nothing with record-detail content follows it.
-    const otherDetails = screen.getByTestId('record-detail-other-details-card');
+    // Feature 063 §C1: streaming sits at position 4 — after the rating card,
+    // before the tracklist.
+    const ratingCard = screen.getByTestId('record-detail-rating-card');
+    const tracklistCard = screen.getByTestId('record-detail-tracklist-card');
     expect(
-      otherDetails.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ratingCard.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      region.compareDocumentPosition(tracklistCard) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 

@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -220,8 +220,11 @@ describe('Record detail flow (US3)', () => {
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
 
     const user = userEvent.setup();
+    const actionBar = screen.getByTestId('record-detail-actions');
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: /remove from library/i }));
+      await user.click(
+        within(actionBar).getByRole('button', { name: /remove from library/i }),
+      );
     });
 
     expect(mockRemove).toHaveBeenCalledWith('entry-1');
@@ -255,8 +258,11 @@ describe('Record detail flow (US3)', () => {
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
 
     const user = userEvent.setup();
+    const actionBar = screen.getByTestId('record-detail-actions');
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: /remove from library/i }));
+      await user.click(
+        within(actionBar).getByRole('button', { name: /remove from library/i }),
+      );
     });
 
     expect(mockRemove).not.toHaveBeenCalled();
@@ -384,40 +390,28 @@ describe('Record detail flow (US3)', () => {
     const gallery = screen.getByTestId('record-detail-gallery-card');
     const mainInfo = screen.getByTestId('record-detail-main-info-card');
     const yourCopy = screen.getByTestId('record-detail-your-copy-card');
+    const ratingCard = screen.getByTestId('record-detail-rating-card');
     const tracklist = screen.getByTestId('record-detail-tracklist-card');
     const otherDetails = screen.getByTestId('record-detail-other-details-card');
 
-    // Each content group is its own card (spec 057) — no single outer
-    // wrapping card, and every card carries its own border/elevation plus
-    // dark-mode classes (FR-011: dark theme legibility regression guard).
-    [gallery, mainInfo, yourCopy, tracklist, otherDetails].forEach((card) => {
+    // Every content group is its own card, each carrying its own
+    // border/elevation plus dark-mode classes (FR-011: dark theme legibility
+    // regression guard).
+    [gallery, mainInfo, yourCopy, ratingCard, tracklist, otherDetails].forEach((card) => {
       expect(card.className).toMatch(/rounded-xl/);
       expect(card.className).toMatch(/border/);
       expect(card.className).toMatch(/dark:border-border-dark/);
       expect(card.className).toMatch(/dark:bg-surface-raised/);
     });
 
-    // The cards' shared grid wrapper uses the tighter gap-4 spacing (spec 057
-    // FR-009): gallery and a plain (non-card) right-column wrapper — holding
-    // main info + your copy stacked — are the two natural lg columns, while
-    // tracklist/other-details span both as their own full-width grid items.
-    const rightColumn = mainInfo.parentElement;
-    const wrapper = gallery.parentElement;
-    expect(wrapper?.className).toMatch(/grid-cols-1/);
-    expect(wrapper?.className).toMatch(/lg:grid-cols-2/);
-    expect(wrapper?.className).toMatch(/gap-4/);
-    expect(gallery.className).not.toMatch(/lg:col-span/);
-    expect(rightColumn?.className).not.toMatch(/lg:col-span/);
-    expect(rightColumn).not.toBe(wrapper);
-    expect(rightColumn?.parentElement).toBe(wrapper);
-    expect(yourCopy.parentElement).toBe(rightColumn);
-    expect(tracklist.parentElement).toBe(wrapper);
-    expect(otherDetails.parentElement).toBe(wrapper);
-    expect(tracklist.className).toMatch(/lg:col-span-2/);
-    expect(otherDetails.className).toMatch(/lg:col-span-2/);
-
-    // DOM order: gallery, main info, your copy, tracklist, other details.
-    const order = [gallery, mainInfo, yourCopy, tracklist, otherDetails];
+    // Feature 063 §C1 / FR-022: the DOM order is the flat contract order,
+    // regardless of viewport — gallery → general info → estado de mi copia →
+    // rating → tracklist → catalog info. `RecordDetailLayout` moves the rail
+    // on desktop with CSS only, never by reordering the tree or using
+    // `order-*`.
+    const layout = screen.getByTestId('record-detail-layout');
+    expect(layout).toBeInTheDocument();
+    const order = [gallery, mainInfo, yourCopy, ratingCard, tracklist, otherDetails];
     for (let i = 0; i < order.length - 1; i += 1) {
       expect(
         order[i].compareDocumentPosition(order[i + 1]) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -427,7 +421,8 @@ describe('Record detail flow (US3)', () => {
     expect(screen.getByText(/Östermalm/)).toBeInTheDocument();
     expect(screen.getByText('Recorded at Stockholm Sound Studio.')).toBeInTheDocument();
     expect(screen.getByText(/Barcode/)).toBeInTheDocument();
-    expect(screen.getByText(/214/)).toBeInTheDocument();
+    // Community have/want now live in the rating card (§C6).
+    expect(within(ratingCard).getByText(/214 lo tienen/)).toBeInTheDocument();
   });
 
   it('omits the other-details card entirely when the release has no notes, identifiers, or community data', async () => {

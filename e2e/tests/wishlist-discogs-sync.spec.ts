@@ -23,6 +23,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const STUB_URL = 'http://localhost:4571';
@@ -296,9 +297,18 @@ test.describe('US2 - add to wantlist (feature 060, FR-005/006/007/007a)', () => 
         ).toBeVisible({ timeout: 15_000 });
 
         await page.getByRole('button', { name: /^add to wishlist$/i }).click();
-        await expect(page.getByRole('button', { name: /^added to wishlist$/i })).toBeVisible({
-            timeout: 10_000,
-        });
+
+        // feat-063 US1 recomposed the detail-page action bar: once the release
+        // is in the wantlist the bar switches to its `view='wishlist'` variant
+        // (only "Add to library") and the Rating card's personal half becomes
+        // an editable "Tu valoración" star group — there is no "Added to
+        // wishlist" confirmation button any more.
+        await expect(
+            page
+                .getByTestId('record-detail-rating-card')
+                .getByRole('group', { name: 'Tu valoración' }),
+        ).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByRole('button', { name: /^add to wishlist$/i })).toHaveCount(0);
 
         await page.goto('/app/wishlist');
         await expect(page.getByTestId('wishlist-grid')).toBeVisible({ timeout: 15_000 });
@@ -417,20 +427,27 @@ test.describe('US2 - add to wantlist (feature 060, FR-005/006/007/007a)', () => 
 });
 
 // ---------------------------------------------------------------------------
-// US3 — edit a wantlist entry's notes + personal rating from the release
-// detail page (feature 060, FR-008/FR-009/FR-010; US3 acceptance scenarios
-// 1–5; quickstart steps 5–6).
+// US3 — edit a wantlist entry's personal rating from the release detail page
+// (feature 060, FR-008/FR-009/FR-010; US3 acceptance scenarios 1–5;
+// quickstart steps 5–6).
 //
-// The release-detail wantlist panel (`<Card data-testid=
-// "release-detail-wantlist-panel-card">` → `WantlistPanel`) renders ONLY when
-// `GET /api/wantlist/:releaseId` returns an entry (FR-008). It carries a
-// heading "Your wishlist notes", a "Personal rating" `StarRating`, and a
-// "Notes" `InlineEditableField` (click to edit → textarea → blur/Enter to
-// confirm), each autosaving per field with NO Save button (FR-009). Backend
-// `PATCH /api/wantlist/:releaseId` takes `{rating}` or `{notes}`, one per call.
+// feat-063 US2 DELETED the `WantlistPanel` (`release-detail-wantlist-panel-card`)
+// and removed the wishlist note UI entirely (not deferred). The personal
+// rating now lives in the shared `RatingCard`
+// (`data-testid="record-detail-rating-card"`): a `role="group"` named
+// "Tu valoración" holding five star `<button>`s (`aria-label="1 stars"`..
+// `"5 stars"`, `aria-pressed`). It renders as an editable group only when the
+// release IS in the wantlist; otherwise the personal half is the read-only
+// "Sin valorar" text (contracts/ui-contracts.md §C4). Backend
+// `PATCH /api/wantlist/:releaseId` still takes `{rating}` (feat-063 US2/T025).
+//
+// The one former note-autosave assertion (T0YY-2) is replaced in place by
+// feat-063 US5 / T038: T0YY-2 below now asserts the inverse — the wishlist
+// detail renders no notes field / label / text anywhere and issues no
+// `notes`-bearing PATCH /api/wantlist/:releaseId.
 //
 // Autosave persistence is asserted the durable way — reload the page, then
-// read the stub wantlist — never by racing the PATCH request.
+// read the stub wantlist — in addition to observing the PATCH.
 // ---------------------------------------------------------------------------
 
 interface StubWantState {
@@ -454,10 +471,11 @@ async function openReleaseDetail(page: Page, releaseId: number): Promise<void> {
     ).toBeVisible({ timeout: 15_000 });
 }
 
-test.describe('US3 - edit wantlist entry (feature 060, FR-008/FR-009/FR-010)', () => {
-    // --- US3 Scenario 2 / SC-003: personal rating autosaves + survives a reload ---
+test.describe('US3 - edit wantlist entry rating (feature 060 + feat-063 US2, FR-008/FR-009/FR-010)', () => {
+    // --- feat-063 US2 / T023 + SC-003: personal rating in the RatingCard
+    //     autosaves via PATCH /api/wantlist/:releaseId and survives a reload ---
 
-    test('T0YY-1: setting the personal rating autosaves to the Discogs wantlist and persists across a reload', async ({
+    test('T0YY-1 / feat-063 US2 (T023): setting the personal rating in the Rating card autosaves to the Discogs wantlist via PATCH /api/wantlist/:releaseId and persists across a reload', async ({
         page,
     }) => {
         await seedWantlist([{ releaseId: 222, rating: 0, notes: '' }]);
@@ -465,62 +483,115 @@ test.describe('US3 - edit wantlist entry (feature 060, FR-008/FR-009/FR-010)', (
         await signInAndLinkDiscogs(page);
         await openReleaseDetail(page, 222);
 
-        // FR-008: the panel is shown because release 222 IS in the wantlist.
-        const panel = page.getByTestId('release-detail-wantlist-panel-card');
-        await expect(panel).toBeVisible({ timeout: 15_000 });
+        // feat-063 US2: the wishlist detail's personal rating lives in the
+        // shared RatingCard ("Tu valoración"), not the removed WantlistPanel.
+        const ratingCard = page.getByTestId('record-detail-rating-card');
+        await expect(ratingCard).toBeVisible({ timeout: 15_000 });
         await expect(
-            panel.getByRole('heading', { name: /your wishlist notes/i }),
-        ).toBeVisible();
+            page.getByTestId('release-detail-wantlist-panel-card'),
+        ).toHaveCount(0);
+        const personalRating = ratingCard.getByRole('group', { name: 'Tu valoración' });
+        await expect(personalRating).toBeVisible();
+
+        const patchRequest = page.waitForRequest(
+            (request) =>
+                /\/api\/wantlist\/222(?:\?|$)/.test(request.url()) &&
+                request.method() === 'PATCH',
+        );
 
         // FR-009/FR-010: tapping a star autosaves — no Save button involved.
-        await panel.getByRole('button', { name: '4 stars' }).click();
+        await personalRating.getByRole('button', { name: '4 stars' }).click();
+
+        const request = await patchRequest;
+        expect(request.postDataJSON()).toEqual({ rating: 4 });
 
         // Durable persistence check: reload, then read the stub directly.
         await openReleaseDetail(page, 222);
-        const panelAfterReload = page.getByTestId('release-detail-wantlist-panel-card');
-        await expect(panelAfterReload).toBeVisible({ timeout: 15_000 });
         await expect(
-            panelAfterReload.getByRole('button', { name: '4 stars' }),
+            page
+                .getByTestId('record-detail-rating-card')
+                .getByRole('group', { name: 'Tu valoración' })
+                .getByRole('button', { name: '4 stars' }),
         ).toHaveAttribute('aria-pressed', 'true');
 
         const wants = await getStubWants();
         expect(wants.find((w) => w.id === 222)?.rating).toBe(4);
     });
 
-    // --- US3 Scenario 2 / SC-003: notes autosave on blur + survive a reload ---
+    // --- feat-063 US5 / T038 + SC-007 (replaces the former T0YY-2 notes-autosave
+    //     assertion, whose UI was removed in US2): the wishlist detail view
+    //     renders NO notes field, NO "Notes"/"Notas" label, does not display the
+    //     stored wantlist note anywhere, and issues no `notes`-bearing
+    //     PATCH /api/wantlist/:releaseId while on the view (FR-016). ---
 
-    test('T0YY-2: editing the notes field autosaves to the Discogs wantlist and persists across a reload', async ({
+    test('T0YY-2 / feat-063 US5 (T038): a wishlist record with a non-empty wantlist note shows no notes field, no note text, and issues no notes PATCH', async ({
         page,
     }) => {
-        await seedWantlist([{ releaseId: 222, rating: 0, notes: '' }]);
+        const NOTE_TEXT = 'Original UK pressing — sleeve VG+';
+        await seedWantlist([{ releaseId: 222, rating: 3, notes: NOTE_TEXT }]);
+
+        // Record every PATCH /api/wantlist/:releaseId body seen while on the
+        // view; assert none of them carries a `notes` field (FR-016).
+        const wantlistPatchBodies: unknown[] = [];
+        await page.route('**/api/wantlist/**', async (route) => {
+            const request = route.request();
+            if (request.method() === 'PATCH') {
+                wantlistPatchBodies.push(request.postDataJSON());
+            }
+            await route.continue();
+        });
 
         await signInAndLinkDiscogs(page);
         await openReleaseDetail(page, 222);
 
-        const panel = page.getByTestId('release-detail-wantlist-panel-card');
-        await expect(panel).toBeVisible({ timeout: 15_000 });
+        const ratingCard = page.getByTestId('record-detail-rating-card');
+        await expect(ratingCard).toBeVisible({ timeout: 15_000 });
+        // This IS the wishlist view (personal rating is editable).
+        const personalRating = ratingCard.getByRole('group', { name: 'Tu valoración' });
+        await expect(personalRating).toBeVisible();
 
-        // InlineEditableField: click the read-mode trigger → textarea → type → blur.
-        await panel.getByRole('button', { name: /edit notes/i }).click();
-        const editor = panel.getByRole('textbox', { name: 'Notes' });
-        await editor.fill('Original UK pressing');
-        await editor.blur();
+        // No notes UI anywhere: no textarea, no "Notes"/"Notas" label, no
+        // "your wishlist notes" heading, and the stored note text is nowhere on
+        // the page (contracts §C4 — the wishlist detail has no notes surface).
+        await expect(page.locator('textarea')).toHaveCount(0);
+        await expect(page.getByRole('textbox', { name: /nota[s]?/i })).toHaveCount(0);
+        await expect(page.getByText(/^\s*nota(s)?\s*$/i)).toHaveCount(0);
+        await expect(page.getByText(/your wishlist notes/i)).toHaveCount(0);
+        await expect(page.getByText(NOTE_TEXT)).toHaveCount(0);
 
-        // Durable persistence check: reload, then read the stub directly.
-        await openReleaseDetail(page, 222);
-        const panelAfterReload = page.getByTestId('release-detail-wantlist-panel-card');
-        await expect(panelAfterReload).toBeVisible({ timeout: 15_000 });
+        // Positively exercise the one PATCH the view CAN issue — the rating
+        // autosave — and confirm it is rating-only, never a notes write.
+        const patchRequest = page.waitForRequest(
+            (request) =>
+                /\/api\/wantlist\/222(?:\?|$)/.test(request.url()) &&
+                request.method() === 'PATCH',
+        );
+        await personalRating.getByRole('button', { name: '4 stars' }).click();
+        const request = await patchRequest;
+        expect(request.postDataJSON()).toEqual({ rating: 4 });
+
+        // Let any (non-existent) trailing note write attempt settle, then
+        // assert: not one PATCH carried a `notes` field.
         await expect(
-            panelAfterReload.getByRole('button', { name: /edit notes/i }),
-        ).toContainText('Original UK pressing');
+            page
+                .getByTestId('record-detail-rating-card')
+                .getByRole('group', { name: 'Tu valoración' })
+                .getByRole('button', { name: '4 stars' }),
+        ).toHaveAttribute('aria-pressed', 'true');
 
+        expect(wantlistPatchBodies.length).toBeGreaterThan(0);
+        for (const body of wantlistPatchBodies) {
+            expect(body).not.toHaveProperty('notes');
+        }
+
+        // The Discogs wantlist note itself was never touched (still the seed).
         const wants = await getStubWants();
-        expect(wants.find((w) => w.id === 222)?.notes).toBe('Original UK pressing');
+        expect(wants.find((w) => w.id === 222)?.notes).toBe(NOTE_TEXT);
     });
 
-    // --- US3 Scenario 2 / FR-009: no Save button anywhere in the panel ---
+    // --- feat-063 US2 / FR-009: the Rating card autosaves with no Save button ---
 
-    test('T0YY-3: the wantlist panel has no Save button (per-field autosave)', async ({
+    test('T0YY-3 / feat-063 US2: the wishlist Rating card autosaves the personal rating with no Save button', async ({
         page,
     }) => {
         await seedWantlist([{ releaseId: 222, rating: 0, notes: '' }]);
@@ -528,19 +599,21 @@ test.describe('US3 - edit wantlist entry (feature 060, FR-008/FR-009/FR-010)', (
         await signInAndLinkDiscogs(page);
         await openReleaseDetail(page, 222);
 
-        const panel = page.getByTestId('release-detail-wantlist-panel-card');
-        await expect(panel).toBeVisible({ timeout: 15_000 });
-
-        await expect(panel.getByRole('button', { name: /save/i })).toHaveCount(0);
-        // Also true while the notes field is open for editing.
-        await panel.getByRole('button', { name: /edit notes/i }).click();
-        await expect(panel.getByRole('textbox', { name: 'Notes' })).toBeVisible();
-        await expect(panel.getByRole('button', { name: /save/i })).toHaveCount(0);
+        const ratingCard = page.getByTestId('record-detail-rating-card');
+        await expect(ratingCard).toBeVisible({ timeout: 15_000 });
+        await expect(
+            ratingCard.getByRole('group', { name: 'Tu valoración' }),
+        ).toBeVisible();
+        await expect(ratingCard.getByRole('button', { name: /save/i })).toHaveCount(0);
+        await expect(
+            page.getByTestId('release-detail-wantlist-panel-card'),
+        ).toHaveCount(0);
     });
 
-    // --- US3 Scenario 5 / FR-008: no panel for a release NOT in the wantlist ---
+    // --- feat-063 US2 / §C4: release NOT in the wantlist → Rating card renders
+    //     but the personal half is read-only "Sin valorar", not editable stars ---
 
-    test('T0YY-4: a release that is not in the wantlist shows no panel — only "Add to wishlist"', async ({
+    test('T0YY-4 / feat-063 US2: a release not in the wantlist shows the Rating card with no editable personal stars — only "Add to wishlist"', async ({
         page,
     }) => {
         await seedWantlist([{ releaseId: 222, rating: 0, notes: '' }]);
@@ -553,34 +626,54 @@ test.describe('US3 - edit wantlist entry (feature 060, FR-008/FR-009/FR-010)', (
             page.getByTestId('release-detail-wantlist-panel-card'),
         ).toHaveCount(0);
         await expect(page.getByText(/your wishlist notes/i)).toHaveCount(0);
+
+        // FR-004: the Rating card is always rendered; without a wantlist entry
+        // the personal half is the read-only "Sin valorar" text (contracts §C4).
+        const ratingCard = page.getByTestId('record-detail-rating-card');
+        await expect(ratingCard).toBeVisible({ timeout: 15_000 });
+        await expect(
+            ratingCard.getByRole('group', { name: 'Tu valoración' }),
+        ).toHaveCount(0);
+        await expect(ratingCard.getByText('Sin valorar', { exact: true })).toBeVisible();
         await expect(
             page.getByRole('button', { name: /^add to wishlist$/i }),
         ).toBeVisible();
     });
 
-    // --- US3 Scenario 1 / FR-008: the panel appears after an add, without a reload ---
+    // --- feat-063 US2 / US3 Scenario 1: adding a release turns the personal
+    //     rating editable without a manual reload ---
 
-    test('T0YY-5: adding a release to the wantlist from its detail page reveals the panel without a manual reload', async ({
+    test('T0YY-5 / feat-063 US2: adding a release to the wantlist from its detail page turns the Rating card personal stars editable without a manual reload', async ({
         page,
     }) => {
         // 999 starts outside both the wantlist and the library.
         await signInAndLinkDiscogs(page);
         await openReleaseDetail(page, 999);
 
+        const ratingCard = page.getByTestId('record-detail-rating-card');
+        await expect(ratingCard).toBeVisible({ timeout: 15_000 });
+        await expect(
+            ratingCard.getByRole('group', { name: 'Tu valoración' }),
+        ).toHaveCount(0);
         await expect(
             page.getByTestId('release-detail-wantlist-panel-card'),
         ).toHaveCount(0);
 
         await page.getByRole('button', { name: /^add to wishlist$/i }).click();
-        await expect(
-            page.getByRole('button', { name: /^added to wishlist$/i }),
-        ).toBeVisible({ timeout: 10_000 });
 
-        // FR-008 / US3-1: the panel appears on the same page load.
-        const panel = page.getByTestId('release-detail-wantlist-panel-card');
-        await expect(panel).toBeVisible({ timeout: 15_000 });
+        // feat-063 US1 recomposed the action bar: once the release is in the
+        // wantlist the bar switches to its `view='wishlist'` variant (only
+        // "Add to library"), so there is no "Added to wishlist" confirmation
+        // button. The wantlist-entry query refetches on the add's invalidation
+        // and the personal half of the Rating card becomes an editable star
+        // group — no reload — which is the actual behaviour under test.
         await expect(
-            panel.getByRole('heading', { name: /your wishlist notes/i }),
+            ratingCard.getByRole('group', { name: 'Tu valoración' }),
+        ).toBeVisible({ timeout: 15_000 });
+        await expect(
+            page
+                .getByTestId('record-detail-actions')
+                .getByRole('button', { name: /^add to library$/i }),
         ).toBeVisible();
 
         const wants = await getStubWants();
@@ -837,4 +930,43 @@ test.describe('US5 - buy removes from wishlist (feature 060, FR-012/FR-013)', ()
         const wants = await getWantlist();
         expect(wants).toHaveLength(0);
     });
+});
+
+// ---------------------------------------------------------------------------
+// feat-063 US1/US2 + spec 058 — WCAG 2.1 AA automated scan of the WISHLIST
+// DETAIL view (T044, closing the axe gap the frontend polish agent flagged
+// under T042). The existing axe call sites cover the search view
+// (`release-detail.spec.ts`) and the library view
+// (`record-detail-responsive.spec.ts`); the wishlist detail view — the
+// release route with `GET /api/wantlist/:releaseId` resolving so the shared
+// `RatingCard` renders its editable personal half ("Tu valoración") — had no
+// scan. Mirrors the `runAxeScan` pattern: serious/critical only, both themes.
+// ---------------------------------------------------------------------------
+
+test.describe('Wishlist detail view WCAG 2.1 AA automated scan (feat-063 / spec 058, T044)', () => {
+    for (const theme of ['light', 'dark'] as const) {
+        test(`the wishlist detail view has no serious/critical WCAG 2.1 AA violations in ${theme} mode`, async ({
+            page,
+        }) => {
+            await page.emulateMedia({ colorScheme: theme });
+            // rating 3 → the RatingCard personal half is pre-filled and editable.
+            await seedWantlist([{ releaseId: 222, rating: 3, notes: '' }]);
+
+            await signInAndLinkDiscogs(page);
+            await openReleaseDetail(page, 222);
+
+            // Gate on the wishlist-only editable personal rating so the scan
+            // runs against the fully-resolved detail view (GET /api/wantlist/222
+            // has landed and RatingCard shows its editable half).
+            const ratingCard = page.getByTestId('record-detail-rating-card');
+            await expect(ratingCard).toBeVisible({ timeout: 15_000 });
+            await expect(
+                ratingCard.getByRole('group', { name: 'Tu valoración' }),
+            ).toBeVisible();
+
+            const seriousOrCritical = await runAxeScan(page);
+
+            expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
+        });
+    }
 });

@@ -1,0 +1,158 @@
+# Agent Assignments
+# Feature: Unified Record Detail Views (063-record-detail-unification)
+# Generated: 2026-09-07
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "backend-agent"
+    source: "project"
+    description: "Work under backend/ — Express + TS hexagonal APIs, Firebase, Discogs, Redis. Not used by this feature."
+  - name: "docs-agent"
+    source: "project"
+    description: "End-user documentation for Vinylmania collectors. Not used by this feature."
+  - name: "frontend-agent"
+    source: "project"
+    description: "Work under frontend/ — React 19 + TS (Vite), Tailwind v4, TanStack Query; Apple design skills; WCAG 2.1 AA; TDD via Vitest + React Testing Library; YAGNI/SOLID/KISS."
+  - name: "qa-agent"
+    source: "project"
+    description: "Test-First/TDD discipline and test quality across backend, frontend, e2e; owns e2e/ Playwright specs; fixes flaky/failing tests; gates changes against the constitution's quality gates."
+
+assignments:
+  T001:
+    agent: "frontend-agent"
+    reason: "Create frontend/src/components/recordDetail/ folder and testIds.ts — frontend scaffolding."
+  T002:
+    agent: "frontend-agent"
+    reason: "Verify/adjust frontend/src/components/ui/Button.tsx :active + hover media query."
+  T003:
+    agent: "frontend-agent"
+    reason: "Write failing Vitest test RecordDetailLayout.test.tsx (TDD, RTL)."
+  T004:
+    agent: "frontend-agent"
+    reason: "Create RecordDetailLayout.tsx — frontend component with responsive/sticky-rail layout."
+  T005:
+    agent: "frontend-agent"
+    reason: "Write failing Vitest test RecordDetailSkeleton.test.tsx."
+  T006:
+    agent: "frontend-agent"
+    reason: "Move + rework RecordDetailSkeleton component to mirror the new layout."
+  T006a:
+    agent: "frontend-agent"
+    reason: "Give MasterReleaseDetailPage its own skeleton to preserve its loading visual (FR-023) — frontend component."
+  T007:
+    agent: "frontend-agent"
+    reason: "Write failing Vitest test RatingCard.test.tsx (community cases)."
+  T008:
+    agent: "frontend-agent"
+    reason: "Write failing Vitest test RecordDetailActions.test.tsx."
+  T009:
+    agent: "frontend-agent"
+    reason: "Write failing Vitest test ReleaseAdditionalInfoSection.test.tsx."
+  T010:
+    agent: "qa-agent"
+    reason: "e2e/tests/release-detail.spec.ts — Playwright assertions for section order + action bar."
+  T011:
+    agent: "qa-agent"
+    reason: "e2e/tests/*-responsive.spec.ts — Playwright rail-vs-stack assertions."
+  T012:
+    agent: "frontend-agent"
+    reason: "Create RatingCard.tsx (community half + have/want) — frontend component."
+  T013:
+    agent: "frontend-agent"
+    reason: "Create RecordDetailActions.tsx — frontend presentational bar."
+  T014:
+    agent: "frontend-agent"
+    reason: "Trim ReleaseAdditionalInfoSection.tsx (remove community line) — frontend component."
+  T015:
+    agent: "frontend-agent"
+    reason: "Recompose ReleaseDetailPage.tsx onto the shared layout — frontend page."
+  T016:
+    agent: "frontend-agent"
+    reason: "Recompose RecordDetailPage.tsx onto the shared layout — frontend page."
+  T017:
+    agent: "frontend-agent"
+    reason: "Route not-found / relink / catalog-unavailable branches through RecordDetailLayout — frontend page logic."
+  T018:
+    agent: "frontend-agent"
+    reason: "Unify data-testid values across pages and section components — frontend edit."
+  T019:
+    agent: "qa-agent"
+    reason: "Make the US1 Playwright specs green and sweep old release-detail-* selectors in e2e/."
+  T020:
+    agent: "qa-agent"
+    reason: "MasterReleaseDetailPage regression — e2e + unit must pass unchanged (quality gate, FR-023)."
+  T021:
+    agent: "frontend-agent"
+    reason: "Extend RatingCard.test.tsx with the personal-half cases (Vitest, TDD)."
+  T022:
+    agent: "qa-agent"
+    reason: "e2e/tests/record-detail-inline-edit.spec.ts — Playwright PATCH /api/library assertion."
+  T023:
+    agent: "qa-agent"
+    reason: "e2e wishlist rating persistence — Playwright PATCH /api/wantlist assertion."
+  T024:
+    agent: "frontend-agent"
+    reason: "Extend RatingCard.tsx with the editable personal half + retry-on-failure — frontend component."
+  T025:
+    agent: "frontend-agent"
+    reason: "ReleaseDetailPage.tsx — build the wishlist personal-rating model; drop WantlistPanel usage."
+  T026:
+    agent: "frontend-agent"
+    reason: "Delete frontend/src/components/WantlistPanel.tsx and its colocated test."
+  T027:
+    agent: "frontend-agent"
+    reason: "RecordDetailPage.tsx — build the library personal-rating model — frontend page."
+  T028:
+    agent: "qa-agent"
+    reason: "Make the US2 Playwright specs green; update wishlist-responsive.spec.ts."
+  T029:
+    agent: "frontend-agent"
+    reason: "Write failing Vitest test MyCopySection.test.tsx (no rating control / no Remove)."
+  T030:
+    agent: "frontend-agent"
+    reason: "Trim MyCopySection.tsx (remove rating + Remove button) — frontend component."
+  T031:
+    agent: "frontend-agent"
+    reason: "RecordDetailPage.tsx — stop passing onSaveRating/onRemove to MyCopySection — frontend page."
+  T032:
+    agent: "qa-agent"
+    reason: "e2e/tests/record-detail-inline-edit.spec.ts — retarget the rating assertion to the Rating card."
+  T033:
+    agent: "frontend-agent"
+    reason: "Update StreamingLinksSection.test.tsx for the removed grid span (Vitest)."
+  T034:
+    agent: "qa-agent"
+    reason: "e2e/tests/release-detail.spec.ts — Playwright streaming-card position assertion."
+  T035:
+    agent: "frontend-agent"
+    reason: "StreamingLinksSection.tsx — remove hard-coded lg:col-span-2 — frontend component."
+  T036:
+    agent: "default"
+    reason: "Edit spec.md US4 AS3 + quickstart.md wording — spec/doc authoring, outside every agent's remit (docs-agent is end-user docs only)."
+  T037:
+    agent: "qa-agent"
+    reason: "Make the US4 Playwright spec green."
+  T038:
+    agent: "qa-agent"
+    reason: "e2e/tests/wishlist-discogs-sync.spec.ts — no notes field + no notes-bearing PATCH."
+  T039:
+    agent: "frontend-agent"
+    reason: "Remove the wishlist-note data path from ReleaseDetailPage.tsx / wantlistQueries usage — frontend edit."
+  T040:
+    agent: "frontend-agent"
+    reason: "Dead-code sweep for wishlist-note references in frontend/src — frontend edit."
+  T041:
+    agent: "frontend-agent"
+    reason: "Motion/design polish on the new components (Apple design skills, reduced-motion) — frontend."
+  T042:
+    agent: "frontend-agent"
+    reason: "Accessibility verification (axe + keyboard, light/dark) on the three views — frontend WCAG 2.1 AA enforcement."
+  T043:
+    agent: "frontend-agent"
+    reason: "Layout-shift verification across skeleton/empty/populated states — frontend visual QA."
+  T044:
+    agent: "qa-agent"
+    reason: "Run the full frontend Vitest suite + e2e detail/master Playwright specs — quality gate."
+  T045:
+    agent: "qa-agent"
+    reason: "Walk the quickstart.md Definition-of-Done checklist (SC-001…SC-010 + FR-023) — quality gate."
