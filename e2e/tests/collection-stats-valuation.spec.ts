@@ -17,7 +17,6 @@
  *   POST /__stub/reset                              — clear all state between tests
  *   PUT  /__stub/collections/:username              — seed / replace the stub collection
  *   POST /__stub/price-suggestions { seeds }        — per-release price map / 404 (null)
- *   GET  /__stub/price-suggestions                  — per-release marketplace hit counters
  *   POST /__stub/seller-settings   { missing }      — toggle the "no seller settings" 403
  *   POST /__stub/failure { priceSuggestions: … }    — force 503 / paced price responses
  *
@@ -88,13 +87,6 @@ async function setSellerSettingsMissing(missing: boolean): Promise<void> {
         body: JSON.stringify({ missing }),
     });
     if (!res.ok) throw new Error(`Failed to set seller-settings flag: ${res.status}`);
-}
-
-/** Total number of GET /marketplace/price_suggestions hits across all releases. */
-async function marketplaceHitTotal(): Promise<number> {
-    const res = await fetch(`${STUB_URL}/__stub/price-suggestions`);
-    const body = (await res.json()) as { totalHits: number };
-    return body.totalHits;
 }
 
 /** The Block 2 section, exposed as a landmark region by its `aria-labelledby` heading. */
