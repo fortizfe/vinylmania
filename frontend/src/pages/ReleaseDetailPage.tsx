@@ -7,6 +7,7 @@ import { ReleaseAdditionalInfoSection } from '../components/ReleaseAdditionalInf
 import { ReleaseDetailsSection } from '../components/ReleaseDetailsSection';
 import { ReleaseImageGallery } from '../components/ReleaseImageGallery';
 import { ReleaseTracklistSection } from '../components/ReleaseTracklistSection';
+import { StreamingLinksSection } from '../components/StreamingLinksSection';
 import { BackLink } from '../components/ui/BackLink';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -255,6 +256,19 @@ export function ReleaseDetailPage() {
             />
           </Card>
         )}
+
+        {/*
+          Feature 062 — "Escúchalo en streaming". Mounted LAST so that its
+          first-view skeleton collapsing to nothing (no Apple Music match)
+          reflows only the empty space below it, never the detail above
+          (FR-017 / research.md §7). The component renders `null` unless a
+          real match resolved.
+        */}
+        <StreamingLinksSection
+          identifiers={release.identifiers}
+          artist={release.artists[0]?.name}
+          title={release.title}
+        />
       </div>
     </main>
   );

@@ -52,7 +52,12 @@ export type LogOutcome =
   | 'seller_settings_required'
   | 'stats_computed'
   | 'valuation_batch'
-  | 'price_suggestion_missing';
+  | 'price_suggestion_missing'
+  // Streaming-platform link resolution (feature 062)
+  | 'matched'
+  | 'no_match'
+  | 'transient_failure'
+  | 'retry';
 
 export interface LogEvent {
   route: string;
