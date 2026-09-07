@@ -69,9 +69,10 @@ Updated specs assert:
   persists via `PATCH /api/library/:id`; editing condition/notes persists as before.
 - **Wishlist**: no notes field anywhere in the wishlist detail view; the personal
   rating edits via `PATCH /api/wantlist/:releaseId`.
-- **Responsive**: at desktop width the rail (`record-detail-rail`) holds gallery +
-  rating + streaming and stays visible while the tracklist scrolls; at mobile width
-  everything is a single column in contract order.
+- **Responsive**: at desktop width the left column (`record-detail-rail` anchor) holds
+  gallery + rating + streaming and the right column holds general-info + tracklist +
+  catalog (+ my-copy for library); at mobile width everything is a single column in
+  contract order. Neither column is `position: sticky`.
 
 ## 4. Manual accessibility + design walkthrough (Principle X + XI)
 
@@ -89,8 +90,8 @@ Run the dev server (`npm run dev` in `frontend`) and, for each of the three view
 4. **Contrast**: spot-check the Rating card badge, the "Sin valoraciones" text, and
    the action-bar error text in both themes.
 5. **Reduced motion**: enable OS "reduce motion"; reload. No sliding/scaling on
-   section load; at most an opacity fade. Sticky rail still works (it never
-   animated).
+   section load; at most an opacity fade. (There is no sticky rail — the left
+   column is a plain grid column.)
 6. **Touch targets**: at 375px width, every action-bar button and each star ≥ 44px.
 7. **No layout shift**: throttle network, reload a detail view; the skeleton
    footprint matches the populated card footprint (gallery, rating, streaming,

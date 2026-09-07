@@ -146,10 +146,41 @@ test.describe('Release detail page (feature 026, US2)', () => {
     await expect(page.getByText(/couldn.t find that release/i)).toBeVisible();
   });
 
-  test('the gallery, details, tracklist, and additional info render in the documented layout (FR-006)', async ({
+  // Feature 063 (US1, contracts/ui-contracts.md §C1 + §C8): the search view is
+  // recomposed onto the shared `RecordDetailLayout`. The section testids are
+  // unified to the `record-detail-*` set and must appear in the contract DOM
+  // order, with the standalone Rating card carrying the Discogs community
+  // rating and the action bar sitting directly under the back-link as chrome
+  // (never inside a Card).
+  const SEARCH_SECTION_ORDER = [
+    'record-detail-actions',
+    'record-detail-gallery-card',
+    'record-detail-main-info-card',
+    'record-detail-rating-card',
+    'record-detail-streaming-card',
+    'record-detail-tracklist-card',
+    'record-detail-other-details-card',
+  ];
+
+  async function stubStreamingMatch(page: import('@playwright/test').Page) {
+    await page.route('**/api/streaming/links**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          links: [
+            { platform: 'apple_music', url: 'https://music.apple.com/es/album/x/123' },
+          ],
+        }),
+      });
+    });
+  }
+
+  test('the search view renders the unified record-detail sections in contract DOM order with the action bar under the back-link (feature 063, US1)', async ({
     page,
   }) => {
     await stubSearchAndRelease(page);
+    await stubStreamingMatch(page);
 
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
@@ -158,30 +189,67 @@ test.describe('Release detail page (feature 026, US2)', () => {
     await page.getByRole('button', { name: /^search$/i }).click();
     await expect(page.getByText('Stockholm')).toBeVisible();
     await page.getByRole('link', { name: /stockholm/i }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/releases/${RELEASE_ID}`));
 
-    const gallery = page.getByTestId('release-detail-gallery-card');
-    const mainInfo = page.getByTestId('release-detail-main-info-card');
-    const tracklist = page.getByTestId('release-detail-tracklist-card');
-    const otherDetails = page.getByTestId('release-detail-other-details-card');
+    // The streaming card resolves (stubbed) so its contract position can be
+    // asserted alongside the always-present sections.
+    await expect(page.getByTestId('record-detail-streaming-card')).toBeVisible();
 
+    const domOrder = await page.evaluate((ids: string[]) => {
+      const seen = new Set<string>();
+      return Array.from(document.querySelectorAll('[data-testid]'))
+        .map((el) => el.getAttribute('data-testid') ?? '')
+        .filter((id) => ids.includes(id) && !seen.has(id) && (seen.add(id), true));
+    }, SEARCH_SECTION_ORDER);
+    expect(domOrder).toEqual(SEARCH_SECTION_ORDER);
+
+    // The Discogs community rating badge is shown on the standalone Rating
+    // card for a rated release (community.rating.average = 4.3, count 37).
+    const ratingCard = page.getByTestId('record-detail-rating-card');
+    await expect(
+      ratingCard.getByRole('status', { name: /rating 4\.3 out of 5/i }),
+    ).toBeVisible();
+    await expect(ratingCard.getByText('(37)')).toBeVisible();
+    await expect(ratingCard.getByText(/214 lo tienen/)).toBeVisible();
+
+    // The action bar carries both add actions, sits as the first element
+    // after the back-link inside <main>, and is not wrapped in a Card.
+    const actionBar = page.getByTestId('record-detail-actions');
+    await expect(actionBar.getByRole('button', { name: /^add to library$/i })).toBeVisible();
+    await expect(actionBar.getByRole('button', { name: /^add to wishlist$/i })).toBeVisible();
+
+    const placement = await actionBar.evaluate((el) => {
+      const wrapper = el.parentElement;
+      const prev = wrapper?.previousElementSibling ?? null;
+      return {
+        wrapperParentIsMain: wrapper?.parentElement?.tagName.toLowerCase() === 'main',
+        prevIsBackLink:
+          prev?.tagName.toLowerCase() === 'a' && /back/i.test(prev.textContent ?? ''),
+        insideCard: Boolean(el.closest('.rounded-xl.border')),
+      };
+    });
+    expect(placement).toEqual({
+      wrapperParentIsMain: true,
+      prevIsBackLink: true,
+      insideCard: false,
+    });
+
+    // The two-column desktop composition still holds: gallery left, main-info
+    // right on the same row; tracklist + other-details stacked below.
     const [galleryBox, mainInfoBox, tracklistBox, otherDetailsBox] = await Promise.all([
-      gallery.boundingBox(),
-      mainInfo.boundingBox(),
-      tracklist.boundingBox(),
-      otherDetails.boundingBox(),
+      page.getByTestId('record-detail-gallery-card').boundingBox(),
+      page.getByTestId('record-detail-main-info-card').boundingBox(),
+      page.getByTestId('record-detail-tracklist-card').boundingBox(),
+      page.getByTestId('record-detail-other-details-card').boundingBox(),
     ]);
     expect(galleryBox && mainInfoBox && tracklistBox && otherDetailsBox).toBeTruthy();
-
-    // At the default desktop viewport (spec 057): the gallery and main-info
-    // cards form a two-column row (gallery left, main-info right), rather
-    // than stacking, with tracklist and other-details cards rendering
-    // full-width below that row instead of beside it as extra panels.
     expect(Math.abs(mainInfoBox!.y - galleryBox!.y)).toBeLessThan(4);
     expect(mainInfoBox!.x).toBeGreaterThan(galleryBox!.x);
     expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
     expect(tracklistBox!.y).toBeGreaterThan(mainInfoBox!.y);
     expect(otherDetailsBox!.y).toBeGreaterThanOrEqual(tracklistBox!.y + tracklistBox!.height);
 
+    // The gallery still drives the fullscreen image navigation.
     const mainImage = page.getByRole('img', { name: 'Stockholm' });
     await expect(mainImage).toHaveAttribute('src', 'https://example.com/cover-front.jpg');
     await page.getByRole('button', { name: /show image 2 of 2/i }).click();
@@ -244,10 +312,10 @@ test.describe('Release detail page (feature 026, US2)', () => {
     await page.goto(`/app/releases/${RELEASE_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
-    const gallery = page.getByTestId('release-detail-gallery-card');
-    const mainInfo = page.getByTestId('release-detail-main-info-card');
-    const tracklist = page.getByTestId('release-detail-tracklist-card');
-    const otherDetails = page.getByTestId('release-detail-other-details-card');
+    const gallery = page.getByTestId('record-detail-gallery-card');
+    const mainInfo = page.getByTestId('record-detail-main-info-card');
+    const tracklist = page.getByTestId('record-detail-tracklist-card');
+    const otherDetails = page.getByTestId('record-detail-other-details-card');
 
     const boxes = await Promise.all([
       gallery.boundingBox(),

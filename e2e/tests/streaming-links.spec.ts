@@ -130,7 +130,7 @@ test.describe('Streaming links section (feature 062, US1)', () => {
       page.getByRole('heading', { name: /escúchalo en streaming/i }),
     ).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Escuchar en Apple Music' })).toHaveCount(0);
-    await expect(page.getByTestId('release-detail-streaming-card')).toHaveCount(0);
+    await expect(page.getByTestId('record-detail-streaming-card')).toHaveCount(0);
 
     const seriousOrCritical = await runAxeScan(page);
     expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);

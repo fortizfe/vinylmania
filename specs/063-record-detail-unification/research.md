@@ -53,12 +53,24 @@ extract a shared presentational surface they both compose.
 
 ---
 
-## R3. Sticky media rail behavior, incl. a tall multi-image gallery
+## R3. Left "media" column behavior (originally: "sticky media rail")
 
-**Decision**: Desktop rail = `position: sticky; top: <header-safe offset>` with
-`align-self: start` on the grid item. When the rail's natural height exceeds the
-viewport, it scrolls with the page (native sticky) — accepted, no special-casing.
-The gallery keeps its current `ReleaseImageGallery` component unchanged.
+**Decision (revised during implementation)**: Desktop = a two-column CSS grid; the
+gallery, Rating card and streaming card are grid-placed in the narrow left column
+via `lg:col-start-1 lg:self-start` on each slot wrapper. The column is **not**
+`position: sticky`.
+
+**Why the revision**: a genuinely sticky rail needs a single contiguous DOM subtree
+wrapping the three left-column sections. That wrapper would force the mobile stack
+out of the §C1 priority order and out of a correct tab order — a Principle X / FR-022
+violation. Per-item `lg:sticky` on the three separate slot wrappers was tried and is
+a no-op: CSS-grid auto-places each on its own row, so each is the tallest item in its
+row and `sticky` has ~zero travel. It also created a stacking context on the gallery
+slot that trapped `Overlay`'s fullscreen viewer (`z-50`) beneath the app header
+(`z-40`), breaking two gallery e2e tests. Removing the ineffective `lg:sticky` both
+fixes that regression and makes the layout honest. The gallery keeps its current
+`ReleaseImageGallery` component unchanged. A true sticky rail (contiguous wrapper +
+a portaled fullscreen viewer) is a viable future enhancement, out of scope here.
 
 **Rationale**:
 - Native `position: sticky` already degrades correctly: a too-tall sticky element

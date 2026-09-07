@@ -67,7 +67,7 @@ describe('StreamingLinksSection on ReleaseDetailPage (feature 062, T020)', () =>
     mockGetRelease.mockResolvedValue(release);
   });
 
-  it('renders the streaming section as the last section, with the resolved Apple Music link', async () => {
+  it('renders the streaming section between the rating card and the tracklist, with the resolved Apple Music link', async () => {
     mockGetStreamingLinks.mockResolvedValue({
       links: [{ platform: 'apple_music', url: APPLE_URL }],
     });
@@ -93,11 +93,15 @@ describe('StreamingLinksSection on ReleaseDetailPage (feature 062, T020)', () =>
       }),
     );
 
-    // It is the last section in the detail layout (FR-017 / research.md §7):
-    // nothing with detail content follows it in document order.
-    const otherDetails = screen.getByText(/Recorded at Sweet Silence Studios/);
+    // Feature 063 §C1: streaming sits at position 4 — after the rating card,
+    // before the tracklist (and the catalog-info card).
+    const ratingCard = screen.getByTestId('record-detail-rating-card');
+    const tracklistCard = screen.getByTestId('record-detail-tracklist-card');
     expect(
-      otherDetails.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ratingCard.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      region.compareDocumentPosition(tracklistCard) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 

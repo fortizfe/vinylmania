@@ -76,14 +76,21 @@ Discogs wantlist note is left untouched in Discogs.
   oculto; queda documentada en la spec como sección pendiente de una futura fuente de
   datos, a decidir en una spec posterior.
 - Q: ¿Qué alternativa de layout se adopta (de las 3 investigadas y presentadas en el
-  artefacto)? → A: **Opción 2 — "Sticky media rail + liner-notes column"**, tomando
-  como base móvil la pila por prioridad de la Opción 1. En escritorio: raíl izquierdo
-  fijo (galería + card de rating + card de streaming) y columna derecha con scroll
-  (información general + tracklist + resto de información del catálogo + "Estado de mi
-  copia" en biblioteca). En móvil: una sola columna en el orden de prioridad. El DOM
-  mantiene el orden de prioridad del contrato; solo la colocación CSS mueve el raíl.
-  La Opción 3 (hero de carátula) se revisará como mejora visual futura, fuera del
-  alcance de este incremento.
+  artefacto)? → A: **Opción 2 — columna "media" izquierda + columna "liner-notes"
+  derecha**, tomando como base móvil la pila por prioridad de la Opción 1. En
+  escritorio: columna izquierda estrecha (galería + card de rating + card de streaming)
+  y columna derecha ancha (información general + "Estado de mi copia" en biblioteca +
+  tracklist + resto de información del catálogo). En móvil: una sola columna en el
+  orden de prioridad del contrato. El DOM mantiene el orden de prioridad del contrato;
+  solo la colocación CSS por columnas cambia entre breakpoints.
+  **Ajuste durante implementación**: la columna izquierda NO es `position: sticky`. Un
+  raíl realmente fijo exige un único subárbol DOM contiguo que envuelva las tres
+  secciones, lo que rompería el orden de prioridad de la pila móvil y el orden de
+  tabulación (Principio X, FR-022). Se prioriza el orden DOM plano; la ganancia en
+  escritorio es el uso deliberado del espacio horizontal, no un raíl fijado. Un raíl
+  fijo (con portal del visor a fullscreen para evitar el atrapamiento por z-index) se
+  puede retomar como mejora futura. La Opción 3 (hero de carátula) también queda como
+  mejora visual futura, fuera del alcance de este incremento.
 - Q: When a search-view record is in neither list and has no Discogs community rating,
   is the Rating card still shown? → A: **Yes — the Rating card is always rendered in
   every view.** Each missing half shows a neutral "not rated" state (reusing the
@@ -418,23 +425,25 @@ value on the wantlist entry is unchanged.
 - **FR-022**: Three distinct layout alternatives, informed by how reference apps
   (Discogs, Apple Music, Spotify, and physical-collection managers such as CLZ Music)
   solve the same screen, were produced and presented for selection before planning
-  (design decision brief published 2026-09-07). The adopted direction is **"Sticky
-  media rail + liner-notes column"** (see Clarifications for the full description):
+  (design decision brief published 2026-09-07). The adopted direction is
+  **"media-left two-column"** — Option 2 without the sticky behavior (see
+  Clarifications for why):
   - **Action bar**: in both layouts, the consistent action bar (FR-012) spans the full
     content width directly under the back-link, above the gallery and above the
-    rail/column split — it is not part of the rail.
-  - **Wide/desktop layout**: a sticky left rail holding, top to bottom, the image
-    gallery, the Rating card, and the streaming card; a scrolling right column holding
+    column split — it is not part of the left column.
+  - **Wide/desktop layout**: a narrow left "media" column holding the image gallery,
+    the Rating card, and the streaming card; a wide right "liner-notes" column holding
     the general-information card, the tracklist, the rest-of-catalog-information card,
     and — in the *My library* view only — the "Estado de mi copia" card immediately
-    after the general-information card.
+    after the general-information card. Neither column is `position: sticky`.
   - **Mobile layout**: a single column in the exact priority order of the shared
     contract (gallery, general info, rating, streaming, tracklist, catalog info); in
     the *My library* view the "Estado de mi copia" card is inserted immediately after
     the general-information card, matching its desktop position.
   - The document order of the sections MUST follow the shared-contract priority order
     regardless of where CSS places them, so keyboard and screen-reader traversal
-    always matches the contract.
+    always matches the contract. This DOM-order requirement is the reason the left
+    column is not a single contiguous sticky element.
 - **FR-023**: The redesign MUST NOT change the **master release** detail page
   (`MasterReleaseDetailPage`); this feature is limited to the search, library, and
   wishlist detail views.

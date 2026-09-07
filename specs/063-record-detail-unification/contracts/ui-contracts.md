@@ -52,17 +52,26 @@ Behavior:
 - Children are rendered in the C1 DOM order **always**, regardless of viewport.
 - **Mobile (`< lg`)**: single column, `flex-col gap-4` (or the project's standard
   card gap), every child full width.
-- **Desktop (`lg:` and up)**: CSS grid, two tracks. Left track = a **sticky rail**
-  (`position: sticky; top: <safe>; align-self: start`) containing `gallery`,
-  `rating`, `streaming`. Right track (normal flow) = `generalInfo`, `myCopy?`,
-  `tracklist`, `catalogInfo`. Achieve this with `lg:` grid placement classes on
-  the wrappers — **not** by reordering the JSX.
+- **Desktop (`lg:` and up)**: CSS grid, two tracks. The `gallery`, `rating` and
+  `streaming` slot wrappers are placed in the **left "media" column** (`lg:col-start-1
+  lg:self-start`); the `generalInfo`, `myCopy?`, `tracklist`, `catalogInfo` wrappers
+  are placed in the **right "liner-notes" column** (`lg:col-start-2`). This is done
+  purely with `lg:` placement classes on the individual slot wrappers — the JSX/DOM
+  order stays the flat §C1 order (`gallery → generalInfo → myCopy? → rating →
+  streaming → tracklist → catalogInfo`), because a single contiguous wrapper around
+  the three left-column sections would reorder the mobile stack and break the
+  DOM-order rule / FR-022 / §C7. There is **no** single element wrapping the three
+  left-column sections, and consequently the left column is **not** `position:
+  sticky` (a real sticky rail requires that contiguous wrapper). A future feature may
+  add a true sticky rail; it must also portal the gallery's fullscreen viewer out of
+  any new stacking context it creates.
 - The `<main>` max-width matches today's detail pages
   (`max-w-5xl … xl:max-w-7xl`) and padding (`p-6 sm:p-8`).
 - No entrance animation. If a rail/column edge treatment is added it is a static
   divider (research R8).
 - `data-testid="record-detail-layout"` on the section grid;
-  `data-testid="record-detail-rail"` on the rail wrapper.
+  `data-testid="record-detail-rail"` on the `gallery` slot wrapper (the left-column
+  anchor — used by responsive e2e to locate the left "media" column).
 
 Test (`RecordDetailLayout.test.tsx`, write first):
 1. Given all slots, the rendered DOM order of the slot wrappers equals C1.
@@ -252,7 +261,7 @@ Test (`ReleaseAdditionalInfoSection.test.tsx`, write first):
 | Section | testid | Change vs today |
 |---------|--------|-----------------|
 | Layout grid | `record-detail-layout` | new |
-| Sticky rail | `record-detail-rail` | new |
+| Sticky rail anchor (gallery slot wrapper) | `record-detail-rail` | new — sits on the gallery slot wrapper, not a 3-section wrapper |
 | Action bar | `record-detail-actions` | new |
 | Gallery card | `record-detail-gallery-card` | unify (was also `release-detail-gallery-card`) |
 | General info card | `record-detail-main-info-card` | unify (was also `release-detail-main-info-card`) |

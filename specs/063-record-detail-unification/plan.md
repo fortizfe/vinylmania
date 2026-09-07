@@ -24,6 +24,11 @@ sticky media rail + scrolling liner-notes column; mobile is a single priority-or
 column; the DOM order always follows the shared contract so assistive-tech traversal
 matches it regardless of CSS placement.
 
+> **Implementation note:** "sticky media rail" was reduced to a plain two-column
+> "media-left" layout — a real sticky rail needs a contiguous DOM wrapper around the
+> three left-column sections, which would break the mobile priority order and tab
+> order (Principle X / FR-022). See spec Clarifications and research R3.
+
 ## Technical Context
 
 **Language/Version**: TypeScript 5.x, React 19 (Vite)
@@ -65,7 +70,7 @@ reworked; ~6 e2e spec files updated. Master-release detail explicitly untouched
 |----------|------------|
 | Does the detail payload carry the community rating + have/want? | **Yes.** `discogsMapper.mapRelease()` maps `community { have, want, rating { average, count } }` from Discogs `GET /releases/{id}`. `ReleaseDetailPage` (`useCatalogRelease`) and `RecordDetailPage` (`entry.release`) both already receive it. Zero backend work. |
 | Converge the two page components into one? | **No.** They resolve different params (`:entryId` → `useLibraryEntry`; `:discogsId` → `useCatalogRelease` + `useWantlistEntry`) and different data shapes. Keep both routes; share a `RecordDetailLayout` and section components. (Spec Assumptions permit this.) |
-| Sticky rail vs. a tall multi-image gallery | Rail is `position: sticky; top: <n>` with `align-self: start`; when the rail's content is taller than the viewport it simply scrolls with the page (native sticky behavior) — acceptable. The gallery keeps its current component; no redesign. |
+| Sticky rail vs. flat DOM order | Resolved during implementation: **no sticky rail.** A contiguous sticky wrapper breaks the mobile priority order + tab order (Principle X / FR-022); per-item `lg:sticky` is a no-op (each slot is the tallest in its grid row) and its stacking context trapped the gallery's fullscreen `Overlay` under the header. Delivered as a plain `lg:` two-column grid (media-left / liner-notes-right), gallery component unchanged. See research R3. |
 | `StreamingLinksSection` hard-codes `lg:col-span-2` + reserved height | Layout-only change (Principle: still "reused without functional change", FR-014): drop the hard-coded span so the parent places the card; keep the resolving-skeleton + collapse-to-null behavior. |
 
 ## Constitution Check
@@ -84,7 +89,7 @@ reworked; ~6 e2e spec files updated. Master-release detail explicitly untouched
 | VIII. Hexagonal Architecture (backend) | No `backend/` change | **PASS (N/A)** |
 | IX. Frontend Network — Backend-Only | No new network calls; no external SDK; community data already served by our backend | **PASS** |
 | X. Accessibility — WCAG 2.1 AA (NON-NEGOTIABLE) | Semantic `<section>` + one non-skipped heading per card; action bar controls have accessible names; DOM order = contract order; contrast via existing tokens; 44×44 targets; `prefers-reduced-motion` for rail/skeleton motion; no color-only rating state (numeric value + label alongside band) | **PASS (planned)** — verified by axe + keyboard walkthrough in quickstart |
-| XI. Apple Design Principles | `apple-design` + `emil-design-eng` consulted before building; sticky rail is a restraint-first spatial pattern; motion (if any) spring-based + interruptible + reduced-motion aware; typography/spacing stay on the project scale | **PASS (planned)** |
+| XI. Apple Design Principles | `apple-design` + `emil-design-eng` consulted before building; two-column media-left layout is a restraint-first spatial pattern; motion (if any) spring-based + interruptible + reduced-motion aware; typography/spacing stay on the project scale | **PASS (planned)** |
 | UI Design System (Tailwind v4) | Every block is `<Card>`; CSS-first; `dark:` + tokens; skeleton mirrors final shape; no layout shift; dual layout via `lg:` breakpoint; no `tailwind.config.js` | **PASS (planned)** |
 | Development Workflow — e2e for `/frontend` | `release-detail*.spec.ts`, `record-detail*.spec.ts` (+ responsive, inline-edit) updated to the new order and the new Rating card / action bar | **PASS (planned)** |
 | Development Workflow — no manual CHANGELOG / version bump | Not touched | **PASS** |

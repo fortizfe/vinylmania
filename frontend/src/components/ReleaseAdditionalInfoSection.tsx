@@ -1,21 +1,27 @@
-import type { CommunityStats, ReleaseIdentifier } from '../services/libraryApi';
+import type { ReleaseIdentifier } from '../services/libraryApi';
 
 interface ReleaseAdditionalInfoSectionProps {
   notes?: string;
   identifiers: ReleaseIdentifier[];
-  community?: CommunityStats;
 }
 
+/**
+ * "Rest of catalog information" — catalog notes + pressing identifiers only.
+ *
+ * Feature 063 (contracts/ui-contracts.md §C6) removed the `community` prop and
+ * its "{have} have / {want} want · rating …" line; the Discogs community
+ * rating and the have/want counts now live in `RatingCard`. This section
+ * renders `null` when there is nothing left to show.
+ */
 export function ReleaseAdditionalInfoSection({
   notes,
   identifiers,
-  community,
 }: ReleaseAdditionalInfoSectionProps) {
   // `identifiers` is typed as required, but an incomplete API response (or
   // a stale test fixture) can still deliver `undefined` at runtime — guard
   // defensively rather than crashing the whole page render (spec 036).
   const safeIdentifiers = identifiers ?? [];
-  const hasContent = Boolean(notes) || safeIdentifiers.length > 0 || Boolean(community);
+  const hasContent = Boolean(notes) || safeIdentifiers.length > 0;
 
   if (!hasContent) return null;
 
@@ -32,13 +38,6 @@ export function ReleaseAdditionalInfoSection({
             </li>
           ))}
         </ul>
-      )}
-
-      {community && (
-        <p className="text-sm text-stone-500 dark:text-stone-400">
-          {community.have} have / {community.want} want · rating{' '}
-          {community.rating.average} ({community.rating.count})
-        </p>
       )}
     </div>
   );

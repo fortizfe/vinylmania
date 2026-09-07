@@ -42,7 +42,7 @@ describe('StreamingLinksSection (feature 062, US1)', () => {
     expect(screen.getByTestId('streaming-links-skeleton')).toBeInTheDocument();
     // A single reserved height on the outer Card so the skeleton -> populated /
     // collapsed transition does not shift the surrounding detail (FR-017).
-    expect(screen.getByTestId('release-detail-streaming-card').className).toMatch(
+    expect(screen.getByTestId('record-detail-streaming-card').className).toMatch(
       /min-h-/,
     );
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
@@ -191,7 +191,7 @@ describe('StreamingLinksSection (feature 062, US3 — never a broken or misleadi
       <StreamingLinksSection artist="Metallica" title="Master of Puppets" />,
     );
 
-    const loadingCard = screen.getByTestId('release-detail-streaming-card');
+    const loadingCard = screen.getByTestId('record-detail-streaming-card');
     expect(loadingCard.className).toMatch(/min-h-\[4\.5rem\]/);
     expect(screen.getByTestId('streaming-links-skeleton')).toBeInTheDocument();
 
@@ -203,7 +203,7 @@ describe('StreamingLinksSection (feature 062, US3 — never a broken or misleadi
     );
     rerender(<StreamingLinksSection artist="Metallica" title="Master of Puppets" />);
 
-    const populatedCard = screen.getByTestId('release-detail-streaming-card');
+    const populatedCard = screen.getByTestId('record-detail-streaming-card');
     expect(populatedCard.className).toMatch(/min-h-\[4\.5rem\]/);
     // The single shared reserved-height class means the skeleton -> populated
     // swap cannot push the surrounding detail around.

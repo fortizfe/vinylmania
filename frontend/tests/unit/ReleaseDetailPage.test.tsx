@@ -91,7 +91,10 @@ describe('ReleaseDetailPage', () => {
     expect(screen.getByText(/Östermalm/)).toBeInTheDocument();
     expect(screen.getByText(/Recorded at Stockholm Sound Studio/)).toBeInTheDocument();
     expect(screen.getByText(/7 39051 23421 6/)).toBeInTheDocument();
-    expect(screen.getByText(/214 have/)).toBeInTheDocument();
+    // Feature 063 §C6: the community have/want moved out of the catalog-info
+    // card and into the standalone RatingCard.
+    expect(screen.getByText(/214 lo tienen/)).toBeInTheDocument();
+    expect(screen.getByText(/58 lo quieren/)).toBeInTheDocument();
     expect(mockGetRelease).toHaveBeenCalledWith(1);
   });
 

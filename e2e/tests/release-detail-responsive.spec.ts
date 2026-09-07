@@ -59,9 +59,9 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
         await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
       }
 
-      const gallery = page.getByTestId('release-detail-gallery-card');
-      const details = page.getByTestId('release-detail-main-info-card');
-      const tracklist = page.getByTestId('release-detail-tracklist-card');
+      const gallery = page.getByTestId('record-detail-gallery-card');
+      const details = page.getByTestId('record-detail-main-info-card');
+      const tracklist = page.getByTestId('record-detail-tracklist-card');
 
       const [galleryBox, detailsBox, tracklistBox] = await Promise.all([
         gallery.boundingBox(),
@@ -115,8 +115,8 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
     await page.goto(`/app/releases/${RELEASE_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
 
-    const gallery = page.getByTestId('release-detail-gallery-card');
-    const details = page.getByTestId('release-detail-main-info-card');
+    const gallery = page.getByTestId('record-detail-gallery-card');
+    const details = page.getByTestId('record-detail-main-info-card');
 
     const [galleryBox, detailsBox] = await Promise.all([
       gallery.boundingBox(),
@@ -147,6 +147,153 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
     const box = await addButton.boundingBox();
     expect(box?.width).toBeGreaterThanOrEqual(44);
     expect(box?.height).toBeGreaterThanOrEqual(44);
+  });
+
+  // Feature 063 (US1, contracts/ui-contracts.md §C1 + §C2): on `lg:` and up the
+  // gallery, rating and streaming sections sit in the narrow left grid column
+  // and the general-info / tracklist / catalog sections sit in the wider right
+  // grid column. This is an honest two-column "media-left" grid, NOT a sticky
+  // rail — the `lg:sticky lg:top-6` was removed from the left-column slots
+  // because it had ~zero scroll travel and its stacking context trapped the
+  // gallery's fullscreen overlay (`z-50`) beneath `AppHeader` (`z-40`). There is
+  // no single element wrapping the three left-column sections — the assertion is
+  // on column placement, not containment.
+  async function stubStreamingMatch(page: import('@playwright/test').Page) {
+    await page.route('**/api/streaming/links**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          links: [
+            { platform: 'apple_music', url: 'https://music.apple.com/es/album/x/123' },
+          ],
+        }),
+      });
+    });
+  }
+
+  test('desktop: gallery, rating and streaming sit in the narrow left grid column; general-info, tracklist and catalog in the wider right column (feature 063, US1)', async ({
+    page,
+  }) => {
+    await stubStreamingMatch(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await goToReleaseDetail(page);
+    await expect(page.getByTestId('record-detail-streaming-card')).toBeVisible();
+
+    const rail = page.getByTestId('record-detail-rail');
+    const [
+      railBox,
+      galleryBox,
+      ratingBox,
+      streamingBox,
+      mainInfoBox,
+      tracklistBox,
+      otherDetailsBox,
+    ] = await Promise.all([
+      rail.boundingBox(),
+      page.getByTestId('record-detail-gallery-card').boundingBox(),
+      page.getByTestId('record-detail-rating-card').boundingBox(),
+      page.getByTestId('record-detail-streaming-card').boundingBox(),
+      page.getByTestId('record-detail-main-info-card').boundingBox(),
+      page.getByTestId('record-detail-tracklist-card').boundingBox(),
+      page.getByTestId('record-detail-other-details-card').boundingBox(),
+    ]);
+    for (const b of [
+      railBox,
+      galleryBox,
+      ratingBox,
+      streamingBox,
+      mainInfoBox,
+      tracklistBox,
+      otherDetailsBox,
+    ]) {
+      expect(b).toBeTruthy();
+    }
+
+    // Left column: gallery, rating and streaming share the same left offset
+    // and none overlaps into the right column.
+    const rightColumnLeft = Math.min(mainInfoBox!.x, tracklistBox!.x, otherDetailsBox!.x);
+    for (const leftCard of [galleryBox!, ratingBox!, streamingBox!]) {
+      expect(Math.abs(leftCard.x - galleryBox!.x)).toBeLessThan(4);
+      expect(leftCard.x + leftCard.width).toBeLessThanOrEqual(rightColumnLeft + 1);
+    }
+    // The right column sits to the right of the rail and its cards align.
+    expect(rightColumnLeft).toBeGreaterThan(galleryBox!.x + galleryBox!.width - 1);
+    expect(Math.abs(tracklistBox!.x - mainInfoBox!.x)).toBeLessThan(4);
+    expect(Math.abs(otherDetailsBox!.x - mainInfoBox!.x)).toBeLessThan(4);
+
+    // The layout is an honest two-column grid, NOT a sticky rail: the
+    // left-column anchor stays in normal flow (`position: static`) and the
+    // narrow left column is meaningfully narrower than the wide right column.
+    const railPosition = await rail.evaluate((el) => getComputedStyle(el).position);
+    expect(railPosition).toBe('static');
+    expect(galleryBox!.width).toBeLessThan(mainInfoBox!.width);
+
+    // No horizontal scroll at desktop width.
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+
+    // The left column is in normal flow: scrolling the page moves it up in
+    // lock-step with the right column (no pinning, no detachment).
+    const maxScroll = await page.evaluate(
+      () => document.documentElement.scrollHeight - window.innerHeight,
+    );
+    const scrollDelta = Math.min(220, Math.max(0, maxScroll - 1));
+    expect(scrollDelta, 'the detail page should be tall enough to scroll').toBeGreaterThan(60);
+    await page.evaluate((y) => window.scrollTo(0, y), scrollDelta);
+    await page.waitForTimeout(150);
+
+    const railAfter = await rail.boundingBox();
+    const mainInfoAfter = await page.getByTestId('record-detail-main-info-card').boundingBox();
+    expect(railAfter && mainInfoAfter).toBeTruthy();
+    // Both columns scrolled up by ~the same delta.
+    const rightShift = mainInfoBox!.y - mainInfoAfter!.y;
+    const railShift = railBox!.y - railAfter!.y;
+    expect(rightShift).toBeGreaterThan(scrollDelta - 20);
+    expect(Math.abs(railShift - rightShift)).toBeLessThan(4);
+  });
+
+  test('mobile: every record-detail section is a single column in contract DOM order (feature 063, US1)', async ({
+    page,
+  }) => {
+    await stubStreamingMatch(page);
+    await page.setViewportSize({ width: 375, height: 812 });
+    await goToReleaseDetail(page);
+    await expect(page.getByTestId('record-detail-streaming-card')).toBeVisible();
+
+    const order = [
+      'record-detail-gallery-card',
+      'record-detail-main-info-card',
+      'record-detail-rating-card',
+      'record-detail-streaming-card',
+      'record-detail-tracklist-card',
+      'record-detail-other-details-card',
+    ];
+    const boxes: { x: number; y: number; width: number; height: number }[] = [];
+    for (const id of order) {
+      const b = await page.getByTestId(id).boundingBox();
+      expect(b, `${id} should be measurable`).toBeTruthy();
+      boxes.push(b!);
+    }
+    // Single column: each card aligns to the first card's left edge and sits
+    // strictly below the previous one (§C1 DOM order, top to bottom).
+    for (let i = 1; i < boxes.length; i += 1) {
+      expect(Math.abs(boxes[i].x - boxes[0].x)).toBeLessThan(4);
+      expect(boxes[i].y).toBeGreaterThanOrEqual(boxes[i - 1].y + boxes[i - 1].height - 1);
+    }
+
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+
+    // Below `lg:` the rail anchor carries no sticky positioning.
+    const position = await page
+      .getByTestId('record-detail-rail')
+      .evaluate((el) => getComputedStyle(el).position);
+    expect(position).toBe('static');
   });
 
   test('lg-range desktop: the main image stays contained and the thumbnail column never exceeds it, even with many images (spec 043, US1)', async ({
@@ -330,7 +477,7 @@ test.describe('Release detail Badge UI component contrast (spec 058, US2)', () =
       await page.emulateMedia({ colorScheme: theme });
       await goToReleaseDetail(page);
 
-      const mainInfoCard = page.getByTestId('release-detail-main-info-card');
+      const mainInfoCard = page.getByTestId('record-detail-main-info-card');
       const genreBadge = mainInfoCard.getByText('Electronic', { exact: true });
 
       await assertUiComponentContrast(

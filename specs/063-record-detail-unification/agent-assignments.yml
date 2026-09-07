@@ -36,6 +36,9 @@ assignments:
   T006:
     agent: "frontend-agent"
     reason: "Move + rework RecordDetailSkeleton component to mirror the new layout."
+  T006a:
+    agent: "frontend-agent"
+    reason: "Give MasterReleaseDetailPage its own skeleton to preserve its loading visual (FR-023) — frontend component."
   T007:
     agent: "frontend-agent"
     reason: "Write failing Vitest test RatingCard.test.tsx (community cases)."

@@ -3,6 +3,7 @@ import clsx from 'clsx';
 
 import { useStreamingLinks } from '../queries/streamingQueries';
 import type { ReleaseIdentifier } from '../services/libraryApi';
+import { RECORD_DETAIL_TESTIDS } from './recordDetail/testIds';
 import { Card } from './ui/Card';
 import { focusRing } from './ui/focusRing';
 import { pressable } from './ui/press';
@@ -100,7 +101,7 @@ export function StreamingLinksSection({
       <Card
         padding="sm"
         className={clsx(CARD_SPAN, RESERVED_HEIGHT)}
-        data-testid="release-detail-streaming-card"
+        data-testid={RECORD_DETAIL_TESTIDS.STREAMING_CARD}
       >
         <div data-testid="streaming-links-skeleton" className="flex flex-col gap-3">
           <Skeleton className="h-5 w-44" />
@@ -122,7 +123,7 @@ export function StreamingLinksSection({
     <Card
       padding="sm"
       className={clsx(CARD_SPAN, RESERVED_HEIGHT)}
-      data-testid="release-detail-streaming-card"
+      data-testid={RECORD_DETAIL_TESTIDS.STREAMING_CARD}
     >
       <section aria-labelledby={HEADING_ID} className="flex flex-col gap-3">
         <h4 id={HEADING_ID} className="font-semibold text-stone-900 dark:text-stone-100">
