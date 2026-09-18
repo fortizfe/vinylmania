@@ -15,7 +15,7 @@ import type {
 } from '../services/collectionStatsApi';
 import { ApiError } from '../services/apiClient';
 
-export const collectionStatsKeys = {
+const collectionStatsKeys = {
   all: ['collection-stats'] as const,
   statistics: () => [...collectionStatsKeys.all, 'statistics'] as const,
   valuation: () => [...collectionStatsKeys.all, 'valuation'] as const,
@@ -34,11 +34,11 @@ export function useCollectionStatistics(): UseQueryResult<CollectionStatistics> 
 }
 
 /** A non-blocking notice raised by the valuation loop, or `null`. */
-export type ValuationNotice = 'seller_settings' | 'unavailable' | null;
+type ValuationNotice = 'seller_settings' | 'unavailable' | null;
 
 export type ValuationStatus = 'idle' | 'loading' | 'partial' | 'complete' | 'unavailable';
 
-export interface ProgressiveValuation {
+interface ProgressiveValuation {
   /** Running totals; `null` until the first chunk resolves. */
   valuation: CollectionValuation | null;
   /**

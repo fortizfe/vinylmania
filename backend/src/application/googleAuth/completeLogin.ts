@@ -5,13 +5,13 @@ import type { IdentityResolverPort } from '../../ports/auth/identityResolverPort
 import type { SessionStorePort } from '../../ports/auth/sessionStorePort';
 import type { GoogleIdentityPort } from '../../ports/googleAuth/googleIdentityPort';
 
-export interface CompleteLoginInput {
+interface CompleteLoginInput {
   state: string;
   code?: string;
   denied?: boolean;
 }
 
-export interface CompleteLoginResult {
+interface CompleteLoginResult {
   sessionToken: string;
   user: UserProfile;
 }

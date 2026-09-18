@@ -1,13 +1,14 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import { defineConfig, devices } from '@playwright/test';
-import dotenv from 'dotenv';
 
 // Single source of truth for the fake Firebase project the backend points
 // at during e2e runs (feature 001's vinylmania-test project, already used
 // by the backend's Jest suite). The frontend no longer reads this at all
 // (feature 051 removed its Firebase client SDK usage entirely).
-dotenv.config({ path: path.resolve(__dirname, '../frontend/.env.test') });
+const envFile = path.resolve(__dirname, '../frontend/.env.test');
+if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 const FRONTEND_URL = 'http://localhost:5173';
 const BACKEND_URL = 'http://localhost:3001';

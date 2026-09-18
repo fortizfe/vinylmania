@@ -27,7 +27,7 @@ export interface UserProfile {
   themePreference?: 'light' | 'dark';
 }
 
-export type LoginOutcome = 'success' | 'denied' | 'expired' | 'error';
+type LoginOutcome = 'success' | 'denied' | 'expired' | 'error';
 
 interface AuthContextValue {
   user: UserProfile | null;

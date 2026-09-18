@@ -14,7 +14,7 @@ import { logger } from '../config/logger';
 export const DEFAULT_LIMIT = 60;
 export const SAFETY_THRESHOLD_RATIO = 0.15;
 export const MAX_WAIT_MS = 1_500;
-export const WINDOW_MS = 60_000;
+const WINDOW_MS = 60_000;
 
 interface RateLimitState {
   limit: number;

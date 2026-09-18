@@ -114,7 +114,7 @@ function delay(ms: number): Promise<void> {
  * user's per-request OAuth 1.0a header (spec 053) without duplicating this
  * ~100-line pipeline a second time (research.md Decision 4).
  */
-export function createDiscogsHttpClient(
+function createDiscogsHttpClient(
   getAuthorization: () => string | undefined = buildAuthorizationHeader,
   credentialType: CatalogCredential['type'] = 'vinylmania',
 ): AxiosInstance {

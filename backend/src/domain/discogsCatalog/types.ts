@@ -41,20 +41,20 @@ export interface CatalogSearchResponse {
   };
 }
 
-export interface ReleaseArtistCredit {
+interface ReleaseArtistCredit {
   discogsArtistId: number;
   name: string;
   nameVariation?: string;
   joinPhrase?: string;
 }
 
-export interface Track {
+interface Track {
   position: string;
   title: string;
   duration?: string;
 }
 
-export interface LabelCredit {
+interface LabelCredit {
   discogsLabelId: number;
   name: string;
   catalogNumber?: string;
@@ -66,7 +66,7 @@ export interface FormatDescriptor {
   descriptions: string[];
 }
 
-export interface CatalogImage {
+interface CatalogImage {
   url: string;
   imageType: 'primary' | 'secondary';
   width?: number;
@@ -143,7 +143,7 @@ export interface MasterReleaseVersionsPage {
   };
 }
 
-export interface ArtistAliasRef {
+interface ArtistAliasRef {
   discogsArtistId: number;
   name: string;
 }

@@ -43,7 +43,7 @@ export interface GrowthPoint {
   cumulative: number;
 }
 
-export interface GrowthSeries {
+interface GrowthSeries {
   granularity: 'month';
   /** Ascending by period; zero-fill months present so the line is continuous. */
   points: GrowthPoint[];
@@ -65,7 +65,7 @@ export interface CollectionStatistics {
 
 export type ValuationStatus = 'partial' | 'complete' | 'unavailable';
 
-export type PerDiscValueReason = 'ok' | 'no_market_data' | 'no_condition';
+type PerDiscValueReason = 'ok' | 'no_market_data' | 'no_condition';
 
 export interface PerDiscValue {
   releaseId: number;

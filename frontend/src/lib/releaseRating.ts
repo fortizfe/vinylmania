@@ -1,6 +1,6 @@
 export type RatingBand = 'low' | 'medium' | 'high' | 'unrated';
 
-export interface RatingSource {
+interface RatingSource {
   average: number;
   count: number;
 }

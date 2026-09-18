@@ -9,7 +9,7 @@ import {
 import * as discogsOauthApi from '../services/discogsOauthApi';
 import type { DiscogsConnectionStatus } from '../services/discogsOauthApi';
 
-export const discogsOauthKeys = {
+const discogsOauthKeys = {
   all: ['discogs-oauth'] as const,
   status: () => [...discogsOauthKeys.all, 'status'] as const,
 };
@@ -34,7 +34,7 @@ export function useRequestDiscogsLink(): UseMutationResult<
   });
 }
 
-export interface CompleteDiscogsLinkArgs {
+interface CompleteDiscogsLinkArgs {
   oauthToken: string;
   oauthVerifier: string;
 }

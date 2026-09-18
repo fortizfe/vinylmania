@@ -1,7 +1,7 @@
 import { DiscogsAuthError } from '../../discogs/discogsErrors';
 import type { CatalogCredential } from '../../domain/discogsCatalog/types';
 
-export interface DiscogsAuthErrorResponse {
+interface DiscogsAuthErrorResponse {
   status: 401;
   body: { error: 'discogs_link_invalid'; message: string };
 }

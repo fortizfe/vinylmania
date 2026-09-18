@@ -7,7 +7,7 @@ import type { DiscogsConnection } from '../../domain/discogsOauth/types';
  * OAuth-signed adapter (`discogsMarketplaceAdapter`) is the only implementation.
  */
 
-export interface ConditionPrice {
+interface ConditionPrice {
   /** ISO 4217, e.g. "EUR" — the user's Discogs seller currency. */
   currency: string;
   /** Suggested price for that grade. */

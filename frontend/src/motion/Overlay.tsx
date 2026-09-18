@@ -28,7 +28,7 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 /** Default backdrop-blur radius for the scrim material (Tailwind `backdrop-blur-md`). */
 const DEFAULT_BLUR_PX = 12;
 
-export interface OverlayScrimMaterial {
+interface OverlayScrimMaterial {
   /**
    * Tailwind classes for the scrim's dim colour (and any non-blur material).
    * Replaces the default `bg-stone-950/60`; keep it a single opaque-ish dim

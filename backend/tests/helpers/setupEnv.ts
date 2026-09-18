@@ -1,5 +1,6 @@
+import { existsSync } from 'node:fs';
+
 import { deleteApp, getApps } from 'firebase-admin/app';
-import dotenv from 'dotenv';
 
 // Extracted so tests can re-apply these defaults directly (see
 // tests/unit/helpers/setupEnv.test.ts) without re-importing this module —
@@ -32,7 +33,7 @@ export function applyTestEnvDefaults(): void {
   // Load backend/.env last, so it only fills in variables not already set
   // above (e.g. DISCOGS_TOKEN) without overriding the Firebase emulator
   // fallbacks with a real project, per feature 001's test isolation.
-  dotenv.config();
+  if (existsSync('.env')) process.loadEnvFile();
 }
 
 applyTestEnvDefaults();
