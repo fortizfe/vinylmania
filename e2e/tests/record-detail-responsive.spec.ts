@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { runAxeScan } from '../helpers/axe';
-import { waitForColumnLayoutSettled } from '../helpers/columnLayout';
+import { waitForStableCardGeometry } from '../helpers/columnLayout';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const ENTRY_ID = 'e2e-responsive-entry-1';
@@ -502,34 +502,33 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     // useIndependentColumnLayout positions cards via ResizeObserver callbacks
     // that fire asynchronously after mount — wait for two consecutive reads
     // to agree before measuring, or this races the layout (flaky webkit/CI).
-    await waitForColumnLayoutSettled(page, [
+    // Uses getBoundingClientRect() via page.evaluate rather than
+    // Locator.boundingBox() — see columnLayout.ts for why.
+    const geometry = await waitForStableCardGeometry(page, [
       'record-detail-rating-card',
       'record-detail-streaming-card',
       'record-detail-your-copy-card',
       'record-detail-tracklist-card',
     ]);
-
-    const [ratingBox, streamingBox, myCopyBox, tracklistBox] = await Promise.all([
-      page.getByTestId('record-detail-rating-card').boundingBox(),
-      page.getByTestId('record-detail-streaming-card').boundingBox(),
-      page.getByTestId('record-detail-your-copy-card').boundingBox(),
-      page.getByTestId('record-detail-tracklist-card').boundingBox(),
-    ]);
+    const ratingBox = geometry['record-detail-rating-card'];
+    const streamingBox = geometry['record-detail-streaming-card'];
+    const myCopyBox = geometry['record-detail-your-copy-card'];
+    const tracklistBox = geometry['record-detail-tracklist-card'];
     expect(ratingBox && streamingBox && myCopyBox && tracklistBox).toBeTruthy();
 
     // Sanity check the mismatch is real: the 40-track tracklist card is much
     // taller than the minimal streaming card next to it in the rail column.
-    expect(tracklistBox!.height).toBeGreaterThan(streamingBox!.height + 200);
+    expect(tracklistBox.height).toBeGreaterThan(streamingBox.height + 200);
 
     // Rail column: rating -> streaming stack with only the card gap between
     // them (never a gap shaped like the much-taller tracklist card).
-    const railGap = streamingBox!.y - (ratingBox!.y + ratingBox!.height);
+    const railGap = streamingBox.top - (ratingBox.top + ratingBox.height);
     expect(railGap).toBeGreaterThanOrEqual(16);
     expect(railGap).toBeLessThanOrEqual(32);
 
     // Content column: myCopy -> tracklist also stack with only the card gap,
     // independent of the rail column's much shorter total height.
-    const contentGap = tracklistBox!.y - (myCopyBox!.y + myCopyBox!.height);
+    const contentGap = tracklistBox.top - (myCopyBox.top + myCopyBox.height);
     expect(contentGap).toBeGreaterThanOrEqual(16);
     expect(contentGap).toBeLessThanOrEqual(32);
 
@@ -572,34 +571,31 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     await expect(page.getByTestId('record-detail-streaming-card')).toBeVisible();
 
     // See the note above: wait for the async layout to settle before measuring.
-    await waitForColumnLayoutSettled(page, [
+    const geometry = await waitForStableCardGeometry(page, [
       'record-detail-rating-card',
       'record-detail-streaming-card',
       'record-detail-tracklist-card',
       'record-detail-other-details-card',
     ]);
-
-    const [ratingBox, streamingBox, tracklistBox, otherDetailsBox] = await Promise.all([
-      page.getByTestId('record-detail-rating-card').boundingBox(),
-      page.getByTestId('record-detail-streaming-card').boundingBox(),
-      page.getByTestId('record-detail-tracklist-card').boundingBox(),
-      page.getByTestId('record-detail-other-details-card').boundingBox(),
-    ]);
+    const ratingBox = geometry['record-detail-rating-card'];
+    const streamingBox = geometry['record-detail-streaming-card'];
+    const tracklistBox = geometry['record-detail-tracklist-card'];
+    const otherDetailsBox = geometry['record-detail-other-details-card'];
     expect(ratingBox && streamingBox && tracklistBox && otherDetailsBox).toBeTruthy();
 
     // Sanity check the mismatch is real: the 30-identifier catalog-info card
     // is much taller than the single-track tracklist card next to it.
-    expect(otherDetailsBox!.height).toBeGreaterThan(tracklistBox!.height + 200);
+    expect(otherDetailsBox.height).toBeGreaterThan(tracklistBox.height + 200);
 
     // Rail column: rating -> streaming stack with only the card gap, even
     // though the content column below them is now much taller overall.
-    const railGap = streamingBox!.y - (ratingBox!.y + ratingBox!.height);
+    const railGap = streamingBox.top - (ratingBox.top + ratingBox.height);
     expect(railGap).toBeGreaterThanOrEqual(16);
     expect(railGap).toBeLessThanOrEqual(32);
 
     // Content column: tracklist -> catalog-info stack with only the card gap,
     // never a gap shaped like the rail column's shorter cards.
-    const contentGap = otherDetailsBox!.y - (tracklistBox!.y + tracklistBox!.height);
+    const contentGap = otherDetailsBox.top - (tracklistBox.top + tracklistBox.height);
     expect(contentGap).toBeGreaterThanOrEqual(16);
     expect(contentGap).toBeLessThanOrEqual(32);
 
