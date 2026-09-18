@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -20,7 +21,8 @@ import {
  * auto-placement shares a row's height between whichever "rail" and
  * "content" cards happen to land in it, so a short card next to a tall one
  * leaves a gap-shaped hole. This hook instead measures each card's own
- * height (via one `ResizeObserver` per card) and positions it with
+ * height (synchronously before first paint, then via one `ResizeObserver`
+ * per card for later changes) and positions it with
  * `position: absolute` / `top`, offset only by the cumulative height of the
  * *same-column* cards that precede it — the two columns can never leak a
  * gap into each other because their running totals are entirely separate.
@@ -101,41 +103,43 @@ export function useIndependentColumnLayout(
     return () => mql.removeEventListener('change', onChange);
   }, []);
 
-  // One ResizeObserver per slot, only while the two-column layout is active.
-  useEffect(() => {
-    if (!active || typeof ResizeObserver !== 'function') {
+  // Measure every slot synchronously before first paint, then keep one
+  // ResizeObserver per slot for later size changes (image loads, font swaps,
+  // content edits). The synchronous pass matters: some engines (seen on
+  // Linux WebKit) deliver the first ResizeObserver notification well after
+  // first paint, and until it arrives every card would sit at `top: 0`.
+  useLayoutEffect(() => {
+    if (!active) {
       setReady(false);
       return;
     }
 
-    setReady(false);
-
     const nodedSlots = slotsRef.current.filter((slot) => slot.ref.current != null);
-    const pendingKeys = new Set(nodedSlots.map((slot) => slot.key));
-    const observers: ResizeObserver[] = [];
 
-    if (pendingKeys.size === 0) {
-      setReady(true);
+    const measured: Record<string, number> = {};
+    for (const slot of nodedSlots) {
+      measured[slot.key] = (slot.ref.current as HTMLElement).getBoundingClientRect().height;
     }
+    setHeights((prev) =>
+      Object.keys(measured).every((key) => prev[key] === measured[key])
+        ? prev
+        : { ...prev, ...measured },
+    );
+    setReady(true);
 
-    nodedSlots.forEach((slot) => {
-      const node = slot.ref.current as HTMLElement;
+    if (typeof ResizeObserver !== 'function') return;
+
+    const observers = nodedSlots.map((slot) => {
       const observer = new ResizeObserver((entries) => {
         const entry = entries[0];
         if (!entry) return;
         const height = entry.contentRect.height;
-
         setHeights((prev) =>
           prev[slot.key] === height ? prev : { ...prev, [slot.key]: height },
         );
-
-        if (pendingKeys.delete(slot.key) && pendingKeys.size === 0) {
-          setReady(true);
-        }
       });
-
-      observer.observe(node);
-      observers.push(observer);
+      observer.observe(slot.ref.current as HTMLElement);
+      return observer;
     });
 
     return () => {

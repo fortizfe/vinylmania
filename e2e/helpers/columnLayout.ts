@@ -1,24 +1,15 @@
 import { expect, type Page } from '@playwright/test';
 
 /**
- * Spec 065 (US1/US3) — `useIndependentColumnLayout` positions each rail/
- * content card via `ResizeObserver` callbacks that fire asynchronously after
- * mount (and again whenever a card's measured height changes), applying the
- * result as an inline `top` style. Reading geometry immediately after the
- * page's first visible content races that measurement pass.
- *
- * `Locator.boundingBox()` is deliberately NOT used here: CI runs surfaced a
- * webkit-only case where `boundingBox()` (a separate CDP round-trip) reported
- * a stale, overlapping geometry for these cards, while a screenshot taken at
- * the exact same failure — and this helper's own `page.evaluate` reads,
- * confirmed stable across repeated polls — showed the correct, gap-free
- * layout. Reading geometry via `getBoundingClientRect()` from inside the
- * page's own JS forces a synchronous layout flush in the renderer itself,
- * sidestepping whatever caching/timing quirk affects `boundingBox()` there.
+ * Spec 065 (US1/US3) — `useIndependentColumnLayout` measures card heights
+ * synchronously before first paint, then re-positions cards from
+ * `ResizeObserver` callbacks when a height changes later (image loads, font
+ * swaps, a section resolving its data).
  *
  * This mirrors `settleEntranceOpacity` in `settleEntrance.ts`: poll geometry
- * until two consecutive reads agree (no `ResizeObserver` callback pending or
- * in-flight commit), then hand back that settled geometry for assertions.
+ * until two consecutive reads agree, then hand back that settled geometry for
+ * assertions. All cards are read in one `page.evaluate`, so the returned
+ * boxes are a single consistent snapshot rather than N separate round-trips.
  */
 export interface CardBox {
   top: number;
