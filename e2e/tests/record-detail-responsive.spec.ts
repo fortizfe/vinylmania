@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { runAxeScan } from '../helpers/axe';
+import { waitForColumnLayoutSettled } from '../helpers/columnLayout';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
 const ENTRY_ID = 'e2e-responsive-entry-1';
@@ -498,6 +499,16 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     // does not render at all (ReleaseAdditionalInfoSection returns null).
     await expect(page.getByTestId('record-detail-other-details-card')).toHaveCount(0);
 
+    // useIndependentColumnLayout positions cards via ResizeObserver callbacks
+    // that fire asynchronously after mount — wait for two consecutive reads
+    // to agree before measuring, or this races the layout (flaky webkit/CI).
+    await waitForColumnLayoutSettled(page, [
+      'record-detail-rating-card',
+      'record-detail-streaming-card',
+      'record-detail-your-copy-card',
+      'record-detail-tracklist-card',
+    ]);
+
     const [ratingBox, streamingBox, myCopyBox, tracklistBox] = await Promise.all([
       page.getByTestId('record-detail-rating-card').boundingBox(),
       page.getByTestId('record-detail-streaming-card').boundingBox(),
@@ -559,6 +570,14 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     await page.goto(`/app/library/records/${ENTRY_ID}`);
     await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
     await expect(page.getByTestId('record-detail-streaming-card')).toBeVisible();
+
+    // See the note above: wait for the async layout to settle before measuring.
+    await waitForColumnLayoutSettled(page, [
+      'record-detail-rating-card',
+      'record-detail-streaming-card',
+      'record-detail-tracklist-card',
+      'record-detail-other-details-card',
+    ]);
 
     const [ratingBox, streamingBox, tracklistBox, otherDetailsBox] = await Promise.all([
       page.getByTestId('record-detail-rating-card').boundingBox(),
