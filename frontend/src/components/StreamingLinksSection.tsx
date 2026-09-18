@@ -53,13 +53,6 @@ const HEADING_ID = 'streaming-links-heading';
  */
 const RESERVED_HEIGHT = 'min-h-[4.5rem]';
 
-/**
- * All three detail-page mount points lay their content out in the same
- * `lg:grid-cols-2` grid with full-width cards below the fold. `lg:col-span-2` is
- * inert anywhere else, so the one class keeps the component drop-in.
- */
-const CARD_SPAN = 'lg:col-span-2';
-
 interface StreamingLinksSectionProps {
   /** Release identifiers; `Barcode`-typed values feed the barcode lookup. */
   identifiers?: ReleaseIdentifier[];
@@ -99,7 +92,7 @@ export function StreamingLinksSection({
     return (
       <Card
         padding="sm"
-        className={clsx(CARD_SPAN, RESERVED_HEIGHT)}
+        className={RESERVED_HEIGHT}
         data-testid="release-detail-streaming-card"
       >
         <div data-testid="streaming-links-skeleton" className="flex flex-col gap-3">
@@ -121,7 +114,7 @@ export function StreamingLinksSection({
   return (
     <Card
       padding="sm"
-      className={clsx(CARD_SPAN, RESERVED_HEIGHT)}
+      className={RESERVED_HEIGHT}
       data-testid="release-detail-streaming-card"
     >
       <section aria-labelledby={HEADING_ID} className="flex flex-col gap-3">

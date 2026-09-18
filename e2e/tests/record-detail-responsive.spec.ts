@@ -96,10 +96,14 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
       expect(galleryBox!.x).toBeLessThan(mainInfoBox!.x);
       expect(yourCopyBox!.y).toBeGreaterThan(mainInfoBox!.y);
 
-      // Tracklist and other-details both render full-width below the
-      // gallery/main-info row (spec 057 FR-009/FR-010).
+      // Tracklist and other-details share the gallery card's column (the
+      // left column) and stack strictly below it, independent of the right
+      // column's own height — the two columns stack independently, with no
+      // shared row track between them (spec 064 fixes the old shared-row
+      // gap defect).
+      expect(Math.abs(tracklistBox!.x - galleryBox!.x)).toBeLessThan(4);
       expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
-      expect(tracklistBox!.y).toBeGreaterThan(yourCopyBox!.y);
+      expect(Math.abs(otherDetailsBox!.x - galleryBox!.x)).toBeLessThan(4);
       expect(otherDetailsBox!.y).toBeGreaterThan(tracklistBox!.y);
 
       const hasHorizontalScroll = await page.evaluate(
@@ -163,6 +167,89 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     await expect(page.getByText(/no cover image available/i)).toBeVisible();
   });
 
+  test('desktop: an uneven height between columns never creates a gap within the shorter column, in either direction (spec 064)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 900 });
+    let signedIn = false;
+
+    async function checkNoGapsInLeftColumn(fixture: ReturnType<typeof buildEntry>) {
+      await page.route(`**/api/library/${ENTRY_ID}`, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(fixture),
+        });
+      });
+      if (!signedIn) {
+        await page.goto('/');
+        await signInAsFakeGoogleUser(page);
+        await page.goto(`/app/library/records/${ENTRY_ID}`);
+        signedIn = true;
+      } else {
+        await page.reload();
+      }
+      await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+
+      const gallery = page.getByTestId('record-detail-gallery-card');
+      const tracklist = page.getByTestId('record-detail-tracklist-card');
+      const otherDetails = page.getByTestId('record-detail-other-details-card');
+
+      const [galleryBox, tracklistBox, otherDetailsBox] = await Promise.all([
+        gallery.boundingBox(),
+        tracklist.boundingBox(),
+        otherDetails.boundingBox(),
+      ]);
+      expect(galleryBox && tracklistBox && otherDetailsBox).toBeTruthy();
+
+      // gap-4 is 16px; allow a little slack for card padding/border
+      // rounding, but nothing near the size of an unfilled row-track gap.
+      const galleryToTracklistGap = tracklistBox!.y - (galleryBox!.y + galleryBox!.height);
+      const tracklistToOtherDetailsGap =
+        otherDetailsBox!.y - (tracklistBox!.y + tracklistBox!.height);
+
+      expect(galleryToTracklistGap).toBeLessThan(20);
+      expect(tracklistToOtherDetailsGap).toBeLessThan(20);
+    }
+
+    // (a) minimal "Your Copy" (short right column) + a long tracklist (tall
+    // left column): the left column must stay gap-free even though it is
+    // now much taller than the right column.
+    const shortCopyLongTracklist = buildEntry();
+    shortCopyLongTracklist.discogs = {
+      instanceId: 100,
+      folderId: 1,
+      rating: 0,
+      mediaCondition: null,
+      sleeveCondition: null,
+      notes: '',
+      editable: { mediaCondition: true, sleeveCondition: true, notes: true },
+    };
+    shortCopyLongTracklist.release.tracklist = Array.from({ length: 15 }, (_, i) => ({
+      position: `${i + 1}`,
+      title: `Track ${i + 1}`,
+      duration: '3:30',
+    }));
+    await checkNoGapsInLeftColumn(shortCopyLongTracklist);
+
+    // (b) full "Your Copy" (tall right column — the old bug's trigger) + a
+    // short tracklist (short left column): the left column must not wait
+    // for the taller right column to finish before continuing its own
+    // stack.
+    const fullCopyShortTracklist = buildEntry();
+    fullCopyShortTracklist.discogs = {
+      instanceId: 100,
+      folderId: 1,
+      rating: 5,
+      mediaCondition: 'Near Mint (NM or M-)',
+      sleeveCondition: 'Very Good Plus (VG+)',
+      notes:
+        'A long note about this specific copy, added deliberately to make the "Your Copy" card noticeably taller than usual for this regression test.',
+      editable: { mediaCondition: true, sleeveCondition: true, notes: true },
+    };
+    await checkNoGapsInLeftColumn(fullCopyShortTracklist);
+  });
+
   test('mobile: single column, no horizontal scroll, and rating/condition/remove controls meet 44x44px (Scenario 9)', async ({
     page,
   }) => {
@@ -187,10 +274,13 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     }
     const [galleryBox, mainInfoBox, yourCopyBox, tracklistBox, otherDetailsBox] =
       boxes as NonNullable<(typeof boxes)[number]>[];
-    expect(mainInfoBox.y).toBeGreaterThan(galleryBox.y);
-    expect(yourCopyBox.y).toBeGreaterThan(mainInfoBox.y);
-    expect(tracklistBox.y).toBeGreaterThan(yourCopyBox.y);
+    // Unified column-grouped order (spec 064, research.md Decision 5):
+    // gallery -> tracklist -> other-details (left column), then main-info
+    // -> your-copy (right column).
+    expect(tracklistBox.y).toBeGreaterThan(galleryBox.y);
     expect(otherDetailsBox.y).toBeGreaterThan(tracklistBox.y);
+    expect(mainInfoBox.y).toBeGreaterThan(otherDetailsBox.y);
+    expect(yourCopyBox.y).toBeGreaterThan(mainInfoBox.y);
 
     const hasHorizontalScroll = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,

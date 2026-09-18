@@ -1,0 +1,65 @@
+# Agent Assignments
+# Feature: 064-fix-detail-column-gaps
+# Generated: 2026-09-18T09:41:55Z
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "backend-agent"
+    source: "project"
+    description: "Use for any work under backend/ — Express.js + TypeScript APIs, hexagonal architecture (domain/application/ports/adapters), Firebase Admin/Firestore, Discogs API client, Redis caching. Enforces TDD, YAGNI, SOLID, and KISS on every change. Do NOT use for frontend/ or e2e/ work."
+  - name: "docs-agent"
+    source: "project"
+    description: "Use for end-user documentation for Vinylmania — user manuals, getting-started guides, feature walkthroughs, and FAQs written for collectors. Not for developer/API docs, specs/, or code changes."
+  - name: "frontend-agent"
+    source: "project"
+    description: "Use for any work under frontend/ — React 19 + TypeScript (Vite), Tailwind CSS v4, TanStack Query. Builds every interface with the installed Apple design skills and strictly enforces WCAG 2.1 AA accessibility, with TDD via Vitest + React Testing Library. Do NOT use for backend/ or e2e/ work — hand those to backend-agent or qa-agent instead."
+  - name: "qa-agent"
+    source: "project"
+    description: "Use for enforcing Test-First/TDD discipline and overall test quality across the whole Vinylmania codebase (backend, frontend, e2e). Reviews whether tests were written before implementation, audits coverage and test quality, fixes flaky/failing tests, and gates changes against the constitution's Test-First principle and quality gates."
+
+assignments:
+  T001:
+    agent: "frontend-agent"
+    reason: "New Vitest+RTL unit test for a frontend/ component (frontend/tests/unit/DetailColumns.test.tsx)."
+  T002:
+    agent: "frontend-agent"
+    reason: "New React component under frontend/src/components/."
+  T003:
+    agent: "frontend-agent"
+    reason: "Edit to an existing frontend/src/components/ file (dead-code removal)."
+  T004:
+    agent: "frontend-agent"
+    reason: "Integration test under frontend/tests/ for a frontend page's DOM structure."
+  T005:
+    agent: "qa-agent"
+    reason: "Playwright spec rewrite under e2e/ — frontend-agent explicitly excludes e2e/ work."
+  T006:
+    agent: "qa-agent"
+    reason: "Playwright spec rewrite under e2e/."
+  T007:
+    agent: "qa-agent"
+    reason: "Playwright spec rewrite under e2e/."
+  T008:
+    agent: "qa-agent"
+    reason: "Playwright spec rewrite under e2e/."
+  T009:
+    agent: "qa-agent"
+    reason: "Playwright spec rewrite under e2e/."
+  T010:
+    agent: "qa-agent"
+    reason: "Playwright spec rewrite under e2e/."
+  T011:
+    agent: "frontend-agent"
+    reason: "Page migration under frontend/src/pages/."
+  T012:
+    agent: "frontend-agent"
+    reason: "Page migration under frontend/src/pages/."
+  T013:
+    agent: "frontend-agent"
+    reason: "Page migration under frontend/src/pages/."
+  T014:
+    agent: "frontend-agent"
+    reason: "Runs and fixes frontend/ unit/integration tests exclusively."
+  T015:
+    agent: "qa-agent"
+    reason: "Runs and fixes e2e/ Playwright tests exclusively — qa-agent's explicit e2e remit."

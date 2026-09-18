@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
+import { DetailColumns } from '../components/DetailColumns';
 import { DiscogsRelinkNotice } from '../components/DiscogsRelinkNotice';
 import { RecordDetailSkeleton } from '../components/RecordDetailSkeleton';
 import { ReleaseAdditionalInfoSection } from '../components/ReleaseAdditionalInfoSection';
@@ -171,105 +172,100 @@ export function ReleaseDetailPage() {
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
       <BackLink to={backTo} />
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <Card data-testid="release-detail-gallery-card" padding="sm">
-          <ReleaseImageGallery images={release.images} alt={release.title} />
-        </Card>
+      <DetailColumns
+        left={
+          <>
+            <Card data-testid="release-detail-gallery-card" padding="sm">
+              <ReleaseImageGallery images={release.images} alt={release.title} />
+            </Card>
 
-        <Card data-testid="release-detail-main-info-card" padding="sm">
-          <div className="flex flex-col gap-4">
-            <ReleaseDetailsSection release={release} />
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={handleAdd}
-                  loading={createEntry.isPending}
-                  disabled={added}
-                >
-                  {added ? 'Added to library' : 'Add to library'}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={handleAddToWantlist}
-                  loading={addToWantlist.isPending}
-                  disabled={addedToWantlist}
-                >
-                  {addedToWantlist ? 'Added to wishlist' : 'Add to wishlist'}
-                </Button>
+            <Card data-testid="release-detail-tracklist-card" padding="sm">
+              <ReleaseTracklistSection tracklist={release.tracklist} />
+            </Card>
+
+            {hasOtherDetails && (
+              <Card data-testid="release-detail-other-details-card" padding="sm">
+                <ReleaseAdditionalInfoSection
+                  notes={release.notes}
+                  identifiers={release.identifiers}
+                  community={release.community}
+                />
+              </Card>
+            )}
+          </>
+        }
+        right={
+          <>
+            <Card data-testid="release-detail-main-info-card" padding="sm">
+              <div className="flex flex-col gap-4">
+                <ReleaseDetailsSection release={release} />
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={handleAdd}
+                      loading={createEntry.isPending}
+                      disabled={added}
+                    >
+                      {added ? 'Added to library' : 'Add to library'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={handleAddToWantlist}
+                      loading={addToWantlist.isPending}
+                      disabled={addedToWantlist}
+                    >
+                      {addedToWantlist ? 'Added to wishlist' : 'Add to wishlist'}
+                    </Button>
+                  </div>
+                  {gateError && (
+                    <p role="status" className="text-sm text-stone-500 dark:text-stone-400">
+                      {gateMessage(gateError)}
+                    </p>
+                  )}
+                  {wantlistNote && (
+                    <p role="status" className="text-sm text-stone-500 dark:text-stone-400">
+                      {wantlistNote}
+                    </p>
+                  )}
+                  {addError && (
+                    <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+                      {addError}
+                    </p>
+                  )}
+                  {wantlistError && (
+                    <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+                      {wantlistError}
+                    </p>
+                  )}
+                </div>
               </div>
-              {gateError && (
-                <p role="status" className="text-sm text-stone-500 dark:text-stone-400">
-                  {gateMessage(gateError)}
-                </p>
-              )}
-              {wantlistNote && (
-                <p role="status" className="text-sm text-stone-500 dark:text-stone-400">
-                  {wantlistNote}
-                </p>
-              )}
-              {addError && (
-                <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-                  {addError}
-                </p>
-              )}
-              {wantlistError && (
-                <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-                  {wantlistError}
-                </p>
-              )}
-            </div>
-          </div>
-        </Card>
+            </Card>
 
-        {wantlistEntry.data && !wantlistEntry.isError && (
-          <Card
-            data-testid="release-detail-wantlist-panel-card"
-            padding="sm"
-            className="lg:col-span-2"
-          >
-            <WantlistPanel
-              entry={wantlistEntry.data}
-              onSaveRating={handleSaveWantlistRating}
-              onSaveNotes={handleSaveWantlistNotes}
-            />
-          </Card>
-        )}
+            {wantlistEntry.data && !wantlistEntry.isError && (
+              <Card data-testid="release-detail-wantlist-panel-card" padding="sm">
+                <WantlistPanel
+                  entry={wantlistEntry.data}
+                  onSaveRating={handleSaveWantlistRating}
+                  onSaveNotes={handleSaveWantlistNotes}
+                />
+              </Card>
+            )}
 
-        <Card
-          data-testid="release-detail-tracklist-card"
-          padding="sm"
-          className="lg:col-span-2"
-        >
-          <ReleaseTracklistSection tracklist={release.tracklist} />
-        </Card>
-
-        {hasOtherDetails && (
-          <Card
-            data-testid="release-detail-other-details-card"
-            padding="sm"
-            className="lg:col-span-2"
-          >
-            <ReleaseAdditionalInfoSection
-              notes={release.notes}
+            {/*
+              Feature 062 — "Escúchalo en streaming". Mounted LAST so that its
+              first-view skeleton collapsing to nothing (no Apple Music match)
+              reflows only the empty space below it, never the detail above
+              (FR-017 / research.md §7). The component renders `null` unless a
+              real match resolved.
+            */}
+            <StreamingLinksSection
               identifiers={release.identifiers}
-              community={release.community}
+              artist={release.artists[0]?.name}
+              title={release.title}
             />
-          </Card>
-        )}
-
-        {/*
-          Feature 062 — "Escúchalo en streaming". Mounted LAST so that its
-          first-view skeleton collapsing to nothing (no Apple Music match)
-          reflows only the empty space below it, never the detail above
-          (FR-017 / research.md §7). The component renders `null` unless a
-          real match resolved.
-        */}
-        <StreamingLinksSection
-          identifiers={release.identifiers}
-          artist={release.artists[0]?.name}
-          title={release.title}
-        />
-      </div>
+          </>
+        }
+      />
     </main>
   );
 }

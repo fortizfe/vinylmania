@@ -1,5 +1,6 @@
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
+import { DetailColumns } from '../components/DetailColumns';
 import { DiscogsRelinkNotice } from '../components/DiscogsRelinkNotice';
 import { MasterReleaseDetailsSection } from '../components/MasterReleaseDetailsSection';
 import {
@@ -93,55 +94,52 @@ export function MasterReleaseDetailPage() {
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
       <BackLink to={backTo} />
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <Card data-testid="master-detail-gallery-card" padding="sm">
-          <ReleaseImageGallery images={master.images} alt={master.title} />
-        </Card>
-
-        <div className="flex flex-col gap-4">
-          <Card data-testid="master-detail-main-info-card" padding="sm">
-            <MasterReleaseDetailsSection master={master} />
-          </Card>
-          {masterHasOtherDetails(master) && (
-            <Card data-testid="master-detail-other-details-card" padding="sm">
-              <MasterReleaseOtherDetailsSection master={master} />
+      <DetailColumns
+        left={
+          <>
+            <Card data-testid="master-detail-gallery-card" padding="sm">
+              <ReleaseImageGallery images={master.images} alt={master.title} />
             </Card>
-          )}
-        </div>
 
-        <Card
-          data-testid="master-detail-tracklist-card"
-          padding="sm"
-          className="lg:col-span-2"
-        >
-          <ReleaseTracklistSection tracklist={master.tracklist} />
-        </Card>
+            <Card data-testid="master-detail-tracklist-card" padding="sm">
+              <ReleaseTracklistSection tracklist={master.tracklist} />
+            </Card>
 
-        <Card
-          data-testid="master-detail-versions-card"
-          padding="sm"
-          className="lg:col-span-2"
-        >
-          <MasterVersionsTable
-            discogsId={parsedId}
-            page={versionsPage}
-            onPageChange={setVersionsPage}
-          />
-        </Card>
+            <Card data-testid="master-detail-versions-card" padding="sm">
+              <MasterVersionsTable
+                discogsId={parsedId}
+                page={versionsPage}
+                onPageChange={setVersionsPage}
+              />
+            </Card>
+          </>
+        }
+        right={
+          <>
+            <Card data-testid="master-detail-main-info-card" padding="sm">
+              <MasterReleaseDetailsSection master={master} />
+            </Card>
+            {masterHasOtherDetails(master) && (
+              <Card data-testid="master-detail-other-details-card" padding="sm">
+                <MasterReleaseOtherDetailsSection master={master} />
+              </Card>
+            )}
 
-        {/*
-          Feature 062 — "Escúchalo en streaming". The same reusable section as on
-          ReleaseDetailPage / RecordDetailPage (FR-002, SC-007). Mounted LAST so a
-          skeleton -> collapsed transition reflows only empty space below it
-          (FR-017). A `MasterRelease` carries no `identifiers`, so `undefined` is
-          passed and resolution falls back to the artist + title text search.
-        */}
-        <StreamingLinksSection
-          identifiers={undefined}
-          artist={master.artists[0]?.name}
-          title={master.title}
-        />
-      </div>
+            {/*
+              Feature 062 — "Escúchalo en streaming". The same reusable section as on
+              ReleaseDetailPage / RecordDetailPage (FR-002, SC-007). Mounted LAST so a
+              skeleton -> collapsed transition reflows only empty space below it
+              (FR-017). A `MasterRelease` carries no `identifiers`, so `undefined` is
+              passed and resolution falls back to the artist + title text search.
+            */}
+            <StreamingLinksSection
+              identifiers={undefined}
+              artist={master.artists[0]?.name}
+              title={master.title}
+            />
+          </>
+        }
+      />
     </main>
   );
 }

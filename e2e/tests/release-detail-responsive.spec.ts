@@ -74,10 +74,13 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
       expect(Math.abs(detailsBox!.y - galleryBox!.y)).toBeLessThan(4);
       expect(galleryBox!.x).toBeLessThan(detailsBox!.x);
 
-      // Tracklist renders full-width below the gallery/details row, not
-      // beside it as a third panel (spec 044 FR-005/FR-010).
+      // Tracklist shares the gallery card's column (the left column) and
+      // stacks strictly below it, independent of the main-info/wantlist
+      // column's own height — the two columns stack independently, with no
+      // shared row track between them (spec 064 fixes the old shared-row
+      // gap defect).
+      expect(Math.abs(tracklistBox!.x - galleryBox!.x)).toBeLessThan(4);
       expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
-      expect(tracklistBox!.y).toBeGreaterThan(detailsBox!.y);
 
       const hasHorizontalScroll = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -132,6 +135,93 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
     await expect(page.getByText(/no cover image available/i)).toBeVisible();
   });
 
+  test('desktop: an uneven height between columns never creates a gap within the shorter column, in either direction (spec 064)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 900 });
+    let signedIn = false;
+
+    async function checkNoGapsInLeftColumn(release: typeof releaseResponse, hasWantlist: boolean) {
+      await page.route(`**/api/discogs/releases/${RELEASE_ID}`, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(release),
+        });
+      });
+      if (hasWantlist) {
+        await page.route(`**/api/wantlist/${RELEASE_ID}`, async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              discogsReleaseId: RELEASE_ID,
+              rating: 4,
+              notes: 'On my wishlist for a while now.',
+              addedAt: '2026-01-01T00:00:00.000Z',
+            }),
+          });
+        });
+      }
+
+      if (!signedIn) {
+        await page.goto('/');
+        await signInAsFakeGoogleUser(page);
+        await page.goto(`/app/releases/${RELEASE_ID}`);
+        signedIn = true;
+      } else {
+        await page.reload();
+      }
+      await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+      if (hasWantlist) {
+        await expect(page.getByTestId('release-detail-wantlist-panel-card')).toBeVisible();
+      }
+
+      const gallery = page.getByTestId('release-detail-gallery-card');
+      const tracklist = page.getByTestId('release-detail-tracklist-card');
+      const otherDetails = page.getByTestId('release-detail-other-details-card');
+
+      const [galleryBox, tracklistBox, otherDetailsBox] = await Promise.all([
+        gallery.boundingBox(),
+        tracklist.boundingBox(),
+        otherDetails.boundingBox(),
+      ]);
+      expect(galleryBox && tracklistBox && otherDetailsBox).toBeTruthy();
+
+      // gap-4 is 16px; allow a little slack for card padding/border
+      // rounding, but nothing near the size of an unfilled row-track gap.
+      const galleryToTracklistGap = tracklistBox!.y - (galleryBox!.y + galleryBox!.height);
+      const tracklistToOtherDetailsGap =
+        otherDetailsBox!.y - (tracklistBox!.y + tracklistBox!.height);
+
+      expect(galleryToTracklistGap).toBeLessThan(20);
+      expect(tracklistToOtherDetailsGap).toBeLessThan(20);
+    }
+
+    // (a) no wantlist panel (short right column) + a long tracklist (tall
+    // left column): the left column must stay gap-free even though it is
+    // now much taller than the right column.
+    const longTracklistNoWantlist = {
+      ...releaseResponse,
+      tracklist: Array.from({ length: 15 }, (_, i) => ({
+        position: `${i + 1}`,
+        title: `Track ${i + 1}`,
+        duration: '3:30',
+      })),
+    };
+    await checkNoGapsInLeftColumn(longTracklistNoWantlist, false);
+
+    // (b) an existing wantlist entry adds a third card to the right column
+    // (tall right column — the old bug's trigger) + a short tracklist
+    // (short left column): the left column must not wait for the taller
+    // right column to finish before continuing its own stack.
+    const shortTracklistWithWantlist = {
+      ...releaseResponse,
+      tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
+    };
+    await checkNoGapsInLeftColumn(shortTracklistWithWantlist, true);
+  });
+
   test('mobile: single column, no horizontal scroll, and the "Add to library" button meets 44x44px (Scenario 9)', async ({
     page,
   }) => {
@@ -142,6 +232,26 @@ test.describe('Release detail page responsive layout (spec 035, US1)', () => {
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );
     expect(hasHorizontalScroll).toBe(false);
+
+    // Unified column-grouped order (spec 064, research.md Decision 5):
+    // gallery -> tracklist -> other-details (left column), then main-info
+    // (right column). The default fixture has notes/identifiers/community
+    // set, so the other-details card is present.
+    const gallery = page.getByTestId('release-detail-gallery-card');
+    const tracklist = page.getByTestId('release-detail-tracklist-card');
+    const otherDetails = page.getByTestId('release-detail-other-details-card');
+    const mainInfo = page.getByTestId('release-detail-main-info-card');
+
+    const [galleryBox, tracklistBox, otherDetailsBox, mainInfoBox] = await Promise.all([
+      gallery.boundingBox(),
+      tracklist.boundingBox(),
+      otherDetails.boundingBox(),
+      mainInfo.boundingBox(),
+    ]);
+    expect(galleryBox && tracklistBox && otherDetailsBox && mainInfoBox).toBeTruthy();
+    expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
+    expect(otherDetailsBox!.y).toBeGreaterThan(tracklistBox!.y);
+    expect(mainInfoBox!.y).toBeGreaterThan(otherDetailsBox!.y);
 
     const addButton = page.getByRole('button', { name: /add to library/i });
     const box = await addButton.boundingBox();

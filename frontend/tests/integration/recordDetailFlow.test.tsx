@@ -397,27 +397,42 @@ describe('Record detail flow (US3)', () => {
       expect(card.className).toMatch(/dark:bg-surface-raised/);
     });
 
-    // The cards' shared grid wrapper uses the tighter gap-4 spacing (spec 057
-    // FR-009): gallery and a plain (non-card) right-column wrapper — holding
-    // main info + your copy stacked — are the two natural lg columns, while
-    // tracklist/other-details span both as their own full-width grid items.
+    // The two columns are rendered by the shared `DetailColumns` component
+    // (spec 064): a left wrapper holding gallery + tracklist + other-details,
+    // and a right wrapper holding main info + your copy, each a plain
+    // `flex flex-col gap-4` column, laid out side by side by an outer
+    // `grid grid-cols-1 lg:grid-cols-2 gap-4`. Nothing spans both columns
+    // any more — the old full-width row behavior is gone.
+    const leftColumn = gallery.parentElement;
     const rightColumn = mainInfo.parentElement;
-    const wrapper = gallery.parentElement;
-    expect(wrapper?.className).toMatch(/grid-cols-1/);
-    expect(wrapper?.className).toMatch(/lg:grid-cols-2/);
-    expect(wrapper?.className).toMatch(/gap-4/);
-    expect(gallery.className).not.toMatch(/lg:col-span/);
-    expect(rightColumn?.className).not.toMatch(/lg:col-span/);
-    expect(rightColumn).not.toBe(wrapper);
-    expect(rightColumn?.parentElement).toBe(wrapper);
+    expect(leftColumn).not.toBe(rightColumn);
+    expect(tracklist.parentElement).toBe(leftColumn);
+    expect(otherDetails.parentElement).toBe(leftColumn);
     expect(yourCopy.parentElement).toBe(rightColumn);
-    expect(tracklist.parentElement).toBe(wrapper);
-    expect(otherDetails.parentElement).toBe(wrapper);
-    expect(tracklist.className).toMatch(/lg:col-span-2/);
-    expect(otherDetails.className).toMatch(/lg:col-span-2/);
 
-    // DOM order: gallery, main info, your copy, tracklist, other details.
-    const order = [gallery, mainInfo, yourCopy, tracklist, otherDetails];
+    expect(leftColumn?.className).toMatch(/flex/);
+    expect(leftColumn?.className).toMatch(/flex-col/);
+    expect(leftColumn?.className).toMatch(/gap-4/);
+    expect(rightColumn?.className).toMatch(/flex/);
+    expect(rightColumn?.className).toMatch(/flex-col/);
+    expect(rightColumn?.className).toMatch(/gap-4/);
+
+    const outerGrid = leftColumn?.parentElement;
+    expect(rightColumn?.parentElement).toBe(outerGrid);
+    expect(outerGrid?.className).toMatch(/grid-cols-1/);
+    expect(outerGrid?.className).toMatch(/lg:grid-cols-2/);
+    expect(outerGrid?.className).toMatch(/gap-4/);
+
+    expect(gallery.className).not.toMatch(/lg:col-span/);
+    expect(tracklist.className).not.toMatch(/lg:col-span/);
+    expect(otherDetails.className).not.toMatch(/lg:col-span/);
+    expect(mainInfo.className).not.toMatch(/lg:col-span/);
+    expect(yourCopy.className).not.toMatch(/lg:col-span/);
+
+    // DOM order: gallery, tracklist, other details (left column), then
+    // main info, your copy (right column) — the fixed order from
+    // research.md Decision 3/5.
+    const order = [gallery, tracklist, otherDetails, mainInfo, yourCopy];
     for (let i = 0; i < order.length - 1; i += 1) {
       expect(
         order[i].compareDocumentPosition(order[i + 1]) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -508,7 +523,13 @@ describe('Record detail flow (US3)', () => {
     expect(screen.getByText(/Svek/)).toBeInTheDocument();
   });
 
-  it('stacks gallery, key details, my copy, tracklist, and additional info in that DOM order (US3)', async () => {
+  it('stacks gallery, tracklist, and additional info before key details and my copy, in that fixed DOM order (US3, spec 064)', async () => {
+    // Per spec 064 research.md Decision 3/5, cards are grouped into fixed
+    // left/right columns (gallery, tracklist, additional-info vs. main
+    // info, your copy), rendered by the shared `DetailColumns` component.
+    // Below `lg` this collapses to a single stack in that same fixed
+    // order — no longer the old interleaved
+    // gallery/main-info/your-copy/tracklist/additional-info order.
     mockGetOne.mockResolvedValue({
       id: 'entry-1',
       discogsReleaseId: 1,
@@ -535,15 +556,17 @@ describe('Record detail flow (US3)', () => {
 
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
 
-    const main = screen.getByText('Stockholm').closest('main');
-    const text = main?.textContent ?? '';
-    expect(text.indexOf('No cover image available')).toBeLessThan(
-      text.indexOf('Stockholm'),
-    );
-    expect(text.indexOf('Stockholm')).toBeLessThan(text.indexOf('Your copy'));
-    expect(text.indexOf('Your copy')).toBeLessThan(text.indexOf('Östermalm'));
-    expect(text.indexOf('Östermalm')).toBeLessThan(
-      text.indexOf('Recorded at Stockholm Sound Studio.'),
-    );
+    const gallery = screen.getByTestId('record-detail-gallery-card');
+    const tracklist = screen.getByTestId('record-detail-tracklist-card');
+    const otherDetails = screen.getByTestId('record-detail-other-details-card');
+    const mainInfo = screen.getByTestId('record-detail-main-info-card');
+    const yourCopy = screen.getByTestId('record-detail-your-copy-card');
+
+    const order = [gallery, tracklist, otherDetails, mainInfo, yourCopy];
+    for (let i = 0; i < order.length - 1; i += 1) {
+      expect(
+        order[i].compareDocumentPosition(order[i + 1]) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
   });
 });

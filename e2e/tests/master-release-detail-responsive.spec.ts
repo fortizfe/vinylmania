@@ -51,7 +51,7 @@ async function goToMasterDetail(page: import('@playwright/test').Page) {
   await page.goto('/');
   await signInAsFakeGoogleUser(page);
   await page.goto(`/app/masters/${MASTER_ID}`);
-  await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hybrid Theory' })).toBeVisible();
 }
 
 test.describe('Master release detail page responsive layout (spec 035, US1)', () => {
@@ -69,7 +69,7 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
         // re-running the sign-in flow (the Google popup only appears once
         // per session).
         await page.reload();
-        await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Hybrid Theory' })).toBeVisible();
       }
 
       const gallery = page.getByTestId('master-detail-gallery-card');
@@ -95,11 +95,14 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
       expect(galleryBox!.x).toBeLessThan(mainInfoBox!.x);
       expect(otherDetailsBox!.y).toBeGreaterThan(mainInfoBox!.y);
 
-      // Tracklist and the versions table both render full-width below the
-      // gallery/info column, not beside it as extra panels (spec 057
-      // FR-009/FR-010), in their current visual order (tracklist first).
+      // Tracklist and the versions table share the gallery card's column
+      // (the left column) and stack strictly below it, independent of the
+      // main-info/other-details column's own height — the two columns
+      // stack independently, with no shared row track between them (spec
+      // 064 fixes the old shared-row gap defect).
+      expect(Math.abs(tracklistBox!.x - galleryBox!.x)).toBeLessThan(4);
       expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
-      expect(tracklistBox!.y).toBeGreaterThan(otherDetailsBox!.y);
+      expect(Math.abs(versionsBox!.x - galleryBox!.x)).toBeLessThan(4);
       expect(versionsBox!.y).toBeGreaterThan(tracklistBox!.y);
 
       // Desktop keeps the versions table (not the mobile card list).
@@ -118,6 +121,90 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
 
     // No distinct intermediate state between lg and xl (spec FR-011).
     expect(Math.abs(lgRange.galleryBox.x - xlRange.galleryBox.x)).toBeLessThan(4);
+  });
+
+  test('desktop: an uneven height between columns never creates a gap within the shorter column, in either direction (spec 064)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 900 });
+    let signedIn = false;
+
+    async function checkNoGapsInLeftColumn(master: typeof masterResponse) {
+      await page.route(`**/api/discogs/masters/${MASTER_ID}/versions**`, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(versionsResponse()),
+        });
+      });
+      await page.route(`**/api/discogs/masters/${MASTER_ID}`, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(master),
+        });
+      });
+
+      if (!signedIn) {
+        await page.goto('/');
+        await signInAsFakeGoogleUser(page);
+        await page.goto(`/app/masters/${MASTER_ID}`);
+        signedIn = true;
+      } else {
+        await page.reload();
+      }
+      await expect(page.getByRole('heading', { name: 'Hybrid Theory' })).toBeVisible();
+
+      const gallery = page.getByTestId('master-detail-gallery-card');
+      const tracklist = page.getByTestId('master-detail-tracklist-card');
+      const versions = page.getByTestId('master-detail-versions-card');
+
+      const [galleryBox, tracklistBox, versionsBox] = await Promise.all([
+        gallery.boundingBox(),
+        tracklist.boundingBox(),
+        versions.boundingBox(),
+      ]);
+      expect(galleryBox && tracklistBox && versionsBox).toBeTruthy();
+
+      // gap-4 is 16px; allow a little slack for card padding/border
+      // rounding, but nothing near the size of an unfilled row-track gap.
+      const galleryToTracklistGap = tracklistBox!.y - (galleryBox!.y + galleryBox!.height);
+      const tracklistToVersionsGap = versionsBox!.y - (tracklistBox!.y + tracklistBox!.height);
+
+      expect(galleryToTracklistGap).toBeLessThan(20);
+      expect(tracklistToVersionsGap).toBeLessThan(20);
+    }
+
+    // (a) minimal main-info/other-details (short right column) + a long
+    // tracklist (tall left column): the left column must stay gap-free
+    // even though it is now much taller than the right column.
+    const longTracklistMinimalDetails = {
+      ...masterResponse,
+      genres: [],
+      styles: [],
+      tracklist: Array.from({ length: 15 }, (_, i) => ({
+        position: `${i + 1}`,
+        title: `Track ${i + 1}`,
+        duration: '3:30',
+      })),
+    };
+    await checkNoGapsInLeftColumn(longTracklistMinimalDetails);
+
+    // (b) many artists — each rendered on its own line by
+    // MasterReleaseDetailsSection, reliably making the right column
+    // (main-info + other-details) taller than the gallery card (the old
+    // bug's trigger) — plus a short tracklist (short left column): the
+    // left column must not wait for the taller right column to finish
+    // before continuing its own stack.
+    const shortTracklistRichDetails = {
+      ...masterResponse,
+      artists: Array.from({ length: 40 }, (_, i) => ({
+        discogsArtistId: i + 1,
+        name: `Featured Artist ${i + 1}`,
+      })),
+      tracklist: [{ position: '1', title: 'Papercut', duration: '3:05' }],
+    };
+    await checkNoGapsInLeftColumn(shortTracklistRichDetails);
   });
 
   test('desktop: the no-cover placeholder stays contained within the gallery column of the two-column lg-range layout (spec 044, FR-014)', async ({
@@ -144,7 +231,7 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
     await page.goto(`/app/masters/${MASTER_ID}`);
-    await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hybrid Theory' })).toBeVisible();
 
     const gallery = page.getByTestId('master-detail-gallery-card');
     const mainInfo = page.getByTestId('master-detail-main-info-card');
@@ -169,6 +256,32 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
 
     await expect(page.getByTestId('master-versions-cards')).toBeVisible();
     await expect(page.locator('table')).toBeHidden();
+
+    // Unified column-grouped order (spec 064, research.md Decision 5):
+    // gallery -> tracklist -> versions (left column), then main-info ->
+    // other-details (right column). The default fixture has year/genres/
+    // styles set, so the other-details card is present.
+    const gallery = page.getByTestId('master-detail-gallery-card');
+    const tracklist = page.getByTestId('master-detail-tracklist-card');
+    const versions = page.getByTestId('master-detail-versions-card');
+    const mainInfo = page.getByTestId('master-detail-main-info-card');
+    const otherDetails = page.getByTestId('master-detail-other-details-card');
+
+    const [galleryBox, tracklistBox, versionsBox, mainInfoBox, otherDetailsBox] =
+      await Promise.all([
+        gallery.boundingBox(),
+        tracklist.boundingBox(),
+        versions.boundingBox(),
+        mainInfo.boundingBox(),
+        otherDetails.boundingBox(),
+      ]);
+    expect(
+      galleryBox && tracklistBox && versionsBox && mainInfoBox && otherDetailsBox,
+    ).toBeTruthy();
+    expect(tracklistBox!.y).toBeGreaterThan(galleryBox!.y);
+    expect(versionsBox!.y).toBeGreaterThan(tracklistBox!.y);
+    expect(mainInfoBox!.y).toBeGreaterThan(versionsBox!.y);
+    expect(otherDetailsBox!.y).toBeGreaterThan(mainInfoBox!.y);
 
     const hasHorizontalScroll = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -211,7 +324,7 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
     await page.goto(`/app/masters/${MASTER_ID}`);
-    await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hybrid Theory' })).toBeVisible();
 
     const mainImage = page.getByRole('img', { name: 'Hybrid Theory' });
     const thumbnailStrip = page

@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { DetailColumns } from '../components/DetailColumns';
 import { MyCopySection } from '../components/MyCopySection';
 import { RecordDetailSkeleton } from '../components/RecordDetailSkeleton';
 import { ReleaseAdditionalInfoSection } from '../components/ReleaseAdditionalInfoSection';
@@ -107,55 +108,52 @@ export function RecordDetailPage() {
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
       <BackLink to="/app/library" />
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <Card data-testid="record-detail-gallery-card" padding="sm">
-          <ReleaseImageGallery images={release.images} alt={release.title} />
-        </Card>
+      <DetailColumns
+        left={
+          <>
+            <Card data-testid="record-detail-gallery-card" padding="sm">
+              <ReleaseImageGallery images={release.images} alt={release.title} />
+            </Card>
 
-        <div className="flex flex-col gap-4">
-          <Card data-testid="record-detail-main-info-card" padding="sm">
-            <ReleaseDetailsSection release={release} />
-          </Card>
-          <Card data-testid="record-detail-your-copy-card" padding="sm">
-            {myCopySection}
-          </Card>
-        </div>
+            <Card data-testid="record-detail-tracklist-card" padding="sm">
+              <ReleaseTracklistSection tracklist={release.tracklist} />
+            </Card>
 
-        <Card
-          data-testid="record-detail-tracklist-card"
-          padding="sm"
-          className="lg:col-span-2"
-        >
-          <ReleaseTracklistSection tracklist={release.tracklist} />
-        </Card>
+            {hasOtherDetails && (
+              <Card data-testid="record-detail-other-details-card" padding="sm">
+                <ReleaseAdditionalInfoSection
+                  notes={release.notes}
+                  identifiers={release.identifiers}
+                  community={release.community}
+                />
+              </Card>
+            )}
+          </>
+        }
+        right={
+          <>
+            <Card data-testid="record-detail-main-info-card" padding="sm">
+              <ReleaseDetailsSection release={release} />
+            </Card>
+            <Card data-testid="record-detail-your-copy-card" padding="sm">
+              {myCopySection}
+            </Card>
 
-        {hasOtherDetails && (
-          <Card
-            data-testid="record-detail-other-details-card"
-            padding="sm"
-            className="lg:col-span-2"
-          >
-            <ReleaseAdditionalInfoSection
-              notes={release.notes}
+            {/*
+              Feature 062 — "Escúchalo en streaming". The same reusable section as on
+              ReleaseDetailPage / MasterReleaseDetailPage (FR-002, SC-007). Only
+              reached in this branch, where `entry.release` exists; the no-release
+              branch above never renders it. Mounted LAST so a skeleton -> collapsed
+              transition reflows only empty space below it (FR-017).
+            */}
+            <StreamingLinksSection
               identifiers={release.identifiers}
-              community={release.community}
+              artist={release.artists[0]?.name}
+              title={release.title}
             />
-          </Card>
-        )}
-
-        {/*
-          Feature 062 — "Escúchalo en streaming". The same reusable section as on
-          ReleaseDetailPage / MasterReleaseDetailPage (FR-002, SC-007). Only
-          reached in this branch, where `entry.release` exists; the no-release
-          branch above never renders it. Mounted LAST so a skeleton -> collapsed
-          transition reflows only empty space below it (FR-017).
-        */}
-        <StreamingLinksSection
-          identifiers={release.identifiers}
-          artist={release.artists[0]?.name}
-          title={release.title}
-        />
-      </div>
+          </>
+        }
+      />
     </main>
   );
 }
