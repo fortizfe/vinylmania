@@ -1,4 +1,4 @@
-export type LogOutcome =
+type LogOutcome =
   | 'verified'
   | 'unauthorized'
   | 'error'

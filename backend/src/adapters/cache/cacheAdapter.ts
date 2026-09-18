@@ -29,16 +29,9 @@ async function set(key: string, value: string, ttlSeconds: number): Promise<void
   }
 }
 
-function withCache<T>(
-  key: string,
-  ttlSeconds: number,
-  fetcher: () => Promise<T>,
-): Promise<T> {
-  return withCacheAside(key, ttlSeconds, fetcher);
-}
-
-function invalidate(key: string): Promise<void> {
-  return invalidateCache(key);
-}
-
-export const cacheAdapter: CachePort = { has, set, withCache, invalidate };
+export const cacheAdapter: CachePort = {
+  has,
+  set,
+  withCache: withCacheAside,
+  invalidate: invalidateCache,
+};

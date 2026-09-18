@@ -1,6 +1,6 @@
 import { isAxiosError } from 'axios';
 
-export type RetryableFailureReason = 'rate_limited' | 'unavailable';
+type RetryableFailureReason = 'rate_limited' | 'unavailable';
 
 /** 1 original attempt + 2 retries (spec FR-010). */
 export const MAX_ATTEMPTS = 3;

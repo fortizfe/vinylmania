@@ -20,7 +20,7 @@ export interface Article {
   category: string;
 }
 
-export type SourceHealth = 'ok' | 'unavailable';
+type SourceHealth = 'ok' | 'unavailable';
 
 export interface SourceStatus {
   sourceId: string;

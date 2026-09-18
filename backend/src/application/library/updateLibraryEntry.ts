@@ -7,7 +7,7 @@ import { getCopyData, resolveManagedRef } from './discogsCopyData';
 import type { EnrichLibraryEntryUseCase } from './enrichLibraryEntry';
 import { requireConnection } from './syncLibrary';
 
-export interface CopyDataPatch {
+interface CopyDataPatch {
   rating?: number;
   mediaCondition?: string | null;
   sleeveCondition?: string | null;

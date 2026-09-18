@@ -44,7 +44,7 @@ export class CatalogUnavailableForCreationError extends Error {
   }
 }
 
-export interface CreateLibraryEntryResult {
+interface CreateLibraryEntryResult {
   entry: LibraryEntry;
   release: Release;
   discogs: EntryDiscogsData;

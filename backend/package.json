@@ -11,7 +11,7 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "pretest": "node ../scripts/check-emulator-ports.js",
-    "test": "node ../scripts/run-with-timeout.js 300 -- firebase emulators:exec --only auth,firestore \"cross-env NODE_ENV=test jest --detectOpenHandles --forceExit\""
+    "test": "node ../scripts/run-with-timeout.js 300 -- firebase emulators:exec --only auth,firestore \"jest --detectOpenHandles --forceExit\""
   },
   "keywords": [],
   "author": "",
@@ -19,7 +19,6 @@
   "dependencies": {
     "axios": "^1.7.7",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^8.6.0",
     "firebase-admin": "^12.3.1",
@@ -35,7 +34,6 @@
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^8.8.0",
     "@typescript-eslint/parser": "^8.8.0",
-    "cross-env": "^7.0.3",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "firebase-tools": "^13.20.2",

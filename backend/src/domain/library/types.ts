@@ -50,7 +50,7 @@ export interface LibraryFilters {
   format?: string[];
 }
 
-export type CatalogStatus = 'ok' | 'unavailable';
+type CatalogStatus = 'ok' | 'unavailable';
 
 /**
  * Per-copy data held in the user's Discogs collection, editable from the

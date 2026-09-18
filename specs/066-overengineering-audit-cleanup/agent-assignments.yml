@@ -1,0 +1,71 @@
+# Agent Assignments
+# Feature: 066-overengineering-audit-cleanup (Over-engineering Audit Cleanup)
+# Generated: 2026-09-18
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "backend-agent"
+    source: "project"
+    description: "Work under backend/ — Express + TypeScript, hexagonal architecture, Firebase Admin, Discogs, Redis; TDD, YAGNI, SOLID, KISS"
+  - name: "docs-agent"
+    source: "project"
+    description: "End-user documentation for Vinylmania (manuals, guides, FAQs)"
+  - name: "frontend-agent"
+    source: "project"
+    description: "Work under frontend/ — React 19 + TypeScript (Vite), Tailwind v4, TanStack Query; WCAG 2.1 AA; TDD via Vitest + RTL"
+  - name: "qa-agent"
+    source: "project"
+    description: "Test-First/TDD discipline and test quality across backend, frontend and e2e; flaky/failing test fixes"
+
+assignments:
+  T001:
+    agent: "qa-agent"
+    reason: "Cross-package baseline test run"
+  T002:
+    agent: "backend-agent"
+    reason: "Backend entrypoint env loading (backend/src/loadEnv.ts, server.ts)"
+  T003:
+    agent: "backend-agent"
+    reason: "Backend Vercel entrypoint (backend/api/index.ts)"
+  T004:
+    agent: "backend-agent"
+    reason: "Backend package.json script and dependency removal"
+  T005:
+    agent: "qa-agent"
+    reason: "e2e/ Playwright config and dependency removal"
+  T006:
+    agent: "qa-agent"
+    reason: "US1 validation across backend and e2e suites"
+  T007:
+    agent: "frontend-agent"
+    reason: "Test-first unit test for the new frontend module, kept with its implementation"
+  T008:
+    agent: "frontend-agent"
+    reason: "New shared hook module in frontend/src/hooks"
+  T009:
+    agent: "frontend-agent"
+    reason: "Refactor frontend/src/hooks/useLibraryQueryParams.ts"
+  T010:
+    agent: "frontend-agent"
+    reason: "Refactor frontend/src/hooks/useSearchQueryParams.ts"
+  T011:
+    agent: "qa-agent"
+    reason: "US2 validation across frontend unit and e2e"
+  T012:
+    agent: "backend-agent"
+    reason: "Backend cache adapter cleanup"
+  T013:
+    agent: "frontend-agent"
+    reason: "Frontend column-layout hook cleanup"
+  T014:
+    agent: "backend-agent"
+    reason: "Backend file-local export removal"
+  T015:
+    agent: "frontend-agent"
+    reason: "Frontend file-local export removal"
+  T016:
+    agent: "qa-agent"
+    reason: "US3 validation across backend, frontend and e2e"
+  T017:
+    agent: "qa-agent"
+    reason: "Final full-suite regression and size check"

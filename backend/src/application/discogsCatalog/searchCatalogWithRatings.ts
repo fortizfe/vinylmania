@@ -28,7 +28,7 @@ function normalizeFilterValue(value: string | undefined): string | undefined {
   return trimmed || undefined;
 }
 
-export interface SearchCatalogWithRatingsUseCase {
+interface SearchCatalogWithRatingsUseCase {
   searchCatalogWithRatings(
     credential: CatalogCredential,
     query: string,

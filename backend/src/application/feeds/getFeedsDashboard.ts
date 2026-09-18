@@ -15,7 +15,7 @@ import type { FeedSourcePort } from '../../ports/feeds/feedSourcePort';
 const CACHE_TTL_SECONDS = 20 * 60;
 const ARTICLES_PER_CATEGORY = 10;
 
-export interface FeedsAggregationUseCase {
+interface FeedsAggregationUseCase {
   getDashboard(): Promise<DashboardResponse>;
   getSourceArticles(sourceId: string): Promise<SourceFeedResponse | null>;
 }

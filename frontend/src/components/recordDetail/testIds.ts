@@ -29,6 +29,3 @@ export const RECORD_DETAIL_TESTIDS = {
   /** Rest-of-catalog-info card. */
   OTHER_DETAILS_CARD: 'record-detail-other-details-card',
 } as const;
-
-export type RecordDetailTestId =
-  (typeof RECORD_DETAIL_TESTIDS)[keyof typeof RECORD_DETAIL_TESTIDS];

@@ -45,13 +45,6 @@ export interface UseIndependentColumnLayoutResult {
   styleFor: (key: string) => CSSProperties;
   /** Inline style for the shared positioning container (sets computed height on `lg`+). */
   containerStyle: CSSProperties;
-  /**
-   * True once the first measurement pass has completed on `lg`+. Exposed for
-   * a future opacity-reveal gate — unused today, since a static, predictable
-   * layout with no entrance transition is the deliberate design (research.md
-   * R3 non-goals).
-   */
-  ready: boolean;
 }
 
 /** Tailwind's `lg` breakpoint — the point at which the two-column layout activates. */
@@ -78,7 +71,6 @@ export function useIndependentColumnLayout(
 ): UseIndependentColumnLayoutResult {
   const [active, setActive] = useState(isBreakpointActive);
   const [heights, setHeights] = useState<Record<string, number>>({});
-  const [ready, setReady] = useState(false);
 
   // Always-fresh reference to the latest slots, read from inside the
   // ResizeObserver effect so it doesn't need to re-subscribe just because
@@ -109,23 +101,21 @@ export function useIndependentColumnLayout(
   // Linux WebKit) deliver the first ResizeObserver notification well after
   // first paint, and until it arrives every card would sit at `top: 0`.
   useLayoutEffect(() => {
-    if (!active) {
-      setReady(false);
-      return;
-    }
+    if (!active) return;
 
     const nodedSlots = slotsRef.current.filter((slot) => slot.ref.current != null);
 
     const measured: Record<string, number> = {};
     for (const slot of nodedSlots) {
-      measured[slot.key] = (slot.ref.current as HTMLElement).getBoundingClientRect().height;
+      measured[slot.key] = (
+        slot.ref.current as HTMLElement
+      ).getBoundingClientRect().height;
     }
     setHeights((prev) =>
       Object.keys(measured).every((key) => prev[key] === measured[key])
         ? prev
         : { ...prev, ...measured },
     );
-    setReady(true);
 
     if (typeof ResizeObserver !== 'function') return;
 
@@ -163,7 +153,10 @@ export function useIndependentColumnLayout(
     return { offsets: nextOffsets, maxHeight: Math.max(railHeight, contentHeight) };
   }, [slots, heights]);
 
-  const slotsByKey = useMemo(() => new Map(slots.map((slot) => [slot.key, slot])), [slots]);
+  const slotsByKey = useMemo(
+    () => new Map(slots.map((slot) => [slot.key, slot])),
+    [slots],
+  );
 
   const styleFor = useCallback(
     (key: string): CSSProperties => {
@@ -192,5 +185,5 @@ export function useIndependentColumnLayout(
     return { position: 'relative', height: maxHeight };
   }, [active, maxHeight]);
 
-  return { styleFor, containerStyle, ready };
+  return { styleFor, containerStyle };
 }

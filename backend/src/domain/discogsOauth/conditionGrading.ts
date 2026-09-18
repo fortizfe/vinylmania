@@ -22,7 +22,7 @@ export const SLEEVE_CONDITIONS = [
 ] as const;
 
 export type MediaCondition = (typeof MEDIA_CONDITIONS)[number];
-export type SleeveCondition = (typeof SLEEVE_CONDITIONS)[number];
+type SleeveCondition = (typeof SLEEVE_CONDITIONS)[number];
 
 export function isMediaCondition(value: string): value is MediaCondition {
   return (MEDIA_CONDITIONS as readonly string[]).includes(value);

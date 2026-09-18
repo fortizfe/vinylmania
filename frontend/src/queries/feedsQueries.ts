@@ -3,7 +3,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import * as feedsApi from '../services/feedsApi';
 import type { DashboardResponse, SourceFeedResponse } from '../services/feedsApi';
 
-export const feedsKeys = {
+const feedsKeys = {
   all: ['feeds'] as const,
   dashboard: () => [...feedsKeys.all, 'dashboard'] as const,
   source: (sourceId: string) => [...feedsKeys.all, 'source', sourceId] as const,

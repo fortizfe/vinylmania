@@ -7,7 +7,7 @@ import {
 } from './ui/InlineEditableField';
 
 /** Discogs grading vocabulary (R6). Must match backend conditionGrading.ts exactly. */
-export const MEDIA_CONDITIONS = [
+const MEDIA_CONDITIONS = [
   'Mint (M)',
   'Near Mint (NM or M-)',
   'Very Good Plus (VG+)',
@@ -18,7 +18,7 @@ export const MEDIA_CONDITIONS = [
   'Poor (P)',
 ] as const;
 
-export const SLEEVE_CONDITIONS = [
+const SLEEVE_CONDITIONS = [
   ...MEDIA_CONDITIONS,
   'Generic',
   'Not Graded',

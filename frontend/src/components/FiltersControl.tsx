@@ -13,7 +13,7 @@ import { STYLE_OPTIONS } from '../constants/styleOptions';
  * component used by both screens (spec FR-001: "not two separate
  * implementations"), so it depends on neither screen-specific type.
  */
-export interface FilterValues {
+interface FilterValues {
   genre?: string[];
   style?: string[];
   format?: string[];

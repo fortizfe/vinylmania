@@ -7,7 +7,7 @@ import { authorizedFetch } from './apiClient';
  */
 
 /** One ranked row in a breakdown: a facet value and how many records carry it. */
-export interface StatBucket {
+interface StatBucket {
   label: string;
   count: number;
 }
@@ -27,7 +27,7 @@ export interface ArtistCount {
 }
 
 /** A single period on the growth timeline. */
-export interface GrowthPoint {
+interface GrowthPoint {
   /** `YYYY-MM`. */
   period: string;
   /** Records added in this period. */

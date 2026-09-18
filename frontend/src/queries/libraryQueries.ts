@@ -91,7 +91,7 @@ export function useRemoveLibraryEntry(): UseMutationResult<void, unknown, string
   });
 }
 
-export interface CreateLibraryEntryArgs {
+interface CreateLibraryEntryArgs {
   discogsReleaseId: number;
 }
 

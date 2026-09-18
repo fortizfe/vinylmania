@@ -50,7 +50,7 @@ const standardRateLimit = rateLimit({
  * via `respondCollectionError`, plus `SellerSettingsRequiredError` → `422`
  * (Block 2 only; Block 1 is unaffected). Returns `false` when unhandled.
  */
-export function respondStatsError(
+function respondStatsError(
   res: Response,
   route: string,
   uid: string,

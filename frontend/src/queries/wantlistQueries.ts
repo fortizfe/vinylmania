@@ -60,7 +60,7 @@ export function useWantlistEntry(
   });
 }
 
-export interface AddToWantlistArgs {
+interface AddToWantlistArgs {
   discogsReleaseId: number;
 }
 

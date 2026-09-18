@@ -17,11 +17,11 @@ export const STREAMING_CACHE_TTL_SECONDS = 90 * 24 * 60 * 60;
 const STREAMING_ROUTE = '/api/streaming/links';
 
 /** Optional per-request context, used only for structured logging (FR-019). */
-export interface ResolveStreamingLinksContext {
+interface ResolveStreamingLinksContext {
   uid?: string;
 }
 
-export interface ResolveStreamingLinksUseCase {
+interface ResolveStreamingLinksUseCase {
   resolveStreamingLinks(
     query: StreamingLinkQuery,
     context?: ResolveStreamingLinksContext,
