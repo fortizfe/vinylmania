@@ -17,6 +17,15 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.11.1] - 2026-09-18
+
+### Fixed
+
+- measure column slots synchronously before first paint ([5b71939])
+- stop using Locator.boundingBox() for gap assertions on webkit ([5a6b408])
+- stop CI-only webkit flakiness in the new gap-regression e2e tests ([ffb0629])
+- independent two-column layout for detail pages ([5e1ba88])
+
 ## [1.11.0] - 2026-09-07
 
 ### Added
