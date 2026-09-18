@@ -5,10 +5,6 @@ on:
   push:
     branches: [main]
 
-env:
-  # ponytail: pinned because vercel@59.23.2 (2026-09-18) hangs on `deploy --prebuilt`; back to latest once fixed upstream
-  VERCEL_CLI_VERSION: 59.23.1
-
 jobs:
   backend-test:
     name: Backend tests
@@ -236,7 +232,7 @@ jobs:
           node-version: 24
 
       - name: Install Vercel CLI
-        run: npm install --global vercel@${{ env.VERCEL_CLI_VERSION }}
+        run: npm install --global vercel@latest
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
@@ -267,7 +263,7 @@ jobs:
           node-version: 24
 
       - name: Install Vercel CLI
-        run: npm install --global vercel@${{ env.VERCEL_CLI_VERSION }}
+        run: npm install --global vercel@latest
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
@@ -297,7 +293,7 @@ jobs:
           node-version: 24
 
       - name: Install Vercel CLI
-        run: npm install --global vercel@${{ env.VERCEL_CLI_VERSION }}
+        run: npm install --global vercel@latest
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
@@ -362,7 +358,7 @@ jobs:
           node-version: 24
 
       - name: Install Vercel CLI
-        run: npm install --global vercel@${{ env.VERCEL_CLI_VERSION }}
+        run: npm install --global vercel@latest
 
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
