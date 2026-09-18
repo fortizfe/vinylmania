@@ -1,0 +1,74 @@
+# Agent Assignments
+# Feature: Fix gaps in the two-column record detail layout
+# Generated: 2026-09-18T11:19:12Z
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "backend-agent"
+    source: "project"
+    description: "Use for any work under backend/ — Express.js + TypeScript APIs, hexagonal architecture (domain/application/ports/adapters), Firebase Admin/Firestore, Discogs API client, Redis caching. Enforces TDD, YAGNI, SOLID, and KISS on every change. Do NOT use for frontend/ or e2e/ work — hand those to frontend-agent or qa-agent instead."
+  - name: "docs-agent"
+    source: "project"
+    description: "Use for end-user documentation for Vinylmania — user manuals, getting-started guides, feature walkthroughs, and FAQs written for collectors using the app, not for developers. Use when writing or updating docs/ content aimed at end users, onboarding material, or in-app help copy. Not for developer/API docs, specs/, or code changes — those stay with backend-agent, frontend-agent, or qa-agent."
+  - name: "frontend-agent"
+    source: "project"
+    description: "Use for any work under frontend/ — React 19 + TypeScript (Vite), Tailwind CSS v4, TanStack Query. Builds every interface with the installed Apple design skills and strictly enforces WCAG 2.1 AA accessibility, with TDD via Vitest + React Testing Library. Applies YAGNI, SOLID, KISS. Do NOT use for backend/ or e2e/ work — hand those to backend-agent or qa-agent instead."
+  - name: "qa-agent"
+    source: "project"
+    description: "Use for enforcing Test-First/TDD discipline and overall test quality across the whole Vinylmania codebase (backend, frontend, e2e). Reviews whether tests were written before implementation, audits coverage and test quality, fixes flaky/failing tests, and gates changes against the constitution's Test-First principle and quality gates. Use for TDD/quality audits and test work, not for feature implementation itself — that's backend-agent or frontend-agent's job."
+
+assignments:
+  T001:
+    agent: "frontend-agent"
+    reason: "Frontend test infrastructure (ResizeObserver stub) in frontend/tests/setup.ts"
+  T002:
+    agent: "frontend-agent"
+    reason: "New hook's unit/contract tests under frontend/tests/unit/hooks/ (TDD)"
+  T003:
+    agent: "frontend-agent"
+    reason: "Failing positioning test added to RecordDetailLayout's existing test file"
+  T004:
+    agent: "frontend-agent"
+    reason: "Updates RecordDetailSkeleton.test.tsx's shape assertion"
+  T005:
+    agent: "frontend-agent"
+    reason: "Implements useIndependentColumnLayout hook in frontend/src/hooks/"
+  T006:
+    agent: "frontend-agent"
+    reason: "Wires the new hook into RecordDetailLayout.tsx"
+  T007:
+    agent: "frontend-agent"
+    reason: "Wires the new hook into RecordDetailSkeleton.tsx"
+  T008:
+    agent: "frontend-agent"
+    reason: "Runs frontend unit tests (Vitest) to verify User Story 1"
+  T009:
+    agent: "frontend-agent"
+    reason: "Failing test for MasterReleaseDetailPage's Flexbox restructure"
+  T010:
+    agent: "frontend-agent"
+    reason: "New unit test file for MasterReleaseDetailSkeleton"
+  T011:
+    agent: "frontend-agent"
+    reason: "Restructures MasterReleaseDetailPage.tsx layout"
+  T012:
+    agent: "frontend-agent"
+    reason: "Restructures MasterReleaseDetailSkeleton.tsx layout"
+  T013:
+    agent: "frontend-agent"
+    reason: "Runs frontend unit tests (Vitest) to verify User Story 2"
+  T014:
+    agent: "frontend-agent"
+    reason: "Keyboard focus-order regression test authored as a frontend integration/unit test"
+  T015:
+    agent: "qa-agent"
+    reason: "Extends Playwright e2e specs under e2e/ — outside frontend-agent's declared scope, matches qa-agent's cross-repo e2e mandate"
+  T016:
+    agent: "qa-agent"
+    reason: "Runs the e2e suite (chromium + webkit) — e2e test verification"
+  T017:
+    agent: "frontend-agent"
+    reason: "Frontend build/lint quality gate (tsc -b, vite build, oxlint)"
+  T018:
+    agent: "qa-agent"
+    reason: "Manual QA verification walkthrough of the quickstart repro steps"

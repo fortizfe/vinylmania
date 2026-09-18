@@ -303,11 +303,19 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
     expect(yourCopyBox!.y).toBeGreaterThan(mainInfoBox!.y);
     expect(tracklistBox!.y).toBeGreaterThan(yourCopyBox!.y);
 
-    // The layout is an honest two-column grid, NOT a sticky rail: the
-    // left-column anchor stays in normal flow (`position: static`) and the
-    // narrow left column is meaningfully narrower than the wide right column.
+    // The layout is an honest two-column composition, NOT a sticky rail: the
+    // left-column anchor never pins itself to the viewport while scrolling,
+    // and the narrow left column is meaningfully narrower than the wide right
+    // column. Spec 065 (US1) replaced the earlier CSS Grid column classes with
+    // useIndependentColumnLayout, whose documented mechanism (research.md R3,
+    // contracts/useIndependentColumnLayout.contract.md) is `position: absolute`
+    // + a measured `top` — deliberately chosen over `sticky`/`fixed` for this
+    // exact "not a sticky rail" reason, so `absolute` here is expected; only
+    // `sticky`/`fixed` (real viewport-pinning) would indicate a regression.
+    // The scroll-lockstep assertions below are the actual behavioral proof.
     const railPosition = await rail.evaluate((el) => getComputedStyle(el).position);
-    expect(railPosition).toBe('static');
+    expect(railPosition).not.toBe('sticky');
+    expect(railPosition).not.toBe('fixed');
     expect(galleryBox!.width).toBeLessThan(mainInfoBox!.width);
 
     // No horizontal scroll at desktop width.
@@ -450,6 +458,136 @@ test.describe('Record detail page responsive layout (spec 035, US1)', () => {
 
     await page.getByTestId('gallery-fullscreen-close').click();
     await expect(fullscreenViewer).not.toBeVisible();
+  });
+
+  // Spec 065 (US1/US3): useIndependentColumnLayout positions each rail/content
+  // slot with `top: <running total of same-column heights>`, so a mismatch in
+  // one column must never leave a gap the size of a card from the *other*
+  // column — only the standard 24px card gap (`CARD_GAP_PX` in
+  // useIndependentColumnLayout.ts, matching the pre-fix `lg:gap-y-6`). The
+  // library view additionally exercises the `myCopy` content-column slot.
+  test('desktop: rail and content columns stack gap-free even when the tracklist is very long and streaming/notes are minimal (spec 065, US1/US3)', async ({
+    page,
+  }) => {
+    await stubStreamingMatch(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    const longTracklistEntry = buildEntry();
+    longTracklistEntry.release.notes = '';
+    longTracklistEntry.release.identifiers = [];
+    longTracklistEntry.release.tracklist = Array.from({ length: 40 }, (_, i) => ({
+      position: String(i + 1),
+      title: `Track title number ${i + 1} with enough words to take real vertical space`,
+      duration: '3:33',
+    }));
+    await page.route(`**/api/library/${ENTRY_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(longTracklistEntry),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/library/records/${ENTRY_ID}`);
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+    await expect(page.getByTestId('record-detail-streaming-card')).toBeVisible();
+
+    // No notes/identifiers in this fixture, so the trailing catalog-info card
+    // does not render at all (ReleaseAdditionalInfoSection returns null).
+    await expect(page.getByTestId('record-detail-other-details-card')).toHaveCount(0);
+
+    const [ratingBox, streamingBox, myCopyBox, tracklistBox] = await Promise.all([
+      page.getByTestId('record-detail-rating-card').boundingBox(),
+      page.getByTestId('record-detail-streaming-card').boundingBox(),
+      page.getByTestId('record-detail-your-copy-card').boundingBox(),
+      page.getByTestId('record-detail-tracklist-card').boundingBox(),
+    ]);
+    expect(ratingBox && streamingBox && myCopyBox && tracklistBox).toBeTruthy();
+
+    // Sanity check the mismatch is real: the 40-track tracklist card is much
+    // taller than the minimal streaming card next to it in the rail column.
+    expect(tracklistBox!.height).toBeGreaterThan(streamingBox!.height + 200);
+
+    // Rail column: rating -> streaming stack with only the card gap between
+    // them (never a gap shaped like the much-taller tracklist card).
+    const railGap = streamingBox!.y - (ratingBox!.y + ratingBox!.height);
+    expect(railGap).toBeGreaterThanOrEqual(16);
+    expect(railGap).toBeLessThanOrEqual(32);
+
+    // Content column: myCopy -> tracklist also stack with only the card gap,
+    // independent of the rail column's much shorter total height.
+    const contentGap = tracklistBox!.y - (myCopyBox!.y + myCopyBox!.height);
+    expect(contentGap).toBeGreaterThanOrEqual(16);
+    expect(contentGap).toBeLessThanOrEqual(32);
+
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+  });
+
+  test('desktop: rail and content columns stack gap-free with a short tracklist and a long notes/identifiers card (spec 065, US1/US3)', async ({
+    page,
+  }) => {
+    await stubStreamingMatch(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    const longCatalogInfoEntry = buildEntry();
+    longCatalogInfoEntry.release.tracklist = [
+      { position: 'A', title: 'Östermalm', duration: '4:45' },
+    ];
+    longCatalogInfoEntry.release.notes =
+      'A very long catalog note repeated several times to take real vertical space. '.repeat(
+        10,
+      );
+    longCatalogInfoEntry.release.identifiers = Array.from({ length: 30 }, (_, i) => ({
+      type: 'Matrix',
+      value: `MX-${i}-ABCDEFGH-${i}`,
+    }));
+    await page.route(`**/api/library/${ENTRY_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(longCatalogInfoEntry),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/library/records/${ENTRY_ID}`);
+    await expect(page.getByRole('heading', { name: 'Stockholm' })).toBeVisible();
+    await expect(page.getByTestId('record-detail-streaming-card')).toBeVisible();
+
+    const [ratingBox, streamingBox, tracklistBox, otherDetailsBox] = await Promise.all([
+      page.getByTestId('record-detail-rating-card').boundingBox(),
+      page.getByTestId('record-detail-streaming-card').boundingBox(),
+      page.getByTestId('record-detail-tracklist-card').boundingBox(),
+      page.getByTestId('record-detail-other-details-card').boundingBox(),
+    ]);
+    expect(ratingBox && streamingBox && tracklistBox && otherDetailsBox).toBeTruthy();
+
+    // Sanity check the mismatch is real: the 30-identifier catalog-info card
+    // is much taller than the single-track tracklist card next to it.
+    expect(otherDetailsBox!.height).toBeGreaterThan(tracklistBox!.height + 200);
+
+    // Rail column: rating -> streaming stack with only the card gap, even
+    // though the content column below them is now much taller overall.
+    const railGap = streamingBox!.y - (ratingBox!.y + ratingBox!.height);
+    expect(railGap).toBeGreaterThanOrEqual(16);
+    expect(railGap).toBeLessThanOrEqual(32);
+
+    // Content column: tracklist -> catalog-info stack with only the card gap,
+    // never a gap shaped like the rail column's shorter cards.
+    const contentGap = otherDetailsBox!.y - (tracklistBox!.y + tracklistBox!.height);
+    expect(contentGap).toBeGreaterThanOrEqual(16);
+    expect(contentGap).toBeLessThanOrEqual(32);
+
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
   });
 });
 

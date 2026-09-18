@@ -10,11 +10,21 @@ import { createTestQueryClient } from '../testUtils';
 const mockGetOne = vi.fn();
 const mockRemove = vi.fn();
 const mockUpdate = vi.fn();
+const mockGetStreamingLinks = vi.fn();
 
 vi.mock('../../src/services/libraryApi', () => ({
   getOne: (...args: unknown[]) => mockGetOne(...args),
   remove: (...args: unknown[]) => mockRemove(...args),
   update: (...args: unknown[]) => mockUpdate(...args),
+}));
+
+// Only feature-065 T014's focus-order test below configures a resolved link;
+// every other test in this file leaves the mock at its default (no
+// implementation, i.e. `undefined`), which `StreamingLinksSection` treats the
+// same as an empty `links` array via optional chaining — a no-op for every
+// pre-existing assertion in this file.
+vi.mock('../../src/services/streamingApi', () => ({
+  getStreamingLinks: (...args: unknown[]) => mockGetStreamingLinks(...args),
 }));
 
 function LibraryListStub() {
@@ -39,6 +49,7 @@ describe('Record detail flow (US3)', () => {
     mockGetOne.mockReset();
     mockRemove.mockReset();
     mockUpdate.mockReset();
+    mockGetStreamingLinks.mockReset();
   });
 
   it('shows the merged catalog detail alongside personal notes', async () => {
@@ -541,4 +552,91 @@ describe('Record detail flow (US3)', () => {
       text.indexOf('Recorded at Stockholm Sound Studio.'),
     );
   });
+
+  it(
+    'keeps keyboard Tab order aligned with the §C1 DOM order across every real ' +
+      'interactive control on the fully rendered page (feature 065, T014)',
+    async () => {
+      mockGetOne.mockResolvedValue({
+        id: 'entry-1',
+        discogsReleaseId: 1,
+        addedAt: '2026-07-03T00:00:00.000Z',
+        catalogStatus: 'ok',
+        discogs: {
+          instanceId: 11,
+          folderId: 1,
+          rating: 3,
+          mediaCondition: 'Good (G)',
+          sleeveCondition: null,
+          notes: '',
+          editable: { mediaCondition: true, sleeveCondition: true, notes: true },
+        },
+        release: {
+          discogsId: 1,
+          title: 'Stockholm',
+          artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+          labels: [{ discogsLabelId: 5, name: 'Svek', catalogNumber: 'SK032' }],
+          formats: [{ name: 'Vinyl', descriptions: ['12"'] }],
+          genres: ['Electronic'],
+          styles: ['Deep House'],
+          notes: 'Recorded at Stockholm Sound Studio.',
+          identifiers: [{ type: 'Barcode', value: '7 39051 23421 6' }],
+          community: { have: 214, want: 58, rating: { average: 4.3, count: 37 } },
+          tracklist: [{ position: 'A', title: 'Östermalm', duration: '4:45' }],
+          images: [],
+          discogsUrl: 'https://www.discogs.com/release/1',
+        },
+      });
+      mockGetStreamingLinks.mockResolvedValue({
+        links: [
+          { platform: 'apple_music', url: 'https://music.apple.com/us/album/stockholm/1' },
+        ],
+      });
+
+      renderPage();
+
+      await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+      // Wait for the streaming section's own query to resolve so its link is
+      // part of the tab sequence below, not still a loading skeleton.
+      await waitFor(() =>
+        expect(
+          screen.getByRole('link', { name: 'Escuchar en Apple Music' }),
+        ).toBeInTheDocument(),
+      );
+
+      // §C1 order (gallery has no cover image here, so no interactive
+      // control; generalInfo, tracklist and catalogInfo are plain text with
+      // this fixture, so none contribute a stop either): back-link → actions
+      // (Remove) → myCopy (Media/Sleeve Condition selects, Notes) → rating
+      // (5 stars) → streaming (Apple Music link).
+      const user = userEvent.setup();
+
+      await user.tab();
+      expect(screen.getByRole('link', { name: /back/i })).toHaveFocus();
+
+      await user.tab();
+      expect(
+        screen.getByRole('button', { name: /remove from library/i }),
+      ).toHaveFocus();
+
+      await user.tab();
+      expect(screen.getByLabelText('Media Condition')).toHaveFocus();
+
+      await user.tab();
+      expect(screen.getByLabelText('Sleeve Condition')).toHaveFocus();
+
+      await user.tab();
+      expect(screen.getByRole('button', { name: 'Edit Notes' })).toHaveFocus();
+
+      for (const star of [1, 2, 3, 4, 5]) {
+        await user.tab();
+        expect(screen.getByRole('button', { name: `${star} stars` })).toHaveFocus();
+      }
+
+      await user.tab();
+      expect(
+        screen.getByRole('link', { name: 'Escuchar en Apple Music' }),
+      ).toHaveFocus();
+    },
+  );
 });
