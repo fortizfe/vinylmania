@@ -93,35 +93,63 @@ export function MasterReleaseDetailPage() {
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
       <BackLink to={backTo} />
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <Card data-testid="master-detail-gallery-card" padding="sm">
-          <ReleaseImageGallery images={master.images} alt={master.title} />
-        </Card>
+      <div className="flex flex-col gap-4">
+        {/*
+          Spec 065 (US2): the gallery card and the info-stack are adjacent
+          siblings sharing this row wrapper, not a shared CSS Grid row — so a
+          height mismatch between them never reserves a gap under the shorter
+          one (FR-001/FR-002). Flexbox's cross-axis sizing (`items-start`)
+          gives each its own natural height with no shared row track.
 
-        <div className="flex flex-col gap-4">
-          <Card data-testid="master-detail-main-info-card" padding="sm">
-            <MasterReleaseDetailsSection master={master} />
+          Spec 065 bugfix: the gallery card alone gets an explicit
+          `lg:basis-[30rem]` (matching its own inner `lg:max-w-md` cap plus
+          this Card's `p-4` padding on both sides). With `flex: 0 1 auto`
+          (the default, still in effect here — only the basis component is
+          overridden), WebKit — unlike Chromium — fails to derive a width for
+          the gallery card's `aspect-square` content from that ambiguous
+          auto basis, collapsing it to near-zero height (the same WebKit
+          aspect-ratio/flex-sizing quirk documented for this gallery in
+          feature 044, see e2e/playwright.config.ts). A fixed basis removes
+          the ambiguity on both engines while reproducing the exact width
+          Chromium already resolved on its own via that same `max-w-md` cap
+          in the common case — an explicit `basis-1/2` on both children was
+          tried first but rejected: it forces the two columns to always
+          split the row exactly in half, which changes Chromium's own
+          behavior when the info-stack's content is unusually large (it no
+          longer lets the gallery shrink to make room, breaking the "top row
+          ... much taller ... other-details content" test above). Left
+          untouched, the info-stack's own `flex: 0 1 auto` still content-
+          derives its width and can still shrink the gallery down via normal
+          flex-shrink math when its content demands more room — only the
+          gallery's basis is no longer ambiguous for WebKit's aspect-ratio
+          resolution. Doesn't affect the <lg stacked layout at all.
+        */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <Card
+            data-testid="master-detail-gallery-card"
+            padding="sm"
+            className="lg:basis-[30rem]"
+          >
+            <ReleaseImageGallery images={master.images} alt={master.title} />
           </Card>
-          {masterHasOtherDetails(master) && (
-            <Card data-testid="master-detail-other-details-card" padding="sm">
-              <MasterReleaseOtherDetailsSection master={master} />
+
+          <div className="flex flex-col gap-4">
+            <Card data-testid="master-detail-main-info-card" padding="sm">
+              <MasterReleaseDetailsSection master={master} />
             </Card>
-          )}
+            {masterHasOtherDetails(master) && (
+              <Card data-testid="master-detail-other-details-card" padding="sm">
+                <MasterReleaseOtherDetailsSection master={master} />
+              </Card>
+            )}
+          </div>
         </div>
 
-        <Card
-          data-testid="master-detail-tracklist-card"
-          padding="sm"
-          className="lg:col-span-2"
-        >
+        <Card data-testid="master-detail-tracklist-card" padding="sm">
           <ReleaseTracklistSection tracklist={master.tracklist} />
         </Card>
 
-        <Card
-          data-testid="master-detail-versions-card"
-          padding="sm"
-          className="lg:col-span-2"
-        >
+        <Card data-testid="master-detail-versions-card" padding="sm">
           <MasterVersionsTable
             discogsId={parsedId}
             page={versionsPage}

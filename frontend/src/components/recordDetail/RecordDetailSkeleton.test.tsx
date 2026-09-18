@@ -1,7 +1,20 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { RecordDetailSkeleton } from './RecordDetailSkeleton';
+
+function mockMatchMedia(matches: boolean) {
+  vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(() => false),
+  }));
+}
 
 /**
  * The skeleton must mirror the populated `RecordDetailLayout` footprint so the
@@ -21,6 +34,10 @@ function hasSizingClass(el: HTMLElement): boolean {
 }
 
 describe('RecordDetailSkeleton', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('keeps the record-detail-skeleton test id', () => {
     render(<RecordDetailSkeleton />);
     expect(screen.getByTestId('record-detail-skeleton')).toBeInTheDocument();
@@ -83,11 +100,50 @@ describe('RecordDetailSkeleton', () => {
     expect(reserved).toBe(true);
   });
 
-  it('mirrors the responsive shape: mobile stack, desktop rail + column', () => {
+  it('mirrors the responsive shape: mobile stack, desktop independent-column positioning', () => {
+    mockMatchMedia(false);
+    const belowLg = render(<RecordDetailSkeleton />);
+    const mobileWrapper = belowLg.getByTestId('record-detail-skeleton');
+    expect(mobileWrapper.className).toMatch(/flex-col/);
+    // The old shared-row CSS Grid mechanism (research.md R1) is gone —
+    // independent stacking is now computed by useIndependentColumnLayout,
+    // not by a `lg:grid` utility class.
+    expect(mobileWrapper.className).not.toMatch(/lg:grid/);
+    expect(belowLg.getByTestId('record-detail-skeleton-gallery').parentElement?.style.position).toBe(
+      '',
+    );
+    belowLg.unmount();
+
+    vi.restoreAllMocks();
+    mockMatchMedia(true);
+    const atLg = render(<RecordDetailSkeleton />);
+    expect(
+      atLg.getByTestId('record-detail-skeleton-gallery').parentElement?.style.position,
+    ).toBe('absolute');
+    atLg.unmount();
+  });
+
+  it('maps blocks to the same rail/content columns as RecordDetailLayout (gallery/rating/streaming = rail; generalInfo/tracklist/catalog = content)', () => {
+    mockMatchMedia(true);
     render(<RecordDetailSkeleton />);
-    const wrapper = screen.getByTestId('record-detail-skeleton');
-    const cls = wrapper.className;
-    expect(cls).toMatch(/flex-col/);
-    expect(cls).toMatch(/lg:grid/);
+
+    const railTestIds = [
+      'record-detail-skeleton-gallery',
+      'record-detail-skeleton-rating',
+      'record-detail-skeleton-streaming',
+    ];
+    const contentTestIds = [
+      'record-detail-skeleton-general-info',
+      'record-detail-skeleton-tracklist',
+      'record-detail-skeleton-catalog',
+    ];
+
+    for (const id of railTestIds) {
+      expect(screen.getByTestId(id).parentElement?.style.left).toBe('0px');
+    }
+    for (const id of contentTestIds) {
+      // jsdom's style-setter normalizes `calc(20rem + 1.5rem)` to `calc(21.5rem)`.
+      expect(screen.getByTestId(id).parentElement?.style.left).toBe('calc(21.5rem)');
+    }
   });
 });

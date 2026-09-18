@@ -261,6 +261,201 @@ test.describe('Master release detail page responsive layout (spec 035, US1)', ()
     await page.keyboard.press('Escape');
     await expect(fullscreenViewer).not.toBeVisible();
   });
+
+  // Spec 065 (US2/US3): the top gallery/info-stack pair is a plain Flexbox row
+  // (`flex flex-col lg:flex-row lg:items-start gap-4`), not a shared CSS Grid
+  // row — so a height mismatch between the gallery and the info-stack must
+  // never leave dead space before the tracklist card below, sized to the
+  // taller of the two (research.md R2).
+  test('desktop: the top row and the info-stack sit gap-free even when other-details content is much taller than the gallery (spec 065, US2/US3)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    // A real-dimensioned (400x400) image, not the module-level fixture's
+    // unresolvable `https://example.com/cover.jpg` — see the note in the
+    // "gallery taller" test below for why an unloaded <img> would silently
+    // invalidate this test's premise too (a collapsed gallery is trivially
+    // shorter than anything, whether or not the fix works).
+    const squareImageDataUri = `data:image/svg+xml;base64,${Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#888"/></svg>',
+    ).toString('base64')}`;
+    const manyGenresMaster = {
+      ...masterResponse,
+      genres: Array.from({ length: 60 }, (_, i) => `Genre ${i}`),
+      styles: Array.from({ length: 60 }, (_, i) => `Style ${i}`),
+      images: [{ url: squareImageDataUri, imageType: 'primary' }],
+    };
+    await page.route(`**/api/discogs/masters/${MASTER_ID}/versions**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(versionsResponse()),
+      });
+    });
+    await page.route(`**/api/discogs/masters/${MASTER_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(manyGenresMaster),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/masters/${MASTER_ID}`);
+    await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
+
+    // Wait for the cover image to actually decode so the aspect-square
+    // gallery card has settled at its real height before measuring.
+    await page.waitForFunction(() => {
+      const img = document.querySelector<HTMLImageElement>('img[alt="Hybrid Theory"]');
+      return Boolean(img && img.complete && img.naturalWidth > 0);
+    });
+
+    const [galleryBox, mainInfoBox, otherDetailsBox, tracklistBox] = await Promise.all([
+      page.getByTestId('master-detail-gallery-card').boundingBox(),
+      page.getByTestId('master-detail-main-info-card').boundingBox(),
+      page.getByTestId('master-detail-other-details-card').boundingBox(),
+      page.getByTestId('master-detail-tracklist-card').boundingBox(),
+    ]);
+    expect(galleryBox && mainInfoBox && otherDetailsBox && tracklistBox).toBeTruthy();
+
+    // Sanity check the mismatch is real: 120 wrapped genre/style badges make
+    // the info-stack much taller than the fixed-aspect-ratio gallery card.
+    const infoStackHeight = otherDetailsBox!.y + otherDetailsBox!.height - mainInfoBox!.y;
+    expect(infoStackHeight).toBeGreaterThan(galleryBox!.height + 200);
+
+    // Within the info-stack column: main-info -> other-details stack with
+    // only the card gap (`gap-4` = 16px), independent of the gallery's height.
+    const infoStackGap = otherDetailsBox!.y - (mainInfoBox!.y + mainInfoBox!.height);
+    expect(infoStackGap).toBeGreaterThanOrEqual(8);
+    expect(infoStackGap).toBeLessThanOrEqual(24);
+
+    // The tracklist card begins right after the TALLER of the two top-row
+    // siblings (here, the info-stack) plus the standard card gap — never
+    // with dead space reserved to match the shorter gallery card.
+    const rowBottom = Math.max(
+      galleryBox!.y + galleryBox!.height,
+      otherDetailsBox!.y + otherDetailsBox!.height,
+    );
+    const rowToTracklistGap = tracklistBox!.y - rowBottom;
+    expect(rowToTracklistGap).toBeGreaterThanOrEqual(8);
+    expect(rowToTracklistGap).toBeLessThanOrEqual(24);
+
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+  });
+
+  test('desktop: the top row sits gap-free when the gallery is taller than a minimal info-stack with no other-details card (spec 065, US2/US3)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    // A self-contained, real-dimensioned image (600x600 SVG data URI) instead
+    // of the module-level fixture's `https://example.com/cover.jpg`: that URL
+    // resolves to a generic external page rather than image bytes, so the
+    // <img> has no intrinsic size and the aspect-square gallery collapses to
+    // a few px — which would silently invert this test's whole premise (the
+    // gallery must be measurably TALLER than the info-stack here).
+    const squareImageDataUri = `data:image/svg+xml;base64,${Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><rect width="600" height="600" fill="#888"/></svg>',
+    ).toString('base64')}`;
+    const noOtherDetailsMaster = {
+      ...masterResponse,
+      year: 0,
+      genres: [],
+      styles: [],
+      images: [{ url: squareImageDataUri, imageType: 'primary' }],
+    };
+    await page.route(`**/api/discogs/masters/${MASTER_ID}/versions**`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(versionsResponse()),
+      });
+    });
+    await page.route(`**/api/discogs/masters/${MASTER_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(noOtherDetailsMaster),
+      });
+    });
+
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto(`/app/masters/${MASTER_ID}`);
+    await expect(page.getByText('Hybrid Theory').first()).toBeVisible();
+
+    // No year/genres/styles: the other-details card does not render at all.
+    await expect(page.getByTestId('master-detail-other-details-card')).toHaveCount(0);
+
+    // Wait for the cover image to actually decode so the aspect-square
+    // gallery card has settled at its real (non-zero-intrinsic) height
+    // before measuring — a data URI decodes fast, but not synchronously.
+    await page.waitForFunction(() => {
+      const img = document.querySelector<HTMLImageElement>('img[alt="Hybrid Theory"]');
+      return Boolean(img && img.complete && img.naturalWidth > 0);
+    });
+
+    const [galleryBox, mainInfoBox, tracklistBox] = await Promise.all([
+      page.getByTestId('master-detail-gallery-card').boundingBox(),
+      page.getByTestId('master-detail-main-info-card').boundingBox(),
+      page.getByTestId('master-detail-tracklist-card').boundingBox(),
+    ]);
+    expect(galleryBox && mainInfoBox && tracklistBox).toBeTruthy();
+
+    // Sanity check the mismatch is real: the title/artist-only info-stack is
+    // much shorter than the fixed-aspect-ratio gallery card next to it.
+    expect(galleryBox!.height).toBeGreaterThan(mainInfoBox!.height + 200);
+
+    // The tracklist card begins right after the gallery (the taller of the
+    // two) plus the standard card gap — not stretched to reserve extra space
+    // matching the gallery, and not left with a gap the size of the gallery
+    // under the shorter info-stack.
+    const gap = tracklistBox!.y - (galleryBox!.y + galleryBox!.height);
+    expect(gap).toBeGreaterThanOrEqual(8);
+    expect(gap).toBeLessThanOrEqual(24);
+
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+  });
+
+  test('mobile: gallery, info-stack and full-width sections keep the same single-column visual order as before this fix (spec 065, US3)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await goToMasterDetail(page);
+
+    const order = [
+      'master-detail-gallery-card',
+      'master-detail-main-info-card',
+      'master-detail-other-details-card',
+      'master-detail-tracklist-card',
+    ];
+    const boxes: { x: number; y: number; width: number; height: number }[] = [];
+    for (const id of order) {
+      const b = await page.getByTestId(id).boundingBox();
+      expect(b, `${id} should be measurable`).toBeTruthy();
+      boxes.push(b!);
+    }
+    // Single column: each card aligns to the first card's left edge and sits
+    // strictly below the previous one, exactly as before this fix.
+    for (let i = 1; i < boxes.length; i += 1) {
+      expect(Math.abs(boxes[i].x - boxes[0].x)).toBeLessThan(4);
+      expect(boxes[i].y).toBeGreaterThanOrEqual(boxes[i - 1].y + boxes[i - 1].height - 1);
+    }
+
+    const hasHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalScroll).toBe(false);
+  });
 });
 
 test.describe('Master release detail responsive WCAG 2.1 AA automated scan (spec 058, US1)', () => {

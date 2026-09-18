@@ -91,6 +91,37 @@ describe('MasterReleaseDetailPage', () => {
     expect(discogsLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
+  it('stacks the gallery/info-stack pair in a flex row instead of a shared grid row (spec 065, US2)', async () => {
+    mockGetMasterRelease.mockResolvedValue(fullMaster);
+    mockGetMasterReleaseVersions.mockResolvedValue(versionsPage);
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Hybrid Theory')).toBeInTheDocument());
+
+    // The gallery card and the info-stack div are adjacent siblings under a
+    // dedicated row wrapper that uses Flexbox (not a shared CSS Grid row), so
+    // a height mismatch between them can never reserve a gap under the
+    // shorter one (FR-001/FR-002).
+    const galleryCard = screen.getByTestId('master-detail-gallery-card');
+    const mainInfoCard = screen.getByTestId('master-detail-main-info-card');
+    const rowWrapper = galleryCard.parentElement;
+    expect(rowWrapper).not.toBeNull();
+    expect(rowWrapper?.className).toMatch(/\bflex\b/);
+    expect(rowWrapper?.className).toMatch(/lg:flex-row/);
+    expect(rowWrapper?.className).not.toMatch(/grid-cols-2/);
+    // The info-stack div (holding the main info + other details cards) is the
+    // gallery card's next sibling inside that same row wrapper.
+    expect(mainInfoCard.parentElement?.parentElement).toBe(rowWrapper);
+
+    // With no outer grid left to span, the full-width sections below no
+    // longer need col-span utility classes.
+    const tracklistCard = screen.getByTestId('master-detail-tracklist-card');
+    const versionsCard = screen.getByTestId('master-detail-versions-card');
+    expect(tracklistCard.className).not.toMatch(/col-span/);
+    expect(versionsCard.className).not.toMatch(/col-span/);
+  });
+
   it('omits the other-details card entirely when the master has no year, genres, or styles', async () => {
     mockGetMasterRelease.mockResolvedValue({
       ...fullMaster,
