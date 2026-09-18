@@ -135,6 +135,36 @@ describe('useIndependentColumnLayout', () => {
     expect(getByTestId('content1').style.top).toBe('0px');
   });
 
+  it('positions slots from heights measured synchronously on mount, without waiting for a ResizeObserver notification', () => {
+    installMatchMedia(true);
+
+    // Some engines (seen on Linux WebKit) deliver the first ResizeObserver
+    // notification well after first paint; until then every card would sit
+    // at top 0, overlapping. The mock observer here never fires at all.
+    const measured: Record<string, number> = { rail1: 320, rail2: 202, content1: 111 };
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const height = measured[this.dataset.testid ?? ''] ?? 0;
+      return { height, width: 0, top: 0, left: 0, right: 0, bottom: height, x: 0, y: 0 } as DOMRect;
+    });
+
+    const { getByTestId } = render(
+      <Harness
+        slots={[
+          { key: 'rail1', column: 'rail' },
+          { key: 'content1', column: 'content' },
+          { key: 'rail2', column: 'rail' },
+        ]}
+      />,
+    );
+
+    expect(getByTestId('rail1').style.top).toBe('0px');
+    expect(getByTestId('rail2').style.top).toBe(`${320 + 24}px`);
+    expect(getByTestId('content1').style.top).toBe('0px');
+    expect(getByTestId('container').style.height).toBe(`${320 + 24 + 202}px`);
+  });
+
   it('shifts only the same-column slots below a slot whose height changes after mount', () => {
     installMatchMedia(true);
 
