@@ -18,6 +18,12 @@ function renderHeader() {
 }
 
 describe('AppHeader', () => {
+  it('takes its height from the shared --header-h token, so sticky content can sit right below it (spec 067 T050 #2)', () => {
+    renderHeader();
+
+    expect(screen.getByRole('banner')).toHaveClass('h-(--header-h)');
+  });
+
   it('renders the hamburger trigger hidden at md+ and the icon nav hidden below md', () => {
     renderHeader();
 

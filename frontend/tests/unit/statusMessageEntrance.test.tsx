@@ -3,7 +3,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
 import { DiscogsRelinkNotice } from '../../src/components/DiscogsRelinkNotice';
-import { FeedSourceStatusBanner } from '../../src/components/FeedSourceStatusBanner';
 import { LibraryLinkRequired } from '../../src/components/LibraryLinkRequired';
 
 /**
@@ -11,8 +10,7 @@ import { LibraryLinkRequired } from '../../src/components/LibraryLinkRequired';
  * opacity-only entrance (`status-fade-in`: `--motion-duration-fade`,
  * `--ease-out`, NO translate/scale) is scoped to components that appear
  * *in response to a state change* and communicate status feedback
- * (apple-design §16). `FeedSourceStatusBanner` mounts when a news source
- * starts failing — a gentle entrance there earns its place.
+ * (apple-design §16).
  *
  * Permanent placeholders (`LibraryLinkRequired`, `DiscogsRelinkNotice`)
  * render on first paint as static wayfinding copy;
@@ -23,18 +21,6 @@ import { LibraryLinkRequired } from '../../src/components/LibraryLinkRequired';
  * ("does it earn its place?") and YAGNI, those three do not animate.
  */
 describe('status-message entrance (US5 / T086, revised T097)', () => {
-  it('FeedSourceStatusBanner fades its status role in when a source fails', () => {
-    render(
-      <FeedSourceStatusBanner
-        sourceStatuses={[
-          { sourceId: 's1', sourceName: 'Loudwire', status: 'unavailable' },
-        ]}
-      />,
-    );
-
-    expect(screen.getByRole('status')).toHaveClass('status-fade-in');
-  });
-
   it('LibraryLinkRequired renders statically and points the user to a way out — no entrance animation', () => {
     render(
       <MemoryRouter>

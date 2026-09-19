@@ -49,14 +49,16 @@ import { createApp } from '../../../src/app';
 
 const app = createApp();
 
-function rssXml(items: Array<{ title: string; link: string; pubDate: string }>): string {
+function rssXml(
+  items: Array<{ title: string; link: string; pubDate: string; guid?: string }>,
+): string {
   const itemsXml = items
     .map(
       (item) => `
       <item>
         <title>${item.title}</title>
         <link>${item.link}</link>
-        <guid>${item.link}</guid>
+        <guid>${item.guid ?? item.link}</guid>
         <pubDate>${item.pubDate}</pubDate>
       </item>`,
     )
@@ -101,9 +103,66 @@ describe('Feeds source API contract: GET /api/feeds/sources/:sourceId', () => {
       sourceName: 'Contract Feed H',
       status: 'ok',
     });
-    // No ARTICLES_PER_CATEGORY-style cap — all 12 come back, not just 10.
+    // No per-category cap — all 12 come back, not just 10.
     expect(res.body.articles).toHaveLength(12);
     expect(typeof res.body.generatedAt).toBe('string');
+  });
+
+  it('returns every article newest first, deduplicated by link then id, with no 7-day window or cap', async () => {
+    const { sessionToken } = await createTestSession('feeds-source-contract-user-5');
+    const HOUR_MS = 60 * 60 * 1000;
+    const DAY_MS = 24 * HOUR_MS;
+    const now = Date.now();
+
+    // 62 recent articles (more than the dashboard's 60 cap) plus one 10 days old.
+    const unique = Array.from({ length: 62 }).map((_, index) => ({
+      title: `Article ${index}`,
+      link: `https://contract-feed-h.test/${index}`,
+      pubDate: new Date(now - (index + 1) * HOUR_MS).toUTCString(),
+    }));
+    const old = {
+      title: 'Old article',
+      link: 'https://contract-feed-h.test/old',
+      pubDate: new Date(now - 10 * DAY_MS).toUTCString(),
+    };
+    const sameLink = {
+      title: 'Duplicate by link',
+      link: unique[0].link,
+      guid: 'dup-guid-by-link',
+      pubDate: new Date(now - 30 * 60 * 1000).toUTCString(),
+    };
+    const sameId = {
+      title: 'Duplicate by id',
+      link: 'https://contract-feed-h.test/dup-by-id',
+      guid: unique[1].link,
+      pubDate: new Date(now - 20 * 60 * 1000).toUTCString(),
+    };
+
+    // Feed order is oldest first, so "newest first" must come from the API.
+    nock('https://contract-feed-h.test')
+      .get('/rss')
+      .reply(200, rssXml([old, ...[...unique].reverse(), sameLink, sameId]));
+
+    const res = await request(app)
+      .get('/api/feeds/sources/contract-source-h')
+      .set('Authorization', `Bearer ${sessionToken}`);
+
+    expect(res.status).toBe(200);
+    const articles: Array<{
+      id: string;
+      link: string;
+      title: string;
+      publishedAt: string;
+    }> = res.body.articles;
+
+    expect(articles.map((a) => a.title)).toEqual([
+      ...unique.map((a) => a.title),
+      'Old article',
+    ]);
+    const times = articles.map((a) => new Date(a.publishedAt).getTime());
+    expect(times).toEqual([...times].sort((a, b) => b - a));
+    expect(new Set(articles.map((a) => a.link)).size).toBe(articles.length);
+    expect(new Set(articles.map((a) => a.id)).size).toBe(articles.length);
   });
 
   it('returns 200 with status "unavailable" and no articles for a failing/timed-out source', async () => {

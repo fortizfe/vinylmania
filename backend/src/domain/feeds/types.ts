@@ -65,4 +65,13 @@ export interface RawFeedItem {
   contentSnippet?: string;
   summary?: string;
   enclosureUrl?: string;
+  enclosureType?: string;
+  /** `content:encoded` HTML. */
+  contentEncoded?: string;
+  /** `media:content`, including entries nested in `media:group`. */
+  mediaContent?: { url: string; medium?: string; type?: string; width?: number }[];
+  /** `media:thumbnail@url` values. */
+  mediaThumbnails?: string[];
+  /** `itunes:image@href`. */
+  itunesImage?: string;
 }

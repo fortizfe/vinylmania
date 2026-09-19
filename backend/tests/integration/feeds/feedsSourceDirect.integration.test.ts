@@ -11,10 +11,10 @@ import { invalidateCache } from '../../../src/adapters/cache/cacheAside';
 import { clearEmulatorUsers } from '../../helpers/authEmulator';
 import { createTestSession } from '../../helpers/testSession';
 
-// A low-frequency source sharing a category with a prolific one, so the
-// general dashboard view's per-category top-10 cutoff excludes its articles
-// — this is exactly the scenario the direct per-source endpoint must fix
-// (spec 041 US3, FR-008, FR-009).
+// A prolific source, a quiet one whose only article is older than the
+// dashboard's 7-day window (spec 067 FR-010), and a flaky one. The direct
+// per-source endpoint is not windowed or capped (spec 041 US3, FR-008, FR-009;
+// spec 067 FR-013).
 jest.mock('../../../src/domain/feeds/feedSources', () => ({
   FEED_SOURCES: [
     {
@@ -48,6 +48,9 @@ jest.mock('../../../src/domain/feeds/feedSources', () => ({
 import { createApp } from '../../../src/app';
 
 const app = createApp();
+
+const HOUR_MS = 3_600_000;
+const hoursAgo = (h: number) => new Date(Date.now() - h * HOUR_MS).toUTCString();
 
 function rssXml(items: Array<{ title: string; link: string; pubDate: string }>): string {
   const itemsXml = items
@@ -86,20 +89,20 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
     nock.cleanAll();
   });
 
-  it("returns the quiet source's article via the direct endpoint even though it doesn't survive the general view's top-10 cutoff (Acceptance Scenario 1, FR-008)", async () => {
+  it("returns the quiet source's article via the direct endpoint even though it is outside the dashboard's 7-day window (Acceptance Scenario 1, FR-008; spec 067 FR-010)", async () => {
     const { sessionToken } = await createTestSession('feeds-source-direct-user');
 
-    // 10 recent items from the prolific source fill the News category's cap
-    // entirely, all newer than the quiet source's single article.
+    // 12 recent items from the prolific source: more than the old 10-cap,
+    // all well inside the 7-day window.
     nock('https://direct-prolific.test')
       .get('/rss')
       .reply(
         200,
         rssXml(
-          Array.from({ length: 10 }).map((_, index) => ({
+          Array.from({ length: 12 }).map((_, index) => ({
             title: `Prolific ${index}`,
             link: `https://direct-prolific.test/${index}`,
-            pubDate: new Date(Date.UTC(2026, 6, 10 + index)).toUTCString(),
+            pubDate: hoursAgo(1 + index),
           })),
         ),
       );
@@ -111,7 +114,7 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
           {
             title: 'Quiet Article',
             link: 'https://direct-quiet.test/1',
-            pubDate: new Date(Date.UTC(2026, 6, 1)).toUTCString(),
+            pubDate: hoursAgo(10 * 24),
           },
         ]),
       );
@@ -123,7 +126,8 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
     const newsCategory = dashboardRes.body.categories.find(
       (c: { category: string }) => c.category === 'News',
     );
-    expect(newsCategory.articles).toHaveLength(10);
+    // All 12 recent articles fit under the 60 cap; the stale quiet one does not qualify.
+    expect(newsCategory.articles).toHaveLength(12);
     expect(
       newsCategory.articles.some((a: { title: string }) => a.title === 'Quiet Article'),
     ).toBe(false);
@@ -149,7 +153,7 @@ describe('Direct per-source feed query (spec 041 US3, FR-008, FR-009, FR-010)', 
           {
             title: 'Visible Article',
             link: 'https://direct-prolific.test/1',
-            pubDate: new Date(Date.UTC(2026, 6, 10)).toUTCString(),
+            pubDate: hoursAgo(1),
           },
         ]),
       );
