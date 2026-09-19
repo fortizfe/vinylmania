@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FeedArticleCard } from '../../src/components/FeedArticleCard';
 import type { Article } from '../../src/services/feedsApi';
@@ -17,13 +17,13 @@ const baseArticle: Article = {
 
 describe('FeedArticleCard', () => {
   it('renders the provided image when present', () => {
-    render(
+    const { container } = render(
       <FeedArticleCard
         article={{ ...baseArticle, imageUrl: 'https://cdn.example.com/cover.jpg' }}
       />,
     );
 
-    const image = screen.getByRole('img', { name: baseArticle.title });
+    const image = container.querySelector('img');
     expect(image).toHaveAttribute('src', 'https://cdn.example.com/cover.jpg');
     expect(
       screen.queryByTestId('feed-article-thumbnail-placeholder'),
@@ -37,122 +37,187 @@ describe('FeedArticleCard', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
-  describe('fixed-height cards with truncated text (feature 028, US4, FR-007, FR-008)', () => {
-    it('applies the same fixed-height classes regardless of a short title and no excerpt', () => {
+  describe('Portada variants (feature 067, US2, FR-009, FR-011, FR-012, plan.md variant table)', () => {
+    const NOW = new Date('2026-09-19T12:00:00.000Z');
+    const withImage: Article = {
+      ...baseArticle,
+      imageUrl: 'https://cdn.example.com/cover.jpg',
+      publishedAt: '2026-09-19T09:00:00.000Z', // 3h before NOW
+    };
+    const variants = ['lead', 'tile', 'row'] as const;
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(NOW);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const imageBox = (container: HTMLElement) =>
+      container.querySelector('img')?.parentElement as HTMLElement;
+
+    it.each(variants)('%s: the title is an h3', (variant) => {
+      render(<FeedArticleCard article={withImage} variant={variant} />);
+
+      expect(
+        screen.getByRole('heading', { level: 3, name: baseArticle.title }),
+      ).toBeInTheDocument();
+    });
+
+    it.each(variants)(
+      '%s: one link opens the original in a new tab, named by the title',
+      (variant) => {
+        render(<FeedArticleCard article={withImage} variant={variant} />);
+
+        const links = screen.getAllByRole('link');
+        expect(links).toHaveLength(1);
+        expect(screen.getByRole('link', { name: baseArticle.title })).toBe(links[0]);
+        expect(links[0]).toHaveAttribute('href', baseArticle.link);
+        expect(links[0]).toHaveAttribute('target', '_blank');
+        expect(links[0]).toHaveAttribute('rel', 'noopener noreferrer');
+      },
+    );
+
+    it.each(variants)(
+      '%s: shows the source and relative age in a <time>, with the full date on hover and for AT',
+      (variant) => {
+        const { container } = render(
+          <FeedArticleCard article={withImage} variant={variant} />,
+        );
+
+        expect(screen.getByText(/Metal Injection/)).toBeInTheDocument();
+
+        const time = container.querySelector('time') as HTMLTimeElement;
+        expect(time).toHaveAttribute('datetime', withImage.publishedAt);
+        expect(time).toHaveTextContent('3h ago');
+
+        const fullDate = time.getAttribute('title') ?? '';
+        expect(fullDate).toMatch(/2026/);
+
+        const srOnly = time.querySelector('.sr-only');
+        expect(srOnly).not.toBeNull();
+        expect(srOnly).toHaveTextContent(fullDate);
+      },
+    );
+
+    it.each(variants)('%s: no longer shows a category badge (FR-013)', (variant) => {
+      render(<FeedArticleCard article={withImage} variant={variant} />);
+
+      expect(screen.queryByText(baseArticle.category)).not.toBeInTheDocument();
+    });
+
+    it('lead: shows the excerpt (hidden below sm, 2-line clamp) and loads the image eagerly with high priority', () => {
       const { container } = render(
-        <FeedArticleCard article={{ ...baseArticle, title: 'Short', excerpt: '' }} />,
+        <FeedArticleCard article={withImage} variant="lead" />,
       );
-
-      expect(container.firstChild).toHaveClass('h-40');
-      expect(container.firstChild).toHaveClass('sm:h-96');
-    });
-
-    it('applies the same fixed-height classes for a long title and excerpt', () => {
-      const { container } = render(
-        <FeedArticleCard
-          article={{
-            ...baseArticle,
-            title:
-              'A Very Long Article Title That Would Otherwise Wrap Across Several Lines And Grow The Card',
-            excerpt:
-              'A very long excerpt that goes on and on describing the article in far more detail than a short summary would, which would otherwise grow the card height well beyond its neighbors.',
-          }}
-        />,
-      );
-
-      expect(container.firstChild).toHaveClass('h-40');
-      expect(container.firstChild).toHaveClass('sm:h-96');
-    });
-
-    it('clamps the title to 2 lines', () => {
-      render(<FeedArticleCard article={baseArticle} />);
-
-      expect(screen.getByText(baseArticle.title)).toHaveClass('line-clamp-2');
-    });
-
-    it('clamps the excerpt (fewer lines on the compact mobile layout than on desktop)', () => {
-      render(<FeedArticleCard article={baseArticle} />);
 
       const excerpt = screen.getByText(baseArticle.excerpt);
-      expect(excerpt).toHaveClass('line-clamp-1');
-      expect(excerpt).toHaveClass('sm:line-clamp-2');
-    });
-  });
+      expect(excerpt.className).toMatch(/(^|\s)hidden(\s|$)/);
+      expect(excerpt.className).toMatch(/line-clamp-2/);
 
-  describe('responsive layout (feature 033, US2, FR-005, FR-007)', () => {
-    it('uses a compact row layout (image beside text) at the base breakpoint, column at sm:+', () => {
+      const image = container.querySelector('img');
+      expect(image).toHaveAttribute('loading', 'eager');
+      expect(image).toHaveAttribute('fetchpriority', 'high');
+      expect(imageBox(container)).toHaveClass('aspect-video');
+    });
+
+    it('lead: clamps the title to 3 lines in the display font', () => {
+      render(<FeedArticleCard article={withImage} variant="lead" />);
+
+      const title = screen.getByRole('heading', { level: 3 });
+      expect(title).toHaveClass('line-clamp-3');
+      expect(title).toHaveClass('font-display');
+    });
+
+    it('tile: shows no excerpt, loads the image lazily in a 16:9 box and clamps the title to 3 lines', () => {
       const { container } = render(
-        <FeedArticleCard
-          article={{ ...baseArticle, imageUrl: 'https://cdn.example.com/cover.jpg' }}
-        />,
+        <FeedArticleCard article={withImage} variant="tile" />,
       );
 
-      const link = container.querySelector('a');
-      expect(link).toHaveClass('flex-row');
-      expect(link).toHaveClass('sm:flex-col');
-
-      const image = screen.getByRole('img', { name: baseArticle.title });
-      expect(image).toHaveClass('w-24');
-      expect(image).toHaveClass('sm:w-full');
-      expect(image).toHaveClass('sm:aspect-video');
+      expect(screen.queryByText(baseArticle.excerpt)).not.toBeInTheDocument();
+      const image = container.querySelector('img');
+      expect(image).toHaveAttribute('loading', 'lazy');
+      expect(image).not.toHaveAttribute('fetchpriority', 'high');
+      expect(imageBox(container)).toHaveClass('aspect-video');
+      expect(screen.getByRole('heading', { level: 3 })).toHaveClass('line-clamp-3');
     });
 
-    it('still shows title, excerpt, source, category badge, and date in the compact layout', () => {
-      render(<FeedArticleCard article={baseArticle} />);
+    it('row: renders a square lazy thumbnail, no excerpt, and clamps the title to 2 lines', () => {
+      const { container } = render(<FeedArticleCard article={withImage} variant="row" />);
 
-      expect(screen.getByText(baseArticle.title)).toBeInTheDocument();
-      expect(screen.getByText(baseArticle.excerpt)).toBeInTheDocument();
-      expect(screen.getByText(baseArticle.category)).toBeInTheDocument();
-      expect(screen.getByText(/Metal Injection/)).toBeInTheDocument();
+      expect(imageBox(container).className).toMatch(/aspect-square|(^|\s)size-\d+/);
+      expect(imageBox(container)).not.toHaveClass('aspect-video');
+      expect(container.querySelector('img')).toHaveAttribute('loading', 'lazy');
+      expect(screen.queryByText(baseArticle.excerpt)).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 3 })).toHaveClass('line-clamp-2');
     });
 
-    it('still opens the original article in a new tab from the compact layout', () => {
-      render(<FeedArticleCard article={baseArticle} />);
+    it('row: the placeholder fills the same square box when there is no image', () => {
+      render(
+        <FeedArticleCard article={{ ...withImage, imageUrl: undefined }} variant="row" />,
+      );
 
-      const link = screen.getByRole('link', { name: new RegExp(baseArticle.title) });
-      expect(link).toHaveAttribute('href', baseArticle.link);
-      expect(link).toHaveAttribute('target', '_blank');
-      expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+      const box = screen.getByTestId('feed-article-thumbnail-placeholder')
+        .parentElement as HTMLElement;
+      expect(box.className).toMatch(/aspect-square|(^|\s)size-\d+/);
+    });
+
+    it('gives every source the same card structure for a given variant (equal prominence, feature 033 SC-004)', () => {
+      const classNamesFor = (sourceName: string) => {
+        const { container, unmount } = render(
+          <FeedArticleCard article={{ ...withImage, sourceName }} variant="tile" />,
+        );
+        const className = (container.firstChild as HTMLElement).className;
+        unmount();
+        return className;
+      };
+
+      expect(classNamesFor('Sample Source')).toBe(classNamesFor('Metal Injection'));
     });
   });
 
-  describe('equal prominence across sources (feature 033, US3, FR-010, SC-004, SC-007)', () => {
-    const priorityArticles = [
-      {
-        ...baseArticle,
-        id: 'mi-1',
-        sourceId: 'metal-injection',
-        sourceName: 'Metal Injection',
-      },
-      { ...baseArticle, id: 'ms-1', sourceId: 'metalsucks', sourceName: 'MetalSucks' },
-      {
-        ...baseArticle,
-        id: 'ls-1',
-        sourceId: 'louder-sound',
-        sourceName: 'Louder Sound',
-      },
-    ];
-    const nonPriorityArticle = {
-      ...baseArticle,
-      id: 'sample-1',
-      sourceId: 'sample-source',
-      sourceName: 'Sample Source',
-    };
+  describe('decorative image and monogram placeholder (feature 067, US1, FR-007, FR-008, D9)', () => {
+    const withImage = { ...baseArticle, imageUrl: 'https://cdn.example.com/cover.jpg' };
 
-    it('renders an identical card size/structure for every source, differing only in the badge/source text', () => {
-      const renders = [...priorityArticles, nonPriorityArticle].map((article) =>
-        render(<FeedArticleCard article={article} />),
+    it('treats the image as decorative so the title is not announced twice', () => {
+      const { container } = render(<FeedArticleCard article={withImage} />);
+
+      expect(container.querySelector('img')).toHaveAttribute('alt', '');
+      expect(screen.queryByRole('img', { name: baseArticle.title })).toBeNull();
+    });
+
+    it('does not send a referrer to the image host', () => {
+      const { container } = render(<FeedArticleCard article={withImage} />);
+
+      expect(container.querySelector('img')).toHaveAttribute(
+        'referrerpolicy',
+        'no-referrer',
       );
+    });
 
-      for (const { container } of renders) {
-        expect(container.firstChild).toHaveClass('h-40');
-        expect(container.firstChild).toHaveClass('sm:h-96');
-      }
+    it('shows a hidden-from-AT source monogram placeholder when there is no image', () => {
+      render(<FeedArticleCard article={baseArticle} />);
 
-      expect(screen.getByText(/Metal Injection/)).toBeInTheDocument();
-      expect(screen.getByText(/MetalSucks/)).toBeInTheDocument();
-      expect(screen.getByText(/Louder Sound/)).toBeInTheDocument();
-      expect(screen.getByText(/Sample Source/)).toBeInTheDocument();
+      const placeholder = screen.getByTestId('feed-article-thumbnail-placeholder');
+      expect(placeholder).toHaveTextContent('MI');
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('swaps a failed image for the placeholder inside the same fixed-aspect box', () => {
+      const { container } = render(<FeedArticleCard article={withImage} />);
+
+      const image = container.querySelector('img') as HTMLImageElement;
+      const box = image.parentElement as HTMLElement;
+      expect(box.className).toMatch(/aspect-/);
+
+      fireEvent.error(image);
+
+      expect(container.querySelector('img')).toBeNull();
+      const placeholder = screen.getByTestId('feed-article-thumbnail-placeholder');
+      expect(box).toContainElement(placeholder);
+      expect(placeholder).toHaveTextContent('MI');
     });
   });
 });

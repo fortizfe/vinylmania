@@ -32,6 +32,8 @@ type LogOutcome =
   // RSS feed dashboard fetch lifecycle (feature 024)
   | 'feed_fetch_failed'
   | 'feed_unavailable'
+  // RSS article image resolution (feature 067)
+  | 'feed_images_resolved'
   // Discogs retry/circuit-breaker resilience (feature 029)
   | 'circuit_open'
   // Theme preference persistence (feature 031)

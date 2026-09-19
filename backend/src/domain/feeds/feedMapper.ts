@@ -2,7 +2,13 @@ import type { Article, FeedSourceConfig, RawFeedItem } from './types';
 
 const EXCERPT_MAX_LENGTH = 200;
 const SAFE_IMAGE_URL_PATTERN = /^https?:\/\//i;
-const IMG_SRC_PATTERN = /<img[^>]+src=["']([^"']+)["']/i;
+const IMG_TAG_PATTERN = /<img\b[^>]*>/gi;
+const IMG_SRC_ATTR_PATTERN = /\ssrc\s*=\s*["']([^"']+)["']/i;
+const IMG_SIZE_ATTR_PATTERN = /\s(?:width|height)\s*=\s*["']?(\d+)/gi;
+const MIN_IMG_SIZE_PX = 50;
+const IMAGE_EXTENSION_PATTERN = /\.(?:jpe?g|png|gif|webp|avif)(?:[?#]|$)/i;
+const META_TAG_PATTERN = /<meta\b[^>]*>/gi;
+const META_ATTR_PATTERN = /\s(property|name|content)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
 
 const ENTITY_PATTERN = /&#(\d+);|&amp;|&lt;|&gt;|&quot;|&apos;/g;
 
@@ -69,21 +75,111 @@ function truncate(text: string, maxLength: number): string {
   return `${text.slice(0, maxLength).trimEnd()}…`;
 }
 
-/** Only http(s) image URLs are ever accepted — rejects javascript:/data: URIs from a hostile feed. */
+function safeUrl(url: string | undefined): string | undefined {
+  return url && SAFE_IMAGE_URL_PATTERN.test(url) ? url : undefined;
+}
+
+function isImageMedia(medium?: string, type?: string): boolean {
+  if (!medium && !type) {
+    return true; // unlabelled media:content is assumed to be an image
+  }
+  return medium === 'image' || Boolean(type?.startsWith('image/'));
+}
+
+/** First safe `<img src>` that isn't a tracking pixel (a width/height attribute under 50). */
+function firstImgSrc(html: string | undefined): string | undefined {
+  for (const [tag] of (html ?? '').matchAll(IMG_TAG_PATTERN)) {
+    const sizes = [...tag.matchAll(IMG_SIZE_ATTR_PATTERN)].map(([, n]) => Number(n));
+    if (sizes.some((n) => n < MIN_IMG_SIZE_PX)) {
+      continue;
+    }
+    const src = safeUrl(IMG_SRC_ATTR_PATTERN.exec(tag)?.[1]);
+    if (src) {
+      return src;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Feed-only image ladder (spec 067 D2): image enclosure → media:content
+ * (largest width) → media:thumbnail → itunes:image → <img> in content:encoded
+ * → <img> in content/summary. Only http(s) URLs are ever accepted — rejects
+ * javascript:/data:/relative URIs from a hostile feed.
+ */
 function extractImageUrl(item: RawFeedItem): string | undefined {
-  const enclosureUrl = item.enclosureUrl;
-  if (enclosureUrl && SAFE_IMAGE_URL_PATTERN.test(enclosureUrl)) {
+  const { enclosureUrl, enclosureType } = item;
+  const enclosureIsImage = enclosureType
+    ? enclosureType.startsWith('image/')
+    : IMAGE_EXTENSION_PATTERN.test(enclosureUrl ?? '');
+  if (enclosureIsImage && safeUrl(enclosureUrl)) {
     return enclosureUrl;
   }
 
-  const rawHtml = item.content ?? item.summary ?? '';
-
-  const imgMatch = IMG_SRC_PATTERN.exec(rawHtml);
-  if (imgMatch && SAFE_IMAGE_URL_PATTERN.test(imgMatch[1])) {
-    return imgMatch[1];
+  const media = (item.mediaContent ?? [])
+    .filter((m) => isImageMedia(m.medium, m.type) && safeUrl(m.url))
+    .sort((a, b) => (b.width ?? 0) - (a.width ?? 0));
+  if (media.length > 0) {
+    return media[0].url;
   }
 
-  return undefined;
+  return (
+    item.mediaThumbnails?.map(safeUrl).find(Boolean) ??
+    safeUrl(item.itunesImage) ??
+    firstImgSrc(item.contentEncoded) ??
+    firstImgSrc(item.content ?? item.summary)
+  );
+}
+
+/**
+ * The article page's `og:image`, else `twitter:image` (spec 067 D3):
+ * entity-decoded, resolved against `baseUrl`, http(s) only.
+ */
+export function extractPreviewImage(html: string, baseUrl: string): string | undefined {
+  const byKey = new Map<string, string>();
+  for (const [tag] of html.matchAll(META_TAG_PATTERN)) {
+    let key: string | undefined;
+    let content: string | undefined;
+    for (const [, attr, dq, sq] of tag.matchAll(META_ATTR_PATTERN)) {
+      const value = dq ?? sq;
+      if (attr.toLowerCase() === 'content') {
+        content = value;
+      } else {
+        key = value.toLowerCase();
+      }
+    }
+    if (key && content !== undefined && !byKey.has(key)) {
+      byKey.set(key, content);
+    }
+  }
+
+  const raw = byKey.get('og:image') ?? byKey.get('twitter:image');
+  if (!raw) {
+    return undefined;
+  }
+  try {
+    return safeUrl(new URL(decodeEntities(raw).trim(), baseUrl).href);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Nulls every page-lookup image URL shared by 2+ article links of one source
+ * refresh — a site logo, not an article image (spec 067 D6, FR-005).
+ */
+export function dropSharedPreviewImages(
+  results: Map<string, string | null>,
+): Map<string, string | null> {
+  const uses = new Map<string, number>();
+  for (const url of results.values()) {
+    if (url) {
+      uses.set(url, (uses.get(url) ?? 0) + 1);
+    }
+  }
+  return new Map(
+    [...results].map(([link, url]) => [link, url && uses.get(url) === 1 ? url : null]),
+  );
 }
 
 function resolvePublishedAt(item: RawFeedItem): string {

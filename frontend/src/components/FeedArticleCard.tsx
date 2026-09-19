@@ -1,61 +1,99 @@
 import clsx from 'clsx';
+import { useId, useState } from 'react';
 
+import {
+  feedCardLayout,
+  feedCardMedia,
+  formatArticleAge,
+  sourceMonogram,
+  type FeedArticleCardVariant,
+} from '../lib/newsLayout';
 import type { Article } from '../services/feedsApi';
-import { Badge } from './ui/Badge';
-import { Card } from './ui/Card';
+import { focusRing } from './ui/focusRing';
 import { pressableCard } from './ui/press';
 
-function formatPublishedAt(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
+const titleClassName = {
+  lead: 'line-clamp-3 font-display text-2xl leading-display tracking-display lg:text-4xl',
+  tile: 'line-clamp-3 text-base font-semibold',
+  row: 'line-clamp-2 text-sm font-semibold sm:text-base',
+} as const;
 
 interface FeedArticleCardProps {
   article: Article;
+  variant?: FeedArticleCardVariant;
 }
 
-export function FeedArticleCard({ article }: FeedArticleCardProps) {
+export function FeedArticleCard({ article, variant = 'tile' }: FeedArticleCardProps) {
+  const [failed, setFailed] = useState(false);
+  const titleId = useId();
+  const isLead = variant === 'lead';
+  const published = new Date(article.publishedAt);
+  const fullDate = published.toLocaleDateString('en', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   return (
-    <Card padding="sm" className="h-40 overflow-hidden sm:h-96">
+    <article>
       <a
         href={article.link}
         target="_blank"
         rel="noopener noreferrer"
+        aria-labelledby={titleId}
         className={clsx(
-          'flex h-full flex-row gap-3 no-underline sm:flex-col sm:gap-2',
+          'group rounded-xl no-underline',
+          feedCardLayout[variant],
+          focusRing,
           pressableCard,
         )}
       >
-        {article.imageUrl ? (
-          <img
-            src={article.imageUrl}
-            alt={article.title}
-            className="h-full w-24 shrink-0 self-stretch rounded-md object-cover sm:aspect-video sm:h-auto sm:w-full"
-          />
-        ) : (
-          <div
-            data-testid="feed-article-thumbnail-placeholder"
-            className="h-full w-24 shrink-0 self-stretch rounded-md bg-stone-100 dark:bg-stone-900 sm:aspect-video sm:h-auto sm:w-full"
-          />
-        )}
-        <div className="flex min-w-0 flex-1 flex-col gap-1 sm:gap-2">
-          <div className="flex items-center gap-2">
-            <Badge>{article.category}</Badge>
-            <span className="text-xs text-stone-500 dark:text-stone-400">
-              {article.sourceName} · {formatPublishedAt(article.publishedAt)}
-            </span>
-          </div>
-          <h3 className="line-clamp-2 text-lg font-semibold text-stone-900 dark:text-stone-100">
+        <div className={clsx('relative overflow-hidden', feedCardMedia[variant])}>
+          {article.imageUrl && !failed ? (
+            <img
+              src={article.imageUrl}
+              alt=""
+              decoding="async"
+              loading={isLead ? 'eager' : 'lazy'}
+              fetchPriority={isLead ? 'high' : undefined}
+              referrerPolicy="no-referrer"
+              onError={() => setFailed(true)}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div
+              data-testid="feed-article-thumbnail-placeholder"
+              aria-hidden="true"
+              className="flex h-full w-full items-center justify-center bg-stone-100 text-xl font-semibold tracking-tight text-stone-600 select-none dark:bg-stone-800 dark:text-stone-300"
+            >
+              {sourceMonogram(article.sourceName)}
+            </div>
+          )}
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h3
+            id={titleId}
+            className={clsx(
+              'text-stone-900 decoration-2 underline-offset-2 group-hover:underline dark:text-stone-100',
+              titleClassName[variant],
+            )}
+          >
             {article.title}
           </h3>
-          <p className="line-clamp-1 text-sm text-stone-600 sm:line-clamp-2 dark:text-stone-300">
-            {article.excerpt}
+          {isLead && (
+            <p className="hidden text-sm text-stone-600 sm:line-clamp-2 dark:text-stone-300">
+              {article.excerpt}
+            </p>
+          )}
+          <p className="text-xs text-stone-600 dark:text-stone-400">
+            {article.sourceName} ·{' '}
+            <time dateTime={article.publishedAt} title={fullDate}>
+              {formatArticleAge(article.publishedAt, new Date())}
+              <span className="sr-only">, {fullDate}</span>
+            </time>
           </p>
         </div>
       </a>
-    </Card>
+    </article>
   );
 }

@@ -1,5 +1,9 @@
-import { mapFeedItem } from '../../../../src/domain/feeds/feedMapper';
-import type { FeedSourceConfig } from '../../../../src/domain/feeds/types';
+import {
+  dropSharedPreviewImages,
+  extractPreviewImage,
+  mapFeedItem,
+} from '../../../../src/domain/feeds/feedMapper';
+import type { FeedSourceConfig, RawFeedItem } from '../../../../src/domain/feeds/types';
 
 const source: FeedSourceConfig = {
   id: 'metal-injection',
@@ -189,11 +193,373 @@ describe('mapFeedItem', () => {
 
     it('still decodes an ordinary, single-escaped ampersand correctly (regression)', () => {
       const mapped = mapFeedItem(
-        { title: 'AC&amp;DC Tribute Album', link: 'https://example.com/normal-ampersand' },
+        {
+          title: 'AC&amp;DC Tribute Album',
+          link: 'https://example.com/normal-ampersand',
+        },
         source,
       );
 
       expect(mapped?.title).toBe('AC&DC Tribute Album');
     });
+  });
+});
+
+describe('mapFeedItem image discovery ladder (spec 067 D2, FR-003)', () => {
+  function imageOf(fields: Partial<RawFeedItem>): string | undefined {
+    return mapFeedItem(
+      { title: 'T', link: 'https://example.com/ladder', ...fields },
+      source,
+    )?.imageUrl;
+  }
+
+  describe('enclosure', () => {
+    it('uses an enclosure whose type is image/*', () => {
+      expect(
+        imageOf({
+          enclosureUrl: 'https://cdn.example.com/cover.webp',
+          enclosureType: 'image/webp',
+        }),
+      ).toBe('https://cdn.example.com/cover.webp');
+    });
+
+    it('skips an audio/mpeg enclosure and falls through to the next rung', () => {
+      expect(
+        imageOf({
+          enclosureUrl: 'https://cdn.example.com/episode.mp3',
+          enclosureType: 'audio/mpeg',
+          content: '<img src="https://cdn.example.com/inline.jpg">',
+        }),
+      ).toBe('https://cdn.example.com/inline.jpg');
+    });
+
+    it('uses a typeless enclosure with an image extension', () => {
+      expect(imageOf({ enclosureUrl: 'https://cdn.example.com/cover.png' })).toBe(
+        'https://cdn.example.com/cover.png',
+      );
+    });
+
+    it('skips a typeless enclosure without an image extension', () => {
+      expect(
+        imageOf({ enclosureUrl: 'https://cdn.example.com/episode.mp3' }),
+      ).toBeUndefined();
+    });
+  });
+
+  describe('media:content', () => {
+    it('prefers a medium="image" entry over a non-image entry listed first', () => {
+      expect(
+        imageOf({
+          mediaContent: [
+            { url: 'https://cdn.example.com/clip.mp4', medium: 'video', width: 1920 },
+            { url: 'https://cdn.example.com/still.jpg', medium: 'image', width: 640 },
+          ],
+        }),
+      ).toBe('https://cdn.example.com/still.jpg');
+    });
+
+    it('treats an image/* type as an image when medium is absent', () => {
+      expect(
+        imageOf({
+          mediaContent: [
+            { url: 'https://cdn.example.com/clip.mp4', type: 'video/mp4' },
+            { url: 'https://cdn.example.com/still.jpg', type: 'image/jpeg' },
+          ],
+        }),
+      ).toBe('https://cdn.example.com/still.jpg');
+    });
+
+    it('picks the largest width among image entries', () => {
+      expect(
+        imageOf({
+          mediaContent: [
+            { url: 'https://cdn.example.com/small.jpg', medium: 'image', width: 300 },
+            { url: 'https://cdn.example.com/large.jpg', medium: 'image', width: 1200 },
+            { url: 'https://cdn.example.com/medium.jpg', medium: 'image', width: 800 },
+          ],
+        }),
+      ).toBe('https://cdn.example.com/large.jpg');
+    });
+
+    // media:group children arrive already flattened into mediaContent by the
+    // adapter (data-model.md); the group parsing itself is asserted in
+    // feedSourceAdapter.test.ts.
+  });
+
+  it('uses media:thumbnail when there is no enclosure or media:content', () => {
+    expect(imageOf({ mediaThumbnails: ['https://cdn.example.com/thumb.jpg'] })).toBe(
+      'https://cdn.example.com/thumb.jpg',
+    );
+  });
+
+  it('uses itunes:image when nothing above it is present', () => {
+    expect(imageOf({ itunesImage: 'https://cdn.example.com/itunes.jpg' })).toBe(
+      'https://cdn.example.com/itunes.jpg',
+    );
+  });
+
+  it('uses the first <img> in content:encoded before one in content', () => {
+    expect(
+      imageOf({
+        contentEncoded: '<p>x</p><img src="https://cdn.example.com/encoded.jpg">',
+        content: '<img src="https://cdn.example.com/description.jpg">',
+      }),
+    ).toBe('https://cdn.example.com/encoded.jpg');
+  });
+
+  it('uses the first <img> in summary when content is absent', () => {
+    expect(imageOf({ summary: '<img src="https://cdn.example.com/summary.jpg">' })).toBe(
+      'https://cdn.example.com/summary.jpg',
+    );
+  });
+
+  describe('tracking pixels (< 50 px)', () => {
+    it('skips an <img width="1" height="1"> and takes the next <img>', () => {
+      expect(
+        imageOf({
+          content:
+            '<img src="https://pixel.example.com/p.gif" width="1" height="1"><img src="https://cdn.example.com/real.jpg">',
+        }),
+      ).toBe('https://cdn.example.com/real.jpg');
+    });
+
+    it('skips an <img> with only a small height attribute', () => {
+      expect(
+        imageOf({
+          contentEncoded:
+            '<img height="10" src="https://pixel.example.com/p.gif"><img src="https://cdn.example.com/real.jpg">',
+        }),
+      ).toBe('https://cdn.example.com/real.jpg');
+    });
+
+    it('keeps an <img> exactly 50 px wide', () => {
+      expect(
+        imageOf({ content: '<img src="https://cdn.example.com/fifty.jpg" width="50">' }),
+      ).toBe('https://cdn.example.com/fifty.jpg');
+    });
+  });
+
+  describe('unsafe URLs are rejected on every rung', () => {
+    it.each<[string, Partial<RawFeedItem>]>([
+      [
+        'javascript: enclosure',
+        { enclosureUrl: 'javascript:alert(1)', enclosureType: 'image/png' },
+      ],
+      [
+        'data: media:content',
+        { mediaContent: [{ url: 'data:image/png;base64,AAAA', medium: 'image' }] },
+      ],
+      [
+        'relative media:content',
+        { mediaContent: [{ url: '/images/a.jpg', medium: 'image' }] },
+      ],
+      ['javascript: media:thumbnail', { mediaThumbnails: ['javascript:alert(1)'] }],
+      ['relative itunes:image', { itunesImage: 'images/cover.jpg' }],
+      [
+        'data: <img> in content:encoded',
+        { contentEncoded: '<img src="data:image/gif;base64,R0lG">' },
+      ],
+      ['relative <img> in content', { content: '<img src="/wp-content/uploads/a.jpg">' }],
+    ])('%s → no image', (_label, fields) => {
+      expect(imageOf(fields)).toBeUndefined();
+    });
+  });
+
+  describe('precedence when several rungs are present', () => {
+    const allRungs: Partial<RawFeedItem> = {
+      enclosureUrl: 'https://cdn.example.com/1-enclosure.jpg',
+      enclosureType: 'image/jpeg',
+      mediaContent: [{ url: 'https://cdn.example.com/2-media.jpg', medium: 'image' }],
+      mediaThumbnails: ['https://cdn.example.com/3-thumb.jpg'],
+      itunesImage: 'https://cdn.example.com/4-itunes.jpg',
+      contentEncoded: '<img src="https://cdn.example.com/5-encoded.jpg">',
+      content: '<img src="https://cdn.example.com/6-content.jpg">',
+    };
+
+    it.each<[keyof RawFeedItem | 'none', string | undefined, (keyof RawFeedItem)[]]>([
+      ['none', 'https://cdn.example.com/1-enclosure.jpg', []],
+      ['enclosureUrl', 'https://cdn.example.com/2-media.jpg', ['enclosureUrl']],
+      [
+        'mediaContent',
+        'https://cdn.example.com/3-thumb.jpg',
+        ['enclosureUrl', 'mediaContent'],
+      ],
+      [
+        'mediaThumbnails',
+        'https://cdn.example.com/4-itunes.jpg',
+        ['enclosureUrl', 'mediaContent', 'mediaThumbnails'],
+      ],
+      [
+        'itunesImage',
+        'https://cdn.example.com/5-encoded.jpg',
+        ['enclosureUrl', 'mediaContent', 'mediaThumbnails', 'itunesImage'],
+      ],
+      [
+        'contentEncoded',
+        'https://cdn.example.com/6-content.jpg',
+        [
+          'enclosureUrl',
+          'mediaContent',
+          'mediaThumbnails',
+          'itunesImage',
+          'contentEncoded',
+        ],
+      ],
+    ])('removing rungs up to %s yields %s', (_label, expected, removed) => {
+      const fields: Partial<RawFeedItem> = { ...allRungs };
+      for (const key of removed) {
+        delete fields[key];
+      }
+      expect(imageOf(fields)).toBe(expected);
+    });
+  });
+});
+
+describe('extractPreviewImage (spec 067 D3)', () => {
+  const baseUrl = 'https://site.example.com/2026/09/18/post/';
+
+  function head(meta: string): string {
+    return `<html><head><title>Post</title>${meta}</head><body></body></html>`;
+  }
+
+  it('reads og:image with property before content', () => {
+    expect(
+      extractPreviewImage(
+        head('<meta property="og:image" content="https://cdn.example.com/og.jpg" />'),
+        baseUrl,
+      ),
+    ).toBe('https://cdn.example.com/og.jpg');
+  });
+
+  it('reads og:image with content before property', () => {
+    expect(
+      extractPreviewImage(
+        head('<meta content="https://cdn.example.com/og.jpg" property="og:image">'),
+        baseUrl,
+      ),
+    ).toBe('https://cdn.example.com/og.jpg');
+  });
+
+  it('falls back to twitter:image (name attribute, either order)', () => {
+    expect(
+      extractPreviewImage(
+        head('<meta name="twitter:image" content="https://cdn.example.com/tw.jpg">'),
+        baseUrl,
+      ),
+    ).toBe('https://cdn.example.com/tw.jpg');
+    expect(
+      extractPreviewImage(
+        head('<meta content="https://cdn.example.com/tw2.jpg" name="twitter:image">'),
+        baseUrl,
+      ),
+    ).toBe('https://cdn.example.com/tw2.jpg');
+  });
+
+  it('prefers og:image over twitter:image even when twitter:image comes first', () => {
+    expect(
+      extractPreviewImage(
+        head(
+          '<meta name="twitter:image" content="https://cdn.example.com/tw.jpg"><meta property="og:image" content="https://cdn.example.com/og.jpg">',
+        ),
+        baseUrl,
+      ),
+    ).toBe('https://cdn.example.com/og.jpg');
+  });
+
+  it('ignores og:image:width / og:image:alt siblings', () => {
+    expect(
+      extractPreviewImage(
+        head(
+          '<meta property="og:image:width" content="1200"><meta property="og:image:alt" content="cover"><meta property="og:image" content="https://cdn.example.com/og.jpg">',
+        ),
+        baseUrl,
+      ),
+    ).toBe('https://cdn.example.com/og.jpg');
+  });
+
+  it('decodes &amp; in the content URL', () => {
+    expect(
+      extractPreviewImage(
+        head(
+          '<meta property="og:image" content="https://cdn.example.com/i.jpg?w=1200&amp;h=630">',
+        ),
+        baseUrl,
+      ),
+    ).toBe('https://cdn.example.com/i.jpg?w=1200&h=630');
+  });
+
+  it('resolves a relative URL against baseUrl', () => {
+    expect(
+      extractPreviewImage(
+        head('<meta property="og:image" content="/uploads/cover.jpg">'),
+        baseUrl,
+      ),
+    ).toBe('https://site.example.com/uploads/cover.jpg');
+  });
+
+  it.each([
+    'javascript:alert(1)',
+    'data:image/png;base64,AAAA',
+    'ftp://cdn.example.com/a.jpg',
+  ])('rejects a non-http(s) URL (%s)', (url) => {
+    expect(
+      extractPreviewImage(head(`<meta property="og:image" content="${url}">`), baseUrl),
+    ).toBeUndefined();
+  });
+
+  it('returns undefined when there is no preview meta', () => {
+    expect(
+      extractPreviewImage(
+        head('<meta name="description" content="nothing here">'),
+        baseUrl,
+      ),
+    ).toBeUndefined();
+  });
+});
+
+describe('dropSharedPreviewImages (spec 067 D6, FR-005)', () => {
+  const LOGO = 'https://site.example.com/horns-512.png';
+
+  it('nulls a URL shared by 2+ links and keeps unique URLs and existing nulls', () => {
+    const results = new Map<string, string | null>([
+      ['https://site.example.com/a', LOGO],
+      ['https://site.example.com/b', LOGO],
+      ['https://site.example.com/c', LOGO],
+      ['https://site.example.com/d', 'https://cdn.example.com/unique-d.jpg'],
+      ['https://site.example.com/e', null],
+    ]);
+
+    const filtered = dropSharedPreviewImages(results);
+
+    expect(Object.fromEntries(filtered)).toEqual({
+      'https://site.example.com/a': null,
+      'https://site.example.com/b': null,
+      'https://site.example.com/c': null,
+      'https://site.example.com/d': 'https://cdn.example.com/unique-d.jpg',
+      'https://site.example.com/e': null,
+    });
+  });
+
+  it('keeps a map of unique URLs unchanged', () => {
+    const results = new Map<string, string | null>([
+      ['https://site.example.com/a', 'https://cdn.example.com/a.jpg'],
+      ['https://site.example.com/b', 'https://cdn.example.com/b.jpg'],
+    ]);
+
+    expect(Object.fromEntries(dropSharedPreviewImages(results))).toEqual(
+      Object.fromEntries(results),
+    );
+  });
+
+  it('does not mutate the input map', () => {
+    const results = new Map<string, string | null>([
+      ['https://site.example.com/a', LOGO],
+      ['https://site.example.com/b', LOGO],
+    ]);
+    const before = Object.fromEntries(results);
+
+    dropSharedPreviewImages(results);
+
+    expect(Object.fromEntries(results)).toEqual(before);
   });
 });

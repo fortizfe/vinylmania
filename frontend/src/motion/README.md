@@ -12,19 +12,19 @@ the mirrored `--ease-*` / `--motion-duration-*` custom properties in
 
 ## Motion tokens (single source of truth)
 
-| Token | Value | Use |
-|-------|-------|-----|
-| `easing.out` / `--ease-out` | `cubic-bezier(0.23, 1, 0.32, 1)` | entrances, exits, press-release, fades |
-| `easing.inOut` / `--ease-in-out` | `cubic-bezier(0.77, 0, 0.175, 1)` | on-screen move/morph |
-| `easing.drawer` / `--ease-drawer` | `cubic-bezier(0.32, 0.72, 0, 1)` | non-gesture drawer slide |
-| `motionDuration.press` / `--motion-duration-press` | `130 ms` | pressed-state transition |
-| `motionDuration.fade` / `--motion-duration-fade` | `200 ms` | modal/dropdown fade, reduced-motion crossfade, input focus-border, header scroll-edge, status entrance |
-| `motionDuration.collapse` / `--motion-duration-collapse` | `200 ms` | disclosure height+opacity |
-| `motionDuration.drawer` / `--motion-duration-drawer` | `250 ms` | drawer slide (non-gesture open) |
-| `spring.default` | `{ spring, duration 0.4, bounce 0 }` | UI springs, no overshoot (modal scale, toggle knob, sliding pill) |
-| `spring.sheet` | `{ spring, duration 0.35, bounce 0 }` | sheet settle to open/closed after a drag |
-| `spring.momentum` | `{ spring, duration 0.5, bounce 0.2 }` | drag-release fling (dismiss, gallery image change) |
-| `dismiss.distanceRatio` / `.velocity` / `.elastic` | `0.45` / `500 px/s` / `0.15` | `Sheet` drag-to-dismiss decision + rubber-band |
+| Token                                                    | Value                                  | Use                                                                                                    |
+| -------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `easing.out` / `--ease-out`                              | `cubic-bezier(0.23, 1, 0.32, 1)`       | entrances, exits, press-release, fades                                                                 |
+| `easing.inOut` / `--ease-in-out`                         | `cubic-bezier(0.77, 0, 0.175, 1)`      | on-screen move/morph                                                                                   |
+| `easing.drawer` / `--ease-drawer`                        | `cubic-bezier(0.32, 0.72, 0, 1)`       | non-gesture drawer slide                                                                               |
+| `motionDuration.press` / `--motion-duration-press`       | `130 ms`                               | pressed-state transition                                                                               |
+| `motionDuration.fade` / `--motion-duration-fade`         | `200 ms`                               | modal/dropdown fade, reduced-motion crossfade, input focus-border, header scroll-edge, status entrance |
+| `motionDuration.collapse` / `--motion-duration-collapse` | `200 ms`                               | disclosure height+opacity                                                                              |
+| `motionDuration.drawer` / `--motion-duration-drawer`     | `250 ms`                               | drawer slide (non-gesture open)                                                                        |
+| `spring.default`                                         | `{ spring, duration 0.4, bounce 0 }`   | UI springs, no overshoot (modal scale, toggle knob, sliding pill)                                      |
+| `spring.sheet`                                           | `{ spring, duration 0.35, bounce 0 }`  | sheet settle to open/closed after a drag                                                               |
+| `spring.momentum`                                        | `{ spring, duration 0.5, bounce 0.2 }` | drag-release fling (dismiss, gallery image change)                                                     |
+| `dismiss.distanceRatio` / `.velocity` / `.elastic`       | `0.45` / `500 px/s` / `0.15`           | `Sheet` drag-to-dismiss decision + rubber-band                                                         |
 
 Typography tokens (`--tracking-display` `-0.02em`, `--leading-display` `1.05`)
 live in the same `@theme` block and surface as the `tracking-display` /
@@ -45,7 +45,7 @@ Every shared UI concept resolves to **exactly one** pattern below. Every
 interactive control is `pressable` **plus** at most one higher-level pattern.
 The focus treatment is the same everywhere: the shared `focusRing` constant
 (`src/components/ui/focusRing.ts` —
-`focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`).
+`focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`).
 `tests/unit/architecture/focus-ring-consistency.test.ts` fails the build on any
 other focus-visible treatment in `components/**`.
 
@@ -67,7 +67,7 @@ other focus-visible treatment in `components/**`.
   `HeaderNavIcons`, `HeaderSearchBox`, `HamburgerMenu` trigger + nav rows,
   `ResultCardActions`, `GoogleSignInButton`, `RecordCard`, `RecordListRow`,
   `SearchResultCard`, `SearchResultListRow`, `FeedArticleCard`,
-  `FeedCategoryFilterBar` / `FeedSourceFilterBar` chips, `MasterVersionsTable`
+  `FeedSourceFilterBar` chips, `MasterVersionsTable`
   navigable rows, `GalleryFullscreenViewer` thumbnails.
 
 ### 2. `binary-switch` — genuine on/off
@@ -77,11 +77,11 @@ other focus-visible treatment in `components/**`.
 - **Affordance**: a knob that springs across the track; paired visual crossfade
   where relevant (sky/stars).
 - **Motion tokens**: `spring.default` (knob translate), `--motion-duration-fade`
-  + `--ease-out` (crossfade).
+  - `--ease-out` (crossfade).
 - **Focus**: `focusRing`.
 - **Reduced motion**: knob position changes with no transition; opacity
   crossfade only.
-- **Conforms**: `ThemeToggle`. *Only* for true binary state — never for a
+- **Conforms**: `ThemeToggle`. _Only_ for true binary state — never for a
   2-option choice (that is `segmented-selector`).
 
 ### 3. `segmented-selector` — 2–4 exclusive named options
@@ -109,7 +109,7 @@ other focus-visible treatment in `components/**`.
 - **Focus**: `focusRing` on the control.
 - **Reduced motion**: nothing to reduce (no transform).
 - **Conforms**: `Checkbox`, `SelectableListFilter` option rows,
-  `FeedCategoryFilterBar` / `FeedSourceFilterBar` (single-select chip bars use
+  `FeedSourceFilterBar` (a single-select chip bar using
   `aria-pressed` toggle buttons — the same visual family, one selected at a
   time).
 
@@ -144,21 +144,18 @@ other focus-visible treatment in `components/**`.
 - **Reduced motion**: opacity-only enter/exit, drag still tracks 1:1 but settles
   with an instant/near-instant snap.
 - **Conforms**: `Overlay` (primitive), `Sheet` (primitive), `Modal` (`center`
-  + `end`), `GalleryFullscreenViewer`, `HamburgerMenu` drawer,
-  `SelectableListFilter` modal. Every gesture outcome has a button + keyboard
-  equivalent (FR-013).
+  - `end`), `GalleryFullscreenViewer`, `HamburgerMenu` drawer,
+    `SelectableListFilter` modal. Every gesture outcome has a button + keyboard
+    equivalent (FR-013).
 
-### Non-interactive: `status-fade-in`
+### Non-interactive status and placeholders
 
-`FeedSourceStatusBanner` gets one gentle opacity-only entrance
-(`--motion-duration-fade`, `--ease-out`, **no** translate/scale — it must not
-pull the eye from its copy). Scoped to it alone: the banner mounts *in response
-to a news source failing*, so the entrance is genuine status feedback
-(apple-design §16). First-paint placeholders that just describe a state
-(`LibraryLinkRequired`, `DiscogsRelinkNotice`) render
-statically — an entrance there communicates nothing and its ancestor `opacity`
-ramp tripped the axe-core contrast scanner mid-fade (see spec 059 T097 /
-`e2e/helpers/settleEntrance.ts`). The header scroll-edge
+No status entrance animations. Feature 067 D12 replaced the source-failure
+banner (the only `status-fade-in` user) with a static "unavailable" marker on
+its filter chip, and the utility was removed. First-paint placeholders
+(`LibraryLinkRequired`, `DiscogsRelinkNotice`) render statically too: an
+ancestor `opacity` ramp tripped the axe-core contrast scanner mid-fade (see
+spec 059 T097 / `e2e/helpers/settleEntrance.ts`). The header scroll-edge
 treatment (`AppHeader`, `LandingHeader`) fades a `box-shadow` in on scroll via
 `transition-shadow` + `--motion-duration-fade`; the surface stays the opaque
 near-black token (constitution wins over full HIG translucency — research.md

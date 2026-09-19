@@ -1,5 +1,14 @@
-import { mapFeedItem } from '../../domain/feeds/feedMapper';
+import {
+  dropSharedPreviewImages,
+  extractPreviewImage,
+  mapFeedItem,
+} from '../../domain/feeds/feedMapper';
 import { FEED_SOURCES } from '../../domain/feeds/feedSources';
+import {
+  byNewest,
+  dedupe,
+  selectDashboardArticles,
+} from '../../domain/feeds/selectDashboardArticles';
 import type {
   Article,
   CategoryGroup,
@@ -11,9 +20,13 @@ import type {
 import { logger } from '../../config/logger';
 import type { CachePort } from '../../ports/cache/cachePort';
 import type { FeedSourcePort } from '../../ports/feeds/feedSourcePort';
+import { mapWithConcurrency } from '../../shared/concurrency';
 
 const CACHE_TTL_SECONDS = 20 * 60;
-const ARTICLES_PER_CATEGORY = 10;
+// spec 067 D4/D5: article-page image lookups.
+const IMAGE_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
+const MAX_LOOKUPS_PER_REFRESH = 8;
+const LOOKUP_TIMEOUT_MS = 1000;
 
 interface FeedsAggregationUseCase {
   getDashboard(): Promise<DashboardResponse>;
@@ -25,20 +38,92 @@ export function createFeedsAggregationUseCase(deps: {
   cache: CachePort;
   /** Overridable for tests; defaults to the real static catalog. */
   feedSources?: FeedSourceConfig[];
+  /** Overridable for tests; the dashboard's 7-day window is relative to it. */
+  now?: () => Date;
 }): FeedsAggregationUseCase {
   const { feedSource, cache } = deps;
+  const now = deps.now ?? (() => new Date());
   const sources = deps.feedSources ?? FEED_SOURCES;
+
+  /**
+   * Fills `imageUrl` of feed-image-less articles from their page's og:image
+   * (spec 067 D4–D6, D13). Mutates `articles`, which the caller just built.
+   */
+  async function resolvePageImages(source: FeedSourceConfig, articles: Article[]) {
+    const pending = articles.filter((article) => !article.imageUrl).sort(byNewest);
+    let lookups = 0;
+    let lookupTimeouts = 0;
+
+    const lookup = async (link: string): Promise<string | null> => {
+      if (lookups >= MAX_LOOKUPS_PER_REFRESH) {
+        throw new Error('page lookup budget spent'); // not cached: retried next refresh
+      }
+      lookups += 1;
+      let html: string | null;
+      try {
+        html = await feedSource.fetchArticleHead(link, LOOKUP_TIMEOUT_MS);
+      } catch (err) {
+        lookupTimeouts += 1;
+        throw err;
+      }
+      return (html && extractPreviewImage(html, link)) || null;
+    };
+
+    const found = await mapWithConcurrency(pending, MAX_LOOKUPS_PER_REFRESH, (article) =>
+      cache
+        .withCache(`feeds:img:${article.link}`, IMAGE_CACHE_TTL_SECONDS, () =>
+          lookup(article.link),
+        )
+        .catch(() => undefined),
+    );
+
+    const results = new Map<string, string | null>();
+    pending.forEach((article, index) => {
+      const url = found[index];
+      if (url !== undefined) {
+        results.set(article.link, url);
+      }
+    });
+    const kept = dropSharedPreviewImages(results);
+
+    let fromPage = 0;
+    let logoDiscarded = 0;
+    for (const article of pending) {
+      const url = kept.get(article.link);
+      if (url) {
+        article.imageUrl = url;
+        fromPage += 1;
+      } else if (results.get(article.link)) {
+        logoDiscarded += 1;
+      }
+    }
+
+    const fromFeed = articles.length - pending.length;
+    logger.info({
+      route: 'feeds:images',
+      outcome: 'feed_images_resolved',
+      meta: {
+        sourceId: source.id,
+        articles: articles.length,
+        fromFeed,
+        fromPage,
+        placeholders: pending.length - fromPage,
+        lookups,
+        lookupTimeouts,
+        logoDiscarded,
+      },
+    });
+  }
 
   async function fetchSourceArticles(source: FeedSourceConfig): Promise<Article[]> {
     return cache.withCache(`feeds:${source.id}`, CACHE_TTL_SECONDS, async () => {
       const items = await feedSource.fetchFeed(source.feedUrl);
-      const articles: Article[] = [];
-      for (const item of items) {
-        const mapped = mapFeedItem(item, source);
-        if (mapped) {
-          articles.push(mapped);
-        }
-      }
+      const articles = dedupe(
+        items
+          .map((item) => mapFeedItem(item, source))
+          .filter((article) => article !== undefined),
+      );
+      await resolvePageImages(source, articles);
       return articles;
     });
   }
@@ -60,11 +145,7 @@ export function createFeedsAggregationUseCase(deps: {
 
     return Array.from(byCategory.entries()).map(([category, categoryArticles]) => ({
       category,
-      articles: [...categoryArticles]
-        .sort(
-          (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-        )
-        .slice(0, ARTICLES_PER_CATEGORY),
+      articles: categoryArticles,
     }));
   }
 
@@ -99,13 +180,14 @@ export function createFeedsAggregationUseCase(deps: {
           route: 'feeds:aggregator',
           outcome: 'feed_unavailable',
           meta: { sourceId: source.id },
-          message: result.reason instanceof Error ? result.reason.message : 'unknown error',
+          message:
+            result.reason instanceof Error ? result.reason.message : 'unknown error',
         });
       }
     });
 
     return {
-      categories: groupByCategory(allArticles),
+      categories: groupByCategory(selectDashboardArticles(allArticles, now())),
       sourceStatuses,
       generatedAt: new Date().toISOString(),
     };
@@ -123,9 +205,7 @@ export function createFeedsAggregationUseCase(deps: {
         sourceId: source.id,
         sourceName: source.name,
         status: 'ok',
-        articles: [...articles].sort(
-          (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-        ),
+        articles: [...articles].sort(byNewest),
         generatedAt: new Date().toISOString(),
       };
     } catch (err) {

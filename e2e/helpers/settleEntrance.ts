@@ -44,16 +44,3 @@ export async function settleEntranceOpacity(page: Page, selector: string): Promi
     )
     .toBe('settled');
 }
-
-/**
- * Spec 059 — Polish / T086, scoped in T097.
- *
- * `.status-fade-in` (see `frontend/src/styles/global.css`) runs
- * `@keyframes vinyl-status-fade-in { from { opacity: 0 } to { opacity: 1 } }`
- * for `--motion-duration-fade` (~200 ms) with `both` fill on the
- * `FeedSourceStatusBanner` when a news source starts failing. Call this
- * before `runAxeScan` on any page that can render that banner.
- */
-export async function settleStatusFadeIn(page: Page): Promise<void> {
-  await settleEntranceOpacity(page, '.status-fade-in');
-}

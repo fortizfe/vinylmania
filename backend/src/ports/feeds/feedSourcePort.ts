@@ -11,4 +11,12 @@ export interface FeedSourcePort {
    * not catch or retry.
    */
   fetchFeed(feedUrl: string, timeoutMs?: number): Promise<RawFeedItem[]>;
+
+  /**
+   * HTML <head> (≤ 256 KB) of a public http(s) page, following ≤ 3 redirects
+   * with a DNS/IP check on every hop. null = definitive "no page" (blocked
+   * address, non-HTML, 4xx, too many redirects). Rejects on transient failure
+   * (timeout, network, 5xx).
+   */
+  fetchArticleHead(url: string, timeoutMs: number): Promise<string | null>;
 }

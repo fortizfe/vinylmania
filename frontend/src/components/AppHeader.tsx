@@ -17,7 +17,7 @@ export function AppHeader() {
   return (
     <header
       className={clsx(
-        'sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center gap-3 bg-white px-4 py-4 transition-shadow duration-(--motion-duration-fade) ease-out dark:bg-surface-raised sm:px-6',
+        'sticky top-0 z-40 grid h-(--header-h) grid-cols-[1fr_auto_1fr] items-center gap-3 bg-white px-4 py-4 transition-shadow duration-(--motion-duration-fade) ease-out dark:bg-surface-raised sm:px-6',
         scrolled && 'header-scroll-edge',
       )}
     >

@@ -34,7 +34,9 @@ function rssXml(items: Array<{ title: string; link: string; pubDate: string }>):
 
 describe('Feeds dashboard with the expanded real catalog (spec 041 FR-005, FR-006, FR-007)', () => {
   beforeEach(async () => {
-    await Promise.all(FEED_SOURCES.map((source) => invalidateCache(`feeds:${source.id}`)));
+    await Promise.all(
+      FEED_SOURCES.map((source) => invalidateCache(`feeds:${source.id}`)),
+    );
   });
 
   afterEach(async () => {
@@ -47,7 +49,9 @@ describe('Feeds dashboard with the expanded real catalog (spec 041 FR-005, FR-00
       expect(FEED_SOURCES.some((source) => source.id === id)).toBe(true);
     }
     expect(
-      FEED_SOURCES.some((source) => new URL(source.feedUrl).hostname === 'metalblade.com'),
+      FEED_SOURCES.some(
+        (source) => new URL(source.feedUrl).hostname === 'metalblade.com',
+      ),
     ).toBe(false);
   });
 
@@ -76,7 +80,7 @@ describe('Feeds dashboard with the expanded real catalog (spec 041 FR-005, FR-00
             {
               title: `${source.name} Article`,
               link: `${source.feedUrl}#1`,
-              pubDate: 'Mon, 13 Jul 2026 00:00:00 GMT',
+              pubDate: new Date(Date.now() - 3_600_000).toUTCString(),
             },
           ]),
         );

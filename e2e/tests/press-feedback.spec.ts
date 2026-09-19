@@ -61,6 +61,13 @@ const RECORD_ENTRY = {
   },
 };
 
+// 1×1 PNG for every fixture image: the Portada lead and tiles only take
+// articles with an image (spec 067 FR-009), and no test may reach a real host.
+const PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 function buildDashboardResponse() {
   return {
     categories: [
@@ -72,6 +79,7 @@ function buildDashboardResponse() {
           excerpt: 'Example excerpt.',
           publishedAt: `2026-07-0${i + 1}T00:00:00.000Z`,
           link: `https://example.test/mi-news-${i}`,
+          imageUrl: `https://images.example.test/mi-news-${i}.png`,
           sourceId: 'metal-injection',
           sourceName: 'Metal Injection',
           category: 'News',
@@ -86,6 +94,7 @@ function buildDashboardResponse() {
             excerpt: 'Example excerpt.',
             publishedAt: '2026-07-01T00:00:00.000Z',
             link: 'https://example.test/ms-reviews-0',
+            imageUrl: 'https://images.example.test/ms-reviews-0.png',
             sourceId: 'metal-storm-reviews',
             sourceName: 'Metal Storm',
             category: 'Reviews',
@@ -102,6 +111,9 @@ function buildDashboardResponse() {
 }
 
 async function mockDashboard(page: Page) {
+  await page.route('https://images.example.test/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL_PNG }),
+  );
   await page.route('**/api/feeds/dashboard', async (route) => {
     await route.fulfill({
       status: 200,
@@ -109,6 +121,36 @@ async function mockDashboard(page: Page) {
       body: JSON.stringify(buildDashboardResponse()),
     });
   });
+  // Activating a source chip fetches that source's own feed; mock it so the
+  // chip tests never fall through to the real backend.
+  await page.route('**/api/feeds/sources/*', async (route) => {
+    const articles = buildDashboardResponse().categories[0].articles;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        sourceId: 'metal-injection',
+        sourceName: 'Metal Injection',
+        status: 'ok',
+        articles,
+        generatedAt: '2026-07-08T00:00:00.000Z',
+      }),
+    });
+  });
+}
+
+// Spec 067 Portada: the loaded feed is the "Top stories" region (lead + tiles);
+// there is no article grid any more.
+async function waitForPortada(page: Page) {
+  await expect(page.getByRole('region', { name: 'Top stories' })).toBeVisible();
+}
+
+// Spec 067 dropped the category chips (FR-013); the source chips are the
+// feed's filter chips now, with the same pressable + focusRing + aria-pressed.
+function sourceChip(page: Page) {
+  return page
+    .getByRole('group', { name: 'Filter by source' })
+    .getByRole('button', { name: 'Metal Injection', exact: true });
 }
 
 async function mockRecordEntry(page: Page) {
@@ -126,7 +168,7 @@ test.describe('Pressed-state feedback (spec 059 US1)', () => {
     await mockDashboard(page);
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
-    await expect(page.getByTestId('feed-article-grid')).toBeVisible();
+    await waitForPortada(page);
 
     const searchButton = page.getByRole('button', { name: 'Search', exact: true });
     const sample = await samplePress(page, searchButton);
@@ -142,11 +184,9 @@ test.describe('Pressed-state feedback (spec 059 US1)', () => {
     await mockDashboard(page);
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
-    await expect(page.getByTestId('feed-article-grid')).toBeVisible();
+    await waitForPortada(page);
 
-    const chip = page
-      .getByRole('group', { name: /filter by category/i })
-      .getByRole('button', { name: 'News', exact: true });
+    const chip = sourceChip(page);
 
     const sample = await samplePress(page, chip);
     expect(sample.widthRatio).toBeGreaterThan(0.93);
@@ -159,7 +199,7 @@ test.describe('Pressed-state feedback (spec 059 US1)', () => {
     await mockDashboard(page);
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
-    await expect(page.getByTestId('feed-article-grid')).toBeVisible();
+    await waitForPortada(page);
 
     const navIcon = page.getByRole('link', { name: /my library/i });
     const sample = await samplePress(page, navIcon);
@@ -344,7 +384,7 @@ test.describe('Pressed-state feedback (spec 059 US1)', () => {
     await mockDashboard(page);
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
-    await expect(page.getByTestId('feed-article-grid')).toBeVisible();
+    await waitForPortada(page);
 
     // A Button.
     const searchButton = page.getByRole('button', { name: 'Search', exact: true });
@@ -354,9 +394,7 @@ test.describe('Pressed-state feedback (spec 059 US1)', () => {
     expect(buttonSample.filter).toContain('brightness');
 
     // A filter chip.
-    const chip = page
-      .getByRole('group', { name: /filter by category/i })
-      .getByRole('button', { name: 'News', exact: true });
+    const chip = sourceChip(page);
     const chipSample = await samplePress(page, chip);
     expect(chipSample.widthRatio).toBeGreaterThan(0.99);
     expect(chipSample.filter).toContain('brightness');
@@ -370,7 +408,7 @@ test.describe('Pressed-state feedback (spec 059 US1)', () => {
       await mockDashboard(page);
       await page.goto('/');
       await signInAsFakeGoogleUser(page);
-      await expect(page.getByTestId('feed-article-grid')).toBeVisible();
+      await waitForPortada(page);
 
       // Reach the Search button with the keyboard (Tab out of the search
       // input) so :focus-visible is unambiguously in play.
@@ -384,20 +422,18 @@ test.describe('Pressed-state feedback (spec 059 US1)', () => {
 
       // Keyboard activation of a filter chip still toggles it (equivalent
       // acknowledgement to a pointer press — Scenario 4).
-      const newsChip = page
-        .getByRole('group', { name: /filter by category/i })
-        .getByRole('button', { name: 'News', exact: true });
+      const sourceChipButton = sourceChip(page);
       // Keyboard modality is already established (the Tab above), so a
       // programmatic focus here still resolves :focus-visible.
-      await newsChip.focus();
-      await expect(newsChip).toHaveAttribute('aria-pressed', 'false');
+      await sourceChipButton.focus();
+      await expect(sourceChipButton).toHaveAttribute('aria-pressed', 'false');
       await page.keyboard.press('Enter');
-      await expect(newsChip).toHaveAttribute('aria-pressed', 'true');
-      expect(await newsChip.evaluate((el) => el.matches(':focus-visible'))).toBe(true);
+      await expect(sourceChipButton).toHaveAttribute('aria-pressed', 'true');
+      expect(await sourceChipButton.evaluate((el) => el.matches(':focus-visible'))).toBe(true);
       // The chip's shared focus ring (new in 059 — chips had no focus
       // affordance before) is a visible box-shadow and AA-compliant.
-      expect(await newsChip.evaluate((el) => getComputedStyle(el).boxShadow)).not.toBe('none');
-      await assertFocusIndicatorContrast(page, newsChip, `filter chip focus ring (${theme})`);
+      expect(await sourceChipButton.evaluate((el) => getComputedStyle(el).boxShadow)).not.toBe('none');
+      await assertFocusIndicatorContrast(page, sourceChipButton, `filter chip focus ring (${theme})`);
     });
   }
 
@@ -409,7 +445,7 @@ test.describe('Pressed-state feedback (spec 059 US1)', () => {
       await mockDashboard(page);
       await page.goto('/');
       await signInAsFakeGoogleUser(page);
-      await expect(page.getByTestId('feed-article-grid')).toBeVisible();
+      await waitForPortada(page);
 
       const seriousOrCritical = await runAxeScan(page);
       expect(seriousOrCritical, JSON.stringify(seriousOrCritical, null, 2)).toEqual([]);
