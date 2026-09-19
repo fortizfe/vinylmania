@@ -41,7 +41,27 @@ export interface LibraryEntry {
   year?: number;
   label?: string[];
   primaryArtist?: string;
+  /**
+   * Album title mirrored from Discogs `basic_information.title` by the
+   * collection sync (feature 068), so Library can sort by album without a
+   * live per-request Discogs lookup. Additive & backfilled — absent until
+   * the entry's next sync, left untouched on a failed sync; written only
+   * when non-empty after `trim()`, never cleared.
+   */
+  title?: string;
 }
+
+/** Library listing order (feature 068, data-model.md §2). */
+export type LibrarySort = {
+  criterion: 'added' | 'artist' | 'album';
+  direction: 'asc' | 'desc';
+};
+
+/** Newest first — the order when no (valid) `sort` is requested. */
+export const DEFAULT_LIBRARY_SORT: LibrarySort = {
+  criterion: 'added',
+  direction: 'desc',
+};
 
 /** Genre/Style/Format selection for filtering the library listing (FR-015/FR-017). */
 export interface LibraryFilters {
@@ -95,11 +115,4 @@ export interface CreateLibraryEntryInput {
   discogsFolderId: number;
   /** Discogs-originated entries carry the instance's date_added. */
   addedAt?: Date;
-}
-
-export interface PaginatedLibraryEntries {
-  items: LibraryEntry[];
-  page: number;
-  pageSize: number;
-  totalItems: number;
 }

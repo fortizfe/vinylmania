@@ -1,14 +1,19 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { FiltersControl } from '../components/FiltersControl';
 import { LibraryLinkRequired } from '../components/LibraryLinkRequired';
+import { LibraryToolbar } from '../components/LibraryToolbar';
 import { RecordCard } from '../components/RecordCard';
 import { RecordCardSkeleton } from '../components/RecordCardSkeleton';
 import { RecordListRow } from '../components/RecordListRow';
 import { RecordListRowSkeleton } from '../components/RecordListRowSkeleton';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { ViewModeToggle } from '../components/ui/ViewModeToggle';
+import {
+  LIBRARY_SORT_OPTIONS,
+  type LibrarySortValue,
+} from '../constants/librarySortOptions';
 import {
   buildLibraryPath,
   type LibraryFilters,
@@ -44,7 +49,7 @@ function activeCount(filters: LibraryFilters): number {
 export function LibraryListPage() {
   const navigate = useNavigate();
   const pageSize = 20;
-  const { page, genre, style, format } = useLibraryQueryParams();
+  const { page, sort, genre, style, format } = useLibraryQueryParams();
   const filters: LibraryFilters = { genre, style, format };
   const hasActiveFilters = activeCount(filters) > 0;
 
@@ -53,20 +58,31 @@ export function LibraryListPage() {
     isLoading,
     isError: loadError,
     error,
-  } = useLibraryList(page, pageSize, filters);
-  const refresh = useRefreshLibrary(page, pageSize, filters);
+  } = useLibraryList(page, pageSize, filters, sort);
+  const refresh = useRefreshLibrary(page, pageSize, filters, sort);
+  // FR-008: announce a sort change only once its results render. Derived from
+  // the current sort, so rapid changes announce just the latest one.
+  const [sortChanged, setSortChanged] = useState(false);
+  const sortAnnouncement =
+    sortChanged && data
+      ? (LIBRARY_SORT_OPTIONS.find((o) => o.sort === sort.sort && o.dir === sort.dir)
+          ?.announcement ?? '')
+      : '';
   const { mode, setMode } = useViewModePreference('vinylmania:view-mode:library');
   const entries = data?.items ?? null;
   const totalItems = data?.totalItems ?? 0;
   const hasNextPage = page * pageSize < totalItems;
   const gate = loadError ? gateVariant(error) : null;
 
-  function applyFilters(newFilters: LibraryFilters) {
-    navigate(buildLibraryPath(1, newFilters));
+  function goTo(path: string) {
+    setSortChanged(false);
+    navigate(path);
   }
 
-  function clearFilters() {
-    navigate(buildLibraryPath(1));
+  function changeSort(newSort: LibrarySortValue) {
+    setSortChanged(true);
+    navigate(buildLibraryPath(filters, newSort), { replace: true });
+    window.scrollTo({ top: 0 });
   }
 
   // FR-003: while the accounts are not linked, the library shows only the
@@ -89,7 +105,6 @@ export function LibraryListPage() {
           Your library
         </h1>
         <div className="flex items-center gap-3">
-          <ViewModeToggle mode={mode} onChange={setMode} screen="library" />
           <Button
             variant="secondary"
             loading={refresh.isPending}
@@ -100,7 +115,22 @@ export function LibraryListPage() {
         </div>
       </div>
 
-      <FiltersControl filters={filters} onApply={applyFilters} onClear={clearFilters} />
+      <LibraryToolbar
+        mode={mode}
+        onModeChange={setMode}
+        sort={sort}
+        onSortChange={changeSort}
+      />
+
+      <FiltersControl
+        filters={filters}
+        onApply={(newFilters) => goTo(buildLibraryPath(newFilters, sort))}
+        onClear={() => goTo(buildLibraryPath(undefined, sort))}
+      />
+
+      <p role="status" className="sr-only">
+        {sortAnnouncement}
+      </p>
 
       {refresh.isError && (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">
@@ -163,14 +193,14 @@ export function LibraryListPage() {
             <Button
               variant="secondary"
               disabled={page <= 1}
-              onClick={() => navigate(buildLibraryPath(page - 1, filters))}
+              onClick={() => goTo(buildLibraryPath(filters, sort, page - 1))}
             >
               Previous
             </Button>
             <Button
               variant="secondary"
               disabled={!hasNextPage}
-              onClick={() => navigate(buildLibraryPath(page + 1, filters))}
+              onClick={() => goTo(buildLibraryPath(filters, sort, page + 1))}
             >
               Next
             </Button>

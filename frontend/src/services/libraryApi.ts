@@ -1,3 +1,4 @@
+import type { LibrarySortValue } from '../constants/librarySortOptions';
 import type { LibraryFilters } from '../hooks/useLibraryQueryParams';
 import { authorizedFetch } from './apiClient';
 
@@ -136,10 +137,15 @@ export async function list(
   pageSize = 20,
   refresh = false,
   filters?: LibraryFilters,
+  sort?: LibrarySortValue,
 ): Promise<PaginatedLibraryEntries> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (refresh) {
     params.set('refresh', 'true');
+  }
+  if (sort) {
+    params.set('sort', sort.sort);
+    params.set('dir', sort.dir);
   }
   const { genre, style, format } = filters ?? {};
   for (const [name, values] of Object.entries({ genre, style, format })) {

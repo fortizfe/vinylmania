@@ -1,17 +1,11 @@
-import type {
-  CreateLibraryEntryInput,
-  LibraryEntry,
-  PaginatedLibraryEntries,
-} from '../../domain/library/types';
+import type { CreateLibraryEntryInput, LibraryEntry } from '../../domain/library/types';
 
 export interface LibraryRepositoryPort {
   createEntry(uid: string, input: CreateLibraryEntryInput): Promise<LibraryEntry>;
 
   getEntry(uid: string, entryId: string): Promise<LibraryEntry | null>;
 
-  listEntries(uid: string, page: number, pageSize: number): Promise<PaginatedLibraryEntries>;
-
-  /** Every entry, unpaginated — used by syncLibrary's reconciliation and by filtered listing. */
+  /** Every entry, unpaginated — used by syncLibrary's reconciliation and by the library listing. */
   listAllEntries(uid: string): Promise<LibraryEntry[]>;
 
   /** Upserts genre/style/format; called only on a successful enrichment lookup. */
@@ -38,6 +32,7 @@ export interface LibraryRepositoryPort {
       year?: number;
       label?: string[];
       primaryArtist?: string;
+      title?: string;
       genre?: string[];
       style?: string[];
     },

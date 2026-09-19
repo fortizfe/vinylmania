@@ -42,6 +42,7 @@ type CollectionFacetPatch = {
   year?: number;
   label?: string[];
   primaryArtist?: string;
+  title?: string;
   genre?: string[];
   style?: string[];
 };
@@ -63,6 +64,10 @@ function collectionFacets(
   }
   if (instance.artistNames.length > 0) {
     facets.primaryArtist = instance.artistNames[0];
+  }
+  const title = instance.title.trim();
+  if (title) {
+    facets.title = title;
   }
   // `genre`/`style` feed the Block 1 breakdowns (FR-007) and reuse the very
   // `LibraryEntry.genre`/`.style` fields feature 038's catalog enrichment

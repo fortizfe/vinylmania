@@ -1,11 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 
 import { getFirestoreDb } from '../../config/firebase-admin';
-import type {
-  CreateLibraryEntryInput,
-  LibraryEntry,
-  PaginatedLibraryEntries,
-} from '../../domain/library/types';
+import type { CreateLibraryEntryInput, LibraryEntry } from '../../domain/library/types';
 import type { LibraryRepositoryPort } from '../../ports/library/libraryRepositoryPort';
 
 function entriesCollection(uid: string) {
@@ -32,6 +28,7 @@ function toLibraryEntry(id: string, data: FirebaseFirestore.DocumentData): Libra
     ...(data.year !== undefined ? { year: data.year } : {}),
     ...(data.label !== undefined ? { label: data.label } : {}),
     ...(data.primaryArtist !== undefined ? { primaryArtist: data.primaryArtist } : {}),
+    ...(data.title !== undefined ? { title: data.title } : {}),
   };
 }
 
@@ -62,30 +59,6 @@ export async function getEntry(
   return toLibraryEntry(snapshot.id, snapshot.data()!);
 }
 
-export async function listEntries(
-  uid: string,
-  page: number,
-  pageSize: number,
-): Promise<PaginatedLibraryEntries> {
-  const collection = entriesCollection(uid);
-  const totalSnapshot = await collection.count().get();
-  const totalItems = totalSnapshot.data().count;
-
-  const offset = (page - 1) * pageSize;
-  const querySnapshot = await collection
-    .orderBy('addedAt', 'desc')
-    .offset(offset)
-    .limit(pageSize)
-    .get();
-
-  return {
-    items: querySnapshot.docs.map((doc) => toLibraryEntry(doc.id, doc.data())),
-    page,
-    pageSize,
-    totalItems,
-  };
-}
-
 /** Every entry, unpaginated — the sync reconciles the full mirror at once. */
 export async function listAllEntries(uid: string): Promise<LibraryEntry[]> {
   const querySnapshot = await entriesCollection(uid).orderBy('addedAt', 'desc').get();
@@ -108,7 +81,8 @@ export async function persistCatalogFields(
 }
 
 /**
- * Upserts the feature-061 collection facets (year/label/primaryArtist).
+ * Upserts the feature-061 collection facets (year/label/primaryArtist) and
+ * the feature-068 album `title`.
  * set+merge for the same reason as `persistCatalogFields` — the entry
  * document may not exist yet in an edge case, and `update()` would throw.
  * Only the keys actually supplied are written.
@@ -120,6 +94,7 @@ export async function persistCollectionFacets(
     year?: number;
     label?: string[];
     primaryArtist?: string;
+    title?: string;
     genre?: string[];
     style?: string[];
   },
@@ -133,6 +108,9 @@ export async function persistCollectionFacets(
   }
   if (facets.primaryArtist !== undefined) {
     patch.primaryArtist = facets.primaryArtist;
+  }
+  if (facets.title !== undefined) {
+    patch.title = facets.title;
   }
   // `genre`/`style` share the fields feature 038's enrichment writes via
   // `persistCatalogFields`; an empty array from `basic_information` is omitted
@@ -191,7 +169,6 @@ export async function deleteEntry(uid: string, entryId: string): Promise<boolean
 export const firestoreLibraryRepository: LibraryRepositoryPort = {
   createEntry,
   getEntry,
-  listEntries,
   listAllEntries,
   persistCatalogFields,
   persistCollectionFacets,

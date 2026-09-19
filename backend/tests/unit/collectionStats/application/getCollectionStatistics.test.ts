@@ -41,7 +41,6 @@ function fakeRepository(
   return {
     createEntry: jest.fn(),
     getEntry: jest.fn(),
-    listEntries: jest.fn(),
     listAllEntries: jest.fn().mockResolvedValue(entries),
     persistCatalogFields: jest.fn(),
     persistCollectionFacets: jest.fn(),

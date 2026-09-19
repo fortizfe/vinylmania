@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '../../src/services/apiClient';
@@ -149,7 +149,15 @@ describe('Library list flow (US2)', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /refresh/i }));
 
-    await waitFor(() => expect(mockList).toHaveBeenCalledWith(1, 20, true, {}));
+    await waitFor(() =>
+      expect(mockList).toHaveBeenCalledWith(
+        1,
+        20,
+        true,
+        {},
+        { sort: 'added', dir: 'desc' },
+      ),
+    );
   });
 });
 
@@ -275,7 +283,13 @@ describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
     await waitFor(() =>
       expect(screen.getByText(/rock result page 1/i)).toBeInTheDocument(),
     );
-    expect(mockList).toHaveBeenLastCalledWith(1, 20, false, { genre: ['Rock'] });
+    expect(mockList).toHaveBeenLastCalledWith(
+      1,
+      20,
+      false,
+      { genre: ['Rock'] },
+      { sort: 'added', dir: 'desc' },
+    );
 
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /^next$/i }));
@@ -283,7 +297,13 @@ describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
     await waitFor(() =>
       expect(screen.getByText(/rock result page 2/i)).toBeInTheDocument(),
     );
-    expect(mockList).toHaveBeenLastCalledWith(2, 20, false, { genre: ['Rock'] });
+    expect(mockList).toHaveBeenLastCalledWith(
+      2,
+      20,
+      false,
+      { genre: ['Rock'] },
+      { sort: 'added', dir: 'desc' },
+    );
   });
 });
 
@@ -369,5 +389,167 @@ describe('View mode toggle (feature 052, US1)', () => {
 
     resolveList({ items: [], page: 1, pageSize: 20, totalItems: 0 });
     await waitFor(() => expect(screen.getByText(/no records yet/i)).toBeInTheDocument());
+  });
+});
+
+describe('Sorting the library (feature 068, US1 AS2/AS5/AS6, FR-008)', () => {
+  const byArtist = { sort: 'artist', dir: 'asc' } as const;
+  const byAlbumDesc = { sort: 'album', dir: 'desc' } as const;
+  let lastLocation: { search: string; navigationType: string };
+
+  function LocationProbe() {
+    const location = useLocation();
+    lastLocation = { search: location.search, navigationType: useNavigationType() };
+    return null;
+  }
+
+  function renderWithProbe(initialEntry: string) {
+    return render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <LibraryListPage />
+          <LocationProbe />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  function entry(id: string, title: string) {
+    return {
+      id,
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title,
+        artists: [],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    };
+  }
+
+  function listPage(title: string) {
+    return { items: [entry('entry-1', title)], page: 1, pageSize: 20, totalItems: 1 };
+  }
+
+  function currentParams() {
+    return new URLSearchParams(lastLocation.search);
+  }
+
+  beforeEach(() => {
+    mockList.mockReset();
+    window.localStorage.clear();
+  });
+
+  it('a deep link requests the library with its sort and filters and shows that option selected', async () => {
+    mockList.mockResolvedValue(listPage('Deep Linked'));
+
+    renderWithProbe('/app/library?sort=artist&dir=asc&genre=Rock');
+
+    await waitFor(() => expect(screen.getByText('Deep Linked')).toBeInTheDocument());
+    expect(mockList).toHaveBeenLastCalledWith(
+      1,
+      20,
+      false,
+      { genre: ['Rock'] },
+      byArtist,
+    );
+    expect(screen.getByRole('combobox', { name: 'Sort' })).toHaveDisplayValue(
+      'Artist (A → Z)',
+    );
+  });
+
+  it('announces nothing on the initial load', async () => {
+    mockList.mockResolvedValue(listPage('Initial'));
+
+    renderWithProbe('/app/library');
+
+    await waitFor(() => expect(screen.getByText('Initial')).toBeInTheDocument());
+    expect(screen.queryByText(/^Sorted by/)).not.toBeInTheDocument();
+  });
+
+  it('changing the select replaces the URL (filters kept, page 1) and announces once after the new data renders, keeping focus', async () => {
+    let resolveSorted!: (value: ReturnType<typeof listPage>) => void;
+    mockList.mockImplementation((...args: unknown[]) => {
+      const sort = args[4] as { sort?: string } | undefined;
+      if (sort?.sort === 'artist') {
+        return new Promise((resolve) => {
+          resolveSorted = resolve;
+        });
+      }
+      return Promise.resolve(listPage('Newest Order'));
+    });
+
+    renderWithProbe('/app/library?genre=Rock&page=2');
+    await waitFor(() => expect(screen.getByText('Newest Order')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Sort' }),
+      screen.getByRole('option', { name: 'Artist (A → Z)' }),
+    );
+
+    // URL: replaced (no new history entry), sort + filters kept, page dropped.
+    await waitFor(() => expect(currentParams().get('sort')).toBe('artist'));
+    expect(lastLocation.navigationType).toBe('REPLACE');
+    expect(currentParams().get('dir')).toBe('asc');
+    expect(currentParams().get('genre')).toBe('Rock');
+    expect(currentParams().get('page')).toBeNull();
+    await waitFor(() =>
+      expect(mockList).toHaveBeenLastCalledWith(
+        1,
+        20,
+        false,
+        { genre: ['Rock'] },
+        byArtist,
+      ),
+    );
+
+    // Not announced before the new results render.
+    expect(screen.queryByText(/^Sorted by/)).not.toBeInTheDocument();
+
+    resolveSorted(listPage('Artist Order'));
+
+    await waitFor(() => expect(screen.getByText('Artist Order')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('Sorted by artist, A to Z.')).toBeInTheDocument(),
+    );
+    const announcements = screen.getAllByText('Sorted by artist, A to Z.');
+    expect(announcements).toHaveLength(1);
+    expect(announcements[0].closest('[role="status"]')).not.toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Sort' })).toHaveFocus();
+  });
+
+  it('applying a filter keeps sort and dir in the URL and in the request', async () => {
+    mockList.mockResolvedValue(listPage('Album Order'));
+
+    renderWithProbe('/app/library?sort=album&dir=desc');
+    await waitFor(() => expect(screen.getByText('Album Order')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^filters$/i }));
+    await user.click(screen.getByRole('button', { name: /^genre$/i }));
+    await user.click(within(screen.getByRole('dialog')).getByLabelText('Rock'));
+    await user.click(screen.getByRole('button', { name: /apply filters/i }));
+
+    await waitFor(() => expect(currentParams().get('genre')).toBe('Rock'));
+    expect(currentParams().get('sort')).toBe('album');
+    expect(currentParams().get('dir')).toBe('desc');
+    await waitFor(() =>
+      expect(mockList).toHaveBeenLastCalledWith(
+        1,
+        20,
+        false,
+        { genre: ['Rock'] },
+        byAlbumDesc,
+      ),
+    );
   });
 });
