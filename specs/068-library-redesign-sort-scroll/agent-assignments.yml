@@ -1,0 +1,242 @@
+# Agent Assignments
+# Feature: 068-library-redesign-sort-scroll — "My Library" Redesign (sorting, infinite scroll, WCAG 2.1 AA, Apple HIG)
+# Generated: 2026-09-19T20:48:58+02:00
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "architect-agent"
+    source: "project"
+    description: "Spec-kit phase design; writes spec artifacts, never source code"
+  - name: "backend-agent"
+    source: "project"
+    description: "backend/ work: Express + TypeScript, hexagonal architecture, Firestore, Discogs, Redis; TDD/YAGNI/SOLID/KISS"
+  - name: "docs-agent"
+    source: "project"
+    description: "End-user documentation under docs/"
+  - name: "frontend-agent"
+    source: "project"
+    description: "frontend/ work: React 19 + TS, Tailwind v4, TanStack Query; Apple design skills; WCAG 2.1 AA; TDD with Vitest + RTL"
+  - name: "qa-agent"
+    source: "project"
+    description: "Test-First/TDD discipline and test quality across backend, frontend, e2e"
+  - name: "reviewer-agent"
+    source: "project"
+    description: "Code-reviews a PR and posts comments; read-only"
+
+assignments:
+  T001:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T002:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T003:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T004:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T005:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T006:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T007:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T008:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T009:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T010:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T011:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T012:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T013:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T014:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T015:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T016:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T017:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T018:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T019:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T020:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T021:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T022:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T023:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T024:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T025:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T026:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T027:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T028:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T029:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T030:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T031:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T032:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T033:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T034:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T035:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T036:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T037:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T038:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T039:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T040:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T041:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T042:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T043:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T044:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T045:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T046:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T047:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T048:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T049:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T050:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T051:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T052:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T053:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T054:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T055:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T056:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T057:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T058:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T059:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T060:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T061:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T062:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T063:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T064:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T065:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T066:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T067:
+    agent: "backend-agent"
+    reason: "Touches backend/ (domain, application, adapters or backend tests); matches backend-agent"
+  T068:
+    agent: "frontend-agent"
+    reason: "Touches frontend/ (components, hooks, queries, styles or frontend tests); matches frontend-agent"
+  T069:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T070:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T071:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
+  T072:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted test run, audit or release gate; matches qa-agent's Test-First/quality role"
