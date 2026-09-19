@@ -1,0 +1,182 @@
+# Agent Assignments
+# Feature: 067-rss-view-redesign — RSS News View Redesign & Reliable Article Images
+# Generated: 2026-09-19T10:24:59
+# Command: /speckit.agent-assign.assign
+
+agents_scanned:
+  - name: "architect-agent"
+    source: "project"
+    description: "Use to design how a Vinylmania feature should be structured before code is written — during the spec-kit phases (specify, clarify, plan, tasks) and at the start of implementation when the structure isn't settled yet. Decides where code lives (backend hexagonal layers, frontend components/hooks), data models, contracts, and task breakdown, always climbing the ponytail ladder for the smallest design that works and using the Apple design skills when the feature has UI or interaction. Writes spec artifacts (spec.md, plan.md, research.md, data-model.md, contracts/, tasks.md), never source code — implementation goes to backend-agent / frontend-agent / qa-agent."
+  - name: "backend-agent"
+    source: "project"
+    description: "Use for any work under backend/ — Express.js + TypeScript APIs, hexagonal architecture (domain/application/ports/adapters), Firebase Admin/Firestore, Discogs API client, Redis caching. Enforces TDD, YAGNI, SOLID, and KISS on every change. Do NOT use for frontend/ or e2e/ work — hand those to frontend-agent or qa-agent instead."
+  - name: "docs-agent"
+    source: "project"
+    description: "Use for end-user documentation for Vinylmania — user manuals, getting-started guides, feature walkthroughs, and FAQs written for collectors using the app, not for developers. Use when writing or updating docs/ content aimed at end users, onboarding material, or in-app help copy. Not for developer/API docs, specs/, or code changes — those stay with backend-agent, frontend-agent, or qa-agent."
+  - name: "frontend-agent"
+    source: "project"
+    description: "Use for any work under frontend/ — React 19 + TypeScript (Vite), Tailwind CSS v4, TanStack Query. Builds every interface with the installed Apple design skills and strictly enforces WCAG 2.1 AA accessibility, with TDD via Vitest + React Testing Library. Applies YAGNI, SOLID, KISS. Do NOT use for backend/ or e2e/ work — hand those to backend-agent or qa-agent instead."
+  - name: "qa-agent"
+    source: "project"
+    description: "Use for enforcing Test-First/TDD discipline and overall test quality across the whole Vinylmania codebase (backend, frontend, e2e). Reviews whether tests were written before implementation, audits coverage and test quality, fixes flaky/failing tests, and gates changes against the constitution's Test-First principle and quality gates. Use for TDD/quality audits and test work, not for feature implementation itself — that's backend-agent or frontend-agent's job."
+  - name: "reviewer-agent"
+    source: "project"
+    description: "Use to code-review a pull request (MR) in the Vinylmania repo and post the results as comments on it. Give it a PR number, URL, or branch; with nothing, it reviews the PR of the current branch. Mandatorily runs the installed ponytail skills (ponytail-review, ponytail-debt) plus a correctness pass, then leaves one GitHub review with inline comments. Read-only on code — it never edits, commits, approves, or merges."
+
+assignments:
+  T001:
+    agent: "qa-agent"
+    reason: "Test-quality / e2e / audit / verification task per task description"
+  T002:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T003:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T004:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T005:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T006:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T007:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T008:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T009:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T010:
+    agent: "qa-agent"
+    reason: "Test-quality / e2e / audit / verification task per task description"
+  T011:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T012:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T013:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T014:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T015:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T016:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T017:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T018:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T019:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T020:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T021:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T022:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T023:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T024:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T025:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T026:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T027:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T028:
+    agent: "qa-agent"
+    reason: "Test-quality / e2e / audit / verification task per task description"
+  T029:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T030:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T031:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T032:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T033:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T034:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T035:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T036:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T037:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T038:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T039:
+    agent: "backend-agent"
+    reason: "Work under backend/ (hexagonal layers, Jest tests) per task description"
+  T040:
+    agent: "qa-agent"
+    reason: "Test-quality / e2e / audit / verification task per task description"
+  T041:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T042:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T043:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T044:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T045:
+    agent: "qa-agent"
+    reason: "Test-quality / e2e / audit / verification task per task description"
+  T046:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T047:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T048:
+    agent: "frontend-agent"
+    reason: "Work under frontend/ (React components/lib, Vitest+RTL tests) per task description"
+  T049:
+    agent: "qa-agent"
+    reason: "Test-quality / e2e / audit / verification task per task description"
+  T050:
+    agent: "qa-agent"
+    reason: "Test-quality / e2e / audit / verification task per task description"
+  T051:
+    agent: "qa-agent"
+    reason: "Test-quality / e2e / audit / verification task per task description"
+  T052:
+    agent: "qa-agent"
+    reason: "Test-quality / e2e / audit / verification task per task description"
