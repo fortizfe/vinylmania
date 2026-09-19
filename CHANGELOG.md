@@ -17,6 +17,16 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.12.0] - 2026-09-19
+
+### Added
+
+- redesign RSS news view as Portada with an image for every source ([8a4888b])
+
+### Fixed
+
+- address PR #57 review findings ([2249630])
+
 ## [1.11.1] - 2026-09-18
 
 ### Fixed
