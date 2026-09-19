@@ -19,6 +19,14 @@ vi.mock('../../../src/services/libraryApi', () => ({
   remove: (...args: unknown[]) => mockRemove(...args),
 }));
 
+// Only the real `libraryApi.list` URL test below uses this; every other test
+// goes through the `libraryApi` mock above.
+const mockAuthorizedFetch = vi.fn();
+vi.mock('../../../src/services/apiClient', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../src/services/apiClient')>()),
+  authorizedFetch: (...args: unknown[]) => mockAuthorizedFetch(...args),
+}));
+
 function wrapper({ children }: { children: ReactNode }) {
   const client = createTestQueryClient();
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
@@ -41,7 +49,13 @@ describe('libraryQueries', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockList).toHaveBeenCalledWith(1, 20, false, {});
+    expect(mockList).toHaveBeenCalledWith(
+      1,
+      20,
+      false,
+      {},
+      { sort: 'added', dir: 'desc' },
+    );
     expect(result.current.data).toEqual({
       items: [],
       page: 1,
@@ -143,5 +157,99 @@ describe('libraryQueries', () => {
     // wantlist cache must be invalidated alongside the library cache.
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: libraryKeys.all });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: wantlistKeys.all });
+  });
+
+  describe('sort (feature 068, US1, FR-002/FR-015)', () => {
+    const byArtist = { sort: 'artist', dir: 'asc' } as const;
+    const byAlbum = { sort: 'album', dir: 'desc' } as const;
+
+    it('libraryApi.list sends sort and dir query params alongside page and filters', async () => {
+      mockAuthorizedFetch.mockResolvedValue({
+        json: () => Promise.resolve({ items: [], page: 1, pageSize: 20, totalItems: 0 }),
+      });
+      const realApi = await vi.importActual<
+        typeof import('../../../src/services/libraryApi')
+      >('../../../src/services/libraryApi');
+
+      await realApi.list(1, 20, false, { genre: ['Rock'] }, byArtist);
+
+      const [url] = mockAuthorizedFetch.mock.lastCall as [string];
+      const [path, query] = url.split('?');
+      const params = new URLSearchParams(query);
+      expect(path).toBe('/api/library');
+      expect(params.get('sort')).toBe('artist');
+      expect(params.get('dir')).toBe('asc');
+      expect(params.get('genre')).toBe('Rock');
+      expect(params.get('page')).toBe('1');
+    });
+
+    it('useLibraryList passes the sort to libraryApi.list', async () => {
+      mockList.mockResolvedValue({ items: [], page: 1, pageSize: 20, totalItems: 0 });
+
+      const { useLibraryList } = await import('../../../src/queries/libraryQueries');
+      const { result } = renderHook(() => useLibraryList(1, 20, {}, byArtist), {
+        wrapper,
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockList).toHaveBeenCalledWith(1, 20, false, {}, byArtist);
+    });
+
+    it('two sorts never share a cache entry (the list key includes the sort)', async () => {
+      mockList.mockImplementation((...args: unknown[]) =>
+        Promise.resolve({
+          items: [
+            { id: `for-${(args[4] as { sort?: string } | undefined)?.sort ?? 'none'}` },
+          ],
+          page: 1,
+          pageSize: 20,
+          totalItems: 1,
+        }),
+      );
+      const client = createTestQueryClient();
+      client.setDefaultOptions({ queries: { retry: false, staleTime: 60_000 } });
+      const localWrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      );
+
+      const { useLibraryList, libraryKeys } =
+        await import('../../../src/queries/libraryQueries');
+      const artist = renderHook(() => useLibraryList(1, 20, {}, byArtist), {
+        wrapper: localWrapper,
+      });
+      await waitFor(() => expect(artist.result.current.isSuccess).toBe(true));
+      const album = renderHook(() => useLibraryList(1, 20, {}, byAlbum), {
+        wrapper: localWrapper,
+      });
+      await waitFor(() => expect(album.result.current.isSuccess).toBe(true));
+
+      expect(mockList).toHaveBeenCalledTimes(2);
+      expect(album.result.current.data?.items[0]?.id).toBe('for-album');
+      expect(artist.result.current.data?.items[0]?.id).toBe('for-artist');
+      expect(libraryKeys.list(1, 20, {}, byArtist)).not.toEqual(
+        libraryKeys.list(1, 20, {}, byAlbum),
+      );
+    });
+
+    it("useRefreshLibrary forces a sync for the current sort and writes into that sort's cache", async () => {
+      const refreshed = { items: [], page: 1, pageSize: 20, totalItems: 0 };
+      mockList.mockResolvedValue(refreshed);
+      const client = createTestQueryClient();
+      const localWrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      );
+
+      const { useRefreshLibrary, libraryKeys } =
+        await import('../../../src/queries/libraryQueries');
+      const { result } = renderHook(() => useRefreshLibrary(1, 20, {}, byAlbum), {
+        wrapper: localWrapper,
+      });
+      await result.current.mutateAsync();
+
+      expect(mockList).toHaveBeenCalledWith(1, 20, true, {}, byAlbum);
+      expect(client.getQueryData(libraryKeys.list(1, 20, {}, byAlbum))).toEqual(
+        refreshed,
+      );
+    });
   });
 });

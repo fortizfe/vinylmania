@@ -6,6 +6,10 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 
+import {
+  DEFAULT_LIBRARY_SORT,
+  type LibrarySortValue,
+} from '../constants/librarySortOptions';
 import type { LibraryFilters } from '../hooks/useLibraryQueryParams';
 import * as libraryApi from '../services/libraryApi';
 import type {
@@ -18,8 +22,12 @@ import { wantlistKeys } from './wantlistQueries';
 export const libraryKeys = {
   all: ['library'] as const,
   lists: () => [...libraryKeys.all, 'list'] as const,
-  list: (page: number, pageSize: number, filters: LibraryFilters = {}) =>
-    [...libraryKeys.lists(), page, pageSize, filters] as const,
+  list: (
+    page: number,
+    pageSize: number,
+    filters: LibraryFilters = {},
+    sort: LibrarySortValue = DEFAULT_LIBRARY_SORT,
+  ) => [...libraryKeys.lists(), page, pageSize, filters, sort] as const,
   details: () => [...libraryKeys.all, 'detail'] as const,
   detail: (entryId: string) => [...libraryKeys.details(), entryId] as const,
 };
@@ -28,26 +36,28 @@ export function useLibraryList(
   page: number,
   pageSize: number,
   filters: LibraryFilters = {},
+  sort: LibrarySortValue = DEFAULT_LIBRARY_SORT,
 ): UseQueryResult<PaginatedLibraryEntries> {
   return useQuery({
-    queryKey: libraryKeys.list(page, pageSize, filters),
-    queryFn: () => libraryApi.list(page, pageSize, false, filters),
+    queryKey: libraryKeys.list(page, pageSize, filters, sort),
+    queryFn: () => libraryApi.list(page, pageSize, false, filters, sort),
     retry: false,
   });
 }
 
-/** Forces a fresh Discogs synchronization for the current page (FR-014). */
+/** Forces a fresh Discogs synchronization for the current page and sort (FR-014). */
 export function useRefreshLibrary(
   page: number,
   pageSize: number,
   filters: LibraryFilters = {},
+  sort: LibrarySortValue = DEFAULT_LIBRARY_SORT,
 ): UseMutationResult<PaginatedLibraryEntries, unknown, void> {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => libraryApi.list(page, pageSize, true, filters),
+    mutationFn: () => libraryApi.list(page, pageSize, true, filters, sort),
     onSuccess: (data) => {
-      queryClient.setQueryData(libraryKeys.list(page, pageSize, filters), data);
+      queryClient.setQueryData(libraryKeys.list(page, pageSize, filters, sort), data);
     },
   });
 }

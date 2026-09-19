@@ -74,7 +74,6 @@ function fakeRepository(): jest.Mocked<LibraryRepositoryPort> {
       }),
     ),
     getEntry: jest.fn(),
-    listEntries: jest.fn(),
     listAllEntries: jest.fn().mockResolvedValue([]),
     persistCatalogFields: jest.fn().mockResolvedValue(undefined),
     persistCollectionFacets: jest.fn().mockResolvedValue(undefined),
@@ -164,6 +163,7 @@ describe('syncLibrary: collection-facet write-back (feature 061)', () => {
       year: 1991,
       label: ['Earache', 'Combat'],
       primaryArtist: 'Morbid Angel',
+      title: 'Release 55',
       genre: ['Death Metal'],
       style: ['Death Metal', 'Grindcore'],
     });
@@ -189,6 +189,7 @@ describe('syncLibrary: collection-facet write-back (feature 061)', () => {
       year: 2001,
       label: ['Nuclear Blast'],
       primaryArtist: 'Nile',
+      title: 'Release 77',
       genre: ['Rock'],
       style: ['Death Metal'],
     });
@@ -224,6 +225,7 @@ describe('syncLibrary: collection-facet write-back (feature 061)', () => {
       year: 1991,
       label: ['Warp'],
       primaryArtist: 'Aphex Twin',
+      title: 'Release 55',
     });
   });
 
@@ -248,6 +250,7 @@ describe('syncLibrary: collection-facet write-back (feature 061)', () => {
     await syncLibrary(UID);
 
     expect(repository.persistCollectionFacets).toHaveBeenCalledWith(UID, 'e1', {
+      title: 'Release 55',
       genre: ['Jazz'],
     });
   });
@@ -305,6 +308,7 @@ describe('syncLibrary: collection-facet write-back (feature 061)', () => {
     discogsCollection.listAllInstances.mockResolvedValue([
       instance(55, {
         instanceId: 550,
+        title: '',
         year: null,
         labelNames: [],
         artistNames: [],
@@ -317,5 +321,76 @@ describe('syncLibrary: collection-facet write-back (feature 061)', () => {
     await syncLibrary(UID);
 
     expect(repository.persistCollectionFacets).not.toHaveBeenCalled();
+  });
+});
+
+describe('syncLibrary: album title write-back (feature 068, research D4)', () => {
+  function matched() {
+    const repository = fakeRepository();
+    repository.listAllEntries.mockResolvedValue([
+      entry('e1', 55, { discogsInstanceId: 550, discogsFolderId: 1, title: 'Stored Title' }),
+    ]);
+    return repository;
+  }
+
+  function collectionWith(title: string) {
+    const discogsCollection = fakeDiscogsCollection();
+    discogsCollection.listAllInstances.mockResolvedValue([
+      instance(55, { instanceId: 550, title, year: null, labelNames: [], genres: [], styles: [] }),
+    ]);
+    return discogsCollection;
+  }
+
+  it('passes a non-empty basic_information.title to persistCollectionFacets for a matched entry', async () => {
+    const { syncLibrary, repository } = build({
+      repository: matched(),
+      discogsCollection: collectionWith('Reign in Blood'),
+    });
+
+    await syncLibrary(UID);
+
+    expect(repository.persistCollectionFacets).toHaveBeenCalledWith(UID, 'e1', {
+      primaryArtist: 'Sepultura',
+      title: 'Reign in Blood',
+    });
+  });
+
+  it.each([
+    ['empty', ''],
+    ['whitespace-only', '   '],
+  ])('omits an %s title for a matched entry, so the stored value is never overwritten', async (_name, title) => {
+    const { syncLibrary, repository } = build({
+      repository: matched(),
+      discogsCollection: collectionWith(title),
+    });
+
+    await syncLibrary(UID);
+
+    expect(repository.persistCollectionFacets).toHaveBeenCalledWith(UID, 'e1', {
+      primaryArtist: 'Sepultura',
+    });
+  });
+
+  it('passes a non-empty title for a newly created (Discogs-only) entry', async () => {
+    const { syncLibrary, repository } = build({
+      discogsCollection: collectionWith('Beneath the Remains'),
+    });
+
+    await syncLibrary(UID);
+
+    expect(repository.persistCollectionFacets).toHaveBeenCalledWith(UID, 'new-entry', {
+      primaryArtist: 'Sepultura',
+      title: 'Beneath the Remains',
+    });
+  });
+
+  it('omits a whitespace-only title for a newly created entry', async () => {
+    const { syncLibrary, repository } = build({ discogsCollection: collectionWith('  ') });
+
+    await syncLibrary(UID);
+
+    expect(repository.persistCollectionFacets).toHaveBeenCalledWith(UID, 'new-entry', {
+      primaryArtist: 'Sepultura',
+    });
   });
 });

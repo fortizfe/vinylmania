@@ -1,5 +1,10 @@
 import { getFirestoreDb } from '../../../../src/config/firebase-admin';
-import { createEntry } from '../../../../src/adapters/library/firestoreLibraryRepository';
+import {
+  createEntry,
+  getEntry,
+  listAllEntries,
+  persistCollectionFacets,
+} from '../../../../src/adapters/library/firestoreLibraryRepository';
 import {
   clearEmulatorFirestore,
   clearEmulatorUsers,
@@ -36,5 +41,32 @@ describe('Library repository adapter live integration: createEntry', () => {
 
     expect(snapshot.exists).toBe(true);
     expect(snapshot.data()?.discogsReleaseId).toBe(1);
+  });
+});
+
+describe('Library repository adapter live integration: title round-trip (feature 068, research D4)', () => {
+  afterEach(async () => {
+    await clearEmulatorUsers();
+    await clearEmulatorFirestore();
+  });
+
+  it('persists title via persistCollectionFacets and maps it back in getEntry and listAllEntries', async () => {
+    const { uid } = await getTestIdToken('library-title-user');
+    const created = await createEntry(uid, {
+      discogsReleaseId: 1,
+      discogsInstanceId: 42,
+      discogsFolderId: 1,
+    });
+    const facets = { primaryArtist: 'The Persuader', title: 'Stockholm' };
+
+    await persistCollectionFacets(uid, created.id, facets);
+
+    expect(await getEntry(uid, created.id)).toMatchObject({
+      primaryArtist: 'The Persuader',
+      title: 'Stockholm',
+    });
+    const all = await listAllEntries(uid);
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({ id: created.id, title: 'Stockholm' });
   });
 });

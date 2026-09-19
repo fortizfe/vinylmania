@@ -412,6 +412,161 @@ describe('Library API contract: GET /api/library genre/style/format filtering (f
   });
 });
 
+describe('Library API contract: GET /api/library sort (feature 068, US1)', () => {
+  type RawInstance = ReturnType<typeof rawCollectionInstance>;
+
+  function rawEntry(
+    releaseId: number,
+    data: { artist?: string; title?: string; dateAdded: string; genres?: string[] },
+  ): RawInstance {
+    return rawCollectionInstance(releaseId, {
+      instanceId: releaseId * 10,
+      dateAdded: data.dateAdded,
+      title: data.title ?? '',
+      artists: data.artist ? [{ name: data.artist, id: releaseId, join: '' }] : [],
+      genres: data.genres ?? ['Rock'],
+    });
+  }
+
+  /** One GET: every request re-syncs (no Redis marker), so each needs fresh stubs. */
+  async function getLibrary(
+    sessionToken: string,
+    username: string,
+    instances: RawInstance[],
+    query: Record<string, string | number> = {},
+  ) {
+    stubCollectionFields(username);
+    stubCollectionPage(username, instances);
+    // Catalog enrichment is irrelevant to ordering: answer 404 (not retried).
+    discogsScope()
+      .get(/^\/releases\/\d+$/)
+      .times(instances.length)
+      .reply(404, { message: 'Release not found.' });
+    return request(app)
+      .get('/api/library')
+      .query(query)
+      .set('Authorization', `Bearer ${sessionToken}`);
+  }
+
+  function releaseIds(body: { items: Array<{ discogsReleaseId: number }> }): number[] {
+    return body.items.map((item) => item.discogsReleaseId);
+  }
+
+  // Present: Björk (3), The Clash (2, under C), Motörhead (1). Missing: 4 (newer), 5 (older).
+  const ARTISTS: RawInstance[] = [
+    rawEntry(1, { artist: 'Motörhead', title: 'Ace of Spades', dateAdded: '2026-01-05T00:00:00Z' }),
+    rawEntry(2, { artist: 'The Clash', title: 'London Calling', dateAdded: '2026-01-04T00:00:00Z' }),
+    rawEntry(3, { artist: 'Björk', title: 'Homogenic', dateAdded: '2026-01-03T00:00:00Z' }),
+    rawEntry(4, { title: 'Untitled A', dateAdded: '2026-03-01T00:00:00Z' }),
+    rawEntry(5, { title: 'Untitled B', dateAdded: '2026-01-01T00:00:00Z' }),
+  ];
+
+  it('?sort=artist&dir=asc: accent/case/article-insensitive order, missing artist last newest first', async () => {
+    const { sessionToken, uid } = await createTestSession('sort-artist-asc-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+
+    const res = await getLibrary(sessionToken, username, ARTISTS, { sort: 'artist', dir: 'asc' });
+
+    expect(res.status).toBe(200);
+    expect(releaseIds(res.body)).toEqual([3, 2, 1, 4, 5]);
+  });
+
+  it('?sort=artist&dir=desc: present group reversed, missing artist still last', async () => {
+    const { sessionToken, uid } = await createTestSession('sort-artist-desc-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+
+    const res = await getLibrary(sessionToken, username, ARTISTS, { sort: 'artist', dir: 'desc' });
+
+    expect(res.status).toBe(200);
+    expect(releaseIds(res.body)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('?sort=album&dir=asc: sorts by title; ties break by artist, then addedAt desc; missing title last', async () => {
+    const { sessionToken, uid } = await createTestSession('sort-album-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+    const instances = [
+      rawEntry(1, { artist: 'Slayer', title: 'Reign in Blood', dateAdded: '2026-01-05T00:00:00Z' }),
+      rawEntry(2, { artist: 'Queen', title: 'Greatest Hits', dateAdded: '2026-01-01T00:00:00Z' }),
+      rawEntry(3, { artist: 'ABBA', title: 'Greatest Hits', dateAdded: '2026-01-02T00:00:00Z' }),
+      rawEntry(4, { artist: 'Queen', title: 'Greatest Hits', dateAdded: '2026-03-01T00:00:00Z' }),
+      rawEntry(5, { artist: 'Nobody', title: '', dateAdded: '2026-04-01T00:00:00Z' }),
+    ];
+
+    const res = await getLibrary(sessionToken, username, instances, { sort: 'album', dir: 'asc' });
+
+    expect(res.status).toBe(200);
+    expect(releaseIds(res.body)).toEqual([3, 4, 2, 1, 5]);
+  });
+
+  it('?sort=added&dir=asc returns oldest first; no params keeps newest first', async () => {
+    const { sessionToken, uid } = await createTestSession('sort-added-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+
+    const asc = await getLibrary(sessionToken, username, ARTISTS, { sort: 'added', dir: 'asc' });
+    const byDefault = await getLibrary(sessionToken, username, ARTISTS);
+
+    expect(asc.status).toBe(200);
+    expect(releaseIds(asc.body)).toEqual([5, 3, 2, 1, 4]);
+    expect(byDefault.status).toBe(200);
+    expect(releaseIds(byDefault.body)).toEqual([4, 1, 2, 3, 5]);
+  });
+
+  it('?sort=foo&dir=up falls back silently: 200 with the same body as no params', async () => {
+    const { sessionToken, uid } = await createTestSession('sort-invalid-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+
+    const invalid = await getLibrary(sessionToken, username, ARTISTS, { sort: 'foo', dir: 'up' });
+    const byDefault = await getLibrary(sessionToken, username, ARTISTS);
+
+    expect(invalid.status).toBe(200);
+    expect(invalid.body).toEqual(byDefault.body);
+  });
+
+  it('?sort=artist&genre=Rock&pageSize=2: pages 1-3 concatenate to the filtered, sorted set', async () => {
+    const { sessionToken, uid } = await createTestSession('sort-genre-paging-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+    const instances = [
+      ...ARTISTS,
+      rawEntry(6, { artist: 'Miles Davis', title: 'Kind of Blue', dateAdded: '2026-02-01T00:00:00Z', genres: ['Jazz'] }),
+    ];
+
+    const pages = [];
+    for (const page of [1, 2, 3]) {
+      pages.push(
+        await getLibrary(sessionToken, username, instances, {
+          sort: 'artist',
+          genre: 'Rock',
+          pageSize: 2,
+          page,
+        }),
+      );
+    }
+
+    for (const res of pages) {
+      expect(res.status).toBe(200);
+      expect(res.body.totalItems).toBe(5);
+    }
+    expect(pages.flatMap((res) => releaseIds(res.body))).toEqual([3, 2, 1, 4, 5]);
+  });
+
+  it('each item carries the album title mirrored from basic_information.title', async () => {
+    const { sessionToken, uid } = await createTestSession('sort-title-user');
+    const username = await linkDiscogs(uid, { initialLibrarySyncAt: new Date() });
+
+    const res = await getLibrary(sessionToken, username, ARTISTS.slice(0, 3));
+
+    expect(res.status).toBe(200);
+    expect(
+      Object.fromEntries(
+        res.body.items.map((item: { discogsReleaseId: number; title?: string }) => [
+          item.discogsReleaseId,
+          item.title,
+        ]),
+      ),
+    ).toEqual({ 1: 'Ace of Spades', 2: 'London Calling', 3: 'Homogenic' });
+  });
+});
+
 describe('Library API contract: GET /api/library/:id (per-copy data)', () => {
   it('returns the enriched entry with its Discogs per-copy data (US2)', async () => {
     const { sessionToken, uid } = await createTestSession('detail-user');

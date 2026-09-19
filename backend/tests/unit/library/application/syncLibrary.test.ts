@@ -68,7 +68,6 @@ function fakeRepository(): jest.Mocked<LibraryRepositoryPort> {
       }),
     ),
     getEntry: jest.fn(),
-    listEntries: jest.fn(),
     listAllEntries: jest.fn().mockResolvedValue([]),
     persistCatalogFields: jest.fn(),
     persistCollectionFacets: jest.fn().mockResolvedValue(undefined),

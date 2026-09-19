@@ -31,6 +31,7 @@ import type {
   EntryDiscogsData,
   LibraryEntry,
   LibraryFilters,
+  LibrarySort,
 } from '../../domain/library/types';
 import { cacheAdapter } from '../cache/cacheAdapter';
 import { discogsCollectionAdapter } from '../discogsOauth/discogsCollectionAdapter';
@@ -67,6 +68,21 @@ function parseLibraryFilters(req: Request): LibraryFilters {
     }
   }
   return filters;
+}
+
+const SORT_CRITERIA: readonly LibrarySort['criterion'][] = ['added', 'artist', 'album'];
+
+/**
+ * Reads `sort`/`dir` (feature 068, data-model.md §2). Unknown or absent values
+ * fall back silently — `added`, and the criterion's default direction
+ * (`desc` for `added`, `asc` otherwise) — never a 400.
+ */
+function parseLibrarySort(req: Request): LibrarySort {
+  const { sort, dir } = req.query;
+  const criterion = SORT_CRITERIA.find((c) => c === sort) ?? 'added';
+  const direction =
+    dir === 'asc' || dir === 'desc' ? dir : criterion === 'added' ? 'desc' : 'asc';
+  return { criterion, direction };
 }
 
 /** Public entry shape: legacy per-copy fields never leave the backend. */
@@ -264,6 +280,7 @@ libraryRouter.get(
     const uid = req.auth!.uid;
     const { page, pageSize } = parsePageParams(req);
     const filters = parseLibraryFilters(req);
+    const sort = parseLibrarySort(req);
 
     try {
       const { enriched, totalItems } = await listLibraryEntries(
@@ -271,6 +288,7 @@ libraryRouter.get(
         page,
         pageSize,
         filters,
+        sort,
         {
           force: req.query.refresh === 'true',
         },
@@ -287,7 +305,13 @@ libraryRouter.get(
         route: '/api/library',
         outcome: 'success',
         uid,
-        meta: { filters: Object.keys(filters) },
+        meta: {
+          filters: Object.keys(filters),
+          sort: sort.criterion,
+          dir: sort.direction,
+          page,
+          totalItems,
+        },
       });
       res.status(200).json({ items: serialized, page, pageSize, totalItems });
     } catch (err) {
