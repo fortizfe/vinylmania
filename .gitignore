@@ -74,3 +74,5 @@ __pycache__/
 
 # Claude Code scratch output (rendered skills, tool artifacts) — local only
 Claude outputs/
+specs/*/.trace.jsonl
+.claude/settings.json
