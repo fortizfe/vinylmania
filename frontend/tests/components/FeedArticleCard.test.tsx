@@ -102,6 +102,19 @@ describe('FeedArticleCard', () => {
       },
     );
 
+    it.each(variants)(
+      '%s: the link is named by the title and described by the source and full date (FR-011)',
+      (variant) => {
+        render(<FeedArticleCard article={withImage} variant={variant} />);
+
+        const link = screen.getByRole('link', { name: baseArticle.title });
+        // jsdom's accname inserts a space before the sr-only span; browsers don't.
+        expect(link).toHaveAccessibleDescription(
+          /^Metal Injection · 3h ago ?, September 19, 2026$/,
+        );
+      },
+    );
+
     it.each(variants)('%s: no longer shows a category badge (FR-013)', (variant) => {
       render(<FeedArticleCard article={withImage} variant={variant} />);
 

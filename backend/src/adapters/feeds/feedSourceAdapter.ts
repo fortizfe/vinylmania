@@ -110,7 +110,8 @@ const OG_IMAGE_META = /<meta\b[^>]*["']og:image["'][^>]*>/i;
 
 // Private, loopback, link-local (incl. cloud metadata), CGNAT, multicast and
 // reserved ranges. IPv4-mapped IPv6 (::ffff:a.b.c.d) is matched against the
-// IPv4 subnets by BlockList itself.
+// IPv4 subnets by BlockList itself; the other IPv4-embedding IPv6 prefixes
+// (IPv4-compatible, NAT64, Teredo, 6to4) are blocked whole.
 const blockedAddresses = new BlockList();
 for (const [network, prefix] of [
   ['0.0.0.0', 8],
@@ -128,8 +129,11 @@ for (const [network, prefix] of [
   blockedAddresses.addSubnet(network, prefix, 'ipv4');
 }
 for (const [network, prefix] of [
-  ['::', 128],
-  ['::1', 128],
+  ['::', 96],
+  ['64:ff9b::', 96],
+  ['64:ff9b:1::', 48],
+  ['2001::', 32],
+  ['2002::', 16],
   ['fc00::', 7],
   ['fe80::', 10],
 ] as const) {
@@ -214,6 +218,8 @@ export async function fetchArticleHead(
       maxRedirects: 0,
       validateStatus: () => true,
       headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      // A proxy would resolve the host itself, skipping the check and the pin.
+      proxy: false,
       // Connect to the address validated above: no DNS-rebinding window.
       lookup: (_hostname, _options, callback) =>
         callback(null, pinned.address, pinned.family === 6 ? 6 : 4),

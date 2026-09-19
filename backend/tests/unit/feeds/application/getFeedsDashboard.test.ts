@@ -636,10 +636,44 @@ describe('article-page image lookup (spec 067 D4, D5, D6, D13, FR-004, FR-005, F
           placeholders: 4,
           lookups: 5,
           lookupTimeouts: 1,
+          lookupErrors: 0,
           logoDiscarded: 2,
         },
       }),
     );
+    infoSpy.mockRestore();
+  });
+
+  it('counts a 5xx or reset as lookupErrors and only aborted/timed-out lookups as lookupTimeouts', async () => {
+    const infoSpy = jest.spyOn(logger, 'info');
+    feedSource.fetchFeed.mockResolvedValue([item(4), item(3), item(2), item(1)]);
+    feedSource.fetchArticleHead.mockImplementation(async (url: string) => {
+      switch (url) {
+        case link(4):
+          throw new Error('Article page responded 503');
+        case link(3):
+          throw Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' });
+        case link(2):
+          // axios, when the timeout signal aborts the request
+          throw Object.assign(new Error('canceled'), {
+            name: 'CanceledError',
+            code: 'ERR_CANCELED',
+          });
+        default:
+          throw new DOMException(
+            'The operation was aborted due to timeout',
+            'TimeoutError',
+          );
+      }
+    });
+    const { cache } = inMemoryCache();
+
+    await refresh(cache);
+
+    const meta = infoSpy.mock.calls
+      .map(([event]) => event)
+      .find((event) => event.outcome === 'feed_images_resolved')?.meta;
+    expect(meta).toEqual(expect.objectContaining({ lookupTimeouts: 2, lookupErrors: 2 }));
     infoSpy.mockRestore();
   });
 });
