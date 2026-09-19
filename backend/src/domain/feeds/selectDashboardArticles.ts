@@ -45,10 +45,5 @@ export function selectDashboardArticles(articles: Article[], now: Date): Article
   }
 
   let room = MAX_ARTICLES - guaranteed.size;
-  return recent.filter((article) => {
-    if (guaranteed.has(article)) return true;
-    if (room <= 0) return false;
-    room -= 1;
-    return true;
-  });
+  return recent.filter((article) => guaranteed.has(article) || room-- > 0);
 }

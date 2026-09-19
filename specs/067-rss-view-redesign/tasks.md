@@ -79,7 +79,7 @@ Red tests reviewed/approved before Implementation.
   - a rejected lookup leaves the article without an image and is retried on the next refresh;
   - a page image shared by 2 links is dropped, while an identical feed-ladder image is kept;
   - duplicate links or guids within a source appear once (FR-014);
-  - exactly one `logger.info` with `outcome: 'feed_images_resolved'` and meta `{ sourceId, articles, fromFeed, fromPage, placeholders, lookups, lookupTimeouts, logoDiscarded }` per source refresh.
+  - exactly one `logger.info` with `outcome: 'feed_images_resolved'` and meta `{ sourceId, articles, fromFeed, fromPage, placeholders, lookups, lookupTimeouts, lookupErrors, logoDiscarded }` per source refresh.
 - [X] T007 [P] [US1] backend-agent: in `backend/tests/integration/feeds/feedsDashboard.integration.test.ts` add a nock scenario (D3):
   - one source whose feed only has `media:content`, one whose items have no image but whose article pages carry `og:image`, and one whose pages all share the same `og:image`;
   - stub DNS with `jest.mock('node:dns', () => ({ ...jest.requireActual('node:dns'), promises: { ...jest.requireActual('node:dns').promises, lookup: jest.fn(async () => [{ address: '93.184.216.34', family: 4 }]) } }))`, because `feedsRoutes.ts` uses the adapter module directly;

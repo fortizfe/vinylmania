@@ -26,6 +26,7 @@ interface FeedArticleCardProps {
 export function FeedArticleCard({ article, variant = 'tile' }: FeedArticleCardProps) {
   const [failed, setFailed] = useState(false);
   const titleId = useId();
+  const metaId = useId();
   const isLead = variant === 'lead';
   const published = new Date(article.publishedAt);
   const fullDate = published.toLocaleDateString('en', {
@@ -41,6 +42,7 @@ export function FeedArticleCard({ article, variant = 'tile' }: FeedArticleCardPr
         target="_blank"
         rel="noopener noreferrer"
         aria-labelledby={titleId}
+        aria-describedby={metaId}
         className={clsx(
           'group rounded-xl no-underline',
           feedCardLayout[variant],
@@ -85,7 +87,7 @@ export function FeedArticleCard({ article, variant = 'tile' }: FeedArticleCardPr
               {article.excerpt}
             </p>
           )}
-          <p className="text-xs text-stone-600 dark:text-stone-400">
+          <p id={metaId} className="text-xs text-stone-600 dark:text-stone-400">
             {article.sourceName} ·{' '}
             <time dateTime={article.publishedAt} title={fullDate}>
               {formatArticleAge(article.publishedAt, new Date())}

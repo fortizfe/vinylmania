@@ -369,7 +369,7 @@ Rationale / Alternatives rejected (one line each).
 - **Alternatives**: new icon file under `ui/icons` (one use → inline).
 
 ### D13 — Observability
-- **Decision**: one structured line per source refresh from the application layer: `logger.info({ route: 'feeds:images', outcome: 'feed_images_resolved', meta: { sourceId, articles, fromFeed, fromPage, placeholders, lookups, lookupTimeouts, logoDiscarded } })`. `feed_images_resolved` is added to the `LogOutcome` union in `config/logger.ts`. Blocked (SSRF) hops log `warn` with `outcome: 'validation_error'`, `meta: { sourceId, host }` (no full URL).
+- **Decision**: one structured line per source refresh from the application layer: `logger.info({ route: 'feeds:images', outcome: 'feed_images_resolved', meta: { sourceId, articles, fromFeed, fromPage, placeholders, lookups, lookupTimeouts, lookupErrors, logoDiscarded } })`. `lookupTimeouts` counts only lookups ended by the timeout signal (`TimeoutError`/`AbortError`, axios `ERR_CANCELED`/`ECONNABORTED`); every other rejection (5xx, connection reset) counts as `lookupErrors`. `feed_images_resolved` is added to the `LogOutcome` union in `config/logger.ts`. Blocked (SSRF) hops log `warn` with `outcome: 'validation_error'`, `meta: { sourceId, host }` (no full URL).
 - **Rationale**: lets SC-001 be measured from production logs (Principle V).
 
 ### D14 — UI structure (apple-design / emil-design-eng consulted)

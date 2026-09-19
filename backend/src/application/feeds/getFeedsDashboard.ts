@@ -25,8 +25,22 @@ import { mapWithConcurrency } from '../../shared/concurrency';
 const CACHE_TTL_SECONDS = 20 * 60;
 // spec 067 D4/D5: article-page image lookups.
 const IMAGE_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
+// ponytail: fixed 1 s timeout within an 8-lookup budget, so publishers whose
+// pages are slower stay on placeholders; lift with a per-source timeout or a
+// background refresh.
 const MAX_LOOKUPS_PER_REFRESH = 8;
 const LOOKUP_TIMEOUT_MS = 1000;
+
+/** fetchArticleHead's timeout signal surfaces as the signal's reason or as axios' cancel. */
+function isTimeout(err: unknown): boolean {
+  const { name, code } = (err ?? {}) as { name?: unknown; code?: unknown };
+  return (
+    name === 'TimeoutError' ||
+    name === 'AbortError' ||
+    code === 'ERR_CANCELED' ||
+    code === 'ECONNABORTED'
+  );
+}
 
 interface FeedsAggregationUseCase {
   getDashboard(): Promise<DashboardResponse>;
@@ -53,6 +67,7 @@ export function createFeedsAggregationUseCase(deps: {
     const pending = articles.filter((article) => !article.imageUrl).sort(byNewest);
     let lookups = 0;
     let lookupTimeouts = 0;
+    let lookupErrors = 0;
 
     const lookup = async (link: string): Promise<string | null> => {
       if (lookups >= MAX_LOOKUPS_PER_REFRESH) {
@@ -63,7 +78,11 @@ export function createFeedsAggregationUseCase(deps: {
       try {
         html = await feedSource.fetchArticleHead(link, LOOKUP_TIMEOUT_MS);
       } catch (err) {
-        lookupTimeouts += 1;
+        if (isTimeout(err)) {
+          lookupTimeouts += 1;
+        } else {
+          lookupErrors += 1;
+        }
         throw err;
       }
       return (html && extractPreviewImage(html, link)) || null;
@@ -77,13 +96,11 @@ export function createFeedsAggregationUseCase(deps: {
         .catch(() => undefined),
     );
 
-    const results = new Map<string, string | null>();
-    pending.forEach((article, index) => {
-      const url = found[index];
-      if (url !== undefined) {
-        results.set(article.link, url);
-      }
-    });
+    const results = new Map(
+      pending.flatMap((article, i) =>
+        found[i] === undefined ? [] : [[article.link, found[i]] as const],
+      ),
+    );
     const kept = dropSharedPreviewImages(results);
 
     let fromPage = 0;
@@ -110,6 +127,7 @@ export function createFeedsAggregationUseCase(deps: {
         placeholders: pending.length - fromPage,
         lookups,
         lookupTimeouts,
+        lookupErrors,
         logoDiscarded,
       },
     });

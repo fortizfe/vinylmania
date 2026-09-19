@@ -2,6 +2,7 @@ import type { LookupAddress } from 'node:dns';
 import { isIP } from 'node:net';
 import { Readable } from 'node:stream';
 
+import axios from 'axios';
 import nock from 'nock';
 
 import {
@@ -201,6 +202,23 @@ describe('fetchArticleHead (spec 067 D3, FR-004a)', () => {
     expect(resolve).toHaveBeenCalledWith('article-head-test.example');
   });
 
+  it('bypasses any HTTP(S)_PROXY and connects to the validated, pinned address', async () => {
+    nock(ARTICLE_ORIGIN).get('/post').reply(200, '<html><head></head>', HTML);
+    const getSpy = jest.spyOn(axios, 'get');
+
+    await fetchArticleHead(`${ARTICLE_ORIGIN}/post`, 1000, fakeResolver());
+
+    const config = getSpy.mock.calls[0][1] as {
+      proxy?: unknown;
+      lookup?: (host: string, opts: object, cb: (...args: unknown[]) => void) => void;
+    };
+    getSpy.mockRestore();
+    expect(config.proxy).toBe(false);
+    const callback = jest.fn();
+    config.lookup?.('article-head-test.example', {}, callback);
+    expect(callback).toHaveBeenCalledWith(null, PUBLIC_ADDRESS.address, 4);
+  });
+
   describe('blocked addresses', () => {
     it.each<[string, number]>([
       ['10.0.0.5', 4],
@@ -209,6 +227,10 @@ describe('fetchArticleHead (spec 067 D3, FR-004a)', () => {
       ['::1', 6],
       ['fd00:ec2::254', 6],
       ['::ffff:127.0.0.1', 6],
+      ['64:ff9b::7f00:1', 6], // NAT64
+      ['2002:7f00:1::', 6], // 6to4
+      ['::7f00:1', 6], // IPv4-compatible
+      ['2001:0:4136:e378:8000:63bf:3fff:fdd2', 6], // Teredo
     ])(
       'returns null without requesting when the host resolves to %s',
       async (address, family) => {

@@ -164,6 +164,9 @@ export function extractPreviewImage(html: string, baseUrl: string): string | und
   }
 }
 
+// ponytail: a logo is only detectable when 2+ looked-up articles share it, so a
+// source with a single looked-up article keeps its logo; lift with counting
+// across refreshes or a per-host image hash.
 /**
  * Nulls every page-lookup image URL shared by 2+ article links of one source
  * refresh — a site logo, not an article image (spec 067 D6, FR-005).
