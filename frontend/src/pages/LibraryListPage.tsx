@@ -59,6 +59,7 @@ export function LibraryListPage() {
     error,
     hasNextPage,
     isFetchingNextPage,
+    isFetchNextPageError,
     fetchNextPage,
   } = useLibraryList(sort, filters);
   const refresh = useRefreshLibrary(sort, filters);
@@ -71,7 +72,11 @@ export function LibraryListPage() {
   // Only the first batch can fail before anything is on screen; a later
   // failure keeps the loaded records and offers Retry instead (FR-013).
   const initialLoadError = !data && isError;
-  const nextPageError = Boolean(data) && isError;
+  // Only a failed *next batch* gets the Retry treatment: a failed refetch of
+  // the loaded pages (e.g. a mutation invalidating the list) leaves nothing to
+  // fetch more of, so `isError` alone would offer a Retry that does nothing and
+  // would hide the end-of-collection message.
+  const nextPageError = isFetchNextPageError;
   const gate = initialLoadError ? gateVariant(error) : null;
 
   // D20: placeholders live in the same <ul> as the records, so a batch takes
@@ -108,18 +113,22 @@ export function LibraryListPage() {
   // FR-028 / contracts §5: each appended batch is announced once it renders,
   // with the end of the collection appended when that batch closed it. A
   // single-batch result (initial load, or a new sort/filter) announces no end.
+  // The count is cumulative, not per batch: setting a `role="status"` node to
+  // the string it already holds announces nothing, so "20 more records loaded."
+  // would go silent from the third full batch on.
   const [batchAnnouncement, setBatchAnnouncement] = useState('');
   useEffect(() => {
-    const last = pages && pages.length > 1 ? pages[pages.length - 1] : undefined;
-    if (!last) {
+    if (!pages || pages.length < 2) {
       setBatchAnnouncement('');
       return;
     }
-    const loaded = `${last.items.length} more records loaded.`;
+    const last = pages[pages.length - 1];
+    const loaded = pages.reduce((total, batch) => total + batch.items.length, 0);
+    const progress = `${loaded} of ${last.totalItems} records loaded.`;
     setBatchAnnouncement(
       last.page * last.pageSize < last.totalItems
-        ? loaded
-        : `${loaded} End of collection, ${last.totalItems} records.`,
+        ? progress
+        : `${progress} End of collection.`,
     );
   }, [pages]);
 
@@ -284,7 +293,14 @@ export function LibraryListPage() {
           <p role="alert" className="text-sm text-red-600 dark:text-red-400">
             Couldn&apos;t load more records. Please try again.
           </p>
-          <Button variant="secondary" onClick={() => fetchNextPage()}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              fetchNextPage().catch(() => {
+                // Surfaced reactively through `nextPageError` above.
+              });
+            }}
+          >
             Retry
           </Button>
         </div>
