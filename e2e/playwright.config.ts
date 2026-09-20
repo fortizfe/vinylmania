@@ -39,16 +39,19 @@ export default defineConfig({
   // only starts counting once emulators:exec itself begins (spec 042,
   // FR-007/FR-008).
   timeout: 30_000,
-  // Whole-run ceiling. Raised from 900_000 (15 min) with spec 059, which
-  // added ~56 e2e tests (pressed-state, reduced-motion, overlay focus/
-  // interruptibility, drag-to-dismiss, gallery swipe, overlay contrast,
-  // motion performance) plus assertions to ~10 existing specs — the suite
-  // grew from ~7–11 min to ~15+ min and was hitting this ceiling exactly,
-  // which Playwright reports as a run failure. 25 min leaves headroom for
-  // CI runner variance while still bounding a genuinely stuck run well
-  // inside the 30-min GitHub job limit and under the `run-with-timeout.js`
-  // wrapper in package.json.
-  globalTimeout: 1_500_000,
+  // Whole-run ceiling. Raised from 900_000 (15 min) with spec 059, then from
+  // 1_500_000 (25 min) with spec 068, which added ~68 e2e tests — the run
+  // reached exactly 1500s with the 423 chromium tests just finished and all
+  // 35 webkit tests still queued, so the *whole* webkit project (spec 044's
+  // Safari-only containment coverage) was silently dropped and the run failed
+  // with "2 errors were not a part of any test" — those two errors being this
+  // ceiling firing for the suite and again for its teardown. Not a slow or
+  // flaky test: zero retries fired in that run and every test that ran passed.
+  // 35 min covers the measured ~27 min full run (chromium ~24.6 min + webkit
+  // ~2.5 min) with ~25% headroom for CI runner variance, and still bounds a
+  // genuinely stuck run under the `run-with-timeout.js` wrapper in
+  // package.json (38 min) and the job's `timeout-minutes` (45).
+  globalTimeout: 2_100_000,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: FRONTEND_URL,
