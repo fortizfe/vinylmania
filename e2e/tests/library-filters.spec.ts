@@ -368,7 +368,9 @@ test.describe('Library filter option contrast (spec 058, US2)', () => {
       await assertUiComponentContrast(
         page,
         rock,
-        page.getByTestId('sheet-surface'),
+        // The painted surface is the Card inside the animating wrapper that
+        // carries `sheet-surface`; the wrapper itself has no background.
+        page.locator('[data-testid="sheet-surface"] .overlay-surface'),
         `Genre option checkbox border (${theme})`,
       );
     });

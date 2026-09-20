@@ -162,14 +162,17 @@ test.describe('Library capsule at 390 × 844 (US3 AS1/AS5/AS6, FR-016, FR-019, F
         el = el.parentElement;
       }
       if (!el || el === document.body) return [];
-      return [...el.querySelectorAll('button, a, select, summary, input:not([type="hidden"])')].map(
-        (node) => {
+      return [...el.querySelectorAll('button, a, select, summary, input:not([type="hidden"])')]
+        // The `hidden sm:*` sort <select> and "Filters" trigger stay in the DOM at
+        // 390 px (CSS-only hiding, asserted by T049) but are display:none, so their
+        // boxes are 0 × 0. Only what the user can actually hit has a touch target.
+        .filter((node) => node.checkVisibility())
+        .map((node) => {
           const r = node.getBoundingClientRect();
           const label =
             node.getAttribute('aria-label') ?? node.textContent?.trim().slice(0, 40) ?? node.tagName;
           return { label, width: r.width, height: r.height };
-        },
-      );
+        });
     });
 
     expect(targets.length).toBeGreaterThan(0);

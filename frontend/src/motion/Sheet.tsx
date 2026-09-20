@@ -67,7 +67,8 @@ function outwardEdge(dismissAxis: 'x' | 'y'): 'right' | 'bottom' {
 
 /**
  * A drawer that also dismisses by 1:1 drag along `dismissAxis`. Composes
- * `Overlay variant="end"`, so the scrim, focus trap, focus restore, scroll
+ * `Overlay` — `variant="bottom"` for a `y` sheet (bottom-anchored, spec 068
+ * D16), `variant="end"` for an `x` drawer — so the scrim, focus trap, focus restore, scroll
  * lock, Escape and any in-content close button all behave identically to a
  * non-gesture overlay (FR-013).
  *
@@ -98,7 +99,7 @@ export function Sheet({
   const [flungClose, setFlungClose] = useState(false);
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    // The `end` Overlay surface is itself the scroll container
+    // The Overlay surface is itself the scroll container
     // (`overflow-y-auto`); `event.currentTarget` is that surface.
     if (scrollBlocksDismiss(event.currentTarget, dismissAxis)) return;
     dragControls.start(event);
@@ -142,7 +143,7 @@ export function Sheet({
   return (
     <Overlay
       {...overlayProps}
-      variant="end"
+      variant={dismissAxis === 'y' ? 'bottom' : 'end'}
       surfaceTestId="sheet-surface"
       surfaceDrag={surfaceDrag}
       exitTransition={flungClose && !reduceMotion ? spring.momentum : undefined}

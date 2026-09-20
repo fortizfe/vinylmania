@@ -10,7 +10,7 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  position?: 'center' | 'end';
+  position?: 'center' | 'end' | 'bottom';
   size?: 'md' | 'lg';
   hideScrollbar?: boolean;
   /** Override the element focus returns to on close (defaults to the opener). */
@@ -23,12 +23,12 @@ const centerSizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
 };
 
 /**
- * Centered dialog / end-anchored drawer. The overlay material, focus trap,
+ * Centered dialog / end-anchored drawer / bottom-anchored sheet. The overlay material, focus trap,
  * focus restoration, background scroll lock, Escape + scrim-click dismissal
  * and the spring enter/exit motion all come from `motion/Overlay`
- * (spec 059, contracts/component-api-changes §Modal). The `end` drawer
- * additionally routes through `motion/Sheet`, so it is drag-to-dismissible
- * on touch — the close button and Escape stay exactly as before (FR-013).
+ * (spec 059, contracts/component-api-changes §Modal). The `end` drawer and
+ * the `bottom` sheet (spec 068 D16) additionally route through
+ * `motion/Sheet`, so they are drag-to-dismissible on touch — the close button and Escape stay exactly as before (FR-013).
  * Public props are unchanged; every existing call site keeps working.
  */
 export function Modal({
@@ -76,13 +76,20 @@ export function Modal({
     scrimTestId: 'modal-backdrop',
   } as const;
 
-  if (position === 'end') {
+  if (position === 'end' || position === 'bottom') {
     return (
       <Sheet
         {...sharedProps}
-        dismissAxis="x"
+        dismissAxis={position === 'bottom' ? 'y' : 'x'}
         showHandle
-        surfaceClassName={clsx('rounded-none', hideScrollbar && 'scrollbar-hidden')}
+        surfaceClassName={clsx(
+          // The sheet sits flush with the bottom edge, so only its top
+          // corners are rounded; the padding clears the home indicator.
+          position === 'bottom'
+            ? 'rounded-b-none pb-[env(safe-area-inset-bottom)]'
+            : 'rounded-none',
+          hideScrollbar && 'scrollbar-hidden',
+        )}
       >
         {body}
       </Sheet>

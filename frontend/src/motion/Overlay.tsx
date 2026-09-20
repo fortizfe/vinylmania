@@ -68,8 +68,12 @@ export interface OverlaySurfaceDrag {
 export interface OverlayProps {
   open: boolean;
   onClose: () => void;
-  /** 'center' = dialog scale-in; 'end' = side drawer slide-in. */
-  variant: 'center' | 'end';
+  /**
+   * 'center' = dialog scale-in; 'end' = side drawer slide-in;
+   * 'bottom' = bottom-anchored sheet rising from the bottom edge
+   * (spec 068 D16).
+   */
+  variant: 'center' | 'end' | 'bottom';
   /**
    * Element to return focus to on close. Defaults to the element focused
    * when `open` became true.
@@ -121,6 +125,7 @@ export interface OverlayProps {
 const positionClasses: Record<OverlayProps['variant'], string> = {
   center: 'items-center justify-center p-4',
   end: 'justify-end',
+  bottom: 'items-end justify-center',
 };
 
 // Layout only — a consumer supplies its own max-width via `surfaceClassName`
@@ -129,6 +134,8 @@ const positionClasses: Record<OverlayProps['variant'], string> = {
 const surfaceSizeClasses: Record<OverlayProps['variant'], string> = {
   center: 'max-h-[90vh] w-full overflow-y-auto',
   end: 'h-dvh w-full max-w-xs overflow-y-auto',
+  // Single detent: the sheet is as tall as its content, capped at 85 dvh.
+  bottom: 'max-h-[85dvh] w-full overflow-y-auto',
 };
 
 function hasMaxWidth(className: string | undefined): boolean {
@@ -201,12 +208,20 @@ export function Overlay({
           exit: { opacity: 0, scale: 0.96 },
           transition: spring.default,
         }
-      : {
-          initial: { x: '100%' },
-          animate: { x: 0 },
-          exit: { x: '100%' },
-          transition: spring.sheet,
-        };
+      : variant === 'bottom'
+        ? {
+            // Enter and exit along the same edge (apple-design §7).
+            initial: { y: '100%' },
+            animate: { y: 0 },
+            exit: { y: '100%' },
+            transition: spring.sheet,
+          }
+        : {
+            initial: { x: '100%' },
+            animate: { x: 0 },
+            exit: { x: '100%' },
+            transition: spring.sheet,
+          };
 
   return (
     <AnimatePresence>
