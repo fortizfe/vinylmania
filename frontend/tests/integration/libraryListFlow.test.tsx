@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '../../src/services/apiClient';
 import { LibraryListPage } from '../../src/pages/LibraryListPage';
+import { libraryKeys } from '../../src/queries/libraryQueries';
 import { createTestQueryClient } from '../testUtils';
 
 const mockList = vi.fn();
@@ -74,9 +75,12 @@ beforeEach(() => {
   vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver);
 });
 
-function renderPage(initialEntries: string[] = ['/app/library']) {
+function renderPage(
+  initialEntries: string[] = ['/app/library'],
+  client = createTestQueryClient(),
+) {
   return render(
-    <QueryClientProvider client={createTestQueryClient()}>
+    <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={initialEntries}>
         <LibraryListPage />
       </MemoryRouter>
@@ -841,23 +845,65 @@ describe('Infinite scroll on the library (feature 068, US2)', () => {
     expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument();
   });
 
-  it('announces each appended batch, and the end only when a later batch closes the collection (FR-028, contracts §5)', async () => {
-    servePages({ 1: batch(1, 20, 45), 2: batch(2, 20, 45), 3: batch(3, 5, 45) });
+  it('announces every appended batch with a string that changes, and the end only when a later batch closes the collection (FR-028, contracts §5)', async () => {
+    servePages({
+      1: batch(1, 20, 65),
+      2: batch(2, 20, 65),
+      3: batch(3, 20, 65),
+      4: batch(4, 5, 65),
+    });
 
     renderPage();
     await waitFor(() => expect(screen.getByText('Record 1-0')).toBeInTheDocument());
 
     await scrollToSentinel();
     await waitFor(() => expect(screen.getByText('Record 2-0')).toBeInTheDocument());
-    const batchAnnouncement = screen.getByText('20 more records loaded.');
+    const batchAnnouncement = screen.getByText('40 of 65 records loaded.');
     expect(batchAnnouncement.closest('[role="status"]')).not.toBeNull();
+
+    // Two consecutive *full* batches must not produce the same text: setting a
+    // `role="status"` node to the string it already holds announces nothing.
+    await scrollToSentinel();
+    await waitFor(() => expect(screen.getByText('Record 3-0')).toBeInTheDocument());
+    expect(screen.getByText('60 of 65 records loaded.')).toBeInTheDocument();
 
     await scrollToSentinel();
     await waitFor(() =>
       expect(
-        screen.getByText('5 more records loaded. End of collection, 45 records.'),
+        screen.getByText('65 of 65 records loaded. End of collection.'),
       ).toBeInTheDocument(),
     );
+  });
+
+  it('keeps the end message and shows no Retry when a refetch of the loaded pages fails', async () => {
+    servePages({ 1: batch(1, 5, 5) });
+    const client = createTestQueryClient();
+
+    renderPage(['/app/library'], client);
+    await waitFor(() =>
+      expect(
+        screen.getByText("You've reached the end of your collection — 5 records"),
+      ).toBeInTheDocument(),
+    );
+
+    // A mutation elsewhere invalidates the list and that refetch fails: the
+    // loaded batches are intact and there is no next batch, so this is not a
+    // next-batch failure and a "Retry" would call `fetchNextPage()` for nothing.
+    mockList.mockRejectedValue(new Error('boom'));
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: libraryKeys.all });
+    });
+
+    // let the failed refetch's result reach the page
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByText("You've reached the end of your collection — 5 records"),
+    ).toBeInTheDocument();
   });
 
   it('makes no end announcement when the first batch is also the last (contracts §5)', async () => {
@@ -871,7 +917,7 @@ describe('Infinite scroll on the library (feature 068, US2)', () => {
     );
 
     expect(screen.queryByText(/End of collection/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/more records loaded/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/records loaded/)).not.toBeInTheDocument();
   });
 });
 

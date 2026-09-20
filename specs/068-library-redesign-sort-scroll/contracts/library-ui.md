@@ -66,8 +66,8 @@ All interactive elements are ≥ 44 × 44 CSS px (`min-h-11 min-w-11`) and use t
 |---|---|
 | Sort changed | the announcement in §2 |
 | Filter toggled / cleared | "Showing N records." ("1 record", "No records match the active filters." for 0) |
-| Next batch appended | "K more records loaded." |
-| Next batch was the last | "K more records loaded. End of collection, N records." |
+| Next batch appended | "L of N records loaded." (L = records loaded so far, N = total). Cumulative, not per batch: a per-batch count repeats itself between two full batches, and re-setting a `role="status"` node to the text it already holds announces nothing |
+| Next batch was the last | "N of N records loaded. End of collection." |
 | First batch is also the last (single-batch result) | no end announcement: only the sort/filter row above if one applies; nothing on initial load. The visible end message still renders. |
 | Initial page load | nothing |
 | Several quick changes | exactly one announcement, for the latest selection, once its results render; an earlier selection's late response is neither shown nor announced |
