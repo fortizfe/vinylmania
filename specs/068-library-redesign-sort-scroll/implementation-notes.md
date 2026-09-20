@@ -988,3 +988,142 @@ applied, no production bug found.
 
 - Follow-up to T059: the Genre-checkbox contrast case now measures against `[data-testid="sheet-surface"] .overlay-surface` (the painted Card; the sheet-surface wrapper has no background). library-filters 17/17 green.
 - US4 note: T063/T064 currently have NO failing test (the existing contrast cases pass via the transparent→black artefact and run at 1280px only). US4 must add red tests at 390px measuring against the composited capsule background, and a test that `.chrome-material` degrades under prefers-contrast/reduced-transparency, before implementing.
+
+## US4 red tests — frontend (T060–T061)
+
+Date: 2026-09-20 · Branch `068-library-redesign-sort-scroll` · US3 committed at
+`e0607ec`. RED phase only: no file under `frontend/src` was touched.
+
+```
+cd frontend && npx vitest run tests/unit/ViewModeToggle.test.tsx tests/unit/LibraryToolbar.test.tsx
+→ 2 failed | 42 passed (44), 1 file failed / 1 passed
+```
+
+### T060 — ViewModeToggle opaque track (RED, 2 tests)
+
+`frontend/tests/unit/ViewModeToggle.test.tsx`, both new tests fail on the same
+missing classes:
+
+```
+Expected the element to have class: bg-white dark:bg-surface
+Received: relative inline-flex gap-1 rounded-xl border border-stone-500 p-1
+```
+
+- "gives the track an opaque background so the pill keeps 3:1 over translucent
+  chrome (US4)" — `screen="library"`.
+- "keeps the track opaque on Search too, so both instances stay identical
+  (US4)" — `screen="search"`, so T063 cannot satisfy the first test by gating
+  the class on `screen === 'library'` (T063 says the change is a visual no-op
+  on Search).
+
+This is the genuinely failing test the US3 verification note asked for: the
+prior e2e contrast cases passed through the transparent→black measurement
+artefact and only ran at 1280 px, never at the 390 px capsule where the
+~2.49:1 was measured.
+
+**Ceiling of the unit level.** jsdom loads no Tailwind stylesheet and does no
+compositing, so `getComputedStyle` returns nothing for `bg-white` and a real
+ratio cannot be derived from the DOM. Asserting the opaque-layer *classes* is
+the strongest check available here; the composited 390 px measurement is
+T062's (qa-agent, e2e). Documented in the test's doc comment so the class
+assertion is not mistaken for a contrast measurement.
+
+### T061 — contracts §4 names/roles/states (GREEN regression guards, 14 tests)
+
+New nested describe `accessible names, roles and states (contracts §4)` in
+`frontend/tests/unit/LibraryToolbar.test.tsx`. **All 14 pass on the US3 code as
+committed** — US3 (T054/T056) already satisfies every toolbar row of the §4
+table, so these land as regression guards, not as red tests.
+
+Rows covered (all green): view toggle radiogroup name + per-radio names +
+`aria-checked`; sort `combobox` named "Sort" with `group` per optgroup and the
+selected option as its value; the same selection as a checked radio in the
+sheet, all six labels asserted; "Sort & Filter" / "Filters" names with the
+count rendered as words (`/^Filters\s*,\s*1 active filter$/`) and the amber
+digit `aria-hidden` so the name is not doubled (FR-029); `aria-expanded`
+flipping only on the trigger that owns the open panel; the panel as
+`aria-modal="true"` labelled by its own heading element; facets as native
+`<details>`/`<summary>` named "Genre (1 selected)" with native `open` state;
+facet options as `checkbox` named by value and checked from `filters`; the
+style search as a `textbox` named "Search style" with no visible label;
+"Clear all filters" carrying `aria-disabled="true"` while never `disabled`
+and still `.focus()`-able, and dropping `aria-disabled` once a filter is
+active; the §4 footer (`min-h-11` + shared `focusRing` on every control in the
+bar); and the §6 tab order view toggle → panel trigger.
+
+**Consequence for T065**: no unit-level gap to close in
+`LibraryToolbar.tsx`. Whatever T065 fixes must come from T062's e2e findings.
+
+### §4 rows NOT testable in this file
+
+- **Record count, live announcer (`role="status"`), next-batch failure
+  `alert` + Retry, end-of-list text, load sentinel** — owned by
+  `LibraryListPage`, not `LibraryToolbar`; already covered by the US2/US3 flow
+  tests in `frontend/tests/integration/libraryListFlow.test.tsx`.
+- **"arrow keys rove natively" across the three sort fieldsets** — jsdom does
+  not implement native radio-group arrow navigation. Only the precondition
+  (one shared `name`) is asserted, by the US3 test; the behaviour itself is
+  e2e-only.
+- **Contrast ratios, `prefers-contrast`/`prefers-reduced-transparency`
+  degradation, drag-to-dismiss, scroll-padding clearance, real 44 px box
+  sizes** — all need layout or compositing; T062.
+- **Facet-option touch target**: the `Checkbox` row is `min-h-11` but the
+  `<input>` itself is `h-4 w-4` and the pointer target is input + label text.
+  Not asserted: `Checkbox` is shared with Search (feature 038) and is outside
+  T065's scope (`LibraryToolbar.tsx` / `LibraryListPage.tsx`), so a red test
+  here would have no authorised fix. Flagged for a future spec.
+
+Search is unaffected: no production file changed, and the only other tests
+touching the toggle (`tests/integration/libraryListFlow.test.tsx:391`,
+`tests/integration/searchResultsFlow.test.tsx:770`) assert its presence, not
+its class list.
+
+## US4 red tests — e2e (T062)
+
+`e2e/tests/library-toolbar.spec.ts` now carries quickstart §3 scenarios 4–7
+(SC-003, SC-004, FR-023, FR-025, FR-027). Run:
+`cd e2e && npm test -- tests/library-toolbar.spec.ts` (chromium; one emulator
+boot). Production code untouched.
+
+### Red (must drive T063–T065)
+
+| Scenario | Test | Why it fails today |
+|---|---|---|
+| 6 — material contrast, dark | "every 390 px / 1280 px control clears its D17 floor over #ffffff covers in dark mode" | `active view pill fill (primary): 2.49:1` over the composited capsule `rgb(35, 35, 39)`, floor 3:1 — exactly research D17's predicted 2.49. Layer stack printed by the test: `rgb(11,11,16)` page → `rgb(22,22,31)` card → `#ffffff` cover → `oklab(… / 0.9)` chrome. **T063** (`bg-white dark:bg-surface` on the radiogroup track) is what makes it pass. |
+| 6b — `emulateMedia({ contrast: 'more' })` | "under prefers-contrast: more the bar drops its blur and gains a 1 px border" | `backdrop-filter` computes to `blur(24px) saturate(1.5)`; `.chrome-material` has no CSS at all. **T064** must add the three unlayered blocks (opaque background, `backdrop-filter: none`, `border: 1px solid currentColor`). The test also asserts the bar background is no longer translucent. |
+
+### Green regression guards (US3 already satisfies them)
+
+- Scenario 4, both keyboard walks (sort select → "Filters" → drawer trap →
+  facet tick/untick → Escape → trigger; and records → Space-scroll a batch →
+  Retry). Focus rings and the drawer's trap already hold.
+- Scenario 5, the whole axe matrix: light/dark × 390/1280 ×
+  {loading, loaded, panel open} and × {end, batch error} — 8 tests, 0
+  serious/critical violations. T065 therefore has no axe gap to close; its
+  remaining work is whatever T061 finds at unit level.
+- Scenario 6 in **light** mode at both widths: every D17 pairing clears its
+  floor (14.01 / 8.24 / 3.84 / 5.04 / 8.14 — the D17 table reproduced to two
+  decimals).
+- Scenario 7, sheet open *and* close under `reducedMotion: 'reduce'` (the
+  close half is new; `reduced-motion.spec.ts` only covered opening).
+
+### Notes on the measurement (why the old cases were false greens)
+
+- The composite walks `elementsFromPoint` in paint order and alpha-blends
+  each layer on a 1 × 1 canvas over a *known solid* cover colour — a flat
+  fill is unchanged by blur and saturation, so the result is D17's worst
+  case by construction (light → `#e6e6e6`, dark → `#232327`). Reading the
+  toggle track's own computed background instead yields `rgba(0,0,0,0)`,
+  which `toRgb` resolves to black and which is what kept
+  `view-mode-toggle.spec.ts` green at 2.49:1.
+- `helpers/libraryFixture.ts`'s `mockLibrary` takes an optional `coverUrl`
+  (default: none, so every other spec is unchanged).
+- Two traps found while writing this, both fixed in the test: a `fillStyle`
+  handed an unparseable value silently keeps the previous colour (now caught
+  by a sentinel and asserted), and `ArrowDown` on a native `<select>` opens
+  the OS popup on macOS instead of changing the value (the walk uses
+  type-ahead, which behaves the same on CI and locally).
+
+## US4 red-test approval gate
+
+- 2026-09-20: Red tests T060–T062 reviewed and **approved by the developer (Fernando Ortiz)** before implementation (Constitution Principle I). The composited-contrast measurement exposed the real 2.49:1 view-pill failure that the previous transparent-background assertions had masked. Implementation T063–T066 may start.
