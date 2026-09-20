@@ -798,10 +798,16 @@ async function paintedBackdrop(
         // `fillStyle` silently keeps its previous value when handed something
         // it cannot parse, which would paint the layer below twice and read
         // back as a plausible — but wrong — colour. The sentinel catches that.
+        const SENTINEL = '#123456';
         const paint = (color: string) => {
-          ctx.fillStyle = '#123456';
+          ctx.fillStyle = SENTINEL;
+          // Read the sentinel back before overwriting it: that read is what
+          // makes the probe work (and what tells a static analyser the write
+          // is not dead). It is also the canvas's own normalisation of the
+          // sentinel, which is what `color` has to be compared against.
+          const sentinel = ctx.fillStyle;
           ctx.fillStyle = color;
-          if (ctx.fillStyle === '#123456' && color.toLowerCase() !== '#123456') {
+          if (ctx.fillStyle === sentinel && color.toLowerCase() !== SENTINEL) {
             unparsed.push(color);
             return;
           }
