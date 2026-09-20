@@ -106,6 +106,37 @@ describe('ViewModeToggle', () => {
     });
   });
 
+  /**
+   * Feature 068, US4 (T060) — FR-023, research D17.
+   *
+   * The library toolbar is a translucent material (`bg-white/90` /
+   * `dark:bg-surface/90` + `backdrop-blur-xl`). The primary pill painted
+   * straight onto that material measures 2.49:1 against the worst-case
+   * backdrop (solid-black artwork under the dark 90 % layer), under the
+   * WCAG 1.4.11 3:1 floor for a UI component. Giving the *track* an opaque
+   * background puts the pill on a solid layer instead, where research D17
+   * measures 6.29:1 (light, `bg-white`) and 3.14:1 (dark, `bg-surface`).
+   *
+   * jsdom has neither Tailwind's stylesheet nor compositing, so the opaque
+   * layer can only be asserted as the class contract here; the composited
+   * ratio at 390 px is measured in e2e (T062).
+   */
+  it('gives the track an opaque background so the pill keeps 3:1 over translucent chrome (US4)', () => {
+    render(<ViewModeToggle mode="grid" onChange={vi.fn()} screen="library" />);
+
+    const track = screen.getByTestId('view-mode-toggle');
+    expect(track).toHaveClass('bg-white', 'dark:bg-surface');
+  });
+
+  it('keeps the track opaque on Search too, so both instances stay identical (US4)', () => {
+    render(<ViewModeToggle mode="list" onChange={vi.fn()} screen="search" />);
+
+    expect(screen.getByTestId('view-mode-toggle')).toHaveClass(
+      'bg-white',
+      'dark:bg-surface',
+    );
+  });
+
   it('pressing an arrow key while the active option is focused moves focus to and activates the other option', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

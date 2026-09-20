@@ -329,4 +329,212 @@ describe('LibraryToolbar — dual layout bar and panel (068 US3)', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
+
+  /**
+   * Feature 068, US4 (T061) — every toolbar row of the names/roles/states
+   * table in contracts/library-ui.md §4, plus the §4 footer rule (≥ 44 px,
+   * shared `focusRing`) and the §6 keyboard rules that are observable
+   * without layout. FR-026 (name/role/value on every control, expanded
+   * state on the panel triggers) and FR-029 (no state by colour alone).
+   *
+   * The rows for the record count, the live announcer, the next-batch
+   * failure, the end-of-list message and the load sentinel belong to
+   * `LibraryListPage`, not to this component — they are covered by the
+   * US2/US3 flow tests and by e2e (T062).
+   */
+  describe('accessible names, roles and states (contracts §4)', () => {
+    it('exposes the view toggle as a named radiogroup of two labelled radios', () => {
+      renderBar();
+
+      const group = screen.getByRole('radiogroup', { name: 'View mode' });
+      const grid = within(group).getByRole('radio', { name: 'Grid view' });
+      const list = within(group).getByRole('radio', { name: 'List view' });
+
+      expect(grid).toHaveAttribute('aria-checked', 'true');
+      expect(list).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('exposes the sort select as a combobox whose value is the selected option, grouped by criterion', () => {
+      renderBar({ desktop: true, sort: { sort: 'artist', dir: 'desc' } });
+
+      const select = screen.getByRole('combobox', { name: 'Sort' });
+      expect(select).toHaveDisplayValue('Artist (Z → A)');
+      expect(
+        within(select).getByRole('option', { name: 'Artist (Z → A)', hidden: true }),
+      ).toBeInTheDocument();
+
+      const optgroups = within(select).getAllByRole('group', { hidden: true });
+      expect(optgroups.map((group) => group.getAttribute('label'))).toEqual([
+        ...new Set(LIBRARY_SORT_OPTIONS.map((o) => o.group)),
+      ]);
+    });
+
+    it('exposes the same selected sort as a checked radio inside the sheet', async () => {
+      const user = userEvent.setup();
+      renderBar({ sort: { sort: 'artist', dir: 'desc' } });
+
+      await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+      const sortGroup = within(screen.getByRole('dialog')).getByRole('group', {
+        name: 'Sort by',
+      });
+
+      for (const option of LIBRARY_SORT_OPTIONS) {
+        const radio = within(sortGroup).getByRole('radio', { name: option.label });
+        if (option.sort === 'artist' && option.dir === 'desc') {
+          expect(radio).toBeChecked();
+        } else {
+          expect(radio).not.toBeChecked();
+        }
+      }
+    });
+
+    it('names the "Sort & Filter" trigger with its count in words, not by the amber alone', () => {
+      renderBar({ filters: { genre: ['Rock'], format: ['Vinyl'] } });
+
+      const trigger = screen.getByRole('button', { name: /sort & filter/i });
+      expect(trigger).toHaveAccessibleName(/^Sort & Filter\s*,\s*2 active filters$/);
+      // The digit is visible but aria-hidden, so the name is not doubled.
+      expect(within(trigger).getByText('2')).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('names the "Filters" trigger plainly with no filters and with the singular suffix for one', () => {
+      const { unmount } = renderBar({ desktop: true });
+      expect(screen.getByRole('button', { name: /^filters/i })).toHaveAccessibleName(
+        'Filters',
+      );
+      unmount();
+
+      renderBar({ desktop: true, filters: { style: ['Doom Metal'] } });
+      expect(screen.getByRole('button', { name: /^filters/i })).toHaveAccessibleName(
+        /^Filters\s*,\s*1 active filter$/,
+      );
+    });
+
+    it('flips aria-expanded on the trigger that owns the open panel, and only that one', async () => {
+      const user = userEvent.setup();
+      renderBar();
+
+      const sheetTrigger = screen.getByRole('button', { name: /sort & filter/i });
+      const drawerTrigger = screen.getByRole('button', { name: /^filters/i });
+
+      expect(sheetTrigger).toHaveAttribute('aria-expanded', 'false');
+      expect(drawerTrigger).toHaveAttribute('aria-expanded', 'false');
+
+      await user.click(sheetTrigger);
+
+      expect(sheetTrigger).toHaveAttribute('aria-expanded', 'true');
+      expect(drawerTrigger).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('labels the panel as a modal dialog by its own title element', async () => {
+      const user = userEvent.setup();
+      renderBar();
+
+      await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveAttribute('aria-modal', 'true');
+      expect(dialog).toHaveAccessibleName('Sort & Filter');
+      const labelledBy = dialog.getAttribute('aria-labelledby');
+      expect(labelledBy).toBeTruthy();
+      expect(document.getElementById(labelledBy!)).toHaveTextContent('Sort & Filter');
+    });
+
+    it('renders each facet as a native disclosure whose name carries its selected count', async () => {
+      const user = userEvent.setup();
+      renderBar({ filters: { genre: ['Rock'] } });
+
+      await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+      const dialog = screen.getByRole('dialog');
+
+      const summaries = Array.from(dialog.querySelectorAll('details > summary'));
+      expect(summaries.map((s) => s.textContent)).toEqual([
+        'Format',
+        'Genre (1 selected)',
+        'Style',
+      ]);
+
+      // Native expanded state: no ARIA substitute, no height animation.
+      const genre = summaries[1].closest('details') as HTMLDetailsElement;
+      expect(genre.open).toBe(false);
+      await user.click(summaries[1]);
+      expect(genre.open).toBe(true);
+    });
+
+    it('exposes each facet option as a checkbox named by its value and checked from the filters', async () => {
+      const user = userEvent.setup();
+      renderBar({ filters: { genre: ['Rock'] } });
+
+      await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+      const dialog = screen.getByRole('dialog');
+
+      expect(within(dialog).getByRole('checkbox', { name: 'Rock' })).toBeChecked();
+      expect(within(dialog).getByRole('checkbox', { name: 'Jazz' })).not.toBeChecked();
+    });
+
+    it('gives the style search box an accessible name without a visible label', async () => {
+      const user = userEvent.setup();
+      renderBar();
+
+      await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+      const dialog = screen.getByRole('dialog');
+
+      const search = within(dialog).getByRole('textbox', { name: 'Search style' });
+      expect(search.tagName).toBe('INPUT');
+    });
+
+    it('keeps "Clear all filters" focusable while inactive, marked aria-disabled rather than disabled', async () => {
+      const user = userEvent.setup();
+      renderBar();
+
+      await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+      const clear = within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Clear all filters',
+      });
+
+      expect(clear).toHaveAttribute('aria-disabled', 'true');
+      expect(clear).not.toBeDisabled();
+      clear.focus();
+      expect(clear).toHaveFocus();
+    });
+
+    it('drops aria-disabled from "Clear all filters" once a filter is active', async () => {
+      const user = userEvent.setup();
+      const { onClear } = renderBar({ filters: { format: ['Vinyl'] } });
+
+      await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+      const clear = within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Clear all filters',
+      });
+
+      expect(clear).not.toHaveAttribute('aria-disabled');
+      await user.click(clear);
+      expect(onClear).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives every bar control a 44px target and the shared focus ring (§4 footer)', () => {
+      const { container } = renderBar({ desktop: true });
+      const bar = container.querySelector('.chrome-material') as HTMLElement;
+
+      const controls = Array.from(
+        bar.querySelectorAll<HTMLElement>('button, select, input, a[href]'),
+      );
+      expect(controls.length).toBeGreaterThan(0);
+
+      for (const control of controls) {
+        expect(control.className).toMatch(/min-h-11/);
+        expect(control.className).toContain('focus-visible:ring-primary');
+      }
+    });
+
+    it('puts the bar controls in visual order in the tab order (§6)', async () => {
+      const user = userEvent.setup();
+      renderBar();
+
+      await user.tab();
+      expect(screen.getByRole('radio', { name: 'Grid view' })).toHaveFocus();
+      await user.tab();
+      expect(screen.getByRole('button', { name: /sort & filter/i })).toHaveFocus();
+    });
+  });
 });

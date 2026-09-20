@@ -143,7 +143,7 @@ export function expectedIds(opts: { sort: Sort; dir: Dir; genre?: string }): str
   return referenceSort(filtered, opts.sort, opts.dir).map((r) => r.id);
 }
 
-function toListItem(r: FixtureRecord) {
+function toListItem(r: FixtureRecord, coverUrl?: string) {
   const n = Number(r.id.slice(4));
   return {
     id: r.id,
@@ -163,7 +163,7 @@ function toListItem(r: FixtureRecord) {
       genres: r.genre,
       styles: [],
       tracklist: [],
-      images: [],
+      images: coverUrl ? [{ url: coverUrl, imageType: 'primary' as const }] : [],
       discogsUrl: `https://www.discogs.com/release/${n}`,
     },
   };
@@ -176,8 +176,20 @@ export interface LibraryMock {
   failPages: Set<number>;
 }
 
-/** Mocks `/api/library` with the fixture. Returns the recorded requests and the failure switch. */
-export async function mockLibrary(page: Page): Promise<LibraryMock> {
+/**
+ * Mocks `/api/library` with the fixture. Returns the recorded requests and the
+ * failure switch.
+ *
+ * `coverUrl` gives every record the same cover image (default: none, so the
+ * cards keep their placeholder and every other spec's layout is unchanged).
+ * The material-contrast cases pass a *solid* colour there: a solid fill blurs
+ * and saturates to itself, so the chrome's painted backdrop over it is exactly
+ * research D17's worst case (artwork directly under the 90 % layer).
+ */
+export async function mockLibrary(
+  page: Page,
+  { coverUrl }: { coverUrl?: string } = {},
+): Promise<LibraryMock> {
   const mock: LibraryMock = { requests: [], failPages: new Set() };
   // `GET /api/library/:id` (record detail) is a different path: the list glob
   // below stops at the next `/`, so it needs its own route.
@@ -187,7 +199,9 @@ export async function mockLibrary(page: Page): Promise<LibraryMock> {
     await route.fulfill({
       status: record ? 200 : 404,
       contentType: 'application/json',
-      body: JSON.stringify(record ? toListItem(record) : { error: 'not_found', message: 'nope' }),
+      body: JSON.stringify(
+        record ? toListItem(record, coverUrl) : { error: 'not_found', message: 'nope' },
+      ),
     });
   });
   await page.route('**/api/library*', async (route) => {
@@ -209,7 +223,7 @@ export async function mockLibrary(page: Page): Promise<LibraryMock> {
     const byId = new Map(FIXTURE.map((r) => [r.id, r]));
     const items = ids
       .slice((pageNo - 1) * pageSize, pageNo * pageSize)
-      .map((id) => toListItem(byId.get(id)!));
+      .map((id) => toListItem(byId.get(id)!, coverUrl));
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
