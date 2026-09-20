@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RecordDetailPage } from '../../src/pages/RecordDetailPage';
@@ -589,7 +589,10 @@ describe('Record detail flow (US3)', () => {
       });
       mockGetStreamingLinks.mockResolvedValue({
         links: [
-          { platform: 'apple_music', url: 'https://music.apple.com/us/album/stockholm/1' },
+          {
+            platform: 'apple_music',
+            url: 'https://music.apple.com/us/album/stockholm/1',
+          },
         ],
       });
 
@@ -615,9 +618,7 @@ describe('Record detail flow (US3)', () => {
       expect(screen.getByRole('link', { name: /back/i })).toHaveFocus();
 
       await user.tab();
-      expect(
-        screen.getByRole('button', { name: /remove from library/i }),
-      ).toHaveFocus();
+      expect(screen.getByRole('button', { name: /remove from library/i })).toHaveFocus();
 
       await user.tab();
       expect(screen.getByLabelText('Media Condition')).toHaveFocus();
@@ -634,9 +635,161 @@ describe('Record detail flow (US3)', () => {
       }
 
       await user.tab();
-      expect(
-        screen.getByRole('link', { name: 'Escuchar en Apple Music' }),
-      ).toHaveFocus();
+      expect(screen.getByRole('link', { name: 'Escuchar en Apple Music' })).toHaveFocus();
     },
   );
+});
+
+/**
+ * Feature 068, US2 (T031) — the record detail returns to the library address
+ * it was opened from: same sort and filters (FR-015a, US2 AS6, research D12).
+ * Opened directly (bookmark, shared link) it falls back to `/app/library`.
+ */
+describe('Return path from the record detail (feature 068, US2)', () => {
+  const LIBRARY_PATH = '/app/library?sort=album&dir=desc&genre=Rock';
+
+  function LibraryProbe() {
+    const location = useLocation();
+    return <p>Library at {location.pathname + location.search}</p>;
+  }
+
+  function renderDetail(state?: { from: string }) {
+    return render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <MemoryRouter
+          initialEntries={[{ pathname: '/app/library/records/entry-1', state }]}
+        >
+          <Routes>
+            <Route path="/app/library/records/:entryId" element={<RecordDetailPage />} />
+            <Route path="/app/library" element={<LibraryProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  function okEntry() {
+    return {
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      discogs: null,
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        identifiers: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    };
+  }
+
+  beforeEach(() => {
+    mockGetOne.mockReset();
+    mockRemove.mockReset();
+    mockUpdate.mockReset();
+    mockGetStreamingLinks.mockReset();
+  });
+
+  it('points Back at the carried library address', async () => {
+    mockGetOne.mockResolvedValue(okEntry());
+
+    renderDetail({ from: LIBRARY_PATH });
+
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute(
+      'href',
+      LIBRARY_PATH,
+    );
+  });
+
+  it('points Back at the carried address while loading, when not found, and when the catalog is unavailable', async () => {
+    mockGetOne.mockImplementation(() => new Promise(() => {}));
+    const loading = renderDetail({ from: LIBRARY_PATH });
+    expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute(
+      'href',
+      LIBRARY_PATH,
+    );
+    loading.unmount();
+
+    mockGetOne.mockRejectedValue(new Error('nope'));
+    const missing = renderDetail({ from: LIBRARY_PATH });
+    await waitFor(() =>
+      expect(screen.getByText(/couldn't find that record/i)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute(
+      'href',
+      LIBRARY_PATH,
+    );
+    missing.unmount();
+
+    mockGetOne.mockResolvedValue({
+      ...okEntry(),
+      catalogStatus: 'unavailable',
+      release: null,
+    });
+    renderDetail({ from: LIBRARY_PATH });
+    await waitFor(() =>
+      expect(screen.getByText(/couldn't load catalog details/i)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute(
+      'href',
+      LIBRARY_PATH,
+    );
+  });
+
+  it('returns to the carried address after removing the record', async () => {
+    mockGetOne.mockResolvedValue(okEntry());
+    mockRemove.mockResolvedValue(undefined);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    renderDetail({ from: LIBRARY_PATH });
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(
+        within(screen.getByTestId('record-detail-actions')).getByRole('button', {
+          name: /remove from library/i,
+        }),
+      );
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText(`Library at ${LIBRARY_PATH}`)).toBeInTheDocument(),
+    );
+  });
+
+  it('falls back to the plain library address when opened directly', async () => {
+    mockGetOne.mockResolvedValue(okEntry());
+    mockRemove.mockResolvedValue(undefined);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    renderDetail();
+    await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute(
+      'href',
+      '/app/library',
+    );
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(
+        within(screen.getByTestId('record-detail-actions')).getByRole('button', {
+          name: /remove from library/i,
+        }),
+      );
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText('Library at /app/library')).toBeInTheDocument(),
+    );
+  });
 });

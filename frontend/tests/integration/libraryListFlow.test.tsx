@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,66 @@ const mockList = vi.fn();
 vi.mock('../../src/services/libraryApi', () => ({
   list: (...args: unknown[]) => mockList(...args),
 }));
+
+const DEFAULT_SORT = { sort: 'added', dir: 'desc' } as const;
+
+// Feature 068, US2: jsdom has no IntersectionObserver. This stub records every
+// observer the page creates (with its options, so the 300 px rootMargin can be
+// asserted) and lets a test fire the "sentinel reached" callback by hand.
+interface RecordedObserver {
+  callback: IntersectionObserverCallback;
+  options?: IntersectionObserverInit;
+  observe: ReturnType<typeof vi.fn>;
+  disconnect: ReturnType<typeof vi.fn>;
+}
+
+const observers: RecordedObserver[] = [];
+
+class FakeIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | Document | null = null;
+  readonly rootMargin: string;
+  readonly thresholds: ReadonlyArray<number> = [];
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  takeRecords = (): IntersectionObserverEntry[] => [];
+
+  constructor(
+    callback: IntersectionObserverCallback,
+    options?: IntersectionObserverInit,
+  ) {
+    this.rootMargin = options?.rootMargin ?? '';
+    observers.push({
+      callback,
+      options,
+      observe: this.observe,
+      disconnect: this.disconnect,
+    });
+  }
+}
+
+function lastObserver(): RecordedObserver {
+  const observer = observers.at(-1);
+  if (!observer) throw new Error('no IntersectionObserver was created');
+  return observer;
+}
+
+/** Fires the current sentinel observer as if the user scrolled to it. */
+async function scrollToSentinel(isIntersecting = true) {
+  const observer = observers.at(-1);
+  if (!observer) return;
+  await act(async () => {
+    observer.callback(
+      [{ isIntersecting } as IntersectionObserverEntry],
+      observer as unknown as IntersectionObserver,
+    );
+  });
+}
+
+beforeEach(() => {
+  observers.length = 0;
+  vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver);
+});
 
 function renderPage(initialEntries: string[] = ['/app/library']) {
   return render(
@@ -551,5 +611,258 @@ describe('Sorting the library (feature 068, US1 AS2/AS5/AS6, FR-008)', () => {
         byAlbumDesc,
       ),
     );
+  });
+});
+
+/**
+ * Feature 068, US2 (T029) — infinite scroll replaces Previous/Next
+ * (FR-010–FR-014, FR-028, US2 AS1–AS5, contracts/library-ui §5).
+ */
+describe('Infinite scroll on the library (feature 068, US2)', () => {
+  function entry(id: string, title: string) {
+    return {
+      id,
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title,
+        artists: [],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        identifiers: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    };
+  }
+
+  /** A batch of `count` entries for `page`, titled "Record <page>-<i>". */
+  function batch(page: number, count: number, totalItems: number) {
+    return {
+      items: Array.from({ length: count }, (_, index) =>
+        entry(`p${page}-e${index}`, `Record ${page}-${index}`),
+      ),
+      page,
+      pageSize: 20,
+      totalItems,
+    };
+  }
+
+  /** Serves page N from `pages`, keyed by the page argument. */
+  function servePages(pages: Record<number, unknown>) {
+    mockList.mockImplementation((page: number) =>
+      page in pages
+        ? Promise.resolve(pages[page])
+        : Promise.reject(new Error(`unexpected page ${page}`)),
+    );
+  }
+
+  beforeEach(() => {
+    mockList.mockReset();
+    window.localStorage.clear();
+  });
+
+  it('observes a sentinel 300 px before the end of the loaded content (AS1, FR-010)', async () => {
+    servePages({ 1: batch(1, 20, 45) });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Record 1-0')).toBeInTheDocument());
+
+    expect(lastObserver().options?.rootMargin).toBe('0px 0px 300px 0px');
+    expect(lastObserver().observe).toHaveBeenCalled();
+  });
+
+  it('appends the next batch on intersection, with same-size placeholders inside the same list (AS1, AS2, FR-011)', async () => {
+    let resolvePage2!: (value: unknown) => void;
+    mockList.mockImplementation((page: number) =>
+      page === 1
+        ? Promise.resolve(batch(1, 20, 45))
+        : new Promise((resolve) => {
+            resolvePage2 = resolve;
+          }),
+    );
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Record 1-0')).toBeInTheDocument());
+
+    await scrollToSentinel();
+    await waitFor(() =>
+      expect(mockList).toHaveBeenLastCalledWith(2, 20, false, {}, DEFAULT_SORT),
+    );
+
+    // min(20, 45 - 20) placeholders, in the very same <ul> as the records.
+    const grid = screen.getByTestId('library-record-grid');
+    await waitFor(() =>
+      expect(within(grid).getAllByTestId('record-card-skeleton')).toHaveLength(20),
+    );
+    expect(within(grid).getByText('Record 1-0')).toBeInTheDocument();
+
+    await act(async () => {
+      resolvePage2(batch(2, 20, 45));
+    });
+
+    await waitFor(() => expect(screen.getByText('Record 2-19')).toBeInTheDocument());
+    expect(screen.getByText('Record 1-0')).toBeInTheDocument();
+    expect(screen.queryByTestId('record-card-skeleton')).not.toBeInTheDocument();
+  });
+
+  it('no longer renders Previous/Next pagination buttons (FR-010)', async () => {
+    servePages({ 1: batch(1, 20, 45) });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Record 1-0')).toBeInTheDocument());
+
+    expect(screen.queryByRole('button', { name: /^previous$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^next$/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the end message with the total and stops requesting (AS3, FR-012)', async () => {
+    let resolvePage2!: (value: unknown) => void;
+    mockList.mockImplementation((page: number) =>
+      page === 1
+        ? Promise.resolve(batch(1, 20, 21))
+        : new Promise((resolve) => {
+            resolvePage2 = resolve;
+          }),
+    );
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Record 1-0')).toBeInTheDocument());
+    expect(
+      screen.queryByText(/you've reached the end of your collection/i),
+    ).not.toBeInTheDocument();
+
+    await scrollToSentinel();
+    // A short last batch reserves only the row it will fill: min(20, 21 - 20).
+    const grid = screen.getByTestId('library-record-grid');
+    await waitFor(() =>
+      expect(within(grid).getAllByTestId('record-card-skeleton')).toHaveLength(1),
+    );
+
+    await act(async () => {
+      resolvePage2(batch(2, 1, 21));
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("You've reached the end of your collection — 21 records"),
+      ).toBeInTheDocument(),
+    );
+
+    const callsAtEnd = mockList.mock.calls.length;
+    await scrollToSentinel();
+    expect(mockList.mock.calls).toHaveLength(callsAtEnd);
+  });
+
+  it('uses the singular form for a collection of one record (FR-012)', async () => {
+    servePages({ 1: batch(1, 1, 1) });
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("You've reached the end of your collection — 1 record"),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it('renders neither the end message nor a sentinel when there are no records', async () => {
+    servePages({ 1: batch(1, 0, 0) });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/no records yet/i)).toBeInTheDocument());
+
+    expect(
+      screen.queryByText(/you've reached the end of your collection/i),
+    ).not.toBeInTheDocument();
+    expect(observers).toHaveLength(0);
+  });
+
+  it('keeps the loaded records and pauses on a failed batch until Retry (AS4, FR-013)', async () => {
+    let failPage2 = true;
+    mockList.mockImplementation((page: number) => {
+      if (page === 1) return Promise.resolve(batch(1, 20, 45));
+      if (failPage2) return Promise.reject(new Error('boom'));
+      return Promise.resolve(batch(2, 20, 45));
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Record 1-0')).toBeInTheDocument());
+
+    await scrollToSentinel();
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        "Couldn't load more records. Please try again.",
+      ),
+    );
+    // Already-loaded records stay; no full-page error replaces them.
+    expect(screen.getByText('Record 1-0')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/something went wrong while loading/i),
+    ).not.toBeInTheDocument();
+
+    // Automatic loading is paused: further intersections request nothing.
+    const callsAfterFailure = mockList.mock.calls.length;
+    await scrollToSentinel();
+    expect(mockList.mock.calls).toHaveLength(callsAfterFailure);
+
+    failPage2 = false;
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^retry$/i }));
+
+    await waitFor(() => expect(screen.getByText('Record 2-0')).toBeInTheDocument());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('still shows the full-page error when the first batch fails (AS5)', async () => {
+    mockList.mockRejectedValue(new Error('boom'));
+
+    renderPage();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/something went wrong while loading your library/i),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument();
+  });
+
+  it('announces each appended batch, and the end only when a later batch closes the collection (FR-028, contracts §5)', async () => {
+    servePages({ 1: batch(1, 20, 45), 2: batch(2, 20, 45), 3: batch(3, 5, 45) });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Record 1-0')).toBeInTheDocument());
+
+    await scrollToSentinel();
+    await waitFor(() => expect(screen.getByText('Record 2-0')).toBeInTheDocument());
+    const batchAnnouncement = screen.getByText('20 more records loaded.');
+    expect(batchAnnouncement.closest('[role="status"]')).not.toBeNull();
+
+    await scrollToSentinel();
+    await waitFor(() =>
+      expect(
+        screen.getByText('5 more records loaded. End of collection, 45 records.'),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it('makes no end announcement when the first batch is also the last (contracts §5)', async () => {
+    servePages({ 1: batch(1, 5, 5) });
+
+    renderPage();
+    await waitFor(() =>
+      expect(
+        screen.getByText("You've reached the end of your collection — 5 records"),
+      ).toBeInTheDocument(),
+    );
+
+    expect(screen.queryByText(/End of collection/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/more records loaded/)).not.toBeInTheDocument();
   });
 });

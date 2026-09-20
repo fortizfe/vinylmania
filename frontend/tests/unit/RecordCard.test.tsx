@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
 import { RecordCard } from '../../src/components/RecordCard';
@@ -145,5 +146,84 @@ describe('RecordCard', () => {
 
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
+  });
+});
+
+/**
+ * Feature 068, US2 (T030) — the library's current address travels with every
+ * record link so the detail page's Back returns to the same sort + filters
+ * (research D12, FR-015a). `from` is required: both list components are
+ * Library-only.
+ */
+describe('RecordCard return path (feature 068, US2)', () => {
+  const LIBRARY_PATH = '/app/library?sort=album&dir=desc&genre=Rock';
+
+  function StateProbe() {
+    const location = useLocation();
+    return <p>from: {String((location.state as { from?: string } | null)?.from)}</p>;
+  }
+
+  function renderCardWithFrom(entry: EnrichedLibraryEntry, from = LIBRARY_PATH) {
+    return render(
+      <MemoryRouter initialEntries={['/app/library']}>
+        <Routes>
+          <Route
+            path="/app/library"
+            element={
+              <ul>
+                <RecordCard entry={entry} from={from} />
+              </ul>
+            }
+          />
+          <Route path="/app/library/records/:entryId" element={<StateProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  function okEntry(): EnrichedLibraryEntry {
+    return {
+      id: 'entry-1',
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title: 'Stockholm',
+        artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        identifiers: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+      discogs: null,
+    };
+  }
+
+  it('carries the library path as router state on the card link', async () => {
+    renderCardWithFrom(okEntry());
+
+    await userEvent.click(screen.getByRole('link'));
+
+    expect(screen.getByText(`from: ${LIBRARY_PATH}`)).toBeInTheDocument();
+  });
+
+  it('carries it on the catalog-unavailable variant too', async () => {
+    renderCardWithFrom({
+      id: 'entry-4',
+      discogsReleaseId: 4,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'unavailable',
+      release: null,
+      discogs: null,
+    });
+
+    await userEvent.click(screen.getByRole('link', { name: /open record/i }));
+
+    expect(screen.getByText(`from: ${LIBRARY_PATH}`)).toBeInTheDocument();
   });
 });

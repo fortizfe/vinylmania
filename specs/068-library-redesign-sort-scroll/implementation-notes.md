@@ -232,3 +232,69 @@ Verdict: **pass, no weakening found.**
 ### Bugs found
 
 None.
+
+## US2 red tests — frontend
+
+Red phase only (Constitution Principle I). No production code under `frontend/src` was touched. Run: `cd frontend && npx vitest run tests/unit/queries/libraryQueries.test.tsx tests/unit/hooks/useLibraryQueryParams.test.tsx tests/integration/libraryListFlow.test.tsx tests/unit/RecordCard.test.tsx tests/unit/RecordListRow.test.tsx tests/integration/recordDetailFlow.test.tsx` → **6 files failed, 24 failed / 81 passed (105)**. Every pre-existing test still passes.
+
+| Task | File | Tests added | Red reason (1 line) |
+|---|---|---|---|
+| T027 | `frontend/tests/unit/queries/libraryQueries.test.tsx` | 5, in `libraryQueries — infinite library list (feature 068, US2)`: key without page; `useLibraryList(sort, filters)` is infinite; `getNextPageParam` advances then stops; no next page for a single batch; `useRefreshLibrary(sort, filters)` resets the cache to `{ pages: [page1], pageParams: [1] }` | `useLibraryList`/`useRefreshLibrary`/`libraryKeys.list` still take `(page, pageSize, …)` and return a plain `useQuery`, so the key carries a page, `result.current.fetchNextPage` is not a function and `list()` is called with the sort object as its page argument |
+| T028 | `frontend/tests/unit/hooks/useLibraryQueryParams.test.tsx` | 4, in `useLibraryQueryParams without paging (feature 068, US2)`: no `page` in the returned object; `?page=3` ignored; `buildLibraryPath` never writes `page`; round-trip without paging | the hook still returns `page: 1` (and `3` for `?page=3`) and `buildLibraryPath(undefined, undefined, 3)` still produces `/app/library?page=3` |
+| T029 | `frontend/tests/integration/libraryListFlow.test.tsx` | 10, in `Infinite scroll on the library (feature 068, US2)`, plus a file-level `IntersectionObserver` stub that records each observer's options: 300 px `rootMargin`; batch append with `min(20, remaining)` skeletons in the same `<ul>`; no Previous/Next; end message + no request after the end; singular "1 record"; no end message/sentinel at 0 results; batch failure → `role="alert"` + Retry with loading paused; first-batch failure still full-page error; batch/end announcements; no end announcement for a single batch | the page is still a paginated `useQuery`: it creates no `IntersectionObserver`, never requests page 2, renders no end message, no next-batch skeletons, no Retry alert, no batch announcements — and still renders Previous/Next. 8 of the 10 fail; the two "nothing is rendered" edge-case guards (no sentinel at 0 results, full-page error on a first-batch failure) pass today by construction and stay as regression guards |
+| T030 | `frontend/tests/unit/RecordCard.test.tsx`, `frontend/tests/unit/RecordListRow.test.tsx` | 2 + 2: the required `from` prop is carried as `state={{ from }}` on the record `Link`, including the catalog-unavailable variant (asserted by clicking through to a location probe) | neither component accepts `from` nor sets `state` on its `Link`, so the probe reads `undefined` |
+| T031 | `frontend/tests/integration/recordDetailFlow.test.tsx` | 4: Back points at `state.from` in the loaded, loading, not-found and catalog-unavailable states; post-delete navigation goes there; direct entry falls back to `/app/library` | `RecordDetailPage` hard-codes `/app/library` in every `BackLink`, in `backTo` and in the post-delete `navigate`. 3 of the 4 fail; the fallback test passes today and stays as a regression guard |
+
+### Existing tests that the US2 implementation (T032–T036) must update or remove
+
+- `frontend/tests/unit/hooks/useLibraryQueryParams.test.tsx`: `parses the page number from the URL`; `defaults to page 1 with no active filters…` (expects `{ page: 1, sort }`); `includes the page number when greater than 1`; `omits the page number when it is 1`; `writes sort, dir, filters and page together`; `round-trips filters, sort and page through a built URL (FR-022, FR-006)`; and the whole `buildLibraryPath(filters?, sort?, page = 1) (feature 068 interim signature)` describe title. `resets to page 1 in the built path when filters change (FR-010)` still holds and can stay.
+- `frontend/tests/unit/queries/libraryQueries.test.tsx`: `useLibraryList fetches and returns the paginated list`; `useLibraryList passes the sort to libraryApi.list`; `two sorts never share a cache entry (the list key includes the sort)`; `useRefreshLibrary forces a sync for the current sort and writes into that sort's cache` — all four call the old `(page, pageSize, filters, sort)` signature and assert page-keyed cache entries. The `libraryApi.list` URL test is unaffected.
+- `frontend/tests/integration/libraryListFlow.test.tsx`: `keeps filters active when navigating to another page (FR-022)` drives the removed **Next** button and must be rewritten as a scroll-triggered batch; the US1 sort test `changing the select replaces the URL (filters kept, page 1)…` starts from `/app/library?genre=Rock&page=2` and asserts `page` is dropped — still valid, but the `page=2` entry becomes meaningless.
+- `frontend/tests/unit/RecordCard.test.tsx` / `RecordListRow.test.tsx`: the shared `renderCard` / `renderRow` helpers omit the now-required `from`; TypeScript (`tsc`, `npm run lint`) will flag every existing call until the helper passes one. Vitest itself does not typecheck, so they still run green today.
+
+None of these were deleted: no file was made unrunnable by the red tests.
+
+## US2 red tests — e2e
+
+T025 (`e2e/tests/library-sort-scroll.spec.ts`) and T026 (`e2e/tests/library-list-responsive.spec.ts`), red phase. Run:
+
+```
+cd e2e && node ../scripts/check-emulator-ports.js && node ../scripts/run-with-timeout.js 900 -- \
+  npx firebase --config ../backend/firebase.json emulators:exec --only auth,firestore --project vinylmania-test \
+  "playwright test tests/library-sort-scroll.spec.ts tests/library-list-responsive.spec.ts --reporter=list"
+```
+
+Result: **14 failed, 9 passed (3.1 min, chromium only** — the webkit project's `testMatch` covers only the three detail-page responsive specs**)**. Every failure is a missing-behaviour failure, not a broken fixture.
+
+### Fixture/mock changes (shared with US1, no behaviour change for the US1 scenarios)
+
+- `mockLibrary` now returns `{ requests, failPages }` instead of the bare `URL[]`. `failPages` is a mutable `Set<number>`: a page number in it is answered `500` until it is removed again (the retry scenario adds 3, then deletes it before pressing Retry). The US1 scenarios ignore the return value.
+- `mockLibrary` also routes `**/api/library/rec-*` (record detail) from the same fixture — the list glob `**/api/library*` stops at the next `/`, so the detail request was previously unmocked. Needed by the back-navigation scenario.
+- Helpers: `END_MESSAGE` regex (`reached the end of your collection — N records`, apostrophe-agnostic), `scrollToBottom` (a **programmatic** `window.scrollTo`, never `mouse.wheel`, so layout shifts are not flagged `hadRecentInput`), `scrollUntil(page, check)` (scroll + poll, 12 s).
+
+### T025 — new scenarios in `library-sort-scroll.spec.ts`
+
+| Scenario | Red reason (today's UI) |
+|---|---|
+| `global order: scrolling <sort>/<dir> to the end …` × 6 (added desc/asc, artist asc/desc, album asc/desc) — no duplicates, 205 ids, equal to the reference order, end text `— 205 records` (SC-007, FR-013) | The end message never appears: scrolling loads nothing, the list stays at the 20 records of page 1 behind Previous/Next. Fails in `scrollUntil` (predicate false after 12 s). |
+| `prefetch: page 2 is requested while the end of the loaded content is still below the fold` (SC-008) | Scrolling to 250 px short of the bottom (inside the future 300 px `rootMargin`, end of content still off-screen — asserted: `belowFold > 200`) requests nothing: `pagesRequested()` stays `[1]`. |
+| `tall screen: at 1280×2400 batches keep loading until the viewport is filled, with no scrolling` | Item count stays at 20 (`expect > 20, received 20`); no sentinel, so no auto-fill. |
+| `retry: a 500 on page 3 keeps the loaded records, shows the alert and Retry, and requests nothing more until Retry is pressed` | The `role="alert"` "Couldn't load more records…" never appears — page 3 is never requested at all, since scrolling loads nothing. Fails in `scrollUntil`. |
+| `back navigation: opening a record and pressing Back returns to the same sorted, filtered list` (SC-009) | Deep link, first record click and the detail page all work; `Back` lands on `http://localhost:5173/app/library` — `RecordDetailPage`'s `BackLink to="/app/library"` is hardcoded and the record links carry no `state.from`, so `sort`/`dir`/`genre` are lost. |
+| `CLS: loading 3 more batches by scrolling shifts nothing already on screen, in grid mode` / `in list mode` (SC-001, chromium-only via `test.skip(browserName !== 'chromium')`) | The precondition — 80 records loaded by scrolling (initial batch + 3) — is never reached, so the test fails in `scrollUntil` **before** reading the CLS sum. Deliberate: without it a `cls === 0` assertion would pass vacuously on a list that never grows. The `PerformanceObserver({ type: 'layout-shift', buffered: true })` only counts entries with `startTime >= ` install time and `!hadRecentInput`, so the first paint and the grid→list switch are excluded. |
+
+### T026 — `library-list-responsive.spec.ts` migrated off Previous/Next (research D22)
+
+- `buildLibraryResponse(count)` → `buildLibraryItems(count)` + `routeLibrary(page, items)`, which now honours `page`/`pageSize` and slices (the old mock returned the whole collection for every request, which makes paging meaningless). `buildListResponse()` → `buildListItems()`: the detailed "Stockholm" row (id `entry-stockholm`) followed by 24 filler items, still `totalItems: 25`.
+- Line ~85, `mobile: … pagination controls meet 44x44px` → `mobile: single column, no horizontal scroll, and scrolling loads the rest of the collection (Scenario 6)`: 20 records, then scroll until 25 plus the `— 25 records` end message. The 44×44 touch-target check moved from the removed "Next" button to the view-mode toggle, which survives the redesign. **Red**: the count stays at 20.
+- Line ~179, `shows all six fields per row and pagination still works` → `… and scrolling loads the next batch`: the six-field assertions are untouched; `expect(Next).toBeEnabled()` became scroll-to-25 + end message. **Red**: same, count stays at 20.
+
+### What stays green (9 passed)
+
+- US1 (T005): fixture soundness, deep link SC-006, select change, reorder paint SC-002 — all 4 still pass.
+- `library-list-responsive.spec.ts`, 5 tests untouched and passing: desktop 5-column grid + no horizontal scroll; the unlinked-Discogs 44×44 link gate; mobile list mode without horizontal scroll; both axe WCAG scans (light + dark).
+- Inside the 2 migrated tests, every assertion that does not depend on paging still passes before the new scroll block: the single-column grid and no-horizontal-scroll checks (mobile) and the six per-row fields (list mode). Only the scroll block at the end of each is red.
+
+## US2 red-test approval gate
+
+- 2026-09-20: Red tests T025–T031 reviewed and **approved by the developer (Fernando Ortiz)** before implementation (Constitution Principle I). Committed as the red-state snapshot. Implementation T032–T037 may start.
