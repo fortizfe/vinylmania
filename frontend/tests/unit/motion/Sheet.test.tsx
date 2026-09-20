@@ -154,3 +154,105 @@ describe('scrollBlocksDismiss — scroll-boundary disambiguation (FR-011)', () =
     expect(scrollBlocksDismiss({ scrollTop: 0, scrollLeft: 24 }, 'x')).toBe(true);
   });
 });
+
+/**
+ * Feature 068, US3 (T045) — a `dismissAxis="y"` Sheet is the bottom sheet
+ * (research D16, FR-017, FR-027). The release thresholds are the shared ones
+ * (`shouldDismissSheet` above); here they are restated for the downward
+ * (positive-y) direction the bottom sheet is dismissed along.
+ */
+describe('Sheet — bottom sheet (068 US3)', () => {
+  function renderBottomSheet(onClose = vi.fn()) {
+    render(
+      <MotionProvider>
+        <Sheet open onClose={onClose} dismissAxis="y" showHandle labelledBy="sheet-title">
+          <h2 id="sheet-title">Sort &amp; Filter</h2>
+          <button type="button" onClick={onClose}>
+            Close
+          </button>
+        </Sheet>
+      </MotionProvider>,
+    );
+    return onClose;
+  }
+
+  it('renders through the Overlay bottom variant', () => {
+    renderBottomSheet();
+    expect(screen.getByRole('dialog')).toHaveAttribute('data-variant', 'bottom');
+  });
+
+  it('shows its grab handle at the top of the surface, hidden from assistive tech', () => {
+    renderBottomSheet();
+    const handle = screen.getByTestId('sheet-handle');
+    expect(handle).toHaveAttribute('aria-hidden', 'true');
+    // A horizontal pill centred above the content (not the leading-edge bar
+    // the x-axis drawer uses).
+    expect(handle.className).toMatch(/mx-auto/);
+    expect(handle.className).not.toMatch(/-translate-y-1\/2/);
+  });
+
+  it('dismisses on a downward drag past 45% of its height, or at 500 px/s', () => {
+    const extent = 520; // sheet height
+    expect(shouldDismissSheet({ offset: 0.45 * extent, velocity: 0, extent })).toBe(true);
+    expect(shouldDismissSheet({ offset: 0.2 * extent, velocity: 500, extent })).toBe(
+      true,
+    );
+    // An upward flick (negative y) never dismisses a bottom sheet.
+    expect(shouldDismissSheet({ offset: 0.2 * extent, velocity: -900, extent })).toBe(
+      false,
+    );
+  });
+
+  it('is opacity-only under reduced motion, still on the bottom variant', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }));
+
+    renderBottomSheet();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('data-variant', 'bottom');
+    expect(dialog).toHaveAttribute('data-reduced-motion', 'true');
+    vi.restoreAllMocks();
+  });
+
+  it('closes on Escape, on a scrim press and on its Close button, restoring focus', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+
+    const { rerender } = render(
+      <MotionProvider>
+        <Sheet open onClose={onClose} dismissAxis="y" showHandle labelledBy="t">
+          <h2 id="t">Sort &amp; Filter</h2>
+          <button type="button" onClick={onClose}>
+            Close
+          </button>
+        </Sheet>
+      </MotionProvider>,
+    );
+
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByTestId('overlay-scrim'));
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(3);
+
+    rerender(
+      <MotionProvider>
+        <Sheet open={false} onClose={onClose} dismissAxis="y" showHandle labelledBy="t">
+          <h2 id="t">Sort &amp; Filter</h2>
+        </Sheet>
+      </MotionProvider>,
+    );
+    expect(opener).toHaveFocus();
+    opener.remove();
+  });
+});

@@ -93,24 +93,25 @@ test.describe('Dark mode contrast (US3)', () => {
  *     control's boundary clear the UI-component ratio.
  */
 test.describe('Overlay material & contrast (spec 059 US3, T066)', () => {
-  function libraryEntry(id: string, title: string) {
+  /**
+   * Spec 068 US3 (T044, research D22): the centred `SelectableListFilter`
+   * modal was removed from `/app/library` (live filters in a drawer / bottom
+   * sheet now). `/app/search` still renders the same collapsible
+   * `FiltersControl` and the same centred Genre modal, so this case moves
+   * there and the primitive stays covered in both themes.
+   */
+  function searchResults() {
     return {
-      id,
-      discogsReleaseId: 1,
-      addedAt: '2026-07-03T00:00:00.000Z',
-      catalogStatus: 'ok',
-      release: {
-        discogsId: 1,
-        title,
-        artists: [{ discogsArtistId: 1, name: 'Overlay Test Artist' }],
-        labels: [],
-        formats: [],
-        genres: [],
-        styles: [],
-        tracklist: [],
-        images: [],
-        discogsUrl: 'https://www.discogs.com/release/1',
-      },
+      results: [
+        {
+          discogsId: 501,
+          resultType: 'release',
+          title: 'Overlay Record',
+          artist: 'Overlay Test Artist',
+          year: 1999,
+        },
+      ],
+      pagination: { page: 1, pages: 1, items: 1, perPage: 20 },
     };
   }
 
@@ -119,21 +120,16 @@ test.describe('Overlay material & contrast (spec 059 US3, T066)', () => {
       page,
     }) => {
       await page.emulateMedia({ colorScheme: theme });
-      await page.route('**/api/library*', async (route) => {
+      await page.route('**/api/discogs/search*', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({
-            items: [libraryEntry('entry-1', 'Overlay Record')],
-            page: 1,
-            pageSize: 20,
-            totalItems: 1,
-          }),
+          body: JSON.stringify(searchResults()),
         });
       });
       await page.goto('/');
       await signInAsFakeGoogleUser(page, { email: `e2e-${theme}-overlay@example.com` });
-      await page.goto('/app/library');
+      await page.goto('/app/search?q=overlay');
       await expect(page.getByText('Overlay Record')).toBeVisible();
 
       await page.getByRole('button', { name: /^filters$/i }).click();

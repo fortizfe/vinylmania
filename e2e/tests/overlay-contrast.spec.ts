@@ -12,8 +12,8 @@ import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
  *  WCAG 2.1 AA."
  *
  * The worst case for a translucent, blurred scrim is a page full of
- * high-chroma album art directly behind the overlay. This opens the Genre
- * filter Modal on a My Library grid packed with cover images and asserts —
+ * high-chroma album art directly behind the overlay. This opens the Library
+ * "Filters" drawer on a My Library grid packed with cover images and asserts —
  * in both themes — that every text string and control on the overlay clears
  * AA *against the overlay's own opaque `.overlay-surface`*, never against
  * the scrim (see `assertOverlayContentContrast`).
@@ -78,7 +78,15 @@ function libraryEntryWithCover(id: string, title: string) {
   };
 }
 
-async function openGenreModalOverBusyArt(page: Page) {
+/**
+ * Spec 068 US3 (T042, research D22): Library's own overlay is now the
+ * "Filters" end-drawer opened from the sticky toolbar (>= 640 px) — the
+ * collapsible panel and its centred Genre modal no longer exist on
+ * `/app/library`. The subject of these cases is the *overlay material over
+ * busy cover art*, and the Library grid is still what paints that art, so the
+ * vehicle moves to the drawer rather than to `/app/search`.
+ */
+async function openFiltersDrawerOverBusyArt(page: Page) {
   await page.route('**/api/library*', async (route) => {
     await route.fulfill({
       status: 200,
@@ -99,8 +107,11 @@ async function openGenreModalOverBusyArt(page: Page) {
   await page.goto('/app/library');
   await expect(page.getByText('Busy Record 1', { exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: /^filters$/i }).click();
-  await page.locator('#filter-genre-trigger').click();
+  await page.getByRole('button', { name: /^filters(,|$)/i }).click();
+
+  const drawer = page.getByRole('dialog', { name: 'Filters' });
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toHaveAttribute('data-variant', 'end');
 
   const scrim = page.locator('[data-testid="modal-backdrop"]');
   const surface = scrim.locator('.overlay-surface');
@@ -114,22 +125,22 @@ for (const theme of ['light', 'dark'] as const) {
     page,
   }) => {
     await page.emulateMedia({ colorScheme: theme });
-    const { surface } = await openGenreModalOverBusyArt(page);
+    const { surface } = await openFiltersDrawerOverBusyArt(page);
     await assertOverlayContentContrast(
       page,
       surface,
-      `Genre Modal over busy cover art (${theme})`,
+      `Library Filters drawer over busy cover art (${theme})`,
     );
   });
 
   // SC-005 — zero serious/critical axe violations with an overlay actually
   // open, in both themes (the pre-change baseline scans these same screens
   // with no overlay open).
-  test(`axe: no serious/critical violations with the Genre Modal open (${theme})`, async ({
+  test(`axe: no serious/critical violations with the Library Filters drawer open (${theme})`, async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme: theme });
-    await openGenreModalOverBusyArt(page);
+    await openFiltersDrawerOverBusyArt(page);
     const violations = await runAxeScan(page);
     expect(violations, JSON.stringify(violations, null, 2)).toEqual([]);
   });
@@ -187,7 +198,7 @@ test.describe('Overlay material fallbacks (spec 059 US3, FR-007)', () => {
     page,
   }) => {
     await page.emulateMedia({ contrast: 'more' });
-    const { scrim, surface } = await openGenreModalOverBusyArt(page);
+    const { scrim, surface } = await openFiltersDrawerOverBusyArt(page);
 
     const scrimStyle = await scrim.evaluate((el) => {
       const s = getComputedStyle(el);

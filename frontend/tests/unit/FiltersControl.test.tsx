@@ -172,3 +172,111 @@ describe('FiltersControl (feature 038, US1)', () => {
     expect(screen.getByRole('button', { name: /^format$/i })).toBeInTheDocument();
   });
 });
+
+/**
+ * Feature 068, US3 (T048) — the Library variant (FR-021a, research D13).
+ * `live` drops the collapsible wrapper, the `<form>` and Apply: the sheet or
+ * drawer is the container, and every tick applies immediately. Search passes
+ * nothing and is unchanged (the suite above).
+ */
+describe('FiltersControl — live filters (068 US3)', () => {
+  function summaryOf(label: string): HTMLElement {
+    const summary = screen
+      .getAllByText(new RegExp(`^${label}`))
+      .find((node) => node.tagName === 'SUMMARY');
+    if (!summary) throw new Error(`no <summary> found for ${label}`);
+    return summary;
+  }
+
+  it('renders the three facets inline, with no collapsible wrapper, form or Apply button', () => {
+    const { container } = render(
+      <FiltersControl live filters={{}} onApply={vi.fn()} onClear={vi.fn()} />,
+    );
+
+    for (const label of ['Format', 'Genre', 'Style']) {
+      expect(summaryOf(label).closest('details')).not.toBeNull();
+    }
+    expect(container.querySelector('form')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /apply filters/i }),
+    ).not.toBeInTheDocument();
+    // No "Filters" disclosure toggle and no badge: the panel title owns that.
+    expect(screen.queryByRole('button', { name: /^filters$/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('active-filter-badge')).not.toBeInTheDocument();
+  });
+
+  it('applies a tick immediately with the full next selection, keeping focus on that checkbox', async () => {
+    const onApply = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <FiltersControl
+        live
+        filters={{ format: ['Vinyl'] }}
+        onApply={onApply}
+        onClear={vi.fn()}
+      />,
+    );
+
+    const genre = summaryOf('Genre').closest('details') as HTMLElement;
+    const rock = within(genre).getByLabelText('Rock');
+    await user.click(rock);
+
+    expect(onApply).toHaveBeenCalledTimes(1);
+    // The whole next selection, not just the facet that changed.
+    expect(onApply).toHaveBeenCalledWith({ genre: ['Rock'], format: ['Vinyl'] });
+    expect(rock).toHaveFocus();
+  });
+
+  it('untick also applies immediately, dropping the emptied facet from the payload', async () => {
+    const onApply = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <FiltersControl
+        live
+        filters={{ genre: ['Rock'] }}
+        onApply={onApply}
+        onClear={vi.fn()}
+      />,
+    );
+
+    const genre = summaryOf('Genre').closest('details') as HTMLElement;
+    await user.click(within(genre).getByLabelText('Rock'));
+
+    expect(onApply).toHaveBeenCalledWith({});
+  });
+
+  it('always renders a text "Clear all filters" button, inert while nothing is active', async () => {
+    const onClear = vi.fn();
+    const user = userEvent.setup();
+    render(<FiltersControl live filters={{}} onApply={vi.fn()} onClear={onClear} />);
+
+    const clear = screen.getByRole('button', { name: 'Clear all filters' });
+    // Visible text, not an icon-only control, and still focusable so focus is
+    // never dropped when the last filter clears.
+    expect(clear).toHaveTextContent('Clear all filters');
+    expect(clear).toHaveAttribute('aria-disabled', 'true');
+    expect(clear).not.toBeDisabled();
+
+    await user.click(clear);
+    expect(onClear).not.toHaveBeenCalled();
+  });
+
+  it('clears everything when at least one filter is active', async () => {
+    const onClear = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <FiltersControl
+        live
+        filters={{ genre: ['Rock'] }}
+        onApply={vi.fn()}
+        onClear={onClear}
+      />,
+    );
+
+    const clear = screen.getByRole('button', { name: 'Clear all filters' });
+    expect(clear).not.toHaveAttribute('aria-disabled', 'true');
+
+    await user.click(clear);
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
+});

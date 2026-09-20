@@ -170,3 +170,131 @@ describe('SelectableListFilter (feature 038, US1)', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Feature 068, US3 (T047) — `inline` renders the facet as a native
+ * `<details>` disclosure instead of a trigger + nested `Modal`, because an
+ * overlay cannot be nested inside the Library's sheet/drawer (research D13).
+ */
+describe('SelectableListFilter — inline disclosure (068 US3)', () => {
+  function summaryOf(label: string): HTMLElement {
+    const summary = screen
+      .getAllByText(new RegExp(`^${label}`))
+      .find((node) => node.tagName === 'SUMMARY');
+    if (!summary) throw new Error(`no <summary> found for ${label}`);
+    return summary;
+  }
+
+  it('renders a native details/summary disclosure instead of a dialog', () => {
+    render(
+      <SelectableListFilter
+        inline
+        label="Genre"
+        options={OPTIONS}
+        value={[]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const summary = summaryOf('Genre');
+    expect(summary.closest('details')).not.toBeNull();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // No modal trigger button either — the summary is the only control.
+    expect(screen.queryByRole('button', { name: /^genre$/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the selected count in the summary, and nothing when none are selected', () => {
+    const { rerender } = render(
+      <SelectableListFilter
+        inline
+        label="Genre"
+        options={OPTIONS}
+        value={['Vinyl', 'CD']}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(summaryOf('Genre')).toHaveTextContent('Genre (2 selected)');
+
+    rerender(
+      <SelectableListFilter
+        inline
+        label="Genre"
+        options={OPTIONS}
+        value={[]}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(summaryOf('Genre')).toHaveTextContent(/^Genre$/);
+  });
+
+  it('keeps the summary a 44px touch target', () => {
+    render(
+      <SelectableListFilter
+        inline
+        label="Genre"
+        options={OPTIONS}
+        value={[]}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(summaryOf('Genre').className).toMatch(/min-h-11/);
+  });
+
+  it('renders the same checkbox list inside the disclosure, with selections checked', () => {
+    render(
+      <SelectableListFilter
+        inline
+        label="Format"
+        options={OPTIONS}
+        value={['Vinyl']}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const details = summaryOf('Format').closest('details') as HTMLElement;
+    expect(within(details).getByLabelText('Vinyl')).toBeChecked();
+    expect(within(details).getByLabelText('CD')).not.toBeChecked();
+  });
+
+  it('calls onChange with the toggled option from the inline list', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <SelectableListFilter
+        inline
+        label="Format"
+        options={OPTIONS}
+        value={['Vinyl']}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByLabelText('CD'));
+    expect(onChange).toHaveBeenCalledWith(['Vinyl', 'CD']);
+  });
+
+  it('keeps the in-list search box when searchable, and omits it otherwise', () => {
+    const { rerender } = render(
+      <SelectableListFilter
+        inline
+        searchable
+        label="Style"
+        options={OPTIONS}
+        value={[]}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('textbox', { name: /search style/i })).toBeInTheDocument();
+
+    rerender(
+      <SelectableListFilter
+        inline
+        label="Style"
+        options={OPTIONS}
+        value={[]}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+});

@@ -229,6 +229,33 @@ async function routeLibrary(page: Page, count = 30): Promise<void> {
   );
 }
 
+/**
+ * Spec 068 US3 (T043, research D22): `/app/library` no longer renders the
+ * collapsible `FiltersControl` nor its centred `SelectableListFilter` modal —
+ * it has a live-filter drawer / bottom sheet instead. `/app/search` keeps both
+ * primitives unchanged, so the centred-Modal and disclosure performance cases
+ * run there and the shared primitives stay covered. The Library end-drawer
+ * (hamburger) case below is unaffected.
+ */
+async function routeSearch(page: Page, count = 30): Promise<void> {
+  await page.route('**/api/discogs/search*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        results: Array.from({ length: count }, (_, i) => ({
+          discogsId: 500 + i,
+          resultType: 'release',
+          title: `Result ${i + 1}`,
+          artist: 'Test Artist',
+          year: 1999,
+        })),
+        pagination: { page: 1, pages: 1, items: count, perPage: count },
+      }),
+    }),
+  );
+}
+
 const RELEASE = {
   discogsId: 1,
   title: 'Stockholm',
@@ -248,12 +275,12 @@ const RELEASE = {
 
 test.describe('Motion performance under 4x CPU throttle (spec 059 T091, SC-010)', () => {
   test('centered Modal enter + exit spring holds 60 fps', async ({ page }, testInfo) => {
-    await routeLibrary(page);
+    await routeSearch(page);
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
     await throttleCpu(page);
-    await page.goto('/app/library');
-    await expect(page.getByText('Record 1', { exact: true })).toBeVisible();
+    await page.goto('/app/search?q=modal');
+    await expect(page.getByText('Result 1', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: /^filters$/i }).click();
 
     const trigger = page.locator('#filter-genre-trigger');
@@ -310,12 +337,12 @@ test.describe('Motion performance under 4x CPU throttle (spec 059 T091, SC-010)'
   });
 
   test('CollapsibleFilterPanel disclosure holds 60 fps', async ({ page }, testInfo) => {
-    await routeLibrary(page);
+    await routeSearch(page);
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
     await throttleCpu(page);
-    await page.goto('/app/library');
-    await expect(page.getByText('Record 1', { exact: true })).toBeVisible();
+    await page.goto('/app/search?q=disclosure');
+    await expect(page.getByText('Result 1', { exact: true })).toBeVisible();
 
     const openToggle = page.getByRole('button', { name: /^filters$/i });
     const body = page.getByTestId('collapsible-filter-body');
