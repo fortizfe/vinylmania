@@ -184,3 +184,56 @@ describe('buildLibraryPath(filters?, sort?, page = 1) (feature 068 interim signa
     expect(result.current).toEqual({ page: 2, sort, ...filters });
   });
 });
+
+/**
+ * Feature 068, US2 (T028) — infinite scroll removes paging from the URL
+ * (research D12, spec edge case "legacy ?page=N links"). The final signature
+ * is `buildLibraryPath(filters?, sort?)` and the hook no longer returns
+ * `page`; a legacy `?page=N` is parsed by nobody and never written back.
+ */
+describe('useLibraryQueryParams without paging (feature 068, US2)', () => {
+  /** Calls the final two-argument builder even where a third is still declared. */
+  const build = buildLibraryPath as (
+    filters?: Parameters<typeof buildLibraryPath>[0],
+    sort?: Parameters<typeof buildLibraryPath>[1],
+    legacyPage?: number,
+  ) => string;
+
+  it('no longer returns a page: infinite scroll owns the batch cursor', () => {
+    const { result } = renderHook(() => useLibraryQueryParams(), {
+      wrapper: wrapper(['/app/library']),
+    });
+
+    expect(result.current).toEqual({ sort: DEFAULT_LIBRARY_SORT });
+    expect('page' in result.current).toBe(false);
+  });
+
+  it('ignores a legacy ?page=3 while keeping the sort and filters of the same URL', () => {
+    const { result } = renderHook(() => useLibraryQueryParams(), {
+      wrapper: wrapper(['/app/library?page=3&sort=album&dir=desc&genre=Rock']),
+    });
+
+    expect('page' in result.current).toBe(false);
+    expect(result.current.sort).toEqual({ sort: 'album', dir: 'desc' });
+    expect(result.current.genre).toEqual(['Rock']);
+  });
+
+  it('never writes a page param, whatever is passed', () => {
+    expect(build()).toBe('/app/library');
+    expect(build(undefined, undefined, 3)).toBe('/app/library');
+    expect(build({ genre: ['Rock'] }, { sort: 'artist', dir: 'asc' }, 2)).not.toMatch(
+      /page=/,
+    );
+  });
+
+  it('round-trips filters and sort through a built URL with no paging (FR-006, FR-007)', () => {
+    const filters = { genre: ['Rock'], style: ['Grunge'], format: ['Vinyl'] };
+    const sort = { sort: 'artist', dir: 'desc' } as const;
+
+    const { result } = renderHook(() => useLibraryQueryParams(), {
+      wrapper: wrapper([build(filters, sort)]),
+    });
+
+    expect(result.current).toEqual({ sort, ...filters });
+  });
+});

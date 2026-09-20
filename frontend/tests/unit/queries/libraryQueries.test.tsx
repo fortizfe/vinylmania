@@ -253,3 +253,114 @@ describe('libraryQueries', () => {
     });
   });
 });
+
+/**
+ * Feature 068, US2 (T027) — infinite scroll (research D8/D10, FR-014).
+ * The list becomes an infinite query: `useLibraryList(sort, filters)` and
+ * `useRefreshLibrary(sort, filters)`, keyed without a page. Page size is a
+ * constant (20) inside the query layer, so callers no longer pass it.
+ */
+describe('libraryQueries — infinite library list (feature 068, US2)', () => {
+  const byArtist = { sort: 'artist', dir: 'asc' } as const;
+
+  /** A batch of `count` placeholder entries for page `page`. */
+  function batch(page: number, count: number, totalItems: number) {
+    return {
+      items: Array.from({ length: count }, (_, index) => ({
+        id: `p${page}-e${index}`,
+      })),
+      page,
+      pageSize: 20,
+      totalItems,
+    };
+  }
+
+  beforeEach(() => {
+    mockList.mockReset();
+  });
+
+  it('keys the list by sort and filters only — no page in the key', async () => {
+    const { libraryKeys } = await import('../../../src/queries/libraryQueries');
+
+    expect(libraryKeys.list(byArtist, { genre: ['Rock'] })).toEqual([
+      ...libraryKeys.lists(),
+      byArtist,
+      { genre: ['Rock'] },
+    ]);
+    // A page number must not leak into the key: one key holds every batch.
+    expect(libraryKeys.list(byArtist, {}).some((part) => typeof part === 'number')).toBe(
+      false,
+    );
+  });
+
+  it('useLibraryList(sort, filters) is an infinite query holding the first batch', async () => {
+    mockList.mockResolvedValue(batch(1, 20, 45));
+
+    const { useLibraryList } = await import('../../../src/queries/libraryQueries');
+    const { result } = renderHook(() => useLibraryList(byArtist, { genre: ['Rock'] }), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockList).toHaveBeenCalledWith(1, 20, false, { genre: ['Rock'] }, byArtist);
+    expect(result.current.data?.pageParams).toEqual([1]);
+    expect(result.current.data?.pages).toHaveLength(1);
+    expect(result.current.hasNextPage).toBe(true);
+  });
+
+  it('getNextPageParam advances while page * pageSize < totalItems, then stops', async () => {
+    mockList.mockImplementation((page: number) =>
+      Promise.resolve(batch(page, page === 3 ? 5 : 20, 45)),
+    );
+
+    const { useLibraryList } = await import('../../../src/queries/libraryQueries');
+    const { result } = renderHook(() => useLibraryList(byArtist), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    await result.current.fetchNextPage();
+    await waitFor(() => expect(result.current.data?.pages).toHaveLength(2));
+    expect(mockList).toHaveBeenLastCalledWith(2, 20, false, {}, byArtist);
+    expect(result.current.hasNextPage).toBe(true);
+
+    await result.current.fetchNextPage();
+    await waitFor(() => expect(result.current.data?.pages).toHaveLength(3));
+    expect(mockList).toHaveBeenLastCalledWith(3, 20, false, {}, byArtist);
+    // 3 * 20 >= 45 — the collection is exhausted.
+    await waitFor(() => expect(result.current.hasNextPage).toBe(false));
+    expect(result.current.data?.pageParams).toEqual([1, 2, 3]);
+  });
+
+  it('reports no next page when the first batch is the whole collection', async () => {
+    mockList.mockResolvedValue(batch(1, 7, 7));
+
+    const { useLibraryList } = await import('../../../src/queries/libraryQueries');
+    const { result } = renderHook(() => useLibraryList(byArtist), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.hasNextPage).toBe(false);
+  });
+
+  it('useRefreshLibrary(sort, filters) forces page 1 and resets the cache to that single batch (FR-014, D10)', async () => {
+    const page1 = batch(1, 20, 45);
+    mockList.mockResolvedValue(page1);
+    const client = createTestQueryClient();
+    const localWrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const { useRefreshLibrary, libraryKeys } =
+      await import('../../../src/queries/libraryQueries');
+    const { result } = renderHook(
+      () => useRefreshLibrary(byArtist, { genre: ['Rock'] }),
+      { wrapper: localWrapper },
+    );
+    await result.current.mutateAsync();
+
+    expect(mockList).toHaveBeenCalledWith(1, 20, true, { genre: ['Rock'] }, byArtist);
+    expect(client.getQueryData(libraryKeys.list(byArtist, { genre: ['Rock'] }))).toEqual({
+      pages: [page1],
+      pageParams: [1],
+    });
+  });
+});

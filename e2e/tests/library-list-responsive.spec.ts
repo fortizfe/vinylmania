@@ -3,40 +3,75 @@ import { expect, test } from '@playwright/test';
 import { runAxeScan } from '../helpers/axe';
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 
-function buildLibraryResponse(count: number) {
-  return {
-    items: Array.from({ length: count }, (_, i) => ({
-      id: `entry-${i}`,
-      discogsReleaseId: i,
-      addedAt: '2026-07-03T00:00:00.000Z',
-      catalogStatus: 'ok',
-      release: {
-        discogsId: i,
-        title: `Record ${i}`,
-        artists: [{ discogsArtistId: i, name: 'Test Artist' }],
-        labels: [],
-        formats: [],
-        genres: [],
-        styles: [],
-        tracklist: [],
-        images: [],
-        discogsUrl: `https://www.discogs.com/release/${i}`,
-      },
-    })),
-    page: 1,
-    pageSize: 20,
-    totalItems: count,
-  };
+type Page = import('@playwright/test').Page;
+
+function buildLibraryItems(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `entry-${i}`,
+    discogsReleaseId: i,
+    addedAt: '2026-07-03T00:00:00.000Z',
+    catalogStatus: 'ok',
+    release: {
+      discogsId: i,
+      title: `Record ${i}`,
+      artists: [{ discogsArtistId: i, name: 'Test Artist' }],
+      labels: [],
+      formats: [],
+      genres: [],
+      styles: [],
+      tracklist: [],
+      images: [],
+      discogsUrl: `https://www.discogs.com/release/${i}`,
+    },
+  }));
 }
 
-async function goToLibrary(page: import('@playwright/test').Page, count: number) {
+/**
+ * Feature 068 (US2) replaced Previous/Next with infinite scroll, so this mock
+ * has to honour `page`/`pageSize` instead of returning the whole collection
+ * for every request (research D22).
+ */
+async function routeLibrary(page: Page, items: object[]) {
   await page.route('**/api/library*', async (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    const pageNo = Math.max(1, Number(params.get('page') ?? '1') || 1);
+    const pageSize = Math.max(1, Number(params.get('pageSize') ?? '20') || 20);
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(buildLibraryResponse(count)),
+      body: JSON.stringify({
+        items: items.slice((pageNo - 1) * pageSize, pageNo * pageSize),
+        page: pageNo,
+        pageSize,
+        totalItems: items.length,
+      }),
     });
   });
+}
+
+/** Loaded records only — skeleton placeholders carry no detail link. */
+const recordCount = (page: Page) =>
+  page
+    .locator(
+      '[data-testid="library-record-grid"] a[href^="/app/library/records/"], [data-testid="library-record-list"] a[href^="/app/library/records/"]',
+    )
+    .count();
+
+/** Scrolls to the bottom until `check()` holds, loading one batch per pass. */
+async function scrollUntil(page: Page, check: () => Promise<boolean>) {
+  await expect
+    .poll(
+      async () => {
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+        return check();
+      },
+      { timeout: 12_000, intervals: [150] },
+    )
+    .toBe(true);
+}
+
+async function goToLibrary(page: Page, count: number) {
+  await routeLibrary(page, buildLibraryItems(count));
 
   await page.goto('/');
   await signInAsFakeGoogleUser(page);
@@ -64,7 +99,7 @@ test.describe('Library page responsive layout (spec 035, US1)', () => {
     expect(hasHorizontalScroll).toBe(false);
   });
 
-  test('mobile: single column, no horizontal scroll, and pagination controls meet 44x44px (Scenario 6)', async ({
+  test('mobile: single column, no horizontal scroll, and scrolling loads the rest of the collection (Scenario 6)', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -82,8 +117,14 @@ test.describe('Library page responsive layout (spec 035, US1)', () => {
     );
     expect(hasHorizontalScroll).toBe(false);
 
-    const nextButton = page.getByRole('button', { name: 'Next' });
-    const box = await nextButton.boundingBox();
+    // Feature 068 US2 removed Previous/Next: the second batch arrives by
+    // scrolling, and the view-mode toggle carries the 44x44 touch-target
+    // check the Next button used to (research D22).
+    expect(await recordCount(page)).toBe(20);
+    await scrollUntil(page, async () => (await recordCount(page)) === 25);
+    await expect(page.getByText(/reached the end of your collection\s*—\s*25 records/)).toBeVisible();
+
+    const box = await page.getByTestId('view-mode-list').boundingBox();
     expect(box?.width).toBeGreaterThanOrEqual(44);
     expect(box?.height).toBeGreaterThanOrEqual(44);
   });
@@ -118,44 +159,35 @@ test.describe('Library page responsive layout (spec 035, US1)', () => {
 });
 
 test.describe('List mode (feature 052, US2)', () => {
-  function buildListResponse() {
-    return {
-      items: [
-        {
-          id: 'entry-1',
-          discogsReleaseId: 1,
-          addedAt: '2026-07-03T00:00:00.000Z',
-          catalogStatus: 'ok',
-          release: {
-            discogsId: 1,
-            title: 'Stockholm',
-            year: 1999,
-            country: 'Sweden',
-            artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
-            labels: [{ discogsLabelId: 1, name: 'Svek' }],
-            formats: [{ name: 'Vinyl', descriptions: [] }],
-            genres: [],
-            styles: [],
-            tracklist: [],
-            images: [],
-            discogsUrl: 'https://www.discogs.com/release/1',
-          },
+  /** The detailed row under test, followed by filler so paging stays meaningful. */
+  function buildListItems() {
+    return [
+      {
+        id: 'entry-stockholm',
+        discogsReleaseId: 1,
+        addedAt: '2026-07-03T00:00:00.000Z',
+        catalogStatus: 'ok',
+        release: {
+          discogsId: 1,
+          title: 'Stockholm',
+          year: 1999,
+          country: 'Sweden',
+          artists: [{ discogsArtistId: 1, name: 'The Persuader' }],
+          labels: [{ discogsLabelId: 1, name: 'Svek' }],
+          formats: [{ name: 'Vinyl', descriptions: [] }],
+          genres: [],
+          styles: [],
+          tracklist: [],
+          images: [],
+          discogsUrl: 'https://www.discogs.com/release/1',
         },
-      ],
-      page: 1,
-      pageSize: 20,
-      totalItems: 25,
-    };
+      },
+      ...buildLibraryItems(24),
+    ];
   }
 
-  test('shows all six fields per row and pagination still works', async ({ page }) => {
-    await page.route('**/api/library*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(buildListResponse()),
-      });
-    });
+  test('shows all six fields per row and scrolling loads the next batch', async ({ page }) => {
+    await routeLibrary(page, buildListItems());
 
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
@@ -176,20 +208,17 @@ test.describe('List mode (feature 052, US2)', () => {
     await expect(list.getByText('1999')).toBeVisible();
     await expect(list.getByText('Svek')).toBeVisible();
 
-    await expect(page.getByRole('button', { name: 'Next' })).toBeEnabled();
+    // Feature 068 US2: the second batch arrives by scrolling, not by Next.
+    expect(await recordCount(page)).toBe(20);
+    await scrollUntil(page, async () => (await recordCount(page)) === 25);
+    await expect(page.getByText(/reached the end of your collection\s*—\s*25 records/)).toBeVisible();
   });
 
   test('mobile: list mode has no horizontal scroll and title/artist remain legible', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.route('**/api/library*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(buildListResponse()),
-      });
-    });
+    await routeLibrary(page, buildListItems());
 
     await page.goto('/');
     await signInAsFakeGoogleUser(page);

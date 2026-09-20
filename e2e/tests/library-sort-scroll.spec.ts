@@ -167,15 +167,41 @@ function toListItem(r: FixtureRecord) {
   };
 }
 
-/** Mocks `/api/library` with the fixture. Returns the list of request URLs for later assertions. */
-async function mockLibrary(page: Page): Promise<URL[]> {
-  const requests: URL[] = [];
+interface LibraryMock {
+  /** Every `/api/library` list request, in order. */
+  requests: URL[];
+  /** Page numbers answered with a 500 until removed again (US2 retry scenario). */
+  failPages: Set<number>;
+}
+
+/** Mocks `/api/library` with the fixture. Returns the recorded requests and the failure switch. */
+async function mockLibrary(page: Page): Promise<LibraryMock> {
+  const mock: LibraryMock = { requests: [], failPages: new Set() };
+  // `GET /api/library/:id` (record detail) is a different path: the list glob
+  // below stops at the next `/`, so it needs its own route.
+  await page.route('**/api/library/rec-*', async (route) => {
+    const id = new URL(route.request().url()).pathname.split('/').pop()!;
+    const record = FIXTURE.find((r) => r.id === id);
+    await route.fulfill({
+      status: record ? 200 : 404,
+      contentType: 'application/json',
+      body: JSON.stringify(record ? toListItem(record) : { error: 'not_found', message: 'nope' }),
+    });
+  });
   await page.route('**/api/library*', async (route) => {
     const url = new URL(route.request().url());
-    requests.push(url);
+    mock.requests.push(url);
     const q = url.searchParams;
     const pageNo = Math.max(1, Number(q.get('page') ?? '1') || 1);
     const pageSize = Math.min(50, Math.max(1, Number(q.get('pageSize') ?? '20') || 20));
+    if (mock.failPages.has(pageNo)) {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'internal_error', message: 'Boom' }),
+      });
+      return;
+    }
     const { sort, dir } = normaliseSort(q.get('sort'), q.get('dir'));
     const ids = expectedIds({ sort, dir, genre: q.get('genre') ?? undefined });
     const byId = new Map(FIXTURE.map((r) => [r.id, r]));
@@ -188,7 +214,7 @@ async function mockLibrary(page: Page): Promise<URL[]> {
       body: JSON.stringify({ items, page: pageNo, pageSize, totalItems: ids.length }),
     });
   });
-  return requests;
+  return mock;
 }
 
 const RECORD_LINKS =
@@ -205,6 +231,203 @@ async function signIn(page: Page) {
   await page.goto('/');
   await signInAsFakeGoogleUser(page);
 }
+
+/** contracts/library-ui.md §4: "You've reached the end of your collection — N records". */
+const END_MESSAGE = /reached the end of your collection\s*—\s*\d+ records?/;
+
+const endMessage = (page: Page) => page.getByText(END_MESSAGE);
+
+/**
+ * Programmatic scroll on purpose: `page.mouse.wheel` would be a user input in
+ * the Layout Instability API's sense, and the CLS scenarios must see the
+ * shifts, not have them flagged `hadRecentInput`.
+ */
+function scrollToBottom(page: Page): Promise<void> {
+  return page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+}
+
+/** Scrolls repeatedly until `check()` holds — used to walk through batches. */
+async function scrollUntil(page: Page, check: () => Promise<boolean>, timeout = 12_000) {
+  await expect
+    .poll(
+      async () => {
+        await scrollToBottom(page);
+        return check();
+      },
+      { timeout, intervals: [150] },
+    )
+    .toBe(true);
+}
+
+const itemCount = async (page: Page) => (await renderedIds(page)).length;
+
+const DEFAULT_ORDER = expectedIds({ sort: 'added', dir: 'desc' });
+
+test.describe('Library infinite scroll (feature 068, US2)', () => {
+  const SORTS: { sort: Sort; dir: Dir }[] = [
+    { sort: 'added', dir: 'desc' },
+    { sort: 'added', dir: 'asc' },
+    { sort: 'artist', dir: 'asc' },
+    { sort: 'artist', dir: 'desc' },
+    { sort: 'album', dir: 'asc' },
+    { sort: 'album', dir: 'desc' },
+  ];
+
+  for (const { sort, dir } of SORTS) {
+    test(`global order: scrolling ${sort}/${dir} to the end shows all 205 records exactly once, in the reference order (SC-007)`, async ({
+      page,
+    }) => {
+      await mockLibrary(page);
+      await signIn(page);
+      await page.goto(`/app/library?sort=${sort}&dir=${dir}`);
+
+      const expected = expectedIds({ sort, dir });
+      await expect.poll(() => renderedIds(page)).toEqual(expected.slice(0, 20));
+
+      await scrollUntil(page, () => endMessage(page).isVisible());
+
+      const ids = await renderedIds(page);
+      expect(new Set(ids).size).toBe(ids.length); // no duplicates
+      expect(ids).toHaveLength(205); // no gaps
+      expect(ids).toEqual(expected);
+      await expect(endMessage(page)).toContainText('— 205 records');
+    });
+  }
+
+  test('prefetch: page 2 is requested while the end of the loaded content is still below the fold (SC-008)', async ({
+    page,
+  }) => {
+    const mock = await mockLibrary(page);
+    await signIn(page);
+    await page.goto('/app/library');
+    await expect.poll(() => renderedIds(page)).toEqual(DEFAULT_ORDER.slice(0, 20));
+
+    const pagesRequested = () =>
+      mock.requests.map((u) => Number(u.searchParams.get('page') ?? '1'));
+    expect(pagesRequested()).not.toContain(2);
+
+    // Stop 250 px short of the bottom: inside the 300 px rootMargin, but with
+    // the end of the loaded content — and the sentinel that follows it —
+    // still off-screen. Loading must start here, before the user gets there.
+    const belowFold = await page.evaluate(() => {
+      const doc = document.documentElement;
+      window.scrollTo(0, Math.max(0, doc.scrollHeight - window.innerHeight - 250));
+      return doc.scrollHeight - (window.scrollY + window.innerHeight);
+    });
+    expect(belowFold).toBeGreaterThan(200);
+
+    await expect.poll(pagesRequested, { timeout: 5_000 }).toContain(2);
+  });
+
+  test('tall screen: at 1280×2400 batches keep loading until the viewport is filled, with no scrolling', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 2400 });
+    await mockLibrary(page);
+    await signIn(page);
+    await page.goto('/app/library');
+    await expect.poll(() => renderedIds(page)).toEqual(DEFAULT_ORDER.slice(0, 20));
+
+    await expect.poll(() => itemCount(page), { timeout: 10_000 }).toBeGreaterThan(20);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+    const ids = await renderedIds(page);
+    expect(ids).toEqual(DEFAULT_ORDER.slice(0, ids.length));
+  });
+
+  test('retry: a 500 on page 3 keeps the loaded records, shows the alert and Retry, and requests nothing more until Retry is pressed', async ({
+    page,
+  }) => {
+    const mock = await mockLibrary(page);
+    mock.failPages.add(3);
+    await signIn(page);
+    await page.goto('/app/library');
+    await expect.poll(() => renderedIds(page)).toEqual(DEFAULT_ORDER.slice(0, 20));
+
+    const alert = page.getByRole('alert').filter({ hasText: "Couldn't load more records" });
+    await scrollUntil(page, () => alert.isVisible());
+
+    // Batches 1 and 2 stay on screen.
+    expect(await renderedIds(page)).toEqual(DEFAULT_ORDER.slice(0, 40));
+    await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+
+    const page3Requests = () =>
+      mock.requests.filter((u) => u.searchParams.get('page') === '3').length;
+    expect(page3Requests()).toBe(1);
+    await scrollToBottom(page);
+    await page.waitForTimeout(1_000); // no automatic reload while the error stands
+    expect(page3Requests()).toBe(1);
+
+    mock.failPages.delete(3);
+    await page.getByRole('button', { name: 'Retry' }).click();
+    await expect.poll(() => renderedIds(page)).toEqual(DEFAULT_ORDER.slice(0, 60));
+    await expect(alert).toHaveCount(0);
+  });
+
+  test('back navigation: opening a record and pressing Back returns to the same sorted, filtered list (SC-009)', async ({
+    page,
+  }) => {
+    await mockLibrary(page);
+    await signIn(page);
+    await page.goto('/app/library?sort=artist&dir=desc&genre=Rock');
+
+    const expected = expectedIds({ sort: 'artist', dir: 'desc', genre: 'Rock' });
+    await expect.poll(() => renderedIds(page)).toEqual(expected.slice(0, 20));
+
+    await page.locator(RECORD_LINKS).first().click();
+    await expect(page).toHaveURL(new RegExp(`/app/library/records/${expected[0]}$`));
+
+    await page.getByRole('link', { name: 'Back' }).first().click();
+    await expect(page).toHaveURL(/[?&]sort=artist(&|$)/);
+    await expect(page).toHaveURL(/[?&]dir=desc(&|$)/);
+    await expect(page).toHaveURL(/[?&]genre=Rock(&|$)/);
+    await expect.poll(async () => (await renderedIds(page)).slice(0, 5)).toEqual(
+      expected.slice(0, 5),
+    );
+  });
+
+  for (const mode of ['grid', 'list'] as const) {
+    test(`CLS: loading 3 more batches by scrolling shifts nothing already on screen, in ${mode} mode (SC-001)`, async ({
+      page,
+      browserName,
+    }) => {
+      // The Layout Instability API is Chromium-only.
+      test.skip(browserName !== 'chromium', 'layout-shift entries are not available');
+
+      await mockLibrary(page);
+      await signIn(page);
+      await page.goto('/app/library');
+      await expect.poll(() => renderedIds(page)).toEqual(DEFAULT_ORDER.slice(0, 20));
+
+      if (mode === 'list') {
+        await page.getByTestId('view-mode-list').click();
+        await expect(page.getByTestId('library-record-list')).toBeVisible();
+      }
+
+      // Only shifts from here on count: the first paint and the view-mode
+      // switch are not "loading additional batches by scrolling" (SC-001).
+      await page.evaluate(() => {
+        const store = window as unknown as { __cls: number };
+        store.__cls = 0;
+        const from = performance.now();
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as (PerformanceEntry & {
+            value: number;
+            hadRecentInput: boolean;
+          })[]) {
+            if (!entry.hadRecentInput && entry.startTime >= from) store.__cls += entry.value;
+          }
+        }).observe({ type: 'layout-shift', buffered: true });
+      });
+
+      await scrollUntil(page, async () => (await itemCount(page)) >= 80);
+
+      const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+      test.info().annotations.push({ type: `cls-${mode}`, description: String(cls) });
+      expect(cls).toBe(0);
+    });
+  }
+});
 
 test.describe('Library sort (feature 068, US1)', () => {
   test('the fixture is sound: 205 unique records and a reference order covering every edge case', () => {
