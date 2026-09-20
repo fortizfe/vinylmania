@@ -232,6 +232,66 @@
 }
 
 /*
+ * ── Chrome material fallbacks (feature 068 US4 — FR-023, research.md D17,
+ * contracts/library-ui.md §7, motion/README §7) ─────────────────────────────
+ *
+ * Justified custom CSS, for the same reason as `.overlay-scrim` above:
+ * Tailwind has no variant for "backdrop-filter unsupported",
+ * `prefers-reduced-transparency` or `prefers-contrast`, so the only way to
+ * degrade `LibraryToolbar`'s translucent bar per user preference is these
+ * three unlayered blocks (unlayered beats the `bg-white/90` utility whatever
+ * the source order). apple-design §14: reduced transparency means frostier,
+ * more contrast means near-solid with a defined border — a deliberate
+ * opaque surface, not a broken translucent one. The bar keeps its shape,
+ * shadow and ring; only the material changes, and its contents already sit
+ * on opaque layers (research D17), so every D17 pairing still holds.
+ */
+
+/* No `backdrop-filter` support at all → the 90% wash would let artwork
+ * through unblurred, so go fully opaque on the page colours. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .chrome-material {
+    background-color: #fff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .dark .chrome-material {
+    background-color: #0b0b10;
+  }
+}
+
+/* User asked for less transparency → solid surface, blur dropped. */
+@media (prefers-reduced-transparency: reduce) {
+  .chrome-material {
+    background-color: #fff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .dark .chrome-material {
+    background-color: #0b0b10 !important;
+  }
+}
+
+/* User asked for more contrast → solid surface plus a 1px edge so the bar's
+ * boundary is unambiguous where content scrolls under it (WCAG 1.4.11); the
+ * soft `ring`/`shadow` alone is not a defined edge. `currentColor` adapts
+ * per theme. */
+@media (prefers-contrast: more) {
+  .chrome-material {
+    background-color: #fff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid currentColor !important;
+  }
+
+  .dark .chrome-material {
+    background-color: #0b0b10 !important;
+  }
+}
+
+/*
  * ── Sticky-header scroll-edge treatment (feature 059 US5 — T084,
  * research.md R5, contracts §AppHeader/LandingHeader) ───────────────────────
  *

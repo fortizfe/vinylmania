@@ -114,6 +114,17 @@ const overlaps = (a: Rect, b: Rect) =>
 const rectOf = async (locator: Locator): Promise<Rect> =>
   locator.evaluate((el) => el.getBoundingClientRect().toJSON() as Rect);
 
+/**
+ * A batch rendered after the last scroll grows the document, leaving the page
+ * short of the bottom — where the fixed capsule does cover the end of the
+ * list. Geometry assertions must wait for the settled, scrolled-to-bottom
+ * state, not merely for the element to exist.
+ */
+const atBottom = (page: Page) =>
+  page.evaluate(
+    () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1,
+  );
+
 /** Resolves `--header-h` to CSS px without duplicating its rem value. */
 const headerHeight = (page: Page) =>
   page.evaluate(() => {
@@ -219,7 +230,7 @@ test.describe('Library capsule at 390 × 844 (US3 AS1/AS5/AS6, FR-016, FR-019, F
     await page.goto('/app/library?genre=Jazz');
     await expect.poll(() => renderedIds(page)).toEqual(JAZZ.slice(0, 20));
 
-    await scrollUntil(page, () => endMessage(page).isVisible());
+    await scrollUntil(page, async () => (await endMessage(page).isVisible()) && atBottom(page));
     expect(await renderedIds(page)).toHaveLength(JAZZ.length);
 
     const bar = await requireBar(page);
@@ -240,7 +251,7 @@ test.describe('Library capsule at 390 × 844 (US3 AS1/AS5/AS6, FR-016, FR-019, F
 
     const alert = page.getByRole('alert').filter({ hasText: "Couldn't load more records" });
     const retry = page.getByRole('button', { name: 'Retry' });
-    await scrollUntil(page, () => retry.isVisible());
+    await scrollUntil(page, async () => (await retry.isVisible()) && atBottom(page));
 
     const bar = await requireBar(page);
     expect(overlaps(await rectOf(alert), bar.rect), 'the capsule overlaps the alert').toBe(false);
