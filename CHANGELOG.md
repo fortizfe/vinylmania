@@ -17,6 +17,20 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.13.0] - 2026-09-20
+
+### Added
+
+- restore WCAG contrast over translucent chrome (US4) ([6b205d1])
+- redesign library toolbar as glass capsule and sticky bar (US3) ([2c2b2d0])
+- replace library pagination with infinite scroll (US2) ([7b03dac])
+- sort library by date added, artist or album (US1) ([4aade35])
+
+### Fixed
+
+- announce every batch and scope the next-batch error (review) ([bd72ce2])
+- read the canvas sentinel back so CodeQL sees it used ([2843b61])
+
 ## [1.12.0] - 2026-09-19
 
 ### Added
