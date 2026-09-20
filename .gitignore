@@ -76,3 +76,7 @@ __pycache__/
 Claude outputs/
 specs/*/.trace.jsonl
 .claude/settings.json
+
+# Antigravity local agent MCP credentials
+.agents/plugins/**/mcp_config.json
+
