@@ -306,4 +306,78 @@ describe('Modal', () => {
       expect(screen.queryByTestId('sheet-surface')).not.toBeInTheDocument();
     });
   });
+
+  /**
+   * Feature 068, US3 (T046) — the bottom sheet the Library's "Sort & Filter"
+   * panel uses below 640 px (research D16, contracts/library-ui §3).
+   */
+  describe('bottom sheet (068 US3)', () => {
+    it('routes position="bottom" through the Sheet, on the Overlay bottom variant', () => {
+      render(
+        <Modal open onClose={() => {}} position="bottom" title="Sort & Filter">
+          Content
+        </Modal>,
+      );
+
+      expect(screen.getByRole('dialog')).toHaveAttribute('data-variant', 'bottom');
+      expect(screen.getByTestId('sheet-surface')).toBeInTheDocument();
+      expect(screen.getByTestId('sheet-handle')).toBeInTheDocument();
+    });
+
+    it('keeps the title and the Close button', () => {
+      render(
+        <Modal open onClose={() => {}} position="bottom" title="Sort & Filter">
+          Content
+        </Modal>,
+      );
+
+      const dialog = screen.getByRole('dialog');
+      const labelledBy = dialog.getAttribute('aria-labelledby');
+      expect(document.getElementById(labelledBy!)).toHaveTextContent('Sort & Filter');
+      expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
+      expect(screen.getByText('Content')).toBeInTheDocument();
+    });
+
+    it('squares off its bottom corners and pads for the home-indicator safe area', () => {
+      render(
+        <Modal open onClose={() => {}} position="bottom" title="Sort & Filter">
+          Content
+        </Modal>,
+      );
+
+      const surface = screen.getByRole('dialog');
+      expect(surface.className).toMatch(/rounded-b-none/);
+      expect(surface.className).toMatch(/pb-\[env\(safe-area-inset-bottom\)\]/);
+    });
+
+    it('still closes via Close and Escape', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      render(
+        <Modal open onClose={onClose} position="bottom" title="Sort & Filter">
+          Content
+        </Modal>,
+      );
+
+      await user.click(screen.getByRole('button', { name: /close/i }));
+      await user.keyboard('{Escape}');
+      expect(onClose).toHaveBeenCalledTimes(2);
+    });
+
+    it('leaves the center and end positions untouched', () => {
+      const { rerender } = render(
+        <Modal open onClose={() => {}} title="Preview">
+          Content
+        </Modal>,
+      );
+      expect(screen.getByRole('dialog')).toHaveAttribute('data-variant', 'center');
+
+      rerender(
+        <Modal open onClose={() => {}} position="end" title="Menu">
+          Content
+        </Modal>,
+      );
+      expect(screen.getByRole('dialog')).toHaveAttribute('data-variant', 'end');
+    });
+  });
 });

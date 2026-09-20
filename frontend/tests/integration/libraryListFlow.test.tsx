@@ -2,7 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '../../src/services/apiClient';
 import { LibraryListPage } from '../../src/pages/LibraryListPage';
@@ -864,5 +864,275 @@ describe('Infinite scroll on the library (feature 068, US2)', () => {
 
     expect(screen.queryByText(/End of collection/)).not.toBeInTheDocument();
     expect(screen.queryByText(/more records loaded/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Feature 068, US3 (T050) — header count, live filters applied from the
+ * toolbar panel, and the rapid-change rule. FR-014, FR-015, FR-020, FR-021,
+ * FR-021a, FR-028; spec edge case "rapid sort/filter changes";
+ * contracts/library-ui §3–§5.
+ */
+describe('Library header and live filters (feature 068, US3)', () => {
+  let lastLocation: { search: string; navigationType: string };
+
+  function LocationProbe() {
+    const location = useLocation();
+    lastLocation = { search: location.search, navigationType: useNavigationType() };
+    return null;
+  }
+
+  function renderWithProbe(initialEntry = '/app/library') {
+    return render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <LibraryListPage />
+          <LocationProbe />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  function entry(id: string, title: string) {
+    return {
+      id,
+      discogsReleaseId: 1,
+      addedAt: '2026-07-03T00:00:00.000Z',
+      catalogStatus: 'ok',
+      release: {
+        discogsId: 1,
+        title,
+        artists: [],
+        labels: [],
+        formats: [],
+        genres: [],
+        styles: [],
+        tracklist: [],
+        images: [],
+        discogsUrl: 'https://www.discogs.com/release/1',
+      },
+    };
+  }
+
+  function result(titles: string[], totalItems = titles.length, page = 1) {
+    return {
+      items: titles.map((title, index) => entry(`${page}-${index}-${title}`, title)),
+      page,
+      pageSize: 20,
+      totalItems,
+    };
+  }
+
+  function currentParams() {
+    return new URLSearchParams(lastLocation.search);
+  }
+
+  /** Opens the phone-sized "Sort & Filter" panel and returns its dialog. */
+  async function openPanel(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+    return screen.getByRole('dialog');
+  }
+
+  beforeEach(() => {
+    mockList.mockReset();
+    window.localStorage.clear();
+    // Phone-sized: the capsule + bottom sheet path, and no reduced motion.
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: () => {},
+          removeListener: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => false,
+        }) as unknown as MediaQueryList,
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.style.overflow = '';
+  });
+
+  it('shows the title, the record count for the current filters and Refresh (FR-020)', async () => {
+    mockList.mockResolvedValue(result(['Record 1-0'], 45));
+
+    renderWithProbe();
+
+    await waitFor(() => expect(screen.getByText('Record 1-0')).toBeInTheDocument());
+    expect(screen.getByRole('heading', { level: 1, name: 'Your library' })).toBeVisible();
+    // The same total as the end message, not the number of loaded records.
+    expect(screen.getByText('45 records')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+  });
+
+  it('uses the singular record count for a one-record library (FR-020)', async () => {
+    mockList.mockResolvedValue(result(['Only One'], 1));
+
+    renderWithProbe();
+
+    await waitFor(() => expect(screen.getByText('Only One')).toBeInTheDocument());
+    expect(screen.getByText('1 record')).toBeInTheDocument();
+  });
+
+  it('applies a genre tick live: URL replaced with sort kept, batch 1 restarted, new total announced', async () => {
+    mockList.mockImplementation(
+      (page: number, _size: number, _refresh: boolean, filters) =>
+        Promise.resolve(
+          filters?.genre?.includes('Rock')
+            ? result(['Rock Record'], 3, page)
+            : result(['Everything'], 45, page),
+        ),
+    );
+
+    renderWithProbe('/app/library?sort=album&dir=desc');
+    await waitFor(() => expect(screen.getByText('Everything')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    const dialog = await openPanel(user);
+    await user.click(within(dialog).getByLabelText('Rock'));
+
+    // URL: replaced, sort kept, no page cursor (FR-021a, contracts §1).
+    await waitFor(() => expect(currentParams().get('genre')).toBe('Rock'));
+    expect(lastLocation.navigationType).toBe('REPLACE');
+    expect(currentParams().get('sort')).toBe('album');
+    expect(currentParams().get('dir')).toBe('desc');
+    expect(currentParams().get('page')).toBeNull();
+
+    // Restarted from batch 1 with the new filters, and the old rows are gone.
+    await waitFor(() =>
+      expect(mockList).toHaveBeenLastCalledWith(
+        1,
+        20,
+        false,
+        { genre: ['Rock'] },
+        { sort: 'album', dir: 'desc' },
+      ),
+    );
+    await waitFor(() => expect(screen.getByText('Rock Record')).toBeInTheDocument());
+    expect(screen.queryByText('Everything')).not.toBeInTheDocument();
+
+    // Count and polite announcement both reflect the new total (FR-028).
+    expect(screen.getByText('3 records')).toBeInTheDocument();
+    const announcement = screen.getByText('Showing 3 records.');
+    expect(announcement.closest('[role="status"]')).not.toBeNull();
+  });
+
+  it('announces the empty result distinctly when no record matches (contracts §5)', async () => {
+    mockList.mockImplementation(
+      (page: number, _size: number, _refresh: boolean, filters) =>
+        Promise.resolve(
+          filters?.genre?.includes('Rock')
+            ? result([], 0, page)
+            : result(['Everything'], 45, page),
+        ),
+    );
+
+    renderWithProbe();
+    await waitFor(() => expect(screen.getByText('Everything')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    const dialog = await openPanel(user);
+    await user.click(within(dialog).getByLabelText('Rock'));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('No records match the active filters.'),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByText('No records match the active filters.').closest('[role="status"]'),
+    ).not.toBeNull();
+    expect(screen.getByText('0 records')).toBeInTheDocument();
+  });
+
+  it('shows and announces only the latest selection when an earlier response lands late (FR-015)', async () => {
+    const pending = new Map<string, (value: unknown) => void>();
+    mockList.mockImplementation(
+      (page: number, _size: number, _refresh: boolean, filters) => {
+        const key = (filters?.genre ?? []).join('+');
+        if (key === '') return Promise.resolve(result(['Everything'], 45, page));
+        return new Promise((resolve) => {
+          pending.set(key, resolve as (value: unknown) => void);
+        });
+      },
+    );
+
+    renderWithProbe();
+    await waitFor(() => expect(screen.getByText('Everything')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    const dialog = await openPanel(user);
+    // Two quick ticks: Rock, then Jazz — neither response has landed yet.
+    await user.click(within(dialog).getByLabelText('Rock'));
+    await user.click(within(dialog).getByLabelText('Jazz'));
+
+    await waitFor(() => expect(pending.has('Rock')).toBe(true));
+    await waitFor(() => expect(pending.has('Rock+Jazz')).toBe(true));
+    expect(currentParams().get('genre')).toBe('Rock,Jazz');
+
+    // Out of order on purpose: the newest selection answers first…
+    await act(async () => {
+      pending.get('Rock+Jazz')!(result(['Fusion Record'], 3));
+    });
+    await waitFor(() => expect(screen.getByText('Fusion Record')).toBeInTheDocument());
+
+    // …then the abandoned one answers. It must neither render nor announce.
+    await act(async () => {
+      pending.get('Rock')!(result(['Rock Record'], 9));
+    });
+
+    expect(screen.queryByText('Rock Record')).not.toBeInTheDocument();
+    expect(screen.getByText('Fusion Record')).toBeInTheDocument();
+    expect(screen.getByText('3 records')).toBeInTheDocument();
+    expect(screen.queryByText('Showing 9 records.')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Showing 3 records.')).toHaveLength(1);
+  });
+
+  it('clearing every filter from the panel restores the unfiltered list (FR-021a)', async () => {
+    mockList.mockImplementation(
+      (page: number, _size: number, _refresh: boolean, filters) =>
+        Promise.resolve(
+          filters?.genre?.length
+            ? result(['Rock Record'], 3, page)
+            : result(['Everything'], 45, page),
+        ),
+    );
+
+    renderWithProbe('/app/library?genre=Rock');
+    await waitFor(() => expect(screen.getByText('Rock Record')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    const dialog = await openPanel(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Clear all filters' }));
+
+    await waitFor(() => expect(currentParams().get('genre')).toBeNull());
+    await waitFor(() => expect(screen.getByText('Everything')).toBeInTheDocument());
+    expect(screen.getByText('Showing 45 records.')).toBeInTheDocument();
+  });
+
+  it('Refresh restarts the list from batch 1 (FR-014)', async () => {
+    mockList.mockImplementation((page: number, _size: number, refresh: boolean) => {
+      if (refresh) return Promise.resolve(result(['Fresh Record'], 40));
+      return Promise.resolve(
+        page === 1 ? result(['Batch One'], 40) : result(['Batch Two'], 40, 2),
+      );
+    });
+
+    renderWithProbe();
+    await waitFor(() => expect(screen.getByText('Batch One')).toBeInTheDocument());
+
+    await scrollToSentinel();
+    await waitFor(() => expect(screen.getByText('Batch Two')).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /refresh/i }));
+
+    await waitFor(() => expect(screen.getByText('Fresh Record')).toBeInTheDocument());
+    expect(screen.queryByText('Batch Two')).not.toBeInTheDocument();
+    expect(mockList).toHaveBeenLastCalledWith(1, 20, true, {}, DEFAULT_SORT);
   });
 });

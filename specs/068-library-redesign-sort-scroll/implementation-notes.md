@@ -447,3 +447,214 @@ Every change falls inside the pre-agreed allowance, and nothing beyond it:
 **Verdict: no Principle I violation. One test defect (tall-screen precondition) and one expected US3-migration failure; no production bug found.**
 
 - Follow-up to T037: removed the self-contradicting "first 20 only" precondition in the tall-screen scenario (e2e/tests/library-sort-scroll.spec.ts); spec re-run green 16/16. library-filters.spec.ts "filters remain active across a page change" still drives the removed Next button — migrated in US3 (T041).
+
+## US3 red tests — frontend (T045–T050)
+
+RED phase only. No file under `frontend/src` was touched. Run with
+`cd frontend && npx vitest run <files>`.
+
+| Task | File | Tests added | Red reason (one line) |
+|---|---|---|---|
+| T045 | `frontend/tests/unit/motion/Overlay.test.tsx` | 4 (`Overlay — bottom variant (068 US3)`) | no `bottom` entry in `positionClasses`/`surfaceSizeClasses`, so the scrim lacks `items-end justify-center` and the surface lacks `max-h-[85dvh] w-full overflow-y-auto` |
+| T045 | `frontend/tests/unit/motion/Sheet.test.tsx` | 5 (`Sheet — bottom sheet (068 US3)`) | `Sheet` hardcodes `variant="end"`, so a `dismissAxis="y"` sheet reports `data-variant="end"` |
+| T046 | `frontend/tests/unit/ui/Modal.test.tsx` | 5 (`Modal › bottom sheet (068 US3)`) | `position="bottom"` is not a case, so it falls through to the centered `Overlay` (`data-variant="center"`, no `rounded-b-none` / safe-area padding) |
+| T047 | `frontend/tests/unit/filters/SelectableListFilter.test.tsx` | 6 (`SelectableListFilter — inline disclosure (068 US3)`) | no `inline` prop: the facet still renders a trigger `Button` + nested `Modal`, never a `<details>/<summary>` |
+| T048 | `frontend/tests/unit/FiltersControl.test.tsx` | 5 (`FiltersControl — live filters (068 US3)`) | no `live` prop: the collapsed `CollapsibleFilterPanel` + `<form>` + Apply are still rendered and there is no "Clear all filters" button |
+| T049 | `frontend/tests/unit/LibraryToolbar.test.tsx` | 11 (`LibraryToolbar — dual layout bar and panel (068 US3)`) | the toolbar is still the US1 in-flow row: no `chrome-material` bar, no "Sort & Filter"/"Filters" triggers, no panel, no `matchMedia` listener |
+| T050 | `frontend/tests/integration/libraryListFlow.test.tsx` | 7 (`Library header and live filters (feature 068, US3)`) | the header renders no record count and the page still mounts the standalone `FiltersControl` (Apply path), so there is no "Sort & Filter" panel and no "Showing N records." announcement |
+
+Counts after this commit: Overlay 21 (2 red), Sheet 22 (2 red), Modal 28 (2 red),
+SelectableListFilter 16 (6 red), FiltersControl 16 (5 red), LibraryToolbar 17
+(11 red), libraryListFlow 35 (6 red). Every pre-existing test in these files is
+still green, and `tests/integration/searchResultsFlow.test.tsx` is 27/27 green
+(Search keeps its Apply button — unchanged by US3).
+
+Notes for the implementation phase:
+
+- `tests/unit/LibraryToolbar.test.tsx`'s existing `renderToolbar` helper was
+  extended with the new `filters` / `onFiltersChange` / `onClear` props so the
+  US1 sort-select tests keep passing once those props become required.
+- Some added cases are green on purpose (they pin behaviour US3 must not
+  break): the `shouldDismissSheet` thresholds restated for the downward axis,
+  the y-axis handle geometry, `Modal`'s center/end variants, and
+  "Refresh restarts the list from batch 1".
+- `variant="bottom"` / `position="bottom"` / `inline` / `live` and the new
+  `LibraryToolbar` props are type errors until T051–T056 land; Vitest strips
+  types, so the failures above are genuine runtime assertion failures.
+
+## US3 red tests — shared e2e migrations (T040–T044)
+
+The five shared e2e specs that reached Library's filters through
+`#filter-genre-trigger` (inside `CollapsibleFilterPanel`) were migrated per
+research D22. The rule applied throughout: a case whose subject is **Library's
+own overlay** re-points at the new Library surfaces (red now); a case whose
+subject is a **shared primitive Library no longer shows** (centred
+`SelectableListFilter` modal, `CollapsibleFilterPanel` disclosure) moves to
+`/app/search`, which keeps both unchanged (green now — that green run is the
+proof no coverage was lost). No production code was touched.
+
+### Moved to `/app/search` — green now (10/10 passing)
+
+| Task | File | Case | Vehicle on Search |
+|---|---|---|---|
+| T040† | `e2e/tests/overlay-focus-management.spec.ts` | "closing the centered Modal mid-enter reverses…" | `/app/search?q=modal` + `**/api/discogs/search*` mock (30 results), `Filters` → `#filter-genre-trigger` |
+| T040† | `e2e/tests/overlay-focus-management.spec.ts` | the three `Modal: …` trap / focus-restore / scroll-lock cases (`openGenreModal`) | same; 30 results keep the page scrollable for the scroll-lock case |
+| T041 | `e2e/tests/reduced-motion.spec.ts` | "the CollapsibleFilterPanel disclosure body reveals with no transform" | `/app/search?q=stockholm` + search mock |
+| T041† | `e2e/tests/reduced-motion.spec.ts` | "the centered Modal opens with opacity only" | same |
+| T043 | `e2e/tests/motion-performance.spec.ts` | "centered Modal enter + exit spring holds 60 fps" | `/app/search?q=modal` + search mock (30 results, so the DOM weight under 4× throttle matches the old Library grid) |
+| T043 | `e2e/tests/motion-performance.spec.ts` | "CollapsibleFilterPanel disclosure holds 60 fps" | `/app/search?q=disclosure` + search mock |
+| T044 | `e2e/tests/dark-mode-contrast.spec.ts` | "centered Modal content clears WCAG AA on its opaque surface" (light + dark) | `/app/search?q=overlay` + search mock, `assertOverlayContentContrast` unchanged |
+
+† Beyond T040/T041's literal text. Both tasks say "its Library overlay vehicle
+becomes the Filters drawer". Re-pointing those cases would have *deleted* the
+only e2e coverage of the centred Modal's focus trap / focus restore / scroll
+lock / interruptibility / reduced-motion path — and would have duplicated the
+end-drawer cases that already exist in both files (the hamburger drawer). So
+D22's shared-primitive rule was applied instead: the centred-Modal cases moved
+to Search, and the Library drawer coverage T040/T041 ask for was **added** as
+new red cases (below). Net: nothing lost, T040/T041's intent satisfied.
+
+### Re-pointed at the new Library surfaces — red now (8/8 failing)
+
+| Task | File | Case | Red reason |
+|---|---|---|---|
+| T040 | `e2e/tests/overlay-focus-management.spec.ts` | **new** "Library Filters drawer: focus is trapped and Escape restores focus to \"Filters\"" | today's "Filters" button is the `CollapsibleFilterPanel` toggle: `toHaveAttribute('aria-haspopup', 'dialog')` fails, no `dialog` named "Filters" exists |
+| T041 | `e2e/tests/reduced-motion.spec.ts` | **new** "the Library Filters drawer opens with no slide translate under reduced motion" | `getByRole('dialog', { name: 'Filters' })` never appears |
+| T041 | `e2e/tests/reduced-motion.spec.ts` | **new** "the Library \"Sort & Filter\" bottom sheet opens with no translate under reduced motion (390 px)" | the capsule's "Sort & Filter" button does not exist yet |
+| T042 | `e2e/tests/overlay-contrast.spec.ts` | `openGenreModalOverBusyArt` → `openFiltersDrawerOverBusyArt`, feeding all 5 cases (AA contrast light/dark, axe light/dark, `prefers-contrast: more`) | `getByRole('dialog', { name: 'Filters' })` never appears |
+
+`overlay-contrast.spec.ts` keeps the Library grid of busy cover art — the
+subject there is the overlay *material over that art*, so the vehicle moves to
+the drawer rather than to Search (D22).
+
+T043's Library end-drawer case ("hamburger drawer (Sheet / end) enter + exit
+slide") is unchanged, as the task requires.
+
+### How this was verified
+
+Two targeted runs (Firebase emulator + Playwright, chromium):
+
+- green: `playwright test tests/overlay-focus-management.spec.ts tests/reduced-motion.spec.ts tests/motion-performance.spec.ts tests/dark-mode-contrast.spec.ts -g 'centered Modal|CollapsibleFilterPanel|Modal: '` → **10 passed (32.6 s)**
+- red: `playwright test tests/overlay-focus-management.spec.ts tests/reduced-motion.spec.ts tests/overlay-contrast.spec.ts -g 'Library Filters drawer|Sort & Filter|busy cover art|prefers-contrast'` → **8 failed**, each on a missing new Library surface (reasons in the table above), none on an assertion about behaviour that already exists.
+
+### Coverage note for the implementation phase
+
+Nothing was dropped, but two expectations are now encoded in these specs and
+must hold once T051–T056 land:
+
+- the Library "Filters" trigger carries `aria-haspopup="dialog"` and its
+  accessible name starts with "Filters" (the sr-only ", N active filters"
+  suffix is matched by `/^filters(,|$)/i`); the bottom-sheet trigger likewise
+  matches `/^sort & filter(,|$)/i`;
+- the drawer/sheet dialogs are named exactly "Filters" and "Sort & Filter"
+  (via `Modal`'s `title` → `aria-labelledby`) and expose `data-variant="end"`
+  / `data-variant="bottom"`.
+
+---
+
+## US3 red tests — e2e (T038–T039)
+
+Two Playwright runs (Firebase emulator, chromium):
+
+- regression after the fixture extraction: `playwright test tests/library-sort-scroll.spec.ts` → **16 passed (37.9 s)**
+- red: `playwright test tests/library-toolbar.spec.ts tests/library-filters.spec.ts` → **32 failed, 1 passed (2.9 min)**, then two test-side fixes re-run (`-g 'not in the page flow|remain active while more batches'` → 1 failed, 1 passed) for a final **32 red / 1 green** across the two files.
+
+### Shared fixture extracted (no behaviour change)
+
+`e2e/helpers/libraryFixture.ts` (new) now holds what `library-sort-scroll.spec.ts`
+had inline: the 205-record `/api/library` mock (honours `page`/`pageSize`/`sort`/
+`dir`/`genre`, with a `failPages` switch), the data-model §3 reference sorter,
+`expectedIds`, `renderedIds`/`RECORD_LINKS`, `signIn`, `END_MESSAGE`/`endMessage`,
+`scrollToBottom`/`scrollUntil`/`itemCount` and `DEFAULT_ORDER`. `library-sort-scroll.spec.ts`
+imports them instead (pure move — the 16 US1/US2 scenarios stay green), and
+`library-toolbar.spec.ts` reuses them rather than duplicating the fixture.
+
+### How the bar is located (T038)
+
+Not by a testid: the controls bar is the nearest **`fixed`** (below 640 px) or
+**`sticky`** (≥ 640 px) ancestor of the single `ViewModeToggle`. That is exactly
+what FR-016/FR-018 require, so the locator is itself the assertion — today's
+in-flow US1 bar has no such ancestor, and `requireBar` fails with "no
+fixed/sticky controls bar wraps the view toggle".
+
+### T038 — `e2e/tests/library-toolbar.spec.ts` (new, 16 scenarios, all red)
+
+| Scenario (quickstart §3) | Red reason today |
+|---|---|
+| 1. capsule bottom is 16 px above the viewport bottom, holds the toggle + "Sort & Filter", the select is hidden at 390 px | no `fixed` bar (US1 bar is in flow); no "Sort & Filter" button |
+| 1. every interactive box in the capsule ≥ 44 × 44 (SC-005) | no capsule to scope the measurement to |
+| 1. last record and end message not overlapped by the capsule (AS5, FR-019) | no capsule rect; `--capsule-clearance` (T055) does not exist |
+| 1. Retry/alert not overlapped by the capsule (FR-019) | same |
+| 2. Escape / Close / scrim click / drag-down each dismiss the sheet and return focus to the trigger (4 tests, AS2) | no "Sort & Filter" trigger and no `Modal position="bottom"` |
+| 2. a sort radio applies live and the sheet stays open (FR-017) | no sheet, no radio group (sort is only the desktop `<select>` today) |
+| 2. a genre tick updates the badge + record count, focus stays on the checkbox (AS7) | no sheet, no live filters, no header count (FR-020, T057) |
+| 3. toolbar top = `--header-h` after scrolling 2000 px (AS3) | the bar is not `sticky` |
+| 3. the select is inside the toolbar and updates the URL | the select exists (US1) but has no sticky bar around it |
+| 3. "Filters" opens the end drawer (`data-variant="end"`), a tick applies live, Escape restores focus (AS3, AS7) | today's "Filters" is the `CollapsibleFilterPanel` trigger: no `aria-haspopup="dialog"`, no dialog |
+| 3. "Clear all filters" clears and keeps focus, then goes `aria-disabled` (FR-021a) | today's control is "Clear filters" inside `FilterActions`, behind Apply |
+| 3. toolbar width = `<main>` content width at 1440 px (`xl:max-w-7xl` → 1216 px) and 1100 px (`max-w-4xl` → 832 px) (FR-018) | no fixed/sticky bar |
+
+Scenarios 4–7 of quickstart §3 (keyboard walk, axe, material contrast, reduced
+motion) are **T062** and are deliberately not in this file yet.
+
+### T039 — `e2e/tests/library-filters.spec.ts` migrated (17 scenarios: 16 red, 1 green)
+
+Migrated off `#filter-genre-trigger` + "Apply filters" to the live filters,
+parameterised over both surfaces (`SURFACES`): the **"Filters" drawer at
+1280 px** and the **"Sort & Filter" sheet at 390 px**. The per-test route
+handlers were replaced by one `mockLibrary(page, records, pageSize)` that
+honours `genre`/`style`/`format` and `page`.
+
+| Scenario | Red reason today |
+|---|---|
+| filters are not in the page flow: "Filters" carries `aria-haspopup="dialog"`, no free-text genre/style, no `#filter-genre-trigger`, no checkbox, no Apply before opening | the "Filters" button is the collapsible trigger and has no `aria-haspopup` |
+| ticking a genre applies live — URL, record count, badge, results (× 2 surfaces) | no dialog; no header count; no live apply |
+| unticking restores the unfiltered list (× 2 surfaces) | same |
+| "Clear all filters" clears every facet, keeps focus, then `aria-disabled` (× 2 surfaces) | same; the current control is "Clear filters" behind Apply |
+| no horizontal scroll while the Style disclosure is open (SC-005) (× 2 surfaces) | no dialog to open the `<details>` in |
+| a no-match combination shows "no results for the active filters" | no dialog |
+| genre narrows list-mode rows the same way (052 US2) | no dialog |
+| empty/no-match messages unchanged in list mode (052 US2) | no dialog |
+| axe: 0 serious/critical with the drawer open, light + dark (058 US1) | no drawer |
+| Genre option checkbox border contrast vs the drawer surface, light + dark (058 US2) | no drawer |
+| **filters remain active while more batches load on scroll (FR-022)** | **green** — this is the test that was failing under US2 because it drove the removed Next button; driven by scroll it passes against today's code |
+
+### Tests dropped, and why
+
+Four cases asserted Library UI that US3 removes outright; none of them has an
+equivalent on the new surfaces, and the shared primitive they covered stays
+covered on `/app/search` through T041/T043/T044:
+
+- "Filter panel disclosure motion" × 2 (expand animates height+opacity; reduced
+  motion is opacity-only) — the Library facets become native `<details>`, which
+  D13 defines as instant with nothing to animate or reduce. `reduced-motion.spec.ts`
+  (T041) and `motion-performance.spec.ts` (T043) keep the `CollapsibleFilterPanel`
+  covered at `/app/search`.
+- "collapsed filter panel border" contrast × 2 themes and "Genre filter trigger
+  border" contrast × 2 themes — neither the collapsed panel Card nor the Genre
+  trigger `Button` exists on Library any more (the facet is a `<summary>`). The
+  toolbar's own material/border contrast is **T062** (research D17 floors).
+
+**Not covered by any task**: T039's text only mentions the `#filter-genre-trigger`
++ Apply flow, but this file also contained those four cases; they were handled
+here because no other US3/US4 task touches `library-filters.spec.ts`.
+
+### Expectations this adds for the implementation phase (T051–T057)
+
+Beyond the ones already listed under T040–T044:
+
+- the controls bar is a **single element** that is `position: fixed` below 640 px
+  (bottom edge 16 px above the viewport bottom) and `position: sticky` at
+  `top: var(--header-h)` from 640 px up, wrapping the one `ViewModeToggle`, and
+  at ≥ 640 px its width equals `<main>`'s content-box width;
+- the header renders the record count as its own element whose whole text is
+  `"N records"` / `"1 record"` (FR-020, T057) — several scenarios read it;
+- the facet disclosure's `<summary>` text is exactly `"Genre"` or
+  `"Genre (N selected)"`, and each option checkbox is labelled by the option value;
+- "Clear all filters" is the exact accessible name, stays in the DOM and focusable,
+  and exposes `aria-disabled="true"` when nothing is active;
+- the panel trigger's accessible name carries the count, matched as `/N active filter/`.
+
+## US3 red-test approval gate
+
+- 2026-09-20: Red tests T038–T050 reviewed and **approved by the developer (Fernando Ortiz)** before implementation (Constitution Principle I), including the reviewed deletion of 4 library-filters cases whose components Library drops (shared primitives stay covered on /app/search). Implementation T051–T059 may start.

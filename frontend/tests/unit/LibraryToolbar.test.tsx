@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LibraryToolbar } from '../../src/components/LibraryToolbar';
 import {
@@ -12,15 +12,20 @@ import {
 function renderToolbar(sort: LibrarySortValue = DEFAULT_LIBRARY_SORT) {
   const onSortChange = vi.fn();
   const onModeChange = vi.fn();
+  const onFiltersChange = vi.fn();
+  const onClear = vi.fn();
   const utils = render(
     <LibraryToolbar
       mode="grid"
       onModeChange={onModeChange}
       sort={sort}
       onSortChange={onSortChange}
+      filters={{}}
+      onFiltersChange={onFiltersChange}
+      onClear={onClear}
     />,
   );
-  return { ...utils, onSortChange, onModeChange };
+  return { ...utils, onSortChange, onModeChange, onFiltersChange, onClear };
 }
 
 describe('LibraryToolbar sort select (feature 068, US1, FR-001/FR-009a)', () => {
@@ -85,5 +90,243 @@ describe('LibraryToolbar sort select (feature 068, US1, FR-001/FR-009a)', () => 
     renderToolbar();
 
     expect(screen.getAllByTestId('view-mode-toggle')).toHaveLength(1);
+  });
+});
+
+/**
+ * Feature 068, US3 (T049) — the one bar element that is the floating capsule
+ * below 640 px and the sticky toolbar from 640 px up, plus its single panel
+ * (bottom sheet / end drawer). FR-016–FR-018, FR-024, US3 AS1–AS3 + AS7,
+ * research D15–D18, contracts/library-ui §3–§4.
+ */
+describe('LibraryToolbar — dual layout bar and panel (068 US3)', () => {
+  /**
+   * Deterministic breakpoint control: only `(min-width: 640px)` is driven,
+   * every other query (notably `prefers-reduced-motion`) stays false.
+   */
+  function mockBreakpoint(initialDesktop: boolean) {
+    const listeners = new Set<(event: MediaQueryListEvent) => void>();
+    let desktop = initialDesktop;
+
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          get matches() {
+            return query === '(min-width: 640px)' ? desktop : false;
+          },
+          media: query,
+          onchange: null,
+          addListener: () => {},
+          removeListener: () => {},
+          addEventListener: (_type: string, listener: EventListener) => {
+            if (query === '(min-width: 640px)') {
+              listeners.add(listener as unknown as (e: MediaQueryListEvent) => void);
+            }
+          },
+          removeEventListener: (_type: string, listener: EventListener) => {
+            listeners.delete(listener as unknown as (e: MediaQueryListEvent) => void);
+          },
+          dispatchEvent: () => false,
+        }) as unknown as MediaQueryList,
+    );
+
+    return {
+      async cross(next: boolean) {
+        desktop = next;
+        await act(async () => {
+          for (const listener of listeners) {
+            listener({
+              matches: next,
+              media: '(min-width: 640px)',
+            } as MediaQueryListEvent);
+          }
+        });
+      },
+    };
+  }
+
+  function renderBar({
+    desktop = false,
+    filters = {},
+    sort = DEFAULT_LIBRARY_SORT,
+  }: {
+    desktop?: boolean;
+    filters?: { genre?: string[]; style?: string[]; format?: string[] };
+    sort?: LibrarySortValue;
+  } = {}) {
+    const breakpoint = mockBreakpoint(desktop);
+    const onSortChange = vi.fn();
+    const onModeChange = vi.fn();
+    const onFiltersChange = vi.fn();
+    const onClear = vi.fn();
+    const utils = render(
+      <LibraryToolbar
+        mode="grid"
+        onModeChange={onModeChange}
+        sort={sort}
+        onSortChange={onSortChange}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        onClear={onClear}
+      />,
+    );
+    return { ...utils, breakpoint, onSortChange, onModeChange, onFiltersChange, onClear };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.style.overflow = '';
+  });
+
+  it('renders exactly one bar element carrying the chrome material, and one view toggle', () => {
+    const { container } = renderBar();
+
+    expect(container.querySelectorAll('.chrome-material')).toHaveLength(1);
+    expect(screen.getAllByTestId('view-mode-toggle')).toHaveLength(1);
+  });
+
+  it('exposes the phone-only "Sort & Filter" trigger as a dialog opener with a 44px target', () => {
+    renderBar();
+
+    const trigger = screen.getByRole('button', { name: /sort & filter/i });
+    expect(trigger.className).toMatch(/(^|\s)sm:hidden(\s|$)/);
+    expect(trigger.className).toMatch(/min-h-11/);
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('shows the active-filter count as a number plus an sr-only suffix (never colour alone)', () => {
+    renderBar({ filters: { genre: ['Rock'], format: ['Vinyl'] } });
+
+    const trigger = screen.getByRole('button', { name: /sort & filter/i });
+    expect(within(trigger).getByText('2')).toBeInTheDocument();
+    expect(trigger).toHaveAccessibleName(/2 active filters/);
+  });
+
+  it('opens a bottom sheet titled "Sort & Filter" holding a native radio group per criterion', async () => {
+    const user = userEvent.setup();
+    renderBar();
+
+    const trigger = screen.getByRole('button', { name: /sort & filter/i });
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('data-variant', 'bottom');
+    expect(
+      within(dialog).getByRole('heading', { name: 'Sort & Filter' }),
+    ).toBeInTheDocument();
+
+    const sortGroup = within(dialog).getByRole('group', { name: 'Sort by' });
+    for (const group of [...new Set(LIBRARY_SORT_OPTIONS.map((o) => o.group))]) {
+      expect(within(sortGroup).getByRole('group', { name: group })).toBeInTheDocument();
+    }
+
+    const radios = within(sortGroup).getAllByRole('radio');
+    expect(radios).toHaveLength(LIBRARY_SORT_OPTIONS.length);
+    // One shared `name`, so arrow keys rove across the three fieldsets natively.
+    expect(new Set(radios.map((radio) => radio.getAttribute('name'))).size).toBe(1);
+    expect(within(sortGroup).getByRole('radio', { name: 'Newest first' })).toBeChecked();
+  });
+
+  it('applies a sort pick immediately and leaves the sheet open', async () => {
+    const user = userEvent.setup();
+    const { onSortChange } = renderBar();
+
+    await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('radio', { name: 'Artist (A → Z)' }));
+
+    expect(onSortChange).toHaveBeenCalledWith({ sort: 'artist', dir: 'asc' });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('puts the live filters in the sheet (AS7)', async () => {
+    const user = userEvent.setup();
+    const { onFiltersChange } = renderBar();
+
+    await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByRole('button', { name: 'Clear all filters' }),
+    ).toBeInTheDocument();
+
+    const rock = within(dialog).getByLabelText('Rock');
+    await user.click(rock);
+
+    expect(onFiltersChange).toHaveBeenCalledWith({ genre: ['Rock'] });
+    expect(rock).toHaveFocus();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('returns focus to the "Sort & Filter" trigger when the sheet is dismissed', async () => {
+    const user = userEvent.setup();
+    renderBar();
+
+    const trigger = screen.getByRole('button', { name: /sort & filter/i });
+    await user.click(trigger);
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('keeps the sort select and the "Filters" trigger for the ≥ 640 px toolbar', () => {
+    renderBar({ desktop: true });
+
+    const selectWrapper = screen.getByText('Sort', { selector: 'label' })
+      .parentElement as HTMLElement;
+    expect(selectWrapper.className).toMatch(/(^|\s)hidden(\s|$)/);
+    expect(selectWrapper.className).toMatch(/sm:flex/);
+
+    const filtersTrigger = screen.getByRole('button', { name: /^filters$/i });
+    expect(filtersTrigger.className).toMatch(/(^|\s)hidden(\s|$)/);
+    expect(filtersTrigger.className).toMatch(/sm:inline-flex/);
+    expect(filtersTrigger.className).toMatch(/min-h-11/);
+    expect(filtersTrigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(filtersTrigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('opens the end drawer titled "Filters" with the same live filters and no sort radios', async () => {
+    const user = userEvent.setup();
+    const { onFiltersChange } = renderBar({ desktop: true });
+
+    const trigger = screen.getByRole('button', { name: /^filters$/i });
+    await user.click(trigger);
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('data-variant', 'end');
+    expect(within(dialog).getByRole('heading', { name: 'Filters' })).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('group', { name: 'Sort by' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByLabelText('Rock'));
+    expect(onFiltersChange).toHaveBeenCalledWith({ genre: ['Rock'] });
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it('shows the "Filters" trigger count too', () => {
+    renderBar({ desktop: true, filters: { style: ['Doom Metal'] } });
+
+    const trigger = screen.getByRole('button', { name: /^filters/i });
+    expect(within(trigger).getByText('1')).toBeInTheDocument();
+    expect(trigger).toHaveAccessibleName(/1 active filter/);
+  });
+
+  it('closes an open panel when the 640 px breakpoint is crossed', async () => {
+    const user = userEvent.setup();
+    const { breakpoint } = renderBar({ desktop: false });
+
+    await user.click(screen.getByRole('button', { name: /sort & filter/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await breakpoint.cross(true);
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });

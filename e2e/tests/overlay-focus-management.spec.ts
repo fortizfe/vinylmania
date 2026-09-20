@@ -41,17 +41,34 @@ function libraryEntry(id: string, title: string) {
   };
 }
 
-async function mockLibrary(page: Page) {
-  await page.route('**/api/library*', async (route) => {
+/**
+ * Spec 068 / US3 (research D22): `/app/library` no longer renders the
+ * collapsible filter panel nor its centred `SelectableListFilter` modal —
+ * its filters live in a "Filters" end-drawer (>= 640 px) and a "Sort &
+ * Filter" bottom sheet (< 640 px). `/app/search` keeps both primitives
+ * unchanged, so every case whose subject is the *centred Modal* runs there
+ * now. Re-pointing them at the drawer would have silently dropped the
+ * centred-Modal focus-trap / restore / scroll-lock coverage.
+ */
+function searchResults(count: number) {
+  return {
+    results: Array.from({ length: count }, (_, i) => ({
+      discogsId: 500 + i,
+      resultType: 'release' as const,
+      title: `Result ${i + 1}`,
+      artist: 'Test Artist',
+      year: 1999,
+    })),
+    pagination: { page: 1, pages: 1, items: count, perPage: count },
+  };
+}
+
+async function mockSearch(page: Page, count = 30) {
+  await page.route('**/api/discogs/search*', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        items: [libraryEntry('entry-1', 'Stockholm')],
-        page: 1,
-        pageSize: 20,
-        totalItems: 1,
-      }),
+      body: JSON.stringify(searchResults(count)),
     });
   });
 }
@@ -60,11 +77,11 @@ test.describe('Overlay motion is interruptible (spec 059 US2, SC-003)', () => {
   test('closing the centered Modal mid-enter reverses from the current value with no transform jump', async ({
     page,
   }) => {
-    await mockLibrary(page);
+    await mockSearch(page);
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
-    await page.goto('/app/library');
-    await expect(page.getByText('Stockholm')).toBeVisible();
+    await page.goto('/app/search?q=modal');
+    await expect(page.getByText('Result 1', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: /^filters$/i }).click();
 
     const trigger = page.locator('#filter-genre-trigger');
@@ -242,18 +259,13 @@ function libraryPage(count: number) {
 }
 
 test.describe('Overlay focus trap, restore and scroll lock (spec 059 US3, T060)', () => {
+  /** The centred Modal vehicle — `/app/search`, not `/app/library` (D22). */
   async function openGenreModal(page: Page) {
-    await page.route('**/api/library*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(libraryPage(30)),
-      });
-    });
+    await mockSearch(page);
     await page.goto('/');
     await signInAsFakeGoogleUser(page);
-    await page.goto('/app/library');
-    await expect(page.getByText('Record 1', { exact: true })).toBeVisible();
+    await page.goto('/app/search?q=modal');
+    await expect(page.getByText('Result 1', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: /^filters$/i }).click();
 
     const trigger = page.locator('#filter-genre-trigger');
@@ -394,6 +406,46 @@ test.describe('Overlay focus trap, restore and scroll lock (spec 059 US3, T060)'
     await expect
       .poll(() => page.evaluate(() => getComputedStyle(document.body).overflow))
       .not.toBe('hidden');
+  });
+
+  /**
+   * Spec 068 US3 (T040, research D22, contracts/library-ui §3–§4): Library's
+   * own overlay is now the "Filters" end-drawer opened from the sticky
+   * toolbar at >= 640 px. Same Overlay contract as every other drawer: focus
+   * trapped while open, Escape restores focus to the "Filters" trigger.
+   */
+  test('Library Filters drawer: focus is trapped and Escape restores focus to "Filters"', async ({
+    page,
+  }) => {
+    await page.route('**/api/library*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(libraryPage(30)),
+      });
+    });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByText('Record 1', { exact: true })).toBeVisible();
+
+    const trigger = page.getByRole('button', { name: /^filters(,|$)/i });
+    await expect(trigger).toBeVisible();
+    await expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    await trigger.click();
+
+    const drawer = page.getByRole('dialog', { name: 'Filters' });
+    await expect(drawer).toBeVisible();
+    await expect(drawer).toHaveAttribute('data-variant', 'end');
+    await page.waitForTimeout(500); // settle the enter slide
+
+    await expectBackdropDistinct(page, '[data-testid="modal-backdrop"]');
+    await expectFocusTrapped(page, '[data-testid="modal-backdrop"] [role="dialog"][data-variant="end"]');
+    await expect(trigger).not.toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(drawer).toHaveCount(0);
+    await expect(trigger).toBeFocused();
   });
 
   async function openGallery(page: Page) {

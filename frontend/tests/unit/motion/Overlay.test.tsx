@@ -266,3 +266,92 @@ describe('Overlay', () => {
     });
   });
 });
+
+/**
+ * Feature 068, US3 (T045) — the bottom-anchored variant the Library's
+ * "Sort & Filter" sheet is built on (research D16, FR-017, FR-027,
+ * contracts/library-ui §3).
+ */
+describe('Overlay — bottom variant (068 US3)', () => {
+  it('anchors the scrim to the bottom edge and stamps data-variant="bottom"', () => {
+    renderOverlay(
+      <Overlay open onClose={() => {}} variant="bottom">
+        <p>sheet body</p>
+      </Overlay>,
+    );
+
+    expect(screen.getByRole('dialog')).toHaveAttribute('data-variant', 'bottom');
+    const scrim = screen.getByTestId('overlay-scrim');
+    expect(scrim.className).toMatch(/items-end/);
+    expect(scrim.className).toMatch(/justify-center/);
+  });
+
+  it('gives the surface the full-width, height-capped sheet geometry', () => {
+    renderOverlay(
+      <Overlay open onClose={() => {}} variant="bottom">
+        <p>sheet body</p>
+      </Overlay>,
+    );
+
+    const surface = screen.getByRole('dialog');
+    expect(surface.className).toMatch(/max-h-\[85dvh\]/);
+    expect(surface.className).toMatch(/(^|\s)w-full(\s|$)/);
+    expect(surface.className).toMatch(/overflow-y-auto/);
+    // A bottom sheet spans the viewport: it must not inherit the centered
+    // dialog's max width.
+    expect(surface.className).not.toMatch(/max-w-lg/);
+  });
+
+  it('takes the reduced-motion path (opacity only, no translation) when requested', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }));
+
+    renderOverlay(
+      <Overlay open onClose={() => {}} variant="bottom">
+        <p>reduced sheet</p>
+      </Overlay>,
+    );
+
+    const surface = screen.getByRole('dialog');
+    expect(surface).toHaveAttribute('data-variant', 'bottom');
+    expect(surface).toHaveAttribute('data-reduced-motion', 'true');
+    // The reduced path animates opacity only — nothing is translated in.
+    expect(surface.style.transform).toBe('');
+  });
+
+  it('closes on Escape and on a scrim press, and restores focus to the opener', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+
+    const { rerender } = renderOverlay(
+      <Overlay open onClose={onClose} variant="bottom">
+        <button type="button">inside</button>
+      </Overlay>,
+    );
+
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByTestId('overlay-scrim'));
+    expect(onClose).toHaveBeenCalledTimes(2);
+
+    rerender(
+      <MotionProvider>
+        <Overlay open={false} onClose={onClose} variant="bottom">
+          <button type="button">inside</button>
+        </Overlay>
+      </MotionProvider>,
+    );
+    expect(opener).toHaveFocus();
+    opener.remove();
+  });
+});
