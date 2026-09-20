@@ -20,47 +20,26 @@ export interface LibrarySortOption extends LibrarySortValue {
 
 export const DEFAULT_LIBRARY_SORT: LibrarySortValue = { sort: 'added', dir: 'desc' };
 
-export const LIBRARY_SORT_OPTIONS: readonly LibrarySortOption[] = [
-  {
-    sort: 'added',
-    dir: 'desc',
-    group: 'Date added',
-    label: 'Newest first',
-    announcement: 'Sorted by date added, newest first.',
-  },
-  {
-    sort: 'added',
-    dir: 'asc',
-    group: 'Date added',
-    label: 'Oldest first',
-    announcement: 'Sorted by date added, oldest first.',
-  },
-  {
-    sort: 'artist',
-    dir: 'asc',
-    group: 'Artist',
-    label: 'Artist (A → Z)',
-    announcement: 'Sorted by artist, A to Z.',
-  },
-  {
-    sort: 'artist',
-    dir: 'desc',
-    group: 'Artist',
-    label: 'Artist (Z → A)',
-    announcement: 'Sorted by artist, Z to A.',
-  },
-  {
-    sort: 'album',
-    dir: 'asc',
-    group: 'Album',
-    label: 'Album (A → Z)',
-    announcement: 'Sorted by album, A to Z.',
-  },
-  {
-    sort: 'album',
-    dir: 'desc',
-    group: 'Album',
-    label: 'Album (Z → A)',
-    announcement: 'Sorted by album, Z to A.',
-  },
+/**
+ * `announcement` is derived, never hand-written: the six strings are
+ * mechanically `group` + `label`, so deriving them keeps them in sync with the
+ * labels they mirror. A parenthesised label carries the detail ("Artist (A →
+ * Z)" → "A to Z"); the rest is the label itself ("Newest first").
+ */
+function announce(group: LibrarySortOption['group'], label: string): string {
+  const detail = label.match(/\((.*)\)/)?.[1]?.replace('→', 'to') ?? label.toLowerCase();
+  return `Sorted by ${group.toLowerCase()}, ${detail}.`;
+}
+
+const SORT_OPTIONS: ReadonlyArray<Omit<LibrarySortOption, 'announcement'>> = [
+  { sort: 'added', dir: 'desc', group: 'Date added', label: 'Newest first' },
+  { sort: 'added', dir: 'asc', group: 'Date added', label: 'Oldest first' },
+  { sort: 'artist', dir: 'asc', group: 'Artist', label: 'Artist (A → Z)' },
+  { sort: 'artist', dir: 'desc', group: 'Artist', label: 'Artist (Z → A)' },
+  { sort: 'album', dir: 'asc', group: 'Album', label: 'Album (A → Z)' },
+  { sort: 'album', dir: 'desc', group: 'Album', label: 'Album (Z → A)' },
 ];
+
+export const LIBRARY_SORT_OPTIONS: readonly LibrarySortOption[] = SORT_OPTIONS.map(
+  (option) => ({ ...option, announcement: announce(option.group, option.label) }),
+);

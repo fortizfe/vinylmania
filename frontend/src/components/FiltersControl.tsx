@@ -136,7 +136,7 @@ export function FiltersControl<T extends FilterValues>({
   );
 
   if (live) {
-    const hasActive = activeCount(toPayload(selection)) > 0;
+    const hasActive = Object.values(selection).some((values) => values.length > 0);
     return (
       <div className="flex flex-col gap-2">
         {facets}

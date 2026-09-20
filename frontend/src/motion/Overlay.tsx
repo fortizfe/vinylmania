@@ -5,7 +5,13 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { AnimatePresence, m, type DragControls, type PanInfo } from 'motion/react';
+import {
+  AnimatePresence,
+  m,
+  type DragControls,
+  type HTMLMotionProps,
+  type PanInfo,
+} from 'motion/react';
 import clsx from 'clsx';
 
 import { useEscapeKey } from '../hooks/useEscapeKey';
@@ -138,6 +144,32 @@ const surfaceSizeClasses: Record<OverlayProps['variant'], string> = {
   bottom: 'max-h-[85dvh] w-full overflow-y-auto',
 };
 
+// Enter and exit along the same edge (apple-design §7): `center` scales in
+// place, the side drawer slides from the right, the sheet from the bottom.
+const surfaceMotionByVariant: Record<
+  OverlayProps['variant'],
+  Pick<HTMLMotionProps<'div'>, 'initial' | 'animate' | 'exit' | 'transition'>
+> = {
+  center: {
+    initial: { opacity: 0, scale: 0.96 },
+    animate: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.96 },
+    transition: spring.default,
+  },
+  end: {
+    initial: { x: '100%' },
+    animate: { x: 0 },
+    exit: { x: '100%' },
+    transition: spring.sheet,
+  },
+  bottom: {
+    initial: { y: '100%' },
+    animate: { y: 0 },
+    exit: { y: '100%' },
+    transition: spring.sheet,
+  },
+};
+
 function hasMaxWidth(className: string | undefined): boolean {
   return !!className && /(?:^|\s)max-w-/.test(className);
 }
@@ -201,27 +233,7 @@ export function Overlay({
         exit: { opacity: 0 },
         transition: { duration: 0.001 },
       }
-    : variant === 'center'
-      ? {
-          initial: { opacity: 0, scale: 0.96 },
-          animate: { opacity: 1, scale: 1 },
-          exit: { opacity: 0, scale: 0.96 },
-          transition: spring.default,
-        }
-      : variant === 'bottom'
-        ? {
-            // Enter and exit along the same edge (apple-design §7).
-            initial: { y: '100%' },
-            animate: { y: 0 },
-            exit: { y: '100%' },
-            transition: spring.sheet,
-          }
-        : {
-            initial: { x: '100%' },
-            animate: { x: 0 },
-            exit: { x: '100%' },
-            transition: spring.sheet,
-          };
+    : surfaceMotionByVariant[variant];
 
   return (
     <AnimatePresence>
