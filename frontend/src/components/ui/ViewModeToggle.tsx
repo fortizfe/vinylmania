@@ -119,7 +119,17 @@ export function ViewModeToggle({ mode, onChange, screen }: ViewModeToggleProps) 
       // measures ~4.80:1 against the light (white) app shell and ~4.09:1
       // against the dark app shell, so one value replaces both the old
       // light default and the `dark:border-border-dark` override.
-      className="relative inline-flex gap-1 rounded-xl border border-stone-500 p-1"
+      //
+      // `bg-white dark:bg-surface` makes the track an *opaque* layer
+      // (feature 068, research D17 / apple-design §12 "put colour on a solid
+      // layer, not the translucent foreground"). On the library's
+      // `chrome-material` bar the active `bg-primary` pill measured only
+      // 2.49:1 against the composited translucent chrome over worst-case
+      // artwork — under the 3:1 floor for UI components (WCAG 1.4.11). On an
+      // opaque track the same pill measures 6.29:1 light / 3.14:1 dark. Both
+      // instances carry it: Search already sits on those exact page colours,
+      // so there it is a visual no-op and the two toggles stay identical.
+      className="relative inline-flex gap-1 rounded-xl border border-stone-500 bg-white p-1 dark:bg-surface"
     >
       {pill && (
         <m.div

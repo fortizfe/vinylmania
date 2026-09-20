@@ -1127,3 +1127,211 @@ boot). Production code untouched.
 ## US4 red-test approval gate
 
 - 2026-09-20: Red tests T060–T062 reviewed and **approved by the developer (Fernando Ortiz)** before implementation (Constitution Principle I). The composited-contrast measurement exposed the real 2.49:1 view-pill failure that the previous transparent-background assertions had masked. Implementation T063–T066 may start.
+
+## US4 implementation (T063–T065)
+
+Date: 2026-09-20 · Branch `068-library-redesign-sort-scroll` · red tests
+approved at `9263ff2`. Two files changed, both under `frontend/src`.
+
+```
+cd frontend && npx vitest run
+→ 109 files passed | 981 tests passed (0 failed)
+npx tsc -b --noEmit → clean
+npm run lint → exit 0 (8 pre-existing react/only-export-components warnings,
+               none in a touched file)
+npx prettier --check on both touched files → clean
+```
+
+### T063 — opaque toggle track (done)
+
+`frontend/src/components/ui/ViewModeToggle.tsx`: the radiogroup container
+gains `bg-white` + `dark:bg-surface`, with a comment citing research D17 —
+the `bg-primary` pill measures 2.49:1 against the composited translucent
+`chrome-material` over worst-case artwork (under the 3:1 floor of WCAG
+1.4.11), and 6.29:1 light / 3.14:1 dark on an opaque track. The class is
+unconditional, not gated on `screen`, per T060's second test: Search sits on
+exactly those page colours, so it is a visual no-op there and the two
+instances stay byte-identical. apple-design §12 — colour goes on a solid
+layer, never on the translucent foreground.
+
+Both T060 tests now pass; the two other specs that touch the toggle
+(`libraryListFlow`, `searchResultsFlow`) assert its presence, not its class
+list, and are unaffected.
+
+### T064 — `.chrome-material` fallbacks (done)
+
+`frontend/src/styles/global.css`: three unlayered blocks added directly after
+the `.overlay-scrim` ones, under their own justification header (Tailwind has
+no variant for unsupported-`backdrop-filter`, `prefers-reduced-transparency`
+or `prefers-contrast`, so custom CSS is the only route — same argument the
+`.overlay-scrim` header already makes).
+
+- `@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))` → `background-color: #fff`, `.dark` `#0b0b10`, both `backdrop-filter` properties `none`. No `!important`: unlayered already beats the `bg-white/90` utility.
+- `@media (prefers-reduced-transparency: reduce)` → the same opaque pair, blur dropped, `!important` mirroring `.overlay-scrim`.
+- `@media (prefers-contrast: more)` → opaque, blur dropped, plus `border: 1px solid currentColor` so the bar has a defined edge where content scrolls under it (WCAG 1.4.11; the soft `ring-1`/`shadow-lg` is not one). `currentColor` adapts per theme, exactly like `.overlay-surface`.
+
+This covers all four assertions of T062's `contrast: 'more'` case:
+`backdrop-filter` and `-webkit-backdrop-filter` resolve to `none`,
+`border-top-style: solid`, `border-top-width: 1px`, and the background is a
+hex with no alpha so the `/,\s*0?\.\d+\s*\)$/` translucency check fails as
+required. Per apple-design §14 the degraded bar is a deliberate solid
+surface: geometry, shadow, ring and contents are untouched, only the material
+changes, and every D17 pairing still holds because the bar's contents already
+sit on opaque layers.
+
+### T065 — no gap found (nothing changed)
+
+Both red-test reports state there is no remaining accessibility gap (axe clean
+across light/dark × 390/1280 × 3 states × 2 list states; both keyboard walks
+green; all 14 §4 unit rows green). That claim was re-verified here by reading
+`contracts/library-ui.md` §4–§6 against `LibraryToolbar.tsx` and
+`LibraryListPage.tsx` row by row, not taken on trust:
+
+- **§4, toolbar rows** — radiogroup name/radios/`aria-checked`; `<select id="library-sort">` with its visible `<label for>` and one `<optgroup>` per group; sheet `fieldset` "Sort by" wrapping one `fieldset` per criterion with a single shared `name="library-sort"`; both triggers carrying `aria-haspopup="dialog"` and an `aria-expanded` scoped to the panel they own; the count rendered as an `aria-hidden` digit plus an sr-only "N active filter(s)" suffix; the panel delegated to the existing `Modal`. All present.
+- **§4, page rows** — `{totalItems} record/records`; `<p role="status" class="sr-only">`; the next-batch `role="alert"` with the contract's exact sentence plus a "Retry" `Button`; the end message with the `record` singular; the sentinel `aria-hidden="true"`.
+- **§5** — the announcer renders one string at a time and every branch is gated on `data`, so a selection announces only once its own results render, rapid changes collapse to the latest, initial load says nothing, and the batch effect's `pages.length > 1` guard keeps a single-batch result from announcing an end. Nothing in the path touches focus.
+- **§6** — DOM order gives header → bar → records → Retry/end; the mount effect sets `scroll-padding-top: calc(var(--header-h) + 3.75rem)` and `scroll-padding-bottom: var(--capsule-clearance)` on `<html>` and clears both on unmount; trap, Escape and focus restore come from `Modal`; the native `<select>` keeps native keyboard behaviour.
+
+No real gap, so **no edit was made** to either file (Constitution Principle
+III — no invented work to fill a task slot). T065 is closed as verified.
+
+The one item still open from T061 is out of T065's scope and unchanged: the
+facet `Checkbox`'s `<input>` is `h-4 w-4` inside a `min-h-11` row, and
+`Checkbox` is shared with Search (feature 038). Flagged there for a future
+spec, not touched here.
+
+## US4 verification (T066)
+
+Date: 2026-09-20 · Branch `068-library-redesign-sort-scroll` · red tests
+committed at `9263ff2`, implementation T063–T065 in the working tree
+(`frontend/src/components/ui/ViewModeToggle.tsx`,
+`frontend/src/styles/global.css`).
+
+### 1. Frontend (Vitest) — PASS
+
+```
+cd frontend && npx vitest run tests/unit/ViewModeToggle.test.tsx tests/unit/LibraryToolbar.test.tsx
+```
+
+| Files | Tests | Result |
+|---|---|---|
+| 2 passed / 2 | 44 passed / 44 | green (1.3 s) |
+
+Both T060 reds (opaque track; the class is unconditional so Library and
+Search stay byte-identical) are green, and the 14 T061 contracts §4
+regression guards still pass.
+
+### 2 + 3. E2E (Playwright) — 51 passed / 52, one emulator boot
+
+```
+cd e2e && node ../scripts/check-emulator-ports.js && \
+  node ../scripts/run-with-timeout.js 1500 -- npx firebase --config ../backend/firebase.json \
+  emulators:exec --only auth,firestore --project vinylmania-test \
+  "playwright test tests/library-toolbar.spec.ts tests/view-mode-toggle.spec.ts \
+   tests/dark-mode-contrast.spec.ts --reporter=list"
+```
+
+Chromium only (the webkit project's `testMatch` covers just the three
+detail-page responsive specs). Duration 1.7 min.
+
+| Spec | Passed | Failed |
+|---|---|---|
+| `library-toolbar.spec.ts` (T038 US3 + T062 US4) | 31 | 1 |
+| `view-mode-toggle.spec.ts` (T063 regression — the toggle is shared with Search) | 13 | 0 |
+| `dark-mode-contrast.spec.ts` (T063 regression) | 7 | 0 |
+| **Total** | **51** | **1** |
+
+Both T062 reds are green:
+
+- **Material contrast over solid cover art (4 tests, light/dark × 390/1280): all pass.**
+  The red pairing, `active view pill fill (primary)`, now measures
+  **3.12:1** in dark mode at **both** 390 px and 1280 px (was 2.49:1;
+  research D17 predicted ~3.14:1, floor 3:1). The composited backdrop under
+  the pill is now `rgb(11, 11, 16)` — the opaque `dark:bg-surface` track
+  from T063 — instead of the translucent chrome's `rgb(35, 35, 39)`. Light
+  mode: **6.29:1** over `rgb(255, 255, 255)` at both widths. Every other
+  D17 pairing still clears its floor (dark 390: track border 3.27, inactive
+  icon 7.59, "Sort & Filter" label 14.35 / border 3.26, badge text 8.14;
+  dark 1280 adds "Sort" label 10.51, select text 16.47 / border 3.96,
+  "Filters" label 14.35 / border 3.26).
+  The 3.12 vs 3.14 gap is rounding in the oklch→sRGB path of the surface
+  token, not a different colour: the measurement is over the real painted
+  pixel, D17's figure over the nominal hex.
+- **`prefers-contrast: more` (library-toolbar.spec.ts:936): passes.**
+  `backdrop-filter` and `-webkit-backdrop-filter` resolve to `none`,
+  `border-top: 1px solid`, background opaque.
+
+No regression from T063's shared change: `view-mode-toggle.spec.ts` 13/13
+(including the four spec-058 UI-component/focus-indicator contrast cases on
+Search) and `dark-mode-contrast.spec.ts` 7/7, both unchanged from the T059
+run. The 8 axe scans and both keyboard walks in `library-toolbar.spec.ts`
+also stay green.
+
+### Failure — `library-toolbar.spec.ts:232` "the capsule does not cover the retry alert when a batch fails (FR-019)"
+
+```
+Error: the capsule overlaps the alert
+> 246 | expect(overlaps(await rectOf(alert), bar.rect), 'the capsule overlaps the alert').toBe(false);
+```
+
+**Flaky test, pre-existing (from the US3 red commit `06d2b73`), not a US4
+regression and not a production bug.** Re-ran in isolation with
+`--grep 'retry alert' --repeat-each=5`: **4 failed / 1 passed**. It was
+green at T059 by timing luck (single run); nothing about it changed since —
+`git diff 9263ff2 -- e2e frontend/tests` is empty, and the T062 fixture
+change (`mockLibrary({ coverUrl })`) is opt-in and not used by this test.
+T063/T064 change colour and media-gated CSS only, no geometry.
+
+Cause: the test waits with `scrollUntil(page, () => retry.isVisible())`, but
+Playwright's `isVisible()` means "in the DOM with a non-empty box", not "in
+the viewport". Inside one poll iteration `scrollToBottom()` runs *before* the
+failed batch renders, so the alert + Retry are appended after the last scroll,
+the document grows, and the page is no longer at the bottom when the rects are
+read — the alert lands in the band the fixed capsule covers (see
+`test-results/.../test-failed-1.png`: the alert text is half behind the
+capsule and Retry is off-screen). At rest at the bottom the layout is correct:
+`LibraryListPage`'s `<main>` carries `pb-(--capsule-clearance)`, and the
+sibling AS5 test (end message) asserts exactly that and passes — though it
+shares the same latent race.
+
+Suggested fix (test-only, left unapplied — T066 authorises no test changes):
+require the scroll to have reached the bottom as well, so the loop takes one
+more `scrollToBottom()` after the alert appears:
+
+```ts
+await scrollUntil(
+  page,
+  async () =>
+    (await retry.isVisible()) &&
+    (await page.evaluate(
+      () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1,
+    )),
+);
+```
+
+No timeout raised, no assertion weakened, no production change needed. The
+same guard is worth applying to the AS5 end-message test at line 212.
+
+### TDD audit (Principle I) — PASS
+
+- `git diff 9263ff2 -- e2e frontend/tests` is **empty**: not one character of
+  the approved red tests changed during implementation. No `.skip`, `.only`,
+  `.todo`, `test.fail` or `toPass()` anywhere in
+  `library-toolbar.spec.ts`, `ViewModeToggle.test.tsx` or
+  `LibraryToolbar.test.tsx`; no floor lowered (the D17 pairings still read
+  3 / 4.5), no timeout or retry added.
+- Order holds: `9263ff2` touches only `e2e/`, `frontend/tests/` and
+  `specs/` — no file under `frontend/src` — and the implementation sits in
+  the working tree after it.
+- Working-tree production diff is exactly the two files T063/T064 declare
+  (plus `.gitignore`, which only adds an `.agents/**/mcp_config.json`
+  ignore, and the two spec docs). Nothing in `frontend/src` was touched to
+  make a test pass.
+- T065 claiming "no gap found" is consistent with this run: the 8 axe scans,
+  both keyboard walks and all 14 §4 unit rows are green without a change.
+
+**Verdict: no Principle I violation.** One flaky test found
+(`library-toolbar.spec.ts:232`, scroll-position race, fix suggested above),
+no production bug.
+
+- Follow-up to T066: fixed the flaky FR-019/AS5 geometry tests (e2e/tests/library-toolbar.spec.ts) — `scrollUntil` now also waits for the document to be settled at the bottom (`atBottom` helper), since a batch rendered after the last scroll grows the page. 20/20 across 5 repeats.
