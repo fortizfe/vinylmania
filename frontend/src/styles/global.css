@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -13,8 +13,7 @@
    * — see specs/032-landing-page-refresh/research.md §4.
    */
   --color-primary: #4f46e5;
-  --font-sans:
-    system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
   /*
    * Wordmark display font (feature 034 — logo rebranding). Used only by
@@ -109,9 +108,22 @@
  * The sticky AppHeader's height (spec 067 T050 #2): 44px controls + py-4.
  * The header takes its height from here, and anything sticky below it (the
  * news chip bar) offsets by it. rem so it scales with the user's text size.
+ *
+ * The floating controls capsule's clearance (feature 068, FR-019, research
+ * D18): the library's `<main>` reserves this much bottom padding below
+ * 640 px so the capsule never covers the last record, the end message or the
+ * Retry alert, and `<html>` uses it as `scroll-padding-bottom` so keyboard
+ * focus never lands under it. 6rem = the 60px capsule + its 16px offset +
+ * breathing room; the safe-area inset keeps it clear of the home indicator.
+ *
+ * `:root` custom properties are the documented exception to the "Tailwind
+ * utilities only" rule (plan.md, UI Design System row): a value that both CSS
+ * (`env()` arithmetic) and a JS-set `scroll-padding` must read cannot live in
+ * a utility class.
  */
 :root {
   --header-h: 4.75rem;
+  --capsule-clearance: calc(6rem + env(safe-area-inset-bottom));
 }
 
 @utility scrollbar-hidden {
@@ -187,9 +199,7 @@
 /* No `backdrop-filter` support at all → solid-dim fallback, no blur. The
  * inline `backdropFilter` is simply ignored by these browsers; we only need
  * to raise the dim so the layer still reads as a backdrop. */
-@supports not (
-  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
-) {
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .overlay-scrim {
     background-color: rgb(12 10 9 / 0.8);
     backdrop-filter: none;

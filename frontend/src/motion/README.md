@@ -123,6 +123,15 @@ other focus-visible treatment in `components/**`.
 - **Focus**: `focusRing` (inherited from `Button`).
 - **Reduced motion**: instant show/hide, no height animation.
 - **Conforms**: `CollapsibleFilterPanel`. Reuse for any future accordion.
+- **Documented exception — native `<details>`**: `SelectableListFilter inline`
+  (the Library sheet/drawer facets, spec 068 D13) uses a native
+  `<details>`/`<summary>` instead. Inside an already-animated overlay a second
+  measured height animation reads as a stutter, and the platform control
+  brings the expanded state, the keyboard contract and the disclosure triangle
+  for free. It is instant, so there is no motion token, no chevron rotation
+  and nothing to reduce under `prefers-reduced-motion`. Use it only for facets
+  nested inside a `dismissible-layer`; a top-level accordion still takes
+  pattern 5.
 
 ### 6. `dismissible-layer` — modals, drawers, fullscreen gallery
 
@@ -134,19 +143,43 @@ other focus-visible treatment in `components/**`.
   `backdrop-blur-md backdrop-saturate-150`, with `@supports` /
   `prefers-reduced-transparency` / `prefers-contrast` fallbacks in
   `global.css`. `center` variant: scale `0.96 → 1` + opacity + blur ramp
-  (`spring.default`). `end` variant: slide on-axis; `Sheet` adds 1:1
-  drag-to-dismiss (dismiss at ≥ 45% distance **or** ≥ 500 px/s, else spring
-  back; rubber-band `dragElastic 0.15`; velocity → `spring.momentum`).
+  (`spring.default`). `end` variant: slide on-axis. `bottom` variant (spec 068
+  D16): bottom-anchored, `y: 100% → 0 → 100%` on `spring.sheet`, one detent —
+  content height capped at `85 dvh` — and the grab handle at the top edge.
+  Enter and exit travel the same edge, so the layer reads as coming from and
+  returning to where it lives. `Sheet` adds 1:1 drag-to-dismiss on either axis
+  (dismiss at ≥ 45% distance **or** ≥ 500 px/s, else spring back; rubber-band
+  `dragElastic 0.15`; velocity → `spring.momentum`) and picks the variant from
+  `dismissAxis` (`y` → `bottom`, `x` → `end`).
 - **Motion tokens**: `spring.default`, `spring.sheet`, `spring.momentum`,
   `--motion-duration-fade` (reduced-motion crossfade).
 - **Focus**: `focusRing` on every control inside; the surface is the opaque
   `<Card>` so spec-058 contrast pairings hold over the blur.
 - **Reduced motion**: opacity-only enter/exit, drag still tracks 1:1 but settles
   with an instant/near-instant snap.
-- **Conforms**: `Overlay` (primitive), `Sheet` (primitive), `Modal` (`center`
-  - `end`), `GalleryFullscreenViewer`, `HamburgerMenu` drawer,
-    `SelectableListFilter` modal. Every gesture outcome has a button + keyboard
-    equivalent (FR-013).
+- **Conforms**: `Overlay` (primitive), `Sheet` (primitive), `Modal` (`center` /
+  `end` / `bottom`), `GalleryFullscreenViewer`, `HamburgerMenu` drawer,
+  `SelectableListFilter` modal, `LibraryToolbar`'s "Sort & Filter" sheet and
+  "Filters" drawer. Every gesture outcome has a button + keyboard equivalent
+  (FR-013).
+
+### 7. `chrome-material` — translucent floating chrome
+
+- **Semantics**: not interactive itself; a container for controls that must
+  stay reachable while content scrolls under it (spec 068 D17, FR-016/FR-018).
+- **Affordance**: `bg-white/90 dark:bg-surface/90` +
+  `backdrop-blur-xl backdrop-saturate-150`, plus the marker class
+  `chrome-material` so `global.css` can degrade it exactly like
+  `.overlay-scrim`: `@supports not (backdrop-filter)` → opaque,
+  `prefers-reduced-transparency` → opaque, `prefers-contrast: more` → opaque
+  with a `1px solid currentColor` border. 90% is the floor — at 85% the dark
+  `stone-500` border falls to 2.74:1.
+- **Motion tokens**: none. The bar is always present; it does not animate in
+  or out, and only its children (`pressable`, the toggle pill) move.
+- **Contrast**: every coloured state sits on an opaque layer, never on the
+  translucent one (`ViewModeToggle`'s track, the sort `<select>`, the amber
+  count badge), so the D17 pairings hold over worst-case artwork.
+- **Conforms**: `LibraryToolbar` (capsule below 640 px, sticky toolbar above).
 
 ### Non-interactive status and placeholders
 

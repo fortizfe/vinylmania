@@ -221,7 +221,20 @@ describe('Library list flow (US2)', () => {
   });
 });
 
-describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
+/**
+ * Feature 068, US3 re-point: Library's facets moved from the in-flow
+ * `CollapsibleFilterPanel` + Apply into the toolbar's live panel (FR-021a).
+ * The assertions below are feature 038's, unchanged — only the vehicle that
+ * reaches the Genre checkbox is the new one. Search keeps the Apply flow, and
+ * `searchResultsFlow.test.tsx` still covers it.
+ */
+describe('Shared filters on My Library (feature 038, US2 — via the 068 panel)', () => {
+  /** Opens the toolbar's filter panel and returns its dialog. */
+  async function openFilters(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: /^filters$/i }));
+    return screen.getByRole('dialog');
+  }
+
   beforeEach(() => {
     mockList.mockReset();
   });
@@ -252,7 +265,7 @@ describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
     };
   }
 
-  it('renders the same collapsible filter component (collapsed by default) above the records grid (FR-016)', async () => {
+  it('keeps the filters behind a panel trigger rather than in the page flow (FR-016)', async () => {
     mockList.mockResolvedValue({
       items: [releaseEntry('entry-1', 'Stockholm')],
       page: 1,
@@ -292,10 +305,8 @@ describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
     await waitFor(() => expect(screen.getByText('Jazz Only')).toBeInTheDocument());
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /^filters$/i }));
-    await user.click(screen.getByRole('button', { name: /^genre$/i }));
-    await user.click(within(screen.getByRole('dialog')).getByLabelText('Rock'));
-    await user.click(screen.getByRole('button', { name: /apply filters/i }));
+    const dialog = await openFilters(user);
+    await user.click(within(dialog).getByLabelText('Rock'));
 
     await waitFor(() => expect(screen.getByText('Rock Only')).toBeInTheDocument());
     expect(screen.queryByText('Jazz Only')).not.toBeInTheDocument();
@@ -318,10 +329,8 @@ describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
     await waitFor(() => expect(screen.getByText('Stockholm')).toBeInTheDocument());
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /^filters$/i }));
-    await user.click(screen.getByRole('button', { name: /^genre$/i }));
-    await user.click(within(screen.getByRole('dialog')).getByLabelText('Non-Music'));
-    await user.click(screen.getByRole('button', { name: /apply filters/i }));
+    const dialog = await openFilters(user);
+    await user.click(within(dialog).getByLabelText('Non-Music'));
 
     await waitFor(() =>
       expect(screen.getByText(/no results for the active filters/i)).toBeInTheDocument(),
@@ -594,10 +603,9 @@ describe('Sorting the library (feature 068, US1 AS2/AS5/AS6, FR-008)', () => {
     await waitFor(() => expect(screen.getByText('Album Order')).toBeInTheDocument());
 
     const user = userEvent.setup();
+    // 068 US3: the facets live in the toolbar panel and apply live (FR-021a).
     await user.click(screen.getByRole('button', { name: /^filters$/i }));
-    await user.click(screen.getByRole('button', { name: /^genre$/i }));
     await user.click(within(screen.getByRole('dialog')).getByLabelText('Rock'));
-    await user.click(screen.getByRole('button', { name: /apply filters/i }));
 
     await waitFor(() => expect(currentParams().get('genre')).toBe('Rock'));
     expect(currentParams().get('sort')).toBe('album');
@@ -1071,12 +1079,12 @@ describe('Library header and live filters (feature 068, US3)', () => {
     await user.click(within(dialog).getByLabelText('Jazz'));
 
     await waitFor(() => expect(pending.has('Rock')).toBe(true));
-    await waitFor(() => expect(pending.has('Rock+Jazz')).toBe(true));
-    expect(currentParams().get('genre')).toBe('Rock,Jazz');
+    await waitFor(() => expect(pending.has('Jazz+Rock')).toBe(true));
+    expect(currentParams().get('genre')).toBe('Jazz,Rock');
 
     // Out of order on purpose: the newest selection answers first…
     await act(async () => {
-      pending.get('Rock+Jazz')!(result(['Fusion Record'], 3));
+      pending.get('Jazz+Rock')!(result(['Fusion Record'], 3));
     });
     await waitFor(() => expect(screen.getByText('Fusion Record')).toBeInTheDocument());
 

@@ -658,3 +658,333 @@ Beyond the ones already listed under T040–T044:
 ## US3 red-test approval gate
 
 - 2026-09-20: Red tests T038–T050 reviewed and **approved by the developer (Fernando Ortiz)** before implementation (Constitution Principle I), including the reviewed deletion of 4 library-filters cases whose components Library drops (shared primitives stay covered on /app/search). Implementation T051–T059 may start.
+
+## US3 implementation — primitives (T051–T054)
+
+Shared primitives only; the Library screen itself (T055–T058) is a separate lane.
+
+- **T051 `Overlay` / `Sheet` bottom variant** (`frontend/src/motion/Overlay.tsx`,
+  `frontend/src/motion/Sheet.tsx`) — `variant: 'center' | 'end' | 'bottom'`.
+  `bottom` adds `items-end justify-center` to the scrim's position classes and
+  `max-h-[85dvh] w-full overflow-y-auto` to the surface size classes, and
+  animates `y: '100%' → 0 → '100%'` on the existing `spring.sheet`. The
+  reduced-motion branch is untouched (opacity only, no translation), as is the
+  `max-w-lg` fallback (still `center`-only). `Sheet` now derives
+  `variant={dismissAxis === 'y' ? 'bottom' : 'end'}`; its drag/dismiss
+  thresholds (`shouldDismissSheet`, 45 % / 500 px/s), rubber-band, scroll-boundary
+  veto, `spring.momentum` fling exit and the existing top-anchored handle for
+  `y` are all reused unchanged — no new motion code.
+- **T052 `Modal position="bottom"`** (`frontend/src/components/ui/Modal.tsx`) —
+  the `end` branch now also serves `bottom`: `dismissAxis` is derived from the
+  position and the surface class is
+  `rounded-b-none pb-[env(safe-area-inset-bottom)]` instead of `rounded-none`.
+  `center`/`end` call sites are unchanged.
+- **T053 `SelectableListFilter inline`**
+  (`frontend/src/components/filters/SelectableListFilter.tsx`) — the search
+  `Input` + `Checkbox` list was extracted into one `optionList` value now shared
+  by the `Modal` path and the new `inline` path, so the two can never drift. The
+  inline path renders `<details><summary>` with the summary text
+  `"Genre"` / `"Genre (N selected)"` (a single text node, no nested span),
+  `min-h-11` + `focusRing` + `pressableRow`, and no `Modal`. The native
+  disclosure triangle is kept as the expanded affordance (state is never colour
+  alone, nothing to reduce under `prefers-reduced-motion`).
+- **T054 `FiltersControl live`** (`frontend/src/components/FiltersControl.tsx`) —
+  `live` drops `CollapsibleFilterPanel`, the `<form>` and `FilterActions`; the
+  three facets render `inline` inside a plain `div`, each tick calls
+  `onApply(toPayload(next))` with the full next selection (emptied facets are
+  dropped, so "nothing selected" is `{}`), and a text `Button`
+  "Clear all filters" is always rendered — `aria-disabled` (never `disabled`)
+  when nothing is active, so focus is never dropped when the last filter clears.
+  The payload builder `toPayload` is shared with the Apply path. Without `live`,
+  Search's behaviour is byte-for-byte unchanged.
+
+Facet options are always rendered (not gated on `<details>` being open): the
+approved T047 tests toggle a checkbox inside a closed disclosure, and the full
+757-option Style list costs ~4 s across the whole `FiltersControl` suite — not
+worth the extra state.
+
+## US3 implementation — toolbar & page (T055–T058)
+
+- **T055 `--capsule-clearance`** (`frontend/src/styles/global.css`) — added
+  next to `--header-h` as `calc(6rem + env(safe-area-inset-bottom))`, sharing
+  that block's comment (the documented `:root` exception, plan UI Design
+  System row): a value that both CSS (`env()` arithmetic) and a JS-set
+  `scroll-padding` read cannot live in a utility class.
+- **T056 `LibraryToolbar`** (`frontend/src/components/LibraryToolbar.tsx`) —
+  one bar element with the D18 class pairs (capsule → `sm:` toolbar), holding
+  `ViewModeToggle` (once), the `sm:hidden` "Sort & Filter" trigger, the
+  `hidden sm:flex` "Sort" label + `<select>` (US1's, moved verbatim) and the
+  `hidden sm:inline-flex` "Filters" trigger. Both triggers carry
+  `aria-haspopup="dialog"` + `aria-expanded`; the count is an `aria-hidden`
+  amber badge plus an sr-only `, N active filter(s)`, so state is never colour
+  alone and the name matches `/^Filters(,|$)/`.
+  - Two `useState`s: `open` and the last-opened `panel` (`'sheet' | 'drawer'`).
+    Keeping them apart means the title and anchor edge do not flip mid-exit.
+    The panel variant follows the trigger, not `matchMedia`, because only one
+    trigger is reachable per breakpoint — matchMedia is used solely for the
+    change listener that closes an open panel when 640 px is crossed.
+  - The `Modal` is a **sibling** of the bar, not a child: the bar's `z-30`
+    opens a stacking context that would trap the overlay's `z-50` under the
+    app header.
+  - Sheet body: `<fieldset legend="Sort by">` wrapping one fieldset per
+    criterion, six native radios sharing `name="library-sort"` (arrow keys
+    rove the whole set natively), then `<FiltersControl live>`. Drawer body:
+    `<FiltersControl live>` only. No new motion code — press feedback is the
+    shared `pressableRow`/`pressable`, the sheet reuses `spring.sheet`.
+- **T057 `LibraryListPage`** (`frontend/src/pages/LibraryListPage.tsx`) —
+  header gains the "N records" / "1 record" total (rendered only once `data`
+  exists, so a loading header never claims "0 records"); the standalone
+  `FiltersControl` is gone and `LibraryToolbar` sits directly after the header
+  with `filters` / `onFiltersChange` / `onClear`; `<main>` gets
+  `pb-(--capsule-clearance) sm:pb-8`; a mount effect sets
+  `scroll-padding-top/bottom` on `<html>` and clears them on unmount. A
+  `filtersChanged` flag mirrors `sortChanged`: "Showing N records." (or "No
+  records match the active filters.") is derived from the *current* query's
+  `totalItems`, so a late response for an abandoned selection can neither
+  render nor announce (FR-015).
+- **T058 `motion/README.md`** — `dismissible-layer` now documents the `bottom`
+  variant (single detent, `85 dvh`, same-edge enter/exit, handle at the top,
+  `Sheet` picking the variant from `dismissAxis`); `disclosure` records the
+  native `<details>` facets of `SelectableListFilter inline` as a documented
+  exception (instant, native expanded state, nothing to reduce); a new pattern
+  7 `chrome-material` documents the translucent chrome, its three fallbacks
+  and the "colour only on opaque layers" rule.
+
+### Perf fix that T049/T050 forced (`SelectableListFilter`)
+
+`getByLabelText` is super-linear in jsdom (measured on this repo: 50 labelled
+inputs → 24 ms, 200 → 0.8 s, 400 → 6.6 s, 800 → 54 s). The live panel mounts
+all 823 facet options, so every `within(dialog).getByLabelText('Rock')` in the
+approved T049/T050 tests took ~65 s and blew the 5 s timeout — the tests could
+not pass against any implementation that mounts the full catalogue.
+
+Fix: inside an `inline` disclosure, a **`searchable`** facet (the marker this
+codebase already uses for "long list" — Style's 757 values) mounts its
+checkboxes only while the `<details>` is open (`onToggle` → state). The search
+`Input` itself always renders, and short facets (Genre 15, Format 51) are
+unchanged, so every approved T047/T048 assertion — including the ones that
+query options inside a *closed* disclosure — stays green. Panel option count
+drops 823 → 66; `getByLabelText` drops 65 s → 82 ms. It is also the right
+behaviour in the browser (no 757 invisible checkboxes in the sheet). e2e is
+unaffected: `facetOption()` clicks the `<summary>` before querying.
+
+### Pre-existing Library tests re-pointed (Apply path → live panel)
+
+`frontend/tests/integration/libraryListFlow.test.tsx`, assertions kept
+verbatim, only the vehicle changed (Search keeps Apply; `searchResultsFlow`
+is untouched and green):
+
+| Test | Change |
+|---|---|
+| describe "Shared collapsible filters on My Library (038 US2)" | renamed to "Shared filters on My Library (feature 038, US2 — via the 068 panel)" + an `openFilters(user)` helper |
+| "renders the same collapsible filter component (collapsed by default)…" | renamed "keeps the filters behind a panel trigger rather than in the page flow (FR-016)"; assertions unchanged (they already only required a "Filters" button and no "Genre" *button*) |
+| "applying a Genre filter narrows the displayed entries…" | Filters → dialog → tick Rock; the `#filter-genre-trigger` hop and "Apply filters" click dropped (neither exists on Library any more) |
+| "shows a 'no results for the active filters' message…" | same |
+| "applying a filter keeps sort and dir in the URL and in the request" (US1) | same |
+
+### One approved assertion is wrong and was left red (T050, FR-015)
+
+`libraryListFlow.test.tsx` ~line 1074–1083 expects the two quick ticks
+Rock → Jazz to produce `genre=Rock,Jazz` (and the request key `Rock+Jazz`).
+Filter values are serialized in **canonical catalogue order** by
+`hooks/catalogFilterParams.ts` (features 022/038, shared with Search), and
+`GENRE_OPTIONS` lists Jazz (index 8) before Rock (index 13) — so the URL is
+`genre=Jazz,Rock` and the key is `Jazz+Rock`. Preserving click order would
+mean changing that shared serializer, which US3 does not ask for and Search
+depends on.
+
+Verified: replacing the three literals `Rock+Jazz` → `Jazz+Rock` and
+`'Rock,Jazz'` → `'Jazz,Rock'` makes the test pass with no other change, and
+nothing about its strength or intent changes. The approved text was left in
+place (red) rather than edited unilaterally.
+
+### Run (T055–T058)
+
+| Command | Result |
+|---|---|
+| `cd frontend && npx vitest run` | **964 passed / 965**, 108 files passed / 109 — the single failure is the canonical-order assertion above |
+| `npx tsc -b --noEmit` | clean |
+| `npm run lint` (oxlint) | 0 errors; 8 pre-existing `only-export-components` warnings, none in touched files |
+| `npx prettier --write` on touched files | no changes |
+
+e2e was not run here (T059, qa-agent).
+
+### For T059 / US4 (T060–T066)
+
+- **T038's 44 × 44 scan will fail as written.** It collects
+  `button, a, select, summary, input` inside the bar and asserts every box is
+  ≥ 44 × 44, but at 390 px the `hidden sm:*` sort `<select>` and "Filters"
+  button are `display: none` → `getBoundingClientRect()` is 0 × 0. They must
+  stay in the DOM (the US1 select tests and T049's class assertions require
+  CSS-only hiding at both breakpoints), so the scan needs a visibility filter
+  (`el.checkVisibility()`, or drop zero-area boxes). Test-side fix; not
+  touched here.
+- `.chrome-material` is applied but has **no CSS yet** — T064 adds the three
+  `global.css` blocks, and the `prefers-contrast: more` e2e case stays red
+  until then.
+- `ViewModeToggle`'s track is still transparent (T063): on the capsule the
+  primary pill currently sits on translucent material (2.49:1). T063's
+  `bg-white dark:bg-surface` closes it.
+- Names/roles already in place for T061: `aria-haspopup="dialog"` +
+  `aria-expanded` on both triggers, visible digit + sr-only ", N active
+  filter(s)", `<fieldset legend="Sort by">` ▸ three criterion fieldsets ▸ six
+  radios sharing `name="library-sort"`, "Clear all filters" always focusable
+  with `aria-disabled` (from T054).
+
+## US3 verification (T059)
+
+Date: 2026-09-20 · Branch `068-library-redesign-sort-scroll` · implementation
+T051–T058 in the working tree, red tests committed at `06d2b73`.
+
+### 1. Frontend (Vitest) — PASS
+
+```
+cd frontend && npx vitest run tests/unit/motion tests/unit/ui/Modal.test.tsx \
+  tests/unit/filters tests/unit/FiltersControl.test.tsx \
+  tests/unit/LibraryToolbar.test.tsx tests/integration/libraryListFlow.test.tsx \
+  tests/integration/searchResultsFlow.test.tsx
+```
+
+| Files | Tests | Result |
+|---|---|---|
+| 14 passed / 14 | 219 passed / 219 | green (3.3 s) |
+
+The FR-015 race assertion is green after the developer's literal fix
+(`Jazz,Rock` / `Jazz+Rock`, the shared serializer's canonical catalogue
+order). The only log noise is the pre-existing jsdom
+`Error: Not implemented: window.scrollTo`, now also raised from
+`LibraryListPage.changeFilters` — non-failing, same finding as the US2 run.
+
+### 2. E2E (Playwright) — 109 passed / 110, one emulator boot
+
+```
+cd e2e && node ../scripts/check-emulator-ports.js && \
+  node ../scripts/run-with-timeout.js 1500 -- npx firebase --config ../backend/firebase.json \
+  emulators:exec --only auth,firestore --project vinylmania-test \
+  "playwright test tests/library-toolbar.spec.ts tests/library-filters.spec.ts \
+   tests/overlay-focus-management.spec.ts tests/reduced-motion.spec.ts \
+   tests/overlay-contrast.spec.ts tests/motion-performance.spec.ts \
+   tests/dark-mode-contrast.spec.ts tests/view-mode-toggle.spec.ts \
+   tests/library-sort-scroll.spec.ts tests/library-list-responsive.spec.ts --reporter=list"
+```
+
+Chromium only. Duration 3.8 min, all ten specs in a single emulator boot.
+
+| Spec | Passed | Failed |
+|---|---|---|
+| `library-toolbar.spec.ts` (T038, US3) | 16 | 0 |
+| `library-filters.spec.ts` (T041, US3 migration) | 16 | 1 |
+| `overlay-focus-management.spec.ts` (T039) | 14 | 0 |
+| `reduced-motion.spec.ts` (T040) | 8 | 0 |
+| `overlay-contrast.spec.ts` | 8 | 0 |
+| `motion-performance.spec.ts` | 4 | 0 |
+| `dark-mode-contrast.spec.ts` | 7 | 0 |
+| `view-mode-toggle.spec.ts` (US1/US3 regression) | 13 | 0 |
+| `library-sort-scroll.spec.ts` (US1/US2 regression) | 16 | 0 |
+| `library-list-responsive.spec.ts` (US2 regression) | 7 | 0 |
+| **Total** | **109** | **1** |
+
+No US1/US2 regression from the layout change: `library-sort-scroll` (16/16,
+including both CLS scenarios) and `library-list-responsive` (7/7) are fully
+green against the new capsule/toolbar.
+
+### Test change made under T059 (authorised)
+
+`e2e/tests/library-toolbar.spec.ts` — the SC-005 44 × 44 scan now filters the
+collected `button, a, select, summary, input` nodes through
+`node.checkVisibility()` before measuring. At 390 px the `hidden sm:*` sort
+`<select>` and "Filters" trigger stay in the DOM (CSS-only hiding, asserted by
+T049) but are `display: none`, so their `getBoundingClientRect()` is 0 × 0 and
+the scan failed on elements the user cannot hit. Strictly a correction of the
+scan's population, not of its threshold: every element that *is* hittable is
+still required to be ≥ 44 × 44. The spec is now 16/16.
+
+### Failure — `library-filters.spec.ts:356` "Genre option checkbox border meets WCAG UI component contrast in light mode"
+
+```
+Error: Genre option checkbox border (light): backgroundColor contrast ratio
+1.00:1 (backgroundColor rgba(0, 0, 0, 0) vs adjacent surface rgba(0, 0, 0, 0))
+```
+
+**Defect in the approved red test (T041), not in the implementation, and not
+a US4 item.** The migrated test compares the checkbox against
+`page.getByTestId('sheet-surface')`. That testid is on `Overlay`'s *animating
+wrapper* (`motion/Overlay.tsx` ~line 246), which carries layout and motion
+only — the painted background is on the inner `<Card className="overlay-surface">`
+it wraps. So the comparison surface computes to `rgba(0, 0, 0, 0)`.
+
+The light-mode checkbox background is *also* transparent by design and by
+prior decision (see the comment block in `frontend/src/components/ui/Checkbox.tsx`,
+spec 058 T028 finding #10) — transparent vs transparent is 1.00:1, so the
+assertion cannot pass against any implementation. The pre-068 version of this
+test used `dialog.locator('> div').first()`, i.e. the painted card, and was
+green. The dark-mode twin passes only *by accident*: `toRgb` resolves
+`rgba(0,0,0,0)` to black, and the dark checkbox fill (`dark:bg-stone-300`)
+contrasts strongly with black.
+
+Suggested fix (test-only, left unapplied — outside T059's authorised change):
+point the comparison at the painted card, matching `overlay-contrast.spec.ts`,
+which does exactly this and is green:
+
+```ts
+page.locator('[data-testid="sheet-surface"] .overlay-surface')
+```
+
+No production change needed; the rendered contrast is correct in both themes.
+
+### Deferred to US4 (T060–T066)
+
+Both pre-declared reds turned out **not to be red** — and neither is actually
+covered by a test today, which is itself the finding:
+
+- **T064 (`.chrome-material` has no CSS).** `overlay-contrast.spec.ts`'s
+  `prefers-contrast: more` case passed: its assertions key on `.overlay-scrim`
+  / `.overlay-surface`, whose `@media (prefers-contrast: more)` block ships
+  from spec 059 (`global.css` ~line 222). Nothing currently asserts that
+  `.chrome-material` degrades at all, so T064 lands with **no failing test
+  in front of it** — T064 must add one (Principle I) rather than only add CSS.
+- **T063 (ViewModeToggle track still transparent).** Both
+  `view-mode-toggle.spec.ts` "active option fill meets WCAG UI component
+  contrast" cases passed, for the same reason the dark checkbox case above
+  passes: the toggle container is transparent, `toRgb` reads that as black,
+  and the primary pill contrasts with black. The tests also run at the default
+  1280 px viewport, i.e. the sticky toolbar, never the translucent capsule
+  where the ~2.49:1 was measured. T063 therefore needs a red test at a
+  < 640 px viewport comparing the pill against the *effective* (composited)
+  capsule background, not the transparent track.
+
+### TDD audit — PASS
+
+Baseline: commit `06d2b73` ("test(068): add failing tests for library toolbar,
+sheet and live filters (US3)"), which touches test files and spec docs only —
+no file under `frontend/src`. Test-first order holds: red committed,
+implementation left in the working tree.
+
+Diff `06d2b73..worktree` over `frontend/tests` and `e2e/tests` — exactly two
+files changed, both inside the pre-agreed allowance:
+
+| File | Change | Verdict |
+|---|---|---|
+| `frontend/tests/integration/libraryListFlow.test.tsx` | the developer's `Jazz,Rock` / `Jazz+Rock` literal fix; the documented Apply-path → live-panel re-pointing (describe rename + `openFilters` helper, one test title reworded, the `#filter-genre-trigger` hop and "Apply filters" click dropped in 4 tests) | allowed |
+| `e2e/tests/library-toolbar.spec.ts` | the `checkVisibility()` filter above | allowed |
+
+Checks run:
+
+- No `it`/`test` removed or added: the re-pointed tests keep their assertion
+  bodies verbatim (`Rock Only` visible / `Jazz Only` absent; the no-matches
+  message; `genre=Rock` + `sort=album` + `dir=asc` in URL and request). Only
+  the navigation steps that no longer exist on Library were dropped.
+- No `.skip` / `.only` / `.todo` / `test.fail` introduced anywhere in the US3
+  suites. The single `test.skip` in `library-sort-scroll.spec.ts:161` is the
+  pre-existing chromium-only guard on the Layout Instability API.
+- No timeout raised, no retry added, no assertion loosened. The one scan
+  narrowed (44 × 44) was narrowed in population, not in threshold.
+- `searchResultsFlow.test.tsx` untouched and green — Search keeps the Apply
+  path, so the shared primitives are still covered on both flows.
+
+**Verdict: no Principle I violation.** One test defect found
+(`library-filters.spec.ts:356`, comparison locator), one authorised test fix
+applied, no production bug found.
+
+- Follow-up to T059: the Genre-checkbox contrast case now measures against `[data-testid="sheet-surface"] .overlay-surface` (the painted Card; the sheet-surface wrapper has no background). library-filters 17/17 green.
+- US4 note: T063/T064 currently have NO failing test (the existing contrast cases pass via the transparent→black artefact and run at 1280px only). US4 must add red tests at 390px measuring against the composited capsule background, and a test that `.chrome-material` degrades under prefers-contrast/reduced-transparency, before implementing.

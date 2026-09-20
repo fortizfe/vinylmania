@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { FiltersControl } from '../components/FiltersControl';
 import { LibraryLinkRequired } from '../components/LibraryLinkRequired';
 import { LibraryToolbar } from '../components/LibraryToolbar';
 import { RecordCard } from '../components/RecordCard';
@@ -96,6 +95,16 @@ export function LibraryListPage() {
       ? (LIBRARY_SORT_OPTIONS.find((o) => o.sort === sort.sort && o.dir === sort.dir)
           ?.announcement ?? '')
       : '';
+  // FR-015 / FR-021a: same rule for a filter change. `data` belongs to the
+  // current selection's cache entry (one key per sort+filters, D8), so an
+  // abandoned selection's late response can neither render nor announce.
+  const [filtersChanged, setFiltersChanged] = useState(false);
+  const filterAnnouncement =
+    filtersChanged && data
+      ? totalItems === 0
+        ? 'No records match the active filters.'
+        : `Showing ${totalItems} ${totalItems === 1 ? 'record' : 'records'}.`
+      : '';
   // FR-028 / contracts §5: each appended batch is announced once it renders,
   // with the end of the collection appended when that batch closed it. A
   // single-batch result (initial load, or a new sort/filter) announces no end.
@@ -140,14 +149,32 @@ export function LibraryListPage() {
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, nextPageError, fetchNextPage]);
 
-  function goTo(path: string) {
-    setSortChanged(false);
-    navigate(path);
-  }
+  // D18: keyboard focus must never land under the sticky toolbar or the
+  // floating capsule, so the scroll container offsets by both while this page
+  // is mounted (3.75rem = the toolbar's own height).
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.scrollPaddingTop = 'calc(var(--header-h) + 3.75rem)';
+    root.style.scrollPaddingBottom = 'var(--capsule-clearance)';
+    return () => {
+      root.style.scrollPaddingTop = '';
+      root.style.scrollPaddingBottom = '';
+    };
+  }, []);
 
   function changeSort(newSort: LibrarySortValue) {
     setSortChanged(true);
+    setFiltersChanged(false);
     navigate(buildLibraryPath(filters, newSort), { replace: true });
+    window.scrollTo({ top: 0 });
+  }
+
+  /** Live filter change: the selection lives in the URL, replacing it so the
+   *  Back button leaves the library rather than walking back through ticks. */
+  function changeFilters(newFilters?: LibraryFilters) {
+    setSortChanged(false);
+    setFiltersChanged(true);
+    navigate(buildLibraryPath(newFilters, sort), { replace: true });
     window.scrollTo({ top: 0 });
   }
 
@@ -169,20 +196,27 @@ export function LibraryListPage() {
   const currentLibraryPath = buildLibraryPath(filters, sort);
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl leading-display tracking-display text-stone-900 dark:text-stone-100">
-          Your library
-        </h1>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="secondary"
-            loading={refresh.isPending}
-            onClick={() => refresh.mutate()}
-          >
-            {refresh.isPending ? 'Refreshing…' : 'Refresh'}
-          </Button>
+    <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 pb-(--capsule-clearance) sm:p-8 sm:pb-8 xl:max-w-7xl">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h1 className="font-display text-2xl leading-display tracking-display text-stone-900 dark:text-stone-100">
+            Your library
+          </h1>
+          {/* FR-020: the total for the current filters, not the number of
+              batches loaded so far. */}
+          {data && (
+            <p className="text-sm text-stone-500 dark:text-stone-400">
+              {totalItems} {totalItems === 1 ? 'record' : 'records'}
+            </p>
+          )}
         </div>
+        <Button
+          variant="secondary"
+          loading={refresh.isPending}
+          onClick={() => refresh.mutate()}
+        >
+          {refresh.isPending ? 'Refreshing…' : 'Refresh'}
+        </Button>
       </div>
 
       <LibraryToolbar
@@ -190,16 +224,13 @@ export function LibraryListPage() {
         onModeChange={setMode}
         sort={sort}
         onSortChange={changeSort}
-      />
-
-      <FiltersControl
         filters={filters}
-        onApply={(newFilters) => goTo(buildLibraryPath(newFilters, sort))}
-        onClear={() => goTo(buildLibraryPath(undefined, sort))}
+        onFiltersChange={changeFilters}
+        onClear={() => changeFilters(undefined)}
       />
 
       <p role="status" className="sr-only">
-        {batchAnnouncement || sortAnnouncement}
+        {batchAnnouncement || sortAnnouncement || filterAnnouncement}
       </p>
 
       {refresh.isError && (
