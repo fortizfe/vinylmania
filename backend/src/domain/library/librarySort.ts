@@ -1,5 +1,10 @@
 import type { LibraryEntry, LibrarySort } from './types';
 
+// ponytail: English collation for every user, which satisfies FR-003 (case and
+// diacritics fold: "Motörhead" = "Motorhead"); ceiling: alphabets whose letters
+// are distinct at the base level (Swedish å/ä/ö sort after z instead of with
+// a/o, Spanish ñ collates as n); upgrade: take the locale from Accept-Language
+// in libraryRoutes and pass it down to build the collator per request.
 const collator = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
 const LEADING_ARTICLE = /^(the|a|an|el|la|los|las|die|les)\s+(?=\S)/i;
 
