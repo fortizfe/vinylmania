@@ -57,12 +57,6 @@ export type LibrarySort = {
   direction: 'asc' | 'desc';
 };
 
-/** Newest first — the order when no (valid) `sort` is requested. */
-export const DEFAULT_LIBRARY_SORT: LibrarySort = {
-  criterion: 'added',
-  direction: 'desc',
-};
-
 /** Genre/Style/Format selection for filtering the library listing (FR-015/FR-017). */
 export interface LibraryFilters {
   genre?: string[];
