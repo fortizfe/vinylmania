@@ -12,9 +12,10 @@ Spec artifacts: [`specs/068-library-redesign-sort-scroll/`](specs/068-library-re
 
 **Sorting (US1)** — six orders: date added (newest/oldest, newest is the default), artist and
 album (A→Z / Z→A). The order is computed over the whole matching library before it is sliced
-into batches, so every batch continues the same sequence. Comparison is language-aware
-(`Intl.Collator`, accents and case fold together), ignores one leading article ("The Clash"
-sorts under C), puts records without the field last, and ends every tie on the record id.
+into batches, so every batch continues the same sequence. Comparison folds case and accents
+together (`Intl.Collator` with English collation — see the `ponytail:` marker for the ceiling on
+alphabets with extra base letters), ignores one leading article ("The Clash" sorts under C),
+puts records without the field last, and ends every tie on the record id.
 The order lives in the URL, so a link restores it exactly.
 
 **Infinite scroll (US2)** — Previous/Next are gone. The next 20 records load about 300 px before
