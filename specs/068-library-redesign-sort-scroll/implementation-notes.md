@@ -1335,3 +1335,455 @@ same guard is worth applying to the AS5 end-message test at line 212.
 no production bug.
 
 - Follow-up to T066: fixed the flaky FR-019/AS5 geometry tests (e2e/tests/library-toolbar.spec.ts) — `scrollUntil` now also waits for the document to be settled at the bottom (`atBottom` helper), since a batch rendered after the last scroll grows the page. 20/20 across 5 repeats.
+
+## Polish — frontend gate (T068)
+
+Ran at HEAD `bf11c59` on `068-library-redesign-sort-scroll`, from `frontend/`:
+
+| Command | Result |
+| --- | --- |
+| `npm test` (vitest run, jsdom) | **PASS** — 109 test files, 981 tests, 0 failed, 0 skipped (~15s) |
+| `npm run lint` (oxlint) | **PASS** — exit 0, 0 errors, 8 warnings |
+| `npm run build` (`tsc -b && vite build`) | **PASS** — exit 0, 614 modules, no TS errors |
+
+**Nothing had to be fixed.** No regression surfaced, including in the shared
+components this feature changed (`FiltersControl` `live`,
+`SelectableListFilter` `inline`, `motion/Overlay` + `Sheet` `bottom`,
+`ui/Modal` `position="bottom"`, `ui/ViewModeToggle` opaque track,
+`global.css` `.chrome-material` fallbacks).
+
+Search / feature-038 shared-filter suites re-run in isolation as an explicit
+check: `tests/unit/filters/`, `FiltersControl`, `HeaderSearchBox`,
+`SearchResultCard`, `SearchResultListRow`, `SearchResultsPage`,
+`useSearchQueryParams` → 9 files, 130 tests, all passing.
+
+### Pre-existing, not introduced here
+
+- **8 oxlint warnings**, all the same rule
+  (`react(only-export-components)`, fast-refresh hygiene): `Button.tsx` ×2,
+  `Sheet.tsx` ×2, `MasterReleaseOtherDetailsSection.tsx`,
+  `ThemeContext.tsx`, `AuthContext.tsx`, `GalleryFullscreenViewer.tsx`.
+  Warnings only — lint exits 0.
+- **jsdom `Error: Not implemented: window.scrollTo` stderr noise** during the
+  library tests, from `LibraryListPage.tsx:178` (`changeFilters` scrolls to
+  top, US2/US3 behaviour). jsdom has no `scrollTo`; it is logged, not thrown,
+  and no test fails on it. Left as-is rather than stubbing it in the test
+  setup, which would also mask genuine scroll errors.
+- **React Router v7 future-flag warnings** — long-standing across the suite.
+- Repo-wide `prettier --check` failures predate this feature; no file this
+  gate did not touch was reformatted (this gate touched no source file at
+  all).
+
+### Production bundle size delta
+
+`vite build` does not print a delta, so the merge-base (`2249630`, pre-feature)
+`frontend/` tree was built from a `git archive` export in a scratch dir with
+the same toolchain and compared:
+
+| Asset | Base `2249630` | HEAD `bf11c59` | Δ raw | Δ gzip |
+| --- | --- | --- | --- | --- |
+| `assets/index-*.css` | 50.32 kB (gzip 9.29) | 54.43 kB (gzip 9.86) | +4.11 kB | +0.57 kB |
+| `assets/index-*.js` | 451.27 kB (gzip 135.52) | 458.95 kB (gzip 137.85) | +7.68 kB | +2.33 kB |
+| `assets/motionFeatures-*.js` | 84.19 kB (gzip 27.62) | 84.19 kB (gzip 27.62) | 0 | 0 |
+| `index.html` | 1.84 kB (gzip 0.91) | 1.84 kB (gzip 0.91) | 0 | 0 |
+| **Total** | 587.62 kB (gzip 173.34) | 599.41 kB (gzip 176.24) | **+11.79 kB** | **+2.90 kB** |
+
+Modules transformed: 612 → 614. No new runtime dependency; the growth is the
+feature's own components, styles and the sort/infinite-scroll logic.
+
+## Polish — backend gate (T067)
+
+Run at HEAD `bf11c59` (branch `068-library-redesign-sort-scroll`), working tree
+clean for `backend/`. This is the feature's one full Jest + Firebase-emulator run.
+
+| Command | Result | Detail |
+| --- | --- | --- |
+| `cd backend && npm test` | **PASS** (exit 0) | 93/93 suites, 910/910 tests, 126.8 s; emulators `auth,firestore` up and shut down cleanly |
+| `cd backend && npm run lint` | **FAIL** (exit 1) | 5 errors, all pre-existing — see below |
+| `cd backend && npm run build` | **PASS** (exit 0) | `tsc -p tsconfig.json`, no diagnostics |
+
+Nothing was fixed: no regression was found in the feature's backend changes.
+All of them are covered green by the run above —
+`tests/unit/library/domain/librarySort.test.ts`,
+`tests/unit/library/application/listLibraryEntries.test.ts`,
+`tests/unit/library/syncLibrary.facets.test.ts`,
+`tests/contract/library/library.contract.test.ts` and
+`tests/integration/library/firestoreLibraryRepository.integration.test.ts`
+(the last one is the guard that `repository.listEntries` is gone and that
+`title` round-trips through the Firestore adapter).
+
+### Pre-existing lint failure (not this feature)
+
+```
+tests/unit/rateLimit/rateLimitStore.test.ts
+  18:38, 26:38, 42:38, 63:31, 66:38
+  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+```
+
+Evidence it predates 068: `git diff 2249630 HEAD` is empty for
+`backend/tests/unit/rateLimit/rateLimitStore.test.ts`, `backend/.eslintrc.cjs`
+and `backend/package.json` — file and lint config are byte-identical to the
+pre-feature commit, so the same 5 errors are produced there. The file was last
+touched by `d3b766d` (2026-07-19). It went unnoticed because `ci.yml` has no
+backend lint step.
+
+Root cause, for whoever picks it up: the five `require()` calls are deliberate
+(re-require after `jest.resetModules()` with a per-test `REDIS_URL`), and each
+already carries `// eslint-disable-next-line @typescript-eslint/no-var-requires`.
+typescript-eslint v8 renamed that rule to `no-require-imports`, so the disable
+comments are stale and no longer suppress anything. Fix is the rule name in the
+five comments — deliberately **not** done here, it is outside feature 068.
+
+### Minor, non-blocking
+
+`DEFAULT_LIBRARY_SORT` in `backend/src/domain/library/types.ts` is exported but
+has no consumer in `backend/src` or `backend/tests` (the route's
+`parseLibrarySort` inlines the same fallback). Dead export; safe to delete.
+
+- Follow-up to T067: removed the unused `DEFAULT_LIBRARY_SORT` export from backend/src/domain/library/types.ts (dead — `parseLibrarySort` inlines the fallback). Build + 140 library/collectionStats unit tests green after removal.
+- T067 lint failure is pre-existing: 5 `@typescript-eslint/no-require-imports` errors in backend/tests/unit/rateLimit/rateLimitStore.test.ts, whose diff vs 2249630 is empty (stale rule name in its eslint-disable comments, renamed in typescript-eslint v8). Out of scope for 068; worth a separate commit.
+
+## Polish — full e2e suite (T069)
+
+```
+cd e2e && npm test
+```
+
+which expands to
+
+```
+node ../scripts/check-emulator-ports.js
+node ../scripts/run-with-timeout.js 1680 -- npx firebase --config ../backend/firebase.json \
+  emulators:exec --only auth,firestore --project vinylmania-test "playwright test"
+```
+
+Whole suite, both projects, no `--grep` and no file filter. HEAD `bf11c59`
+plus the working-tree removal of the unused `DEFAULT_LIBRARY_SORT` export in
+`backend/src/domain/library/types.ts` (T067's "minor, non-blocking" item).
+
+**Result: PASS — 456 passed, 0 failed, 2 skipped, 13.9 min, exit 0.**
+
+| Project | Passed | Failed | Skipped |
+|---|---|---|---|
+| chromium (42 spec files, whole `tests/`) | 421 | 0 | 2 |
+| webkit (3 detail-page responsive specs via `testMatch`) | 35 | 0 | 0 |
+| **Total** | **456** | **0** | **2** |
+
+webkit's 35: `release-detail-responsive` 14, `record-detail-responsive` 11,
+`master-release-detail-responsive` 10 — matching the config's deliberate
+`testMatch` scope (research.md Decision 2), not an accidental narrowing.
+
+Feature 068's own specs, all green in the same pass: `library-toolbar` 32,
+`library-filters` 17, `library-sort-scroll` 16, `library-list-responsive` 7,
+plus the specs US3/US4 touched as regression surface — `view-mode-toggle` 13,
+`overlay-focus-management` 14, `press-feedback` 13, `reduced-motion` 8,
+`overlay-contrast` 8, `dark-mode-contrast` 7, `motion-performance` 4.
+
+### Triage
+
+**Nothing failed, so there is nothing to triage as a regression, and nothing
+was fixed.** Local `retries` is 0 (playwright.config.ts), so these are 456
+first-attempt passes, not retry-laundered ones.
+
+The FR-019/AS5 geometry flake found at T066 (`library-toolbar.spec.ts:232`,
+capsule-overlaps-retry-alert) stayed green here. Its `atBottom` fix is
+committed in `bf11c59` (`e2e/tests/library-toolbar.spec.ts:123`, used at
+lines 233 and 254), so no further repeat-each run was needed on top of the
+20/20 × 5 repeats already recorded at T066.
+
+### The 2 skipped (pre-existing `test.fixme`, not 068)
+
+Both live in `e2e/tests/search-result-filters.spec.ts` and are chromium-only:
+
+1. `:439` "selecting multiple formats narrows results to releases matching
+   all of them together" — deterministic test/app mismatch on filter
+   serialisation order, marked `test.fixme` by spec 042.
+2. `:948` "a mobile viewport opens each selectable list as a full-screen
+   modal, with no horizontal scroll (FR-012, FR-014, SC-005)" — product bug
+   marked `test.fixme` by spec 042.
+
+Proof they predate this feature: `git diff 2249630 HEAD --
+e2e/tests/search-result-filters.spec.ts` is **empty** — the file is
+byte-identical to the pre-068 commit, so both are skipped there too.
+
+Worth flagging for a future spec (**not** a 068 regression, and deliberately
+not fixed here): skip 2's underlying bug is **still open**.
+`frontend/src/components/ui/Modal.tsx:13` still offers
+`position?: 'center' | 'end' | 'bottom'` and still branches on it at line 79,
+while `frontend/src/components/filters/SelectableListFilter.tsx` never passes
+`position` at all — so the mobile selectable list still renders centred
+instead of full-screen. Feature 068 did edit `SelectableListFilter.tsx`, but
+for the live-filter work, not this; the fix is a one-prop change plus
+un-`fixme`-ing that test, and belongs to whoever owns the Search filters.
+
+### Redis
+
+**No flush was needed.** `redis-cli --scan --pattern 'discogs:libsync:*'`
+returned **zero keys before the run**, so the stale-library-list symptom from
+project memory never had a chance to appear, and none of the library specs
+showed stale data. After the run a single key exists
+(`discogs:libsync:HVWkW2wCz9IAqVqb1EZKYMxD6lgt`) — written *by* this run for
+a randomly generated e2e uid, not stale state; e2e uids are fresh per run, so
+it cannot collide with a later one. Left in place rather than flushing the
+dev Redis with no symptom to justify it.
+
+## Polish — TDD audit (T071)
+
+Read-only audit at HEAD `bf11c59` (plus the T067 working-tree deletion of the
+unused `DEFAULT_LIBRARY_SORT` export). No code, test or `tasks.md` change.
+
+### 1. Test-first evidence, per story
+
+| Story | Red state | Developer approval | Implementation after? | Verdict |
+|---|---|---|---|---|
+| US1 | **Notes only** — no separate `test(068)` commit; `6ab7e21` carries tests + `src/` together | notes, 2026-09-19, before the implementation sections | cannot be proven from git | **PASS with a documented evidence gap** |
+| US2 | `25d0761` — test files + specs only, no `src/` | notes, 2026-09-20, "committed as the red-state snapshot" | `64c9cc0`, 20 min later | **PASS** |
+| US3 | `06d2b73` — test files + `e2e/helpers/libraryFixture.ts` only, no `src/` | notes, 2026-09-20, incl. the reviewed deletion of 4 library-filters cases | `e0607ec`, 4 h 25 min later | **PASS** |
+| US4 | `9263ff2` — `library-toolbar.spec.ts`, `libraryFixture.ts`, 2 unit files, no `src/` | notes, 2026-09-20 | `bf11c59`, 10 min later | **PASS** |
+
+US1's gap, stated plainly: per-phase committing only started at US2, so US1's
+red state exists solely as prose. What supports it: the red notes carry
+concrete failure output that could only come from a real run (`TS2307: Cannot
+find module '…/librarySort'`, `TS2322: Property 'listEntries' is missing`,
+`TS2554: Expected 4-5 arguments, but got 6`, the contract diffs
+`[3,2,1,4,5]` vs `[4,1,2,3,5]`, `title` undefined), and they name which tests
+were *not* meant to be red (the 3 "omit" cases). Spot-check: the five test
+titles listed for T007 match `listLibraryEntries.test.ts` verbatim, so the
+notes describe the suite that actually shipped. What is missing and cannot be
+recovered: a commit whose tree contains the tests without the implementation.
+The claim is credible and self-consistent; it is not independently verifiable.
+
+### 2. `ponytail:` markers
+
+All three exist and name a real ceiling plus an upgrade path:
+
+- **D3** `backend/src/application/library/listLibraryEntries.ts:30` — whole
+  per-user mirror read per batch (~N reads); ceiling a few thousand records
+  or read-quota pressure; upgrade Redis-cached sorted id list or persisted
+  sort keys + cursors. Sits directly above the `listAllEntries` call it
+  describes.
+- **D9** `frontend/src/pages/LibraryListPage.tsx:126` — duplicate of the
+  SearchResultsPage sentinel effect; extract a shared hook at the third
+  infinite list. Rule-of-three, correctly deferred.
+- **D11** `frontend/src/queries/libraryQueries.ts:101` — `invalidateQueries`
+  refetches every loaded page after a mutation; upgrade to
+  `resetQueries(lists)` if deep scroll + edit gets slow. Sits in the
+  `onSuccess` it describes.
+
+No stray or orphaned 068 markers; the only other `ponytail:` comments in
+`src/` belong to the feeds feature.
+
+### 3. `grep -rn "listEntries(" backend/src backend/tests`
+
+Exit 1, no output. The port method is gone from both production and test
+code; `firestoreLibraryRepository.integration.test.ts` guards it.
+
+### 4. Weakening check — diff of each red commit against its feat commit
+
+`25d0761→64c9cc0`, `06d2b73→e0607ec`, `9263ff2→bf11c59`, restricted to
+`backend/tests frontend/tests e2e`. Nothing was silenced; every change is a
+migration to the approved new design, a locator correction, or a
+strengthening:
+
+- **US2** — `useLibraryQueryParams` / `libraryQueries` signature migrations
+  and the three `page`-param tests deleted, because the batch cursor left the
+  URL (research D12, approved); `keeps filters active …` re-pointed from the
+  removed Next button to `scrollToSentinel`; `RecordCard`/`RecordListRow` gain
+  the required `from` prop. Added `expect(result.current.data?.pages)
+  .toHaveLength(1)` (the documented T027 deviation) — a strengthening.
+- **US2, the one genuine relaxation** — `library-sort-scroll.spec.ts` tall
+  screen: the precondition `renderedIds == DEFAULT_ORDER.slice(0,20)` was
+  removed. Reason recorded at T037: on a 2400 px viewport the sentinel is
+  inside its 300 px margin at first paint, so the precondition is
+  unobservable by construction. The scenario's actual assertions
+  (`itemCount > 20` while `scrollY === 0`) are untouched, and in the same
+  file the `belowFold` measurement was **tightened** to read the sentinel's
+  own rect. Net: no loss of behavioural coverage.
+- **US3** — `checkVisibility()` filter on the 44×44 scan (the `hidden sm:*`
+  controls are 0×0 by design; `targets.length > 0` still asserted); contrast
+  target narrowed from the background-less animating wrapper to the painted
+  `.overlay-surface`; the Apply-path → live-panel re-point (`openFilters`
+  helper, `apply filters` clicks dropped) which is FR-021a itself; the
+  developer's `Rock+Jazz` → `Jazz+Rock` literal fix, left red by
+  frontend-agent rather than edited unilaterally and then corrected by the
+  developer — the right order.
+- **US4** — only the `atBottom` settling guard, a strengthening that fixed a
+  real geometry race (20/20 over 5 repeats, green again in the T069 full run).
+
+**`.skip`/`.only`/`.todo`/`fixme` introduced by 068: one**, and it is
+legitimate — `library-sort-scroll.spec.ts:161`
+`test.skip(browserName !== 'chromium', 'layout-shift entries are not
+available')`, a capability guard on the CLS measurement, introduced in the
+**red** commit `25d0761`, not added later to dodge a failure. The two
+`test.fixme` in `search-result-filters.spec.ts` are spec 042's.
+
+### 5. FR / SC coverage
+
+All 33 FRs (incl. FR-003a/009a/015a/021a) and all 9 SCs in `spec.md` map to
+at least one test that exists and passes; the thin ones were checked by hand
+rather than by ID grep count: FR-003a `librarySort.test.ts:30`, FR-009a
+`LibraryToolbar.test.tsx:31`, FR-020 `libraryListFlow.test.tsx:968/980`,
+FR-026/FR-029 `LibraryToolbar.test.tsx:337`, FR-028
+`libraryListFlow.test.tsx:844`, SC-001 `library-sort-scroll.spec.ts:156`
+(both view modes), SC-002 `:248` (7.3 ms against a 100 ms budget), SC-009
+`:133`. Green at the gates: backend 910/910 (T067), frontend 981/981 (T068),
+e2e 456 passed / 0 failed / 2 pre-existing `test.fixme` (T069).
+
+No requirement is left asserted-but-red, and no test was left disabled.
+
+### Verdict
+
+**Principle I: PASS.** US2–US4 are proven test-first by commit order; US1 is
+attested test-first by contemporaneous notes with a developer approval gate
+recorded before implementation, and is the one place where the trail is prose
+rather than git. The process fix (commit the red phase separately) was adopted
+from US2 onward and held for the rest of the feature.
+
+Residual, non-blocking: the working-tree deletion of the unused
+`DEFAULT_LIBRARY_SORT` export in `backend/src/domain/library/types.ts` is a
+production change with no test change — acceptable, it is a dead-export
+removal covered by the green full backend and e2e runs.
+
+---
+
+## Polish — manual checks (T070)
+
+Quickstart §4's six checks. Four of them are fully automatable and were run
+ad hoc (throwaway spec + throwaway node script, both deleted afterwards — no
+new spec file, no production change). Two need the macOS System Settings
+toggles a headless browser cannot flip, and are left as a 3-minute
+hands-on checklist below.
+
+### Verified automatically
+
+All values below are actual output from the ad hoc runs, not expectations.
+
+**1. "The Beatles" sorts under B, "Motörhead" next to "Motorpsycho" — PASS**
+
+- `cd backend && npx jest tests/unit/library/domain/librarySort.test.ts` →
+  **28 passed / 28** (0.9 s), including the article-stripping and
+  accent-folding rows of data-model §3.
+- Ad hoc check through the real comparator
+  (`backend/src/domain/library/librarySort.ts`, `sortLibraryEntries`, artist
+  asc) on a list containing both names:
+
+  ```
+  ["Air","Baxter Dury","The Beatles","Bob Dylan","The Byrds",
+   "Motörhead","Motorhead","Motörhead","Motorpsycho","Zappa"]
+  ```
+
+  "The Beatles" lands between "Baxter Dury" and "Bob Dylan" (i.e. under B,
+  not T); "Motörhead" and "motorhead" collate together and sit immediately
+  before "Motorpsycho", with nothing in between. The e2e global-order
+  scenario (`library-sort-scroll.spec.ts` #1) already proves the rendered UI
+  order equals this comparator's order for all 6 sorts over 205 records, so
+  the list in the browser inherits the result.
+
+**2. Rotating / resizing across 640 px with the sheet open — PASS**
+
+Chromium, real app + 205-record fixture, `/app/library?sort=artist&dir=asc&genre=Rock`,
+scrolled to 40 loaded records, sheet open, then rotated 390 × 844 → 844 × 390
+and back:
+
+- the `Sort & Filter` dialog is gone after the rotation (`getByRole('dialog')`
+  count 0) — and no dialog reappears on the way back;
+- the URL is byte-identical before and after (sort **and** genre kept), and
+  the desktop `<select>` that appears above 640 px reads `artist:asc`;
+- the header record count is unchanged;
+- the 40 already-rendered ids are still there, in the same order, as an exact
+  prefix of the reference order — nothing is dropped, refetched into a
+  different order, or duplicated.
+- Observed and accepted: the landscape viewport is shorter, so the sentinel
+  comes into range and batches 3–4 load on their own (40 → 80 records). The
+  extra ids continue the same reference order with no duplicates, which is
+  infinite scroll behaving correctly, not lost state.
+
+**3. A browser without `backdrop-filter` shows the opaque fallback — PASS**
+
+Chromium cannot have the feature switched off (`--disable-blink-features=CSSBackdropFilter`
+and `BackdropFilter` both leave `CSS.supports('backdrop-filter','blur(1px)')`
+true), so the check lifted the shipped
+`@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))`
+branch out of its condition via CSSOM and re-applied it — exactly what a
+non-supporting browser computes, since such a browser also ignores every
+`backdrop-filter` declaration. The branch found in the served stylesheet:
+
+```
+.chrome-material { background-color: rgb(255, 255, 255); backdrop-filter: none; }
+.dark .chrome-material { background-color: rgb(11, 11, 16); }
+```
+
+Resulting computed style on the live capsule: `rgb(255, 255, 255)` (light) /
+`rgb(11, 11, 16)` (dark), alpha **1** in both, `backdrop-filter: none`. The
+"Sort & Filter" label over that opaque surface measures **17.49:1** (light)
+and **18.00:1** (dark) — both well over the 4.5:1 floor, so D17's pairings
+hold with no blur at all.
+
+**4. `prefers-contrast: more` adds the 1 px border — PASS (already covered)**
+
+`library-toolbar.spec.ts` "Increased contrast degrades the chrome material"
+covers this in the suite; re-confirmed ad hoc in both themes:
+`border-top-style: solid`, `border-top-width: 1px`, `backdrop-filter: none`,
+background `rgb(255, 255, 255)` / `rgb(11, 11, 16)` (opaque). This is the
+media-query half of the macOS "Increase contrast" check — what is left for
+the developer is only that macOS actually maps the toggle to the media query
+in their browser.
+
+**5. `prefers-reduced-transparency: reduce` makes the bar opaque — PASS (new)**
+
+Quickstart §3 note 6 says Playwright cannot emulate reduced transparency.
+That is true of `page.emulateMedia()` in Playwright 1.61 — passing
+`reducedTransparency` is silently ignored (`matchMedia(...).matches` stays
+`false`) — but the CDP command behind it does support the feature:
+
+```ts
+const cdp = await page.context().newCDPSession(page);
+await cdp.send('Emulation.setEmulatedMedia', {
+  features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }],
+});
+```
+
+With the feature genuinely on (`matchMedia` asserted `true` first), the live
+capsule computes `backdrop-filter: none` and background `rgb(255, 255, 255)`
+(light) / `rgb(11, 11, 16)` (dark), alpha **1** — opaque, blur dropped, as
+`global.css` intends. Chromium only; this is not in the committed suite (the
+quickstart's manual carve-out was left as written), so it is an ad hoc result.
+
+### Needs the developer's hands-on check
+
+Only the macOS System Settings toggles are left — the media queries
+themselves are proven green above, so what is being checked here is that
+macOS + the real browser deliver the preference, and that the result looks
+right rather than merely computing right. ~3 minutes:
+
+1. Run `npm run dev` in `backend/` and `frontend/`, sign in with a linked
+   Discogs account, open **/app/library** and scroll a little so record
+   artwork sits *under* the bar — the material only shows itself over
+   content. Do it twice if you can: once at a phone width (the floating
+   capsule near the bottom edge) and once at desktop width (the sticky
+   toolbar under the header).
+2. **Reduce transparency.** System Settings → Accessibility → Display →
+   **Reduce transparency** → on. Look at the bar *without reloading the page*
+   (the media query is live).
+   - **Pass**: the bar goes flat solid — pure white in light mode, near-black
+     (`#0b0b10`) in dark mode. No artwork, no colour and no blur show through
+     any more; the rounded shape, shadow and ring stay exactly as they were.
+   - **Fail**: anything still bleeds through, or the bar's contents jump/
+     resize.
+3. **Increase contrast.** Same panel → **Increase contrast** → on (turn
+   Reduce transparency back off first, so you are testing one thing).
+   - **Pass**: the bar is solid *and* gains a hairline 1 px outline all the
+     way round, in the text colour (dark outline in light mode, light outline
+     in dark mode), so its edge is unambiguous where the list scrolls under
+     it.
+   - **Fail**: no visible outline, a double/clipped outline, or the outline
+     changing the bar's size enough to shift its contents.
+4. Turn both toggles back off and confirm the bar returns to translucent
+   blur.
+
+Note if you use Safari: `prefers-contrast` is well supported, but
+`prefers-reduced-transparency` is not implemented by every engine. If step 2
+shows no change in Safari while Chrome does change, that is browser feature
+support, not an app bug — the `@supports` fallback and the contrast branch
+(both verified above) still protect legibility. Record the browser and
+version next to the result either way.
