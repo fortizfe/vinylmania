@@ -16,21 +16,14 @@ function wrapper(initialEntries: string[]) {
 }
 
 describe('useLibraryQueryParams (feature 038, US2, FR-010/FR-022)', () => {
-  it('defaults to page 1 with no active filters when no query params are present', () => {
+  it('defaults to no active filters when no query params are present', () => {
     const { result } = renderHook(() => useLibraryQueryParams(), {
       wrapper: wrapper(['/app/library']),
     });
 
-    // 068: the default sort is part of the parsed state (data-model §2).
-    expect(result.current).toEqual({ page: 1, sort: DEFAULT_LIBRARY_SORT });
-  });
-
-  it('parses the page number from the URL', () => {
-    const { result } = renderHook(() => useLibraryQueryParams(), {
-      wrapper: wrapper(['/app/library?page=3']),
-    });
-
-    expect(result.current.page).toBe(3);
+    // 068: the default sort is part of the parsed state (data-model §2); the
+    // batch cursor left the URL with US2 (research D12).
+    expect(result.current).toEqual({ sort: DEFAULT_LIBRARY_SORT });
   });
 
   it('parses comma-joined genre/style/format params into arrays, in canonical catalog order', () => {
@@ -115,17 +108,9 @@ describe('useLibraryQueryParams sort (feature 068, US1, FR-006/FR-007, data-mode
   });
 });
 
-describe('buildLibraryPath(filters?, sort?, page = 1) (feature 068 interim signature)', () => {
-  it('builds the base path with no filters/sort/page', () => {
+describe('buildLibraryPath(filters?, sort?)', () => {
+  it('builds the base path with no filters or sort', () => {
     expect(buildLibraryPath()).toBe('/app/library');
-  });
-
-  it('includes the page number when greater than 1', () => {
-    expect(buildLibraryPath(undefined, undefined, 2)).toBe('/app/library?page=2');
-  });
-
-  it('omits the page number when it is 1', () => {
-    expect(buildLibraryPath(undefined, undefined, 1)).toBe('/app/library');
   });
 
   it('joins genre/style/format arrays into comma-separated params, in canonical catalog order', () => {
@@ -160,28 +145,25 @@ describe('buildLibraryPath(filters?, sort?, page = 1) (feature 068 interim signa
     expect(oldest.get('dir')).toBe('asc');
   });
 
-  it('writes sort, dir, filters and page together', () => {
+  it('writes sort, dir and filters together', () => {
     const params = new URLSearchParams(
-      buildLibraryPath({ genre: ['Rock'] }, { sort: 'album', dir: 'desc' }, 3).split(
-        '?',
-      )[1],
+      buildLibraryPath({ genre: ['Rock'] }, { sort: 'album', dir: 'desc' }).split('?')[1],
     );
     expect(params.get('sort')).toBe('album');
     expect(params.get('dir')).toBe('desc');
     expect(params.get('genre')).toBe('Rock');
-    expect(params.get('page')).toBe('3');
   });
 
-  it('round-trips filters, sort and page through a built URL (FR-022, FR-006)', () => {
+  it('round-trips filters and sort through a built URL (FR-022, FR-006)', () => {
     const filters = { genre: ['Rock'], style: ['Grunge'], format: ['Vinyl'] };
     const sort = { sort: 'artist', dir: 'desc' } as const;
-    const path = buildLibraryPath(filters, sort, 2);
+    const path = buildLibraryPath(filters, sort);
 
     const { result } = renderHook(() => useLibraryQueryParams(), {
       wrapper: wrapper([path]),
     });
 
-    expect(result.current).toEqual({ page: 2, sort, ...filters });
+    expect(result.current).toEqual({ sort, ...filters });
   });
 });
 

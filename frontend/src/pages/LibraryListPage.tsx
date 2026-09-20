@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { FiltersControl } from '../components/FiltersControl';
@@ -48,18 +48,46 @@ function activeCount(filters: LibraryFilters): number {
 
 export function LibraryListPage() {
   const navigate = useNavigate();
-  const pageSize = 20;
-  const { page, sort, genre, style, format } = useLibraryQueryParams();
+  const { sort, genre, style, format } = useLibraryQueryParams();
   const filters: LibraryFilters = { genre, style, format };
   const hasActiveFilters = activeCount(filters) > 0;
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const {
     data,
     isLoading,
-    isError: loadError,
+    isError,
     error,
-  } = useLibraryList(page, pageSize, filters, sort);
-  const refresh = useRefreshLibrary(page, pageSize, filters, sort);
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useLibraryList(sort, filters);
+  const refresh = useRefreshLibrary(sort, filters);
+  const { mode, setMode } = useViewModePreference('vinylmania:view-mode:library');
+
+  const pages = data?.pages;
+  const lastPage = pages?.at(-1);
+  const entries = pages?.flatMap((batch) => batch.items) ?? [];
+  const totalItems = lastPage?.totalItems ?? 0;
+  // Only the first batch can fail before anything is on screen; a later
+  // failure keeps the loaded records and offers Retry instead (FR-013).
+  const initialLoadError = !data && isError;
+  const nextPageError = Boolean(data) && isError;
+  const gate = initialLoadError ? gateVariant(error) : null;
+
+  // D20: placeholders live in the same <ul> as the records, so a batch takes
+  // exactly the cells it will fill and nothing already on screen shifts.
+  const skeletonCount = isLoading
+    ? SKELETON_COUNT
+    : isFetchingNextPage
+      ? Math.max(0, Math.min(lastPage?.pageSize ?? 0, totalItems - entries.length))
+      : 0;
+  const showList = !initialLoadError && (isLoading || entries.length > 0);
+  const atEnd = entries.length > 0 && !hasNextPage && !nextPageError;
+  const endMessage = `You've reached the end of your collection — ${totalItems} ${
+    totalItems === 1 ? 'record' : 'records'
+  }`;
+
   // FR-008: announce a sort change only once its results render. Derived from
   // the current sort, so rapid changes announce just the latest one.
   const [sortChanged, setSortChanged] = useState(false);
@@ -68,11 +96,49 @@ export function LibraryListPage() {
       ? (LIBRARY_SORT_OPTIONS.find((o) => o.sort === sort.sort && o.dir === sort.dir)
           ?.announcement ?? '')
       : '';
-  const { mode, setMode } = useViewModePreference('vinylmania:view-mode:library');
-  const entries = data?.items ?? null;
-  const totalItems = data?.totalItems ?? 0;
-  const hasNextPage = page * pageSize < totalItems;
-  const gate = loadError ? gateVariant(error) : null;
+  // FR-028 / contracts §5: each appended batch is announced once it renders,
+  // with the end of the collection appended when that batch closed it. A
+  // single-batch result (initial load, or a new sort/filter) announces no end.
+  const [batchAnnouncement, setBatchAnnouncement] = useState('');
+  useEffect(() => {
+    const last = pages && pages.length > 1 ? pages[pages.length - 1] : undefined;
+    if (!last) {
+      setBatchAnnouncement('');
+      return;
+    }
+    const loaded = `${last.items.length} more records loaded.`;
+    setBatchAnnouncement(
+      last.page * last.pageSize < last.totalItems
+        ? loaded
+        : `${loaded} End of collection, ${last.totalItems} records.`,
+    );
+  }, [pages]);
+
+  // ponytail: duplicate of SearchResultsPage sentinel effect; extract a shared
+  // hook when a third infinite list appears.
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (
+          entry.isIntersecting &&
+          hasNextPage &&
+          !isFetchingNextPage &&
+          !nextPageError
+        ) {
+          fetchNextPage().catch(() => {
+            // Surfaced reactively through `nextPageError` above.
+          });
+        }
+      },
+      // D9: start the next batch before the user reaches the end, and let the
+      // re-created observer fire again so a tall screen fills itself.
+      { rootMargin: '0px 0px 300px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, nextPageError, fetchNextPage]);
 
   function goTo(path: string) {
     setSortChanged(false);
@@ -97,6 +163,10 @@ export function LibraryListPage() {
       </main>
     );
   }
+
+  // FR-015a: every record link carries the address it was opened from, so the
+  // detail page's Back returns to this exact sort and filter selection.
+  const currentLibraryPath = buildLibraryPath(filters, sort);
 
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
@@ -129,7 +199,7 @@ export function LibraryListPage() {
       />
 
       <p role="status" className="sr-only">
-        {sortAnnouncement}
+        {batchAnnouncement || sortAnnouncement}
       </p>
 
       {refresh.isError && (
@@ -138,7 +208,7 @@ export function LibraryListPage() {
         </p>
       )}
 
-      {loadError && (
+      {initialLoadError && (
         <Card>
           <p className="text-stone-500 dark:text-stone-400">
             Something went wrong while loading your library. Please try again.
@@ -146,66 +216,57 @@ export function LibraryListPage() {
         </Card>
       )}
 
-      {!loadError && isLoading && (
-        <ul className={mode === 'list' ? listClasses : gridClasses}>
-          {Array.from({ length: SKELETON_COUNT }, (_, index) =>
+      {!initialLoadError && !isLoading && entries.length === 0 && (
+        <Card>
+          <p className="text-stone-500 dark:text-stone-400">
+            {hasActiveFilters
+              ? 'No results for the active filters. Try adjusting or clearing them.'
+              : 'No records yet. Add your first one to get started.'}
+          </p>
+        </Card>
+      )}
+
+      {showList && (
+        <ul
+          className={mode === 'list' ? listClasses : gridClasses}
+          data-testid={mode === 'list' ? 'library-record-list' : 'library-record-grid'}
+        >
+          {entries.map((entry) =>
             mode === 'list' ? (
-              <RecordListRowSkeleton key={index} />
+              <RecordListRow key={entry.id} entry={entry} from={currentLibraryPath} />
             ) : (
-              <RecordCardSkeleton key={index} />
+              <RecordCard key={entry.id} entry={entry} from={currentLibraryPath} />
+            ),
+          )}
+          {Array.from({ length: skeletonCount }, (_, index) =>
+            mode === 'list' ? (
+              <RecordListRowSkeleton key={`placeholder-${index}`} />
+            ) : (
+              <RecordCardSkeleton key={`placeholder-${index}`} />
             ),
           )}
         </ul>
       )}
 
-      {!loadError && !isLoading && entries?.length === 0 && hasActiveFilters && (
-        <Card>
-          <p className="text-stone-500 dark:text-stone-400">
-            No results for the active filters. Try adjusting or clearing them.
+      {nextPageError && (
+        <div className="flex flex-col items-center gap-2">
+          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+            Couldn&apos;t load more records. Please try again.
           </p>
-        </Card>
+          <Button variant="secondary" onClick={() => fetchNextPage()}>
+            Retry
+          </Button>
+        </div>
       )}
 
-      {!loadError && !isLoading && entries?.length === 0 && !hasActiveFilters && (
-        <Card>
-          <p className="text-stone-500 dark:text-stone-400">
-            No records yet. Add your first one to get started.
-          </p>
-        </Card>
+      {atEnd && (
+        <p className="text-center text-sm text-stone-500 dark:text-stone-400">
+          {endMessage}
+        </p>
       )}
 
-      {!loadError && entries && entries.length > 0 && (
-        <>
-          {mode === 'list' ? (
-            <ul className={listClasses} data-testid="library-record-list">
-              {entries.map((entry) => (
-                <RecordListRow key={entry.id} entry={entry} />
-              ))}
-            </ul>
-          ) : (
-            <ul className={gridClasses} data-testid="library-record-grid">
-              {entries.map((entry) => (
-                <RecordCard key={entry.id} entry={entry} />
-              ))}
-            </ul>
-          )}
-          <div className="flex gap-3">
-            <Button
-              variant="secondary"
-              disabled={page <= 1}
-              onClick={() => goTo(buildLibraryPath(filters, sort, page - 1))}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!hasNextPage}
-              onClick={() => goTo(buildLibraryPath(filters, sort, page + 1))}
-            >
-              Next
-            </Button>
-          </div>
-        </>
+      {entries.length > 0 && hasNextPage && (
+        <div ref={sentinelRef} aria-hidden="true" data-testid="library-load-sentinel" />
       )}
     </main>
   );

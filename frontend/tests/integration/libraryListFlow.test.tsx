@@ -329,7 +329,7 @@ describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
     expect(screen.queryByText(/no records yet/i)).not.toBeInTheDocument();
   });
 
-  it('keeps filters active when navigating to another page (FR-022)', async () => {
+  it('keeps filters active when the next batch is loaded (FR-022)', async () => {
     mockList.mockImplementation((page) =>
       Promise.resolve({
         items: [releaseEntry(`entry-${page}`, `Rock Result Page ${page}`)],
@@ -348,11 +348,11 @@ describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
       20,
       false,
       { genre: ['Rock'] },
-      { sort: 'added', dir: 'desc' },
+      DEFAULT_SORT,
     );
 
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    // Feature 068, US2: Previous/Next are gone; the next batch arrives on scroll.
+    await scrollToSentinel();
 
     await waitFor(() =>
       expect(screen.getByText(/rock result page 2/i)).toBeInTheDocument(),
@@ -362,7 +362,7 @@ describe('Shared collapsible filters on My Library (feature 038, US2)', () => {
       20,
       false,
       { genre: ['Rock'] },
-      { sort: 'added', dir: 'desc' },
+      DEFAULT_SORT,
     );
   });
 });
@@ -535,7 +535,7 @@ describe('Sorting the library (feature 068, US1 AS2/AS5/AS6, FR-008)', () => {
     expect(screen.queryByText(/^Sorted by/)).not.toBeInTheDocument();
   });
 
-  it('changing the select replaces the URL (filters kept, page 1) and announces once after the new data renders, keeping focus', async () => {
+  it('changing the select replaces the URL (filters kept, no page) and announces once after the new data renders, keeping focus', async () => {
     let resolveSorted!: (value: ReturnType<typeof listPage>) => void;
     mockList.mockImplementation((...args: unknown[]) => {
       const sort = args[4] as { sort?: string } | undefined;
@@ -547,7 +547,7 @@ describe('Sorting the library (feature 068, US1 AS2/AS5/AS6, FR-008)', () => {
       return Promise.resolve(listPage('Newest Order'));
     });
 
-    renderWithProbe('/app/library?genre=Rock&page=2');
+    renderWithProbe('/app/library?genre=Rock');
     await waitFor(() => expect(screen.getByText('Newest Order')).toBeInTheDocument());
 
     const user = userEvent.setup();
