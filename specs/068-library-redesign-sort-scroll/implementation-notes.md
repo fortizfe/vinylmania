@@ -298,3 +298,152 @@ Result: **14 failed, 9 passed (3.1 min, chromium only** — the webkit project's
 ## US2 red-test approval gate
 
 - 2026-09-20: Red tests T025–T031 reviewed and **approved by the developer (Fernando Ortiz)** before implementation (Constitution Principle I). Committed as the red-state snapshot. Implementation T032–T037 may start.
+
+## US2 implementation — frontend
+
+T032–T036, green phase. Run: `cd frontend && npx vitest run` (whole suite) → **109 files, 922 tests, all passing**; `npx tsc -b --noEmit` clean; `npx oxlint` reports 0 errors (only the pre-existing `react(only-export-components)` warnings, none in touched files); Prettier clean on every touched file.
+
+### Files changed (`frontend/`)
+
+| Task | File | What changed |
+|---|---|---|
+| T032 | `src/queries/libraryQueries.ts` | `PAGE_SIZE = 20` module constant. `libraryKeys.list(sort, filters)` drops page/pageSize. `useLibraryList(sort, filters)` is a `useInfiniteQuery` (`initialPageParam: 1`, D8 `getNextPageParam`, `retry: false`). `useRefreshLibrary(sort, filters)` fetches page 1 with `refresh=true` and `setQueryData(key, { pages: [data], pageParams: [1] })`. `// ponytail: invalidateQueries refetches every loaded page after a mutation; upgrade to resetQueries(lists) if deep scrolls + edits get slow` above the mutation invalidations. `libraryApi.list` keeps its `(page, pageSize, refresh, filters, sort)` signature. |
+| T033 | `src/hooks/useLibraryQueryParams.ts` | `page` removed from the returned object and from `buildLibraryPath`, now `(filters?, sort?)`. A legacy `?page=N` is read by nobody and never written back (D12). |
+| T034 | `src/components/RecordCard.tsx`, `src/components/RecordListRow.tsx` | Required `from: string` prop, passed as `state={{ from }}` on both `Link`s in each component (record link + catalog-unavailable "Open record"). |
+| T035 | `src/pages/RecordDetailPage.tsx` | `backTo = (location.state as { from?: string } \| null)?.from ?? '/app/library'`, used by all three `BackLink`s, the `RecordDetailLayout` `backTo` prop and the post-delete `navigate`. |
+| T036 | `src/pages/LibraryListPage.tsx` | Rebuilt: `data.pages.flatMap(p => p.items)`; skeletons appended **inside the same `<ul>`** (8 initially, `min(pageSize, totalItems − loaded)` for a later batch, D20); `<div ref={sentinelRef} aria-hidden="true" data-testid="library-load-sentinel">` rendered only when items exist and `hasNextPage`, observed with `rootMargin: '0px 0px 300px 0px'` and deps `[hasNextPage, isFetchingNextPage, nextPageError, fetchNextPage]`, marked `// ponytail: duplicate of SearchResultsPage sentinel effect; extract a shared hook when a third infinite list appears`; end message (contracts §4, em dash, singular "1 record"); `role="alert"` + Retry block for a failed batch, with the full-page error now gated on `!data && isError`; Previous/Next removed; `currentLibraryPath = buildLibraryPath(filters, sort)` passed as `from`; status region extended with the batch/end rows of contracts §5 (`batchAnnouncement \|\| sortAnnouncement` in the single `<p role="status" class="sr-only">`, D21). |
+
+`data-testid="library-load-sentinel"` was added at qa-agent's request so T025's prefetch scenario can assert on the sentinel directly. It keeps `aria-hidden="true"`, so it stays out of the accessibility tree (contracts §4).
+
+Design skills consulted (`apple-design`, `emil-design-eng`): no new motion in this pass (that is US3/US4). Presentation follows the existing `SearchResultsPage` pattern — skeletons geometrically identical to the real card/row so an appended batch shifts nothing (CLS = 0, D20); the end message is quiet centered secondary text rather than a banner (restraint); the batch failure pairs text with a Retry button and never signals state by colour alone (WCAG 1.4.1).
+
+### Existing tests updated (and why)
+
+- `tests/unit/queries/libraryQueries.test.tsx` — the four US1 tests that called `useLibraryList(1, 20, …)` / `useRefreshLibrary(1, 20, …)` / `libraryKeys.list(1, 20, …)` moved to the new `(sort, filters)` signature; their assertions read `data.pages[0]` and the refresh cache now holds `{ pages: [...], pageParams: [1] }`. All coverage kept, including "two sorts never share a cache entry".
+- `tests/unit/hooks/useLibraryQueryParams.test.tsx` — `parses the page number from the URL`, `includes the page number when greater than 1` and `omits the page number when it is 1` removed (the behaviour is gone; the US2 block's `ignores a legacy ?page=3` and `never writes a page param` replace them). `defaults to page 1 …`, `writes sort, dir, filters and page together` and the round-trip test dropped their `page` expectations; the describe title is now `buildLibraryPath(filters?, sort?)`. `resets to page 1 in the built path when filters change (FR-010)` kept unchanged.
+- `tests/integration/libraryListFlow.test.tsx` — `keeps filters active when navigating to another page (FR-022)` rewritten as `keeps filters active when the next batch is loaded (FR-022)`: same filter assertions, but the second batch now arrives via `scrollToSentinel()` instead of the removed **Next** button. The US1 sort test's initial entry lost its meaningless `&page=2`; its `page` assertion stays as a regression guard.
+- `tests/unit/RecordCard.test.tsx` / `RecordListRow.test.tsx` — the shared `renderCard` / `renderRow` helpers now pass the required `from="/app/library"`.
+
+### Deviation — one line added to an approved red test (T027)
+
+`libraryQueries.test.tsx` › `getNextPageParam advances while page * pageSize < totalItems, then stops` could not pass as written, for a reason unrelated to the implementation. TanStack Query only notifies an observer about **result properties that have been read** (`notifyOnChangeProps` tracking); `renderHook`'s probe reads none during render, so after the first `waitFor(() => result.current.isSuccess)` only `isSuccess` is tracked. When page 2 lands, `isSuccess` is unchanged, no notification fires, and `result.current.data` stays pinned at one page forever — the cache genuinely holds 2 then 3 pages (verified: `fetchNextPage()` resolves with `pages: 2`, `calls: [1, 2]`). The sibling test in `discogsQueries.test.tsx` avoids this only incidentally, by reading `hasNextPage` (which flips there) before fetching.
+
+Fix applied — one assertion added after the first `waitFor`, before the first `fetchNextPage`:
+
+```ts
+expect(result.current.data?.pages).toHaveLength(1);
+```
+
+It reads `data`, which subscribes the observer to it, and additionally pins the first batch to exactly one page. Nothing was weakened or removed, and no production code was bent for the harness (the alternative, `notifyOnChangeProps: 'all'` on `useLibraryList`, was rejected as test-driven production config). Flagged here for qa-agent/developer sign-off.
+
+## US2 verification (T037)
+
+Date: 2026-09-20 · Branch `068-library-redesign-sort-scroll` (US2 implementation T032–T036 in the working tree, red tests committed at 25d0761).
+
+### 1. Frontend (Vitest) — PASS
+
+```
+cd frontend && npx vitest run tests/unit/queries/libraryQueries.test.tsx \
+  tests/unit/hooks/useLibraryQueryParams.test.tsx tests/unit/RecordCard.test.tsx \
+  tests/unit/RecordListRow.test.tsx tests/integration/libraryListFlow.test.tsx \
+  tests/integration/recordDetailFlow.test.tsx
+```
+
+| Files | Tests | Result |
+|---|---|---|
+| 6 passed / 6 | 102 passed / 102 | green (1.5 s) |
+
+One non-failing jsdom log: `Error: Not implemented: window.scrollTo` from `LibraryListPage.tsx:151` (`changeSort`). jsdom has no scroll implementation; the sort tests still pass. Noise, not a defect — worth a `vi.stubGlobal('scrollTo', …)` in the frontend setup file if it ever hides a real error.
+
+### 2 + 3. E2E (Playwright) — 52 passed, 2 failed
+
+`npm test -- <path>` in tasks.md is still wrong (T001/T005); all four specs ran in one emulator boot:
+
+```
+cd e2e && node ../scripts/check-emulator-ports.js && \
+  PLAYWRIGHT_JSON_OUTPUT_NAME=<scratch>/e2e-us2.json \
+  node ../scripts/run-with-timeout.js 1200 -- npx firebase --config ../backend/firebase.json \
+  emulators:exec --only auth,firestore --project vinylmania-test \
+  "playwright test tests/library-sort-scroll.spec.ts tests/library-list-responsive.spec.ts \
+   tests/library-filters.spec.ts tests/view-mode-toggle.spec.ts --reporter=list,json"
+```
+
+Chromium only (the webkit project's `testMatch` covers just the three detail-page responsive specs). Duration 2.2 min.
+
+| Spec | Passed | Failed |
+|---|---|---|
+| `library-sort-scroll.spec.ts` (US1 + US2) | 15 | 1 |
+| `library-list-responsive.spec.ts` (US2) | 7 | 0 |
+| `library-filters.spec.ts` (regression, migrated in US3) | 17 | 1 |
+| `view-mode-toggle.spec.ts` (regression, migrated in US3) | 13 | 0 |
+| **Total** | **52** | **2** |
+
+**CLS (SC-001): `cls-grid = 0`, `cls-list = 0`** — both CLS scenarios green, exactly 0 after 3 scroll-loaded batches in each mode. The retry scenario, the prefetch scenario, the no-duplicates/no-gaps scenarios, the end message and the back-navigation scenario all pass.
+
+#### Failure 1 — `library-filters.spec.ts:210` "filters remain active across a page change (FR-022)"
+
+```
+> 233 |     await page.getByRole('button', { name: /^next$/i }).click();
+```
+
+Cause: the spec drives pagination through the **Next** button, which T036 removed. This is the expected consequence of US2 (the spec is only migrated in US3, T041), not a regression in library behaviour: the same requirement is covered green at the integration layer by `libraryListFlow.test.tsx` › `keeps filters active when the next batch is loaded (FR-022)`, which asserts `list(2, 20, false, { genre: ['Rock'] }, DEFAULT_SORT)` after the sentinel fires. Filters themselves are unaffected — the other 17 tests in the spec pass, including the `genre=Rock` URL round-trip. Fix in US3: replace the Next click with `scrollToBottom`/`scrollUntil` and drop `page` from the mock's `totalItems: 40` shape. No production change needed.
+
+#### Failure 2 — `library-sort-scroll.spec.ts:326` "tall screen: at 1280×2400 batches keep loading until the viewport is filled, with no scrolling"
+
+```
+> 333 |     await expect.poll(() => renderedIds(page)).toEqual(DEFAULT_ORDER.slice(0, 20));
+    - Expected  -  0
+    + Received  + 20      (rec-021 … rec-040 already rendered)
+```
+
+**Defect in the approved red test, not in the implementation.** The test sets a 2400 px viewport *before* `goto`, so the sentinel is inside the viewport (and its 300 px `rootMargin`) on first paint and page 2 auto-loads immediately — which is precisely the behaviour the test's *next* two assertions demand (`itemCount > 20` while `scrollY === 0`). The precondition "exactly the first 20 are rendered" can therefore never hold stably on a tall screen; the 5 s poll timed out with 40 items on screen. The implementation is correct and is in fact over-satisfying the scenario.
+
+Suggested fix (test-only, left unapplied here — T037 was scoped to one test change, see below): drop line 333 and let the existing
+```ts
+await expect.poll(() => itemCount(page), { timeout: 10_000 }).toBeGreaterThan(20);
+expect(await page.evaluate(() => window.scrollY)).toBe(0);
+const ids = await renderedIds(page);
+expect(ids).toEqual(DEFAULT_ORDER.slice(0, ids.length));
+```
+carry the scenario — the last assertion already proves order and prefix-correctness without pinning the count. Alternatively assert `.toEqual(DEFAULT_ORDER.slice(0, 20))` against the *first* page response rather than the DOM.
+
+### Test change made under T037
+
+One, as authorised: `e2e/tests/library-sort-scroll.spec.ts` › T025 prefetch scenario (SC-008). The off-screen check measured the **document end** (`scrollHeight - (scrollY + innerHeight) > 200`), a proxy. It now measures the **sentinel itself** via the new `data-testid="library-load-sentinel"`, in the same `page.evaluate` as the (synchronous) `window.scrollTo`, so the rect reflects the new scroll offset:
+
+```ts
+const sentinel = document.querySelector('[data-testid="library-load-sentinel"]');
+if (sentinel === null) return null;
+return sentinel.getBoundingClientRect().top - window.innerHeight;
+```
+with `expect(sentinelBelowFold).not.toBeNull()` + `.toBeGreaterThan(200)`. Strictly sharper: it now fails if the sentinel is missing or on-screen, neither of which the document-end proxy could detect. Passes.
+
+### TDD audit — PASS
+
+Baseline: commit `25d0761` ("Red state approved before implementation per Constitution Principle I"), which touches **test files and spec docs only** — no `src/` file. Test-first order holds: red committed, implementation left in the working tree.
+
+Diff `25d0761..worktree` over `frontend/tests` and `e2e/tests`:
+
+| File | `it(` red → now | Verdict |
+|---|---|---|
+| `unit/queries/libraryQueries.test.tsx` | 15 → 15 | signature migration only |
+| `unit/hooks/useLibraryQueryParams.test.tsx` | 24 → 21 | the 3 documented page tests removed |
+| `unit/RecordCard.test.tsx` | 9 → 9 | `from` prop in helper |
+| `unit/RecordListRow.test.tsx` | 11 → 11 | `from` prop in helper |
+| `integration/libraryListFlow.test.tsx` | 28 → 28 | Next → `scrollToSentinel()` |
+| `integration/recordDetailFlow.test.tsx` | 18 → 18 | untouched |
+| `e2e/tests/*` | — | untouched since 25d0761 except the T025 tightening above |
+
+Every change falls inside the pre-agreed allowance, and nothing beyond it:
+
+- Signature migrations to `useLibraryList(sort, filters)` / `libraryKeys.list(sort, filters)` / `buildLibraryPath(filters?, sort?)` — assertions carried over, not dropped (e.g. "two sorts never share a cache entry" still compares the two keys; the refresh test still asserts the cache payload, now `{ pages: [refreshed], pageParams: [1] }`).
+- Removal of deleted page behaviour — exactly the 3 named tests (`parses the page number from the URL`, `includes the page number when greater than 1`, `omits the page number when it is 1`). No fourth removal.
+- Next-button flow rewritten as scroll-triggered, keeping both `mockList` argument assertions.
+- `from` added to the card/row render helpers.
+- The one added line `expect(result.current.data?.pages).toHaveLength(1)` in the `getNextPageParam` test. **Signed off.** The `notifyOnChangeProps` diagnosis is correct — TanStack only notifies on read result props, so without a `data` read the observer never sees pages 2 and 3. It is an added constraint, not a relaxed one, and it was preferred over `notifyOnChangeProps: 'all'` in production, which is the right call (no production config bent to suit the harness).
+- Regression guards kept: `expect(currentParams().get('page')).toBeNull()` in the US1 sort test; `resets to page 1 in the built path when filters change (FR-010)` untouched.
+- No test weakened, no `.skip`/`.only`/`.todo` introduced (the single `test.skip` in `library-sort-scroll.spec.ts:399` is the pre-existing chromium-only guard on the Layout Instability API, present in the red commit).
+
+**Verdict: no Principle I violation. One test defect (tall-screen precondition) and one expected US3-migration failure; no production bug found.**
+
+- Follow-up to T037: removed the self-contradicting "first 20 only" precondition in the tall-screen scenario (e2e/tests/library-sort-scroll.spec.ts); spec re-run green 16/16. library-filters.spec.ts "filters remain active across a page change" still drives the removed Next button — migrated in US3 (T041).

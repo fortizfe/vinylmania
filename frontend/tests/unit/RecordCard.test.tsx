@@ -9,7 +9,7 @@ import type { EnrichedLibraryEntry } from '../../src/services/libraryApi';
 function renderCard(entry: EnrichedLibraryEntry) {
   return render(
     <MemoryRouter>
-      <RecordCard entry={entry} />
+      <RecordCard entry={entry} from="/app/library" />
     </MemoryRouter>,
   );
 }

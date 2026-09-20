@@ -9,9 +9,15 @@ import { ReleaseRatingBadge } from './ui/ReleaseRatingBadge';
 
 interface RecordListRowProps {
   entry: EnrichedLibraryEntry;
+  /**
+   * The library address this row was rendered from (sort + filters), carried
+   * as router state so the detail page's Back returns here (research D12,
+   * FR-015a). Required: this component is Library-only.
+   */
+  from: string;
 }
 
-export function RecordListRow({ entry }: RecordListRowProps) {
+export function RecordListRow({ entry, from }: RecordListRowProps) {
   if (entry.catalogStatus === 'unavailable' || !entry.release) {
     return (
       <li>
@@ -22,6 +28,7 @@ export function RecordListRow({ entry }: RecordListRowProps) {
           <p>Couldn&apos;t load catalog details for this record right now.</p>
           <Link
             to={`/app/library/records/${entry.id}`}
+            state={{ from }}
             className="text-sm font-medium text-primary not-italic dark:text-primary-text"
           >
             Open record
@@ -43,6 +50,7 @@ export function RecordListRow({ entry }: RecordListRowProps) {
       <Card padding="sm">
         <Link
           to={`/app/library/records/${entry.id}`}
+          state={{ from }}
           className={clsx('flex items-center gap-4', pressableCard)}
         >
           <div className="relative shrink-0">

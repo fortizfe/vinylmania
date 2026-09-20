@@ -9,7 +9,7 @@ import type { EnrichedLibraryEntry } from '../../src/services/libraryApi';
 function renderRow(entry: EnrichedLibraryEntry) {
   return render(
     <MemoryRouter>
-      <RecordListRow entry={entry} />
+      <RecordListRow entry={entry} from="/app/library" />
     </MemoryRouter>,
   );
 }

@@ -41,11 +41,11 @@ describe('libraryQueries', () => {
     mockRemove.mockReset();
   });
 
-  it('useLibraryList fetches and returns the paginated list', async () => {
+  it('useLibraryList fetches and returns the first batch', async () => {
     mockList.mockResolvedValue({ items: [], page: 1, pageSize: 20, totalItems: 0 });
 
     const { useLibraryList } = await import('../../../src/queries/libraryQueries');
-    const { result } = renderHook(() => useLibraryList(1, 20), { wrapper });
+    const { result } = renderHook(() => useLibraryList(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -56,12 +56,9 @@ describe('libraryQueries', () => {
       {},
       { sort: 'added', dir: 'desc' },
     );
-    expect(result.current.data).toEqual({
-      items: [],
-      page: 1,
-      pageSize: 20,
-      totalItems: 0,
-    });
+    expect(result.current.data?.pages).toEqual([
+      { items: [], page: 1, pageSize: 20, totalItems: 0 },
+    ]);
   });
 
   it('useLibraryEntry stays disabled and issues no request when entryId is undefined', async () => {
@@ -187,7 +184,7 @@ describe('libraryQueries', () => {
       mockList.mockResolvedValue({ items: [], page: 1, pageSize: 20, totalItems: 0 });
 
       const { useLibraryList } = await import('../../../src/queries/libraryQueries');
-      const { result } = renderHook(() => useLibraryList(1, 20, {}, byArtist), {
+      const { result } = renderHook(() => useLibraryList(byArtist), {
         wrapper,
       });
 
@@ -214,21 +211,19 @@ describe('libraryQueries', () => {
 
       const { useLibraryList, libraryKeys } =
         await import('../../../src/queries/libraryQueries');
-      const artist = renderHook(() => useLibraryList(1, 20, {}, byArtist), {
+      const artist = renderHook(() => useLibraryList(byArtist), {
         wrapper: localWrapper,
       });
       await waitFor(() => expect(artist.result.current.isSuccess).toBe(true));
-      const album = renderHook(() => useLibraryList(1, 20, {}, byAlbum), {
+      const album = renderHook(() => useLibraryList(byAlbum), {
         wrapper: localWrapper,
       });
       await waitFor(() => expect(album.result.current.isSuccess).toBe(true));
 
       expect(mockList).toHaveBeenCalledTimes(2);
-      expect(album.result.current.data?.items[0]?.id).toBe('for-album');
-      expect(artist.result.current.data?.items[0]?.id).toBe('for-artist');
-      expect(libraryKeys.list(1, 20, {}, byArtist)).not.toEqual(
-        libraryKeys.list(1, 20, {}, byAlbum),
-      );
+      expect(album.result.current.data?.pages[0].items[0]?.id).toBe('for-album');
+      expect(artist.result.current.data?.pages[0].items[0]?.id).toBe('for-artist');
+      expect(libraryKeys.list(byArtist)).not.toEqual(libraryKeys.list(byAlbum));
     });
 
     it("useRefreshLibrary forces a sync for the current sort and writes into that sort's cache", async () => {
@@ -241,15 +236,16 @@ describe('libraryQueries', () => {
 
       const { useRefreshLibrary, libraryKeys } =
         await import('../../../src/queries/libraryQueries');
-      const { result } = renderHook(() => useRefreshLibrary(1, 20, {}, byAlbum), {
+      const { result } = renderHook(() => useRefreshLibrary(byAlbum), {
         wrapper: localWrapper,
       });
       await result.current.mutateAsync();
 
       expect(mockList).toHaveBeenCalledWith(1, 20, true, {}, byAlbum);
-      expect(client.getQueryData(libraryKeys.list(1, 20, {}, byAlbum))).toEqual(
-        refreshed,
-      );
+      expect(client.getQueryData(libraryKeys.list(byAlbum))).toEqual({
+        pages: [refreshed],
+        pageParams: [1],
+      });
     });
   });
 });
@@ -317,6 +313,11 @@ describe('libraryQueries — infinite library list (feature 068, US2)', () => {
     const { useLibraryList } = await import('../../../src/queries/libraryQueries');
     const { result } = renderHook(() => useLibraryList(byArtist), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    // Reading `data` here is required, not decorative: TanStack only notifies
+    // on the result props that have been read, and `renderHook`'s probe reads
+    // none during render — without this the later batches never reach
+    // `result.current`. It also pins the first batch to exactly one page.
+    expect(result.current.data?.pages).toHaveLength(1);
 
     await result.current.fetchNextPage();
     await waitFor(() => expect(result.current.data?.pages).toHaveLength(2));

@@ -307,14 +307,18 @@ test.describe('Library infinite scroll (feature 068, US2)', () => {
     expect(pagesRequested()).not.toContain(2);
 
     // Stop 250 px short of the bottom: inside the 300 px rootMargin, but with
-    // the end of the loaded content — and the sentinel that follows it —
-    // still off-screen. Loading must start here, before the user gets there.
-    const belowFold = await page.evaluate(() => {
+    // the sentinel that follows the loaded content still off-screen. Loading
+    // must start here, before the user gets there. Measured on the sentinel
+    // itself (scrollTo is synchronous, so the rect below reflects the scroll).
+    const sentinelBelowFold = await page.evaluate(() => {
       const doc = document.documentElement;
       window.scrollTo(0, Math.max(0, doc.scrollHeight - window.innerHeight - 250));
-      return doc.scrollHeight - (window.scrollY + window.innerHeight);
+      const sentinel = document.querySelector('[data-testid="library-load-sentinel"]');
+      if (sentinel === null) return null;
+      return sentinel.getBoundingClientRect().top - window.innerHeight;
     });
-    expect(belowFold).toBeGreaterThan(200);
+    expect(sentinelBelowFold).not.toBeNull();
+    expect(sentinelBelowFold).toBeGreaterThan(200);
 
     await expect.poll(pagesRequested, { timeout: 5_000 }).toContain(2);
   });
@@ -326,8 +330,9 @@ test.describe('Library infinite scroll (feature 068, US2)', () => {
     await mockLibrary(page);
     await signIn(page);
     await page.goto('/app/library');
-    await expect.poll(() => renderedIds(page)).toEqual(DEFAULT_ORDER.slice(0, 20));
-
+    // No "first 20 only" precondition: on a 2400px viewport the sentinel is
+    // already inside its 300px margin at first paint, so batch 2 may land
+    // before any assertion can observe the first batch alone.
     await expect.poll(() => itemCount(page), { timeout: 10_000 }).toBeGreaterThan(20);
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
 

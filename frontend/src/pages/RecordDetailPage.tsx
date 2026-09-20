@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { MyCopySection } from '../components/MyCopySection';
 import { RecordDetailActions } from '../components/recordDetail/RecordDetailActions';
@@ -26,6 +26,11 @@ const REMOVE_FAILED_MESSAGE =
 export function RecordDetailPage() {
   const { entryId } = useParams<{ entryId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // FR-015a: return to the exact library address this record was opened from
+  // (sort + filters). Opened directly — bookmark, shared link — fall back to
+  // the plain library (research D12).
+  const backTo = (location.state as { from?: string } | null)?.from ?? '/app/library';
   const { data: entry, isLoading, isError: notFound } = useLibraryEntry(entryId);
   const updateEntry = useUpdateLibraryEntry(entryId ?? '');
   const removeEntry = useRemoveLibraryEntry();
@@ -37,7 +42,7 @@ export function RecordDetailPage() {
     }
     try {
       await removeEntry.mutateAsync(entryId);
-      navigate('/app/library');
+      navigate(backTo);
     } catch {
       // Error surfaced through the action bar via removeEntry.isError.
     }
@@ -71,7 +76,7 @@ export function RecordDetailPage() {
   if (notFound) {
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
-        <BackLink to="/app/library" />
+        <BackLink to={backTo} />
         {actions}
         <Card>
           <p className="text-stone-500 dark:text-stone-400">
@@ -85,7 +90,7 @@ export function RecordDetailPage() {
   if (isLoading || !entry) {
     return (
       <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6 sm:p-8 xl:max-w-7xl">
-        <BackLink to="/app/library" />
+        <BackLink to={backTo} />
         <RecordDetailSkeleton />
       </main>
     );
@@ -108,7 +113,7 @@ export function RecordDetailPage() {
     // their copy and remove the record (FR-018 / FR-019).
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6 sm:p-8">
-        <BackLink to="/app/library" />
+        <BackLink to={backTo} />
         {actions}
         <Card>
           <p className="text-stone-500 dark:text-stone-400">
@@ -128,7 +133,7 @@ export function RecordDetailPage() {
 
   return (
     <RecordDetailLayout
-      backTo="/app/library"
+      backTo={backTo}
       actions={actions}
       gallery={
         <Card data-testid={RECORD_DETAIL_TESTIDS.GALLERY_CARD} padding="sm">

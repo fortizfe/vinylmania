@@ -1,7 +1,10 @@
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
+  type InfiniteData,
+  type UseInfiniteQueryResult,
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
@@ -19,45 +22,55 @@ import type {
 } from '../services/libraryApi';
 import { wantlistKeys } from './wantlistQueries';
 
+/** One batch per request (research D8); the page number is an internal cursor. */
+const PAGE_SIZE = 20;
+
 export const libraryKeys = {
   all: ['library'] as const,
   lists: () => [...libraryKeys.all, 'list'] as const,
-  list: (
-    page: number,
-    pageSize: number,
-    filters: LibraryFilters = {},
-    sort: LibrarySortValue = DEFAULT_LIBRARY_SORT,
-  ) => [...libraryKeys.lists(), page, pageSize, filters, sort] as const,
+  /**
+   * Feature 068 (D8): no page — one key holds every loaded batch, so two
+   * sorts or filter sets never share a cache entry and a late response for an
+   * abandoned selection can never render under the current one (FR-015).
+   */
+  list: (sort: LibrarySortValue = DEFAULT_LIBRARY_SORT, filters: LibraryFilters = {}) =>
+    [...libraryKeys.lists(), sort, filters] as const,
   details: () => [...libraryKeys.all, 'detail'] as const,
   detail: (entryId: string) => [...libraryKeys.details(), entryId] as const,
 };
 
 export function useLibraryList(
-  page: number,
-  pageSize: number,
-  filters: LibraryFilters = {},
   sort: LibrarySortValue = DEFAULT_LIBRARY_SORT,
-): UseQueryResult<PaginatedLibraryEntries> {
-  return useQuery({
-    queryKey: libraryKeys.list(page, pageSize, filters, sort),
-    queryFn: () => libraryApi.list(page, pageSize, false, filters, sort),
+  filters: LibraryFilters = {},
+): UseInfiniteQueryResult<InfiniteData<PaginatedLibraryEntries>> {
+  return useInfiniteQuery({
+    queryKey: libraryKeys.list(sort, filters),
+    queryFn: ({ pageParam }) =>
+      libraryApi.list(pageParam, PAGE_SIZE, false, filters, sort),
+    initialPageParam: 1,
+    getNextPageParam: (last) =>
+      last.page * last.pageSize < last.totalItems ? last.page + 1 : undefined,
     retry: false,
   });
 }
 
-/** Forces a fresh Discogs synchronization for the current page and sort (FR-014). */
+/**
+ * Forces a fresh Discogs synchronization and resets the list to its first
+ * batch for the current sort and filters (FR-014, research D10).
+ */
 export function useRefreshLibrary(
-  page: number,
-  pageSize: number,
-  filters: LibraryFilters = {},
   sort: LibrarySortValue = DEFAULT_LIBRARY_SORT,
+  filters: LibraryFilters = {},
 ): UseMutationResult<PaginatedLibraryEntries, unknown, void> {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => libraryApi.list(page, pageSize, true, filters, sort),
+    mutationFn: () => libraryApi.list(1, PAGE_SIZE, true, filters, sort),
     onSuccess: (data) => {
-      queryClient.setQueryData(libraryKeys.list(page, pageSize, filters, sort), data);
+      queryClient.setQueryData(libraryKeys.list(sort, filters), {
+        pages: [data],
+        pageParams: [1],
+      });
     },
   });
 }
@@ -85,6 +98,9 @@ export function useUpdateLibraryEntry(
   return useMutation({
     mutationFn: (patch: UpdateCopyDataPatch) => libraryApi.update(entryId, patch),
     onSuccess: () => {
+      // ponytail: invalidateQueries refetches every loaded page after a
+      // mutation; upgrade to resetQueries(lists) if deep scrolls + edits get
+      // slow.
       queryClient.invalidateQueries({ queryKey: libraryKeys.all });
     },
   });

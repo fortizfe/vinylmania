@@ -16,7 +16,6 @@ import {
 export type LibraryFilters = CatalogFilters;
 
 interface LibraryQueryParams extends LibraryFilters {
-  page: number;
   sort: LibrarySortValue;
 }
 
@@ -39,26 +38,21 @@ export function useLibraryQueryParams(): LibraryQueryParams {
 
   return useMemo(() => {
     const params = new URLSearchParams(location.search);
-    const parsedPage = Number(params.get('page'));
-    const page =
-      Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
 
-    return { page, sort: readSort(params), ...readCatalogFilters(params) };
+    // Feature 068 (D12): infinite scroll owns the batch cursor, so no `page`
+    // is read or written. A legacy `?page=N` link is simply ignored.
+    return { sort: readSort(params), ...readCatalogFilters(params) };
   }, [location.search]);
 }
 
 export function buildLibraryPath(
   filters?: LibraryFilters,
   sort: LibrarySortValue = DEFAULT_LIBRARY_SORT,
-  page = 1,
 ): string {
   const params = new URLSearchParams();
   if (sort.sort !== DEFAULT_LIBRARY_SORT.sort || sort.dir !== DEFAULT_LIBRARY_SORT.dir) {
     params.set('sort', sort.sort);
     params.set('dir', sort.dir);
-  }
-  if (page > 1) {
-    params.set('page', String(page));
   }
   writeCatalogFilters(params, filters);
   const query = params.toString();
