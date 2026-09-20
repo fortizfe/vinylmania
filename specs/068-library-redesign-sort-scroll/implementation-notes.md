@@ -1787,3 +1787,148 @@ shows no change in Safari while Chrome does change, that is browser feature
 support, not an app bug — the `@supports` fallback and the contrast branch
 (both verified above) still protect legibility. Record the browser and
 version next to the result either way.
+
+## CI fix — e2e global timeout
+
+PR #58 went red on **E2E tests** (run `35520875057`, job `106104617908`)
+after feature 068 landed. Nothing failed.
+
+### Confirmed root cause
+
+```
+420 passed (25.0m)
+3 skipped
+35 did not run
+Timed out waiting 1500s for the test suite to run
+Timed out waiting 1500s for the teardown for test suite to run
+2 errors were not a part of any test, see above for details
+```
+
+The suite exhausted `globalTimeout: 1_500_000` in `e2e/playwright.config.ts`
+— it is not an assertion, a flake or a slow single test:
+
+- **The "2 errors" are the two timeout lines themselves** (one for the suite,
+  one for its teardown). They are *not* the Discogs `401`/`auth_failed`
+  warnings in the log: those are `level":"warn"` lines emitted by the stub
+  behaving exactly as `discogs-catalog-relink.spec.ts` asks it to, and they
+  appear in passing runs too.
+- **Zero retries fired.** `retries: process.env.CI ? 2 : 0` never engaged —
+  the log contains no `retry #1`/`retry #2` attempt, so all 420 results are
+  first-attempt passes and no runtime was burned on flakiness.
+- **The 35 that "did not run" are the entire `webkit` project.** Chromium is
+  423 tests (420 passed + 3 skipped) and webkit is 35 (`release-detail-
+  responsive` 14, `record-detail-responsive` 11, `master-release-detail-
+  responsive` 10). The ceiling fired 0.6 s after the last chromium test, so
+  spec 044's Safari-only containment coverage was silently dropped wholesale.
+
+Timeline from the job log: job start `15:51:23`, `Run tests` step `15:52:23`
+(60 s of setup), `playwright test` up at `~15:52:34`, ceiling at `16:17:34` —
+exactly 1500 s. Job total 26 m 14 s, comfortably inside its 40-minute limit,
+so `timeout-minutes` was never the binding constraint.
+
+**Why it slipped through T069.** The full local suite passed at 13.9 min
+against the same 1500 s ceiling. CI is ~1.9× slower than this machine
+(`library-toolbar` 138.7 s CI vs 69.4 s local; `library-filters` 58.9 s vs
+27.4 s; chromium overall 1500 s vs ~786 s), so a green local run at 13.9 min
+was already ~25 min of CI — over the ceiling with no local signal at all.
+068's own additions (`library-toolbar` 138.7 s / 32 tests, `library-sort-
+scroll` 61.0 s / 15, `library-filters` 58.9 s / 17) pushed a suite that was
+already near the ceiling past it.
+
+### Change 1 — trim genuinely redundant runtime (`library-sort-scroll.spec.ts`)
+
+The `global order` scenario ran all six `sort`/`dir` combinations, each
+scrolling all 205 records to the end (~11 batches). Cut to two.
+
+This is redundancy, not coverage: `mockLibrary` answers every page from
+`expectedIds()`, so **the frontend never sorts** — it requests page N,
+appends it and paints it. The six combinations drove one identical client
+path over six different arrays, and the comparator producing those arrays is
+the backend's, exhaustively covered by
+`backend/tests/unit/library/domain/librarySort.test.ts` (28 cases:
+normalisation, missing keys, every tie-break, purity).
+
+Kept, because they are the two distinct *shapes* the reference order has:
+
+- `added/desc` — the default landing path, dense `addedAt` ties;
+- `artist/asc` — an alphabetical key whose missing/blank entries sort to the
+  very tail, i.e. proof the **last** batch is right, not just the first.
+
+No assertion was weakened and nothing was skipped: both surviving scenarios
+keep the full reference-order equality, the no-duplicates and no-gaps checks
+and the `— 205 records` end message. The dropped combinations keep their
+page-1 wiring coverage elsewhere — `artist/desc` in "deep link",
+`album/asc` in "select change", `album/desc` in
+`library-toolbar.spec.ts:390` ("Album (Z → A)").
+
+Cost: 16 → 12 tests in the file, 458 → 454 overall; −21.4 s CI, −13.2 s local.
+
+### Change 2 — raise the three ceilings, kept ordered
+
+| Ceiling | Was | Now | Where |
+|---|---|---|---|
+| Playwright `globalTimeout` | 1500 s (25 m) | **2100 s (35 m)** | `e2e/playwright.config.ts` |
+| `run-with-timeout.js` wrapper | 1680 s (28 m) | **2280 s (38 m)** | `e2e/package.json` `test` script |
+| GitHub job `timeout-minutes` | 40 | **45** | `.github/workflows/ci.yml` |
+
+Ordering holds with room between each: globalTimeout 2100 s + ~11 s emulator
+boot = 2111 s, so the wrapper still fires ~169 s later, and the job's 2700 s
+covers 60 s of setup + the 2280 s wrapper.
+
+The trim alone could not have fixed this — it recovers 21 s against a deficit
+of ~120 s (the unrun webkit project), so the ceiling had to move regardless.
+
+### Local verification
+
+```
+cd e2e && npm test
+```
+
+**454 tests — 451 passed, 2 skipped, 1 failed, 14.0 min** (847.7 s wall
+including emulator boot). Feature 068's specs all green: `library-toolbar`
+32, `library-filters` 17, `library-sort-scroll` 12 (both surviving global-
+order scenarios pass in 3.3 s each). Webkit ran its full 35 in 48.4 s.
+
+The 1 failure is **environmental, pre-existing and not reproducible in CI** —
+`discogs-catalog-relink.spec.ts:75` (spec 053, untouched by 068), which
+passed in the same CI run that this fix addresses. Cause is the documented
+local dev-Redis issue: `getRelease` caches under
+`discogs:release:${discogsReleaseId}` (`discogsCatalogAdapter.ts:439`) keyed
+**only by release id, not by credential**, with a 6-hour TTL. The sibling
+test at `:88` legitimately populates `discogs:release:1`; on a later run
+within 6 hours, `:75` browses `/app/releases/1` with a revoked link, is
+served from cache, never calls Discogs, never gets the 401 and so never shows
+the reconnect prompt. CI has no Redis, so it cannot occur there. After
+`redis-cli del 'discogs:release:1'` the whole file is green (5 passed,
+34.9 s) and `:75` drops from an 11.5 s timeout-failure to a 1.5 s pass.
+
+Worth a future spec, **not** fixed here (spec 053's test, unrelated to this
+CI fix): that cache key should include the credential identity, or the file's
+`beforeEach` should evict the ids it touches, so the suite is not
+order-dependent across runs.
+
+### Expected CI margin
+
+Projected CI Playwright run: chromium ~1478 s (the measured 1500 s less the
+21.4 s trimmed) + webkit ~120 s (48.4 s local × the ~1.9× CI factor, plus
+browser launch) ≈ **1600 s ≈ 26.7 min**.
+
+Against the new 2100 s ceiling that leaves **~500 s / 8.3 min of headroom
+(~31 %)**. Whole job ≈ 60 s setup + 11 s emulators + 1600 s + teardown
+≈ 28 min against `timeout-minutes: 45`. The slack also absorbs CI retries:
+at the CI average of 3.6 s/test, 500 s covers well over a hundred retried
+tests, or five full 30 s per-test timeouts retried twice.
+
+### Deliberately not done
+
+- **`workers: 1` / `fullyParallel: false` left alone.** Parallelising is the
+  real fix for a suite whose wall-clock is ~97 % test time (1472.9 s of
+  measured test duration inside a 1500 s run), but the specs share one
+  Firestore emulator, one backend process and fixed stub ports, so it is a
+  test-isolation project, not a CI hotfix.
+- **Per-test sign-in left alone.** `signIn()` runs a real stub OAuth round
+  trip in nearly every test and is ~2 s of the 3.63 s CI average — ~14 min of
+  the 25. Reusing `storageState` would dwarf every other saving here, and is
+  the obvious next lever, but it touches all 42 spec files.
+- **No assertion weakened, nothing skipped, no retries or timeouts added as
+  padding, no production code touched, `tasks.md` untouched.**

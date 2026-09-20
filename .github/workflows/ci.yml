@@ -55,7 +55,11 @@ jobs:
   e2e-test:
     name: E2E tests
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Outermost of three ordered ceilings, all raised together in spec 068:
+    # playwright.config.ts globalTimeout (35 min) < run-with-timeout.js in
+    # e2e/package.json (38 min) < this job (45 min). Setup before `npm test`
+    # measured ~1 min, so the wrapper still fires first.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 

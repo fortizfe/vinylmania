@@ -25,13 +25,24 @@ import {
  */
 
 test.describe('Library infinite scroll (feature 068, US2)', () => {
+  // Two scenarios, not all six sort/dir combinations. `mockLibrary` answers
+  // every page from `expectedIds()`, so the frontend never sorts: it requests
+  // page N, appends it and paints it. The six combinations therefore drive one
+  // identical client path over six different arrays — the comparator that
+  // produces those arrays is the backend's, exhaustively covered by
+  // `backend/tests/unit/library/domain/librarySort.test.ts` (28 cases:
+  // normalisation, missing keys, every tie-break, purity). What only e2e can
+  // prove is the wiring and the *global* properties across ~11 batches, and
+  // these two cover both shapes the reference order has:
+  //  - added/desc — the default landing path, dense addedAt ties;
+  //  - artist/asc — an alphabetical key whose missing/blank entries sort to
+  //    the very tail, i.e. correctness of the last batch, not just the first.
+  // The remaining combinations keep their e2e wiring coverage on page 1:
+  // artist/desc in "deep link" below, album/asc in "select change" below, and
+  // album/desc in library-toolbar.spec.ts:390 ("Album (Z → A)").
   const SORTS: { sort: Sort; dir: Dir }[] = [
     { sort: 'added', dir: 'desc' },
-    { sort: 'added', dir: 'asc' },
     { sort: 'artist', dir: 'asc' },
-    { sort: 'artist', dir: 'desc' },
-    { sort: 'album', dir: 'asc' },
-    { sort: 'album', dir: 'desc' },
   ];
 
   for (const { sort, dir } of SORTS) {
