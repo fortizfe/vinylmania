@@ -10,56 +10,61 @@ init_commit_message: "[Spec Kit] Initial commit"
 # Auto-commit before/after core commands.
 # Set "default" to enable for all commands, then override per-command.
 # Each key can be true/false. Message is customizable per-command.
+#
+# Messages follow Conventional Commits. Two placeholders are expanded by
+# auto-commit.sh from .specify/feature.json (falling back to the branch name):
+#   {scope} -> feature number, e.g. 069   ("spec" when there is no number)
+#   {name}  -> feature slug,   e.g. jira-speckit-hooks
 auto_commit:
   default: false
   before_clarify:
     enabled: false
-    message: "[Spec Kit] Save progress before clarification"
+    message: "chore({scope}): save progress before clarification"
   before_plan:
     enabled: false
-    message: "[Spec Kit] Save progress before planning"
+    message: "chore({scope}): save progress before planning"
   before_tasks:
     enabled: false
-    message: "[Spec Kit] Save progress before task generation"
+    message: "chore({scope}): save progress before task generation"
   before_implement:
     enabled: false
-    message: "[Spec Kit] Save progress before implementation"
+    message: "chore({scope}): save progress before implementation"
   before_checklist:
     enabled: false
-    message: "[Spec Kit] Save progress before checklist"
+    message: "chore({scope}): save progress before checklist"
   before_analyze:
     enabled: false
-    message: "[Spec Kit] Save progress before analysis"
+    message: "chore({scope}): save progress before analysis"
   before_taskstoissues:
     enabled: false
-    message: "[Spec Kit] Save progress before issue sync"
+    message: "chore({scope}): save progress before issue sync"
   after_constitution:
-    enabled: false
-    message: "[Spec Kit] Add project constitution"
+    enabled: true
+    message: "docs(constitution): update project constitution"
   after_specify:
-    enabled: false
-    message: "[Spec Kit] Add specification"
+    enabled: true
+    message: "docs({scope}): add spec for {name}"
   after_clarify:
-    enabled: false
-    message: "[Spec Kit] Clarify specification"
+    enabled: true
+    message: "docs({scope}): clarify spec for {name}"
   after_plan:
-    enabled: false
-    message: "[Spec Kit] Add implementation plan"
+    enabled: true
+    message: "docs({scope}): add implementation plan"
   after_tasks:
-    enabled: false
-    message: "[Spec Kit] Add tasks"
+    enabled: true
+    message: "docs({scope}): add task breakdown"
   after_implement:
-    enabled: false
-    message: "[Spec Kit] Implementation progress"
+    enabled: true
+    message: "feat({scope}): implement {name}"
   after_checklist:
-    enabled: false
-    message: "[Spec Kit] Add checklist"
+    enabled: true
+    message: "docs({scope}): add checklist"
   after_analyze:
-    enabled: false
-    message: "[Spec Kit] Add analysis report"
+    enabled: true
+    message: "docs({scope}): add analysis report"
   after_taskstoissues:
-    enabled: false
-    message: "[Spec Kit] Sync tasks to issues"
+    enabled: true
+    message: "chore({scope}): sync tasks to issues"
 
 # Pull request creation via `gh` (invoked by speckit.git.pr, e.g. as the
 # optional after_implement hook).

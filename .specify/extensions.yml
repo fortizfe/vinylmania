@@ -2,6 +2,7 @@ installed:
 - agent-assign
 - companion
 - git
+- jira
 settings:
   auto_execute_hooks: true
 hooks:
@@ -90,16 +91,25 @@ hooks:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Commit constitution changes?
     description: Auto-commit after constitution update
     condition: null
   after_specify:
+  - extension: jira
+    command: speckit.jira.start
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Execute speckit.jira.start?
+    description: Move the Jira issue to In Progress when specify was given a Jira key
+      or URL
+    condition: null
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Commit specification changes?
     description: Auto-commit after specification
@@ -117,7 +127,7 @@ hooks:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Commit clarification changes?
     description: Auto-commit after spec clarification
@@ -126,7 +136,7 @@ hooks:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Commit plan changes?
     description: Auto-commit after implementation planning
@@ -143,7 +153,7 @@ hooks:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Commit task changes?
     description: Auto-commit after task generation
@@ -169,7 +179,7 @@ hooks:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Commit implementation changes?
     description: Auto-commit after implementation
@@ -191,11 +201,19 @@ hooks:
     description: Per-task journaling on implement (currentStep=implement; status=implemented
       when all tasks checked)
     condition: null
+  - extension: jira
+    command: speckit.jira.review
+    enabled: true
+    optional: false
+    priority: 30
+    prompt: Execute speckit.jira.review?
+    description: Move the Jira issue to In Review after implementation
+    condition: null
   after_checklist:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Commit checklist changes?
     description: Auto-commit after checklist generation
@@ -204,7 +222,7 @@ hooks:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Commit analysis results?
     description: Auto-commit after analysis
@@ -213,7 +231,7 @@ hooks:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Commit after syncing issues?
     description: Auto-commit after tasks-to-issues conversion

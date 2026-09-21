@@ -1,0 +1,45 @@
+schema_version: "1.0"
+
+extension:
+  id: jira
+  name: "Jira Card Sync"
+  version: "1.0.0"
+  description: "Move the Jira issue that drives a feature across the board as the Spec Kit pipeline advances"
+  author: project-local (vinylmania)
+  license: MIT
+
+requires:
+  speckit_version: ">=0.2.0"
+  tools:
+    - name: atlassian-mcp
+      required: false
+
+provides:
+  commands:
+    - name: speckit.jira.start
+      file: commands/speckit.jira.start.md
+      description: "Move the feature's Jira issue to 'En curso' and record its key in the spec directory"
+    - name: speckit.jira.review
+      file: commands/speckit.jira.review.md
+      description: "Move the feature's Jira issue to 'En revisión' after implementation"
+
+hooks:
+  after_specify:
+    command: speckit.jira.start
+    optional: false
+    description: "Move the Jira issue to In Progress when /speckit-specify was given a Jira key or URL"
+  after_implement:
+    command: speckit.jira.review
+    optional: false
+    description: "Move the Jira issue to In Review after implementation"
+
+tags:
+  - "jira"
+  - "workflow"
+
+config:
+  defaults:
+    site: fortizfe.atlassian.net
+    project: VINYLMANIA
+    in_progress_status_id: "10001"   # En curso
+    in_review_status_id: "10002"     # En revisión
