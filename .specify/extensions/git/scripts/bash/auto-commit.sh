@@ -130,8 +130,20 @@ _phase=$(echo "$EVENT_NAME" | grep -q '^before_' && echo 'before' || echo 'after
 
 # Use custom message if configured, otherwise default
 if [ -z "$_commit_msg" ]; then
-    _commit_msg="[Spec Kit] Auto-commit ${_phase} ${_command_name}"
+    _commit_msg="chore: auto-commit ${_phase} ${_command_name}"
 fi
+
+# Expand {scope}/{name} from the active feature dir (fallback: branch name)
+_feature_dir=""
+if [ -f "$REPO_ROOT/.specify/feature.json" ]; then
+    _feature_dir=$(sed -n 's/.*"feature_directory"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$REPO_ROOT/.specify/feature.json" | head -1)
+fi
+[ -n "$_feature_dir" ] || _feature_dir=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+_slug=$(basename "$_feature_dir")
+_scope=$(echo "$_slug" | sed -n 's/^\([0-9][0-9]*\)-.*/\1/p')
+[ -n "$_scope" ] || _scope="spec"
+_name=$(echo "$_slug" | sed 's/^[0-9]*-//')
+_commit_msg=$(echo "$_commit_msg" | sed "s|{scope}|${_scope}|g; s|{name}|${_name}|g")
 
 # Stage and commit
 _git_out=$(git add . 2>&1) || { echo "[specify] Error: git add failed: $_git_out" >&2; exit 1; }
