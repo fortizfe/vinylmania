@@ -4,6 +4,8 @@ import clsx from 'clsx';
 interface CardProps {
   children: ReactNode;
   className?: string;
+  /** Only for the few Cards another element must point at (e.g. `aria-controls`). */
+  id?: string;
   padding?: 'sm' | 'md';
   'data-testid'?: string;
 }
@@ -16,11 +18,13 @@ const paddingClasses: Record<NonNullable<CardProps['padding']>, string> = {
 export function Card({
   children,
   className,
+  id,
   padding = 'md',
   'data-testid': testId,
 }: CardProps) {
   return (
     <div
+      id={id}
       data-testid={testId}
       className={clsx(
         // border-stone-500 (not the much lighter default border-stone-200)

@@ -195,6 +195,76 @@ test.describe('Responsive header navigation (US1, US2, US3)', () => {
 });
 
 /**
+ * Spec 069 — User Story 1, T007 (FR-001, SC-010; tasks.md assumption 1).
+ *
+ * Written before the implementation (T010), per Constitution Principle I.
+ * Below 640 px today's header still renders a cramped `w-28` text field plus
+ * a submit button; the redesign replaces that cell with a single collapsed
+ * icon button that opens the overlay, so the entry point is one 44x44 target
+ * advertising its collapsed state — and the header's other two grid cells
+ * must not move because of it.
+ */
+test.describe('Header search entry point below 640px (spec 069 US1, T007)', () => {
+  test('is a single 44x44 icon button named "Search" with aria-expanded="false", not a text field, leaving the other header cells in place', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+
+    const searchControls = page.getByRole('button', { name: 'Search', exact: true });
+    await expect(
+      searchControls,
+      'the collapsed search cell must expose exactly one control below 640px',
+    ).toHaveCount(1);
+    await expect(searchControls).toBeVisible();
+    await expect(searchControls).toHaveAttribute('aria-expanded', 'false');
+
+    // Not a text field: the input only exists once the overlay is open.
+    await expect(page.locator('input#header-search')).toBeHidden();
+
+    const searchBox = await searchControls.boundingBox();
+    expect(searchBox?.width, 'collapsed search button width').toBeGreaterThanOrEqual(44);
+    expect(searchBox?.height, 'collapsed search button height').toBeGreaterThanOrEqual(44);
+
+    // The other two cells of the `grid-cols-[1fr_auto_1fr]` header keep their
+    // positions: brand flush to the `px-4` left gutter, nav cluster flush to
+    // the right one, the search between them with no overlap.
+    const headerBox = await page.locator('header').boundingBox();
+    const brandBox = await page.getByRole('link', { name: 'Vinylmania' }).boundingBox();
+    const hamburgerBox = await page.getByRole('button', { name: /^menu$/i }).boundingBox();
+    expect(headerBox).not.toBeNull();
+    expect(brandBox).not.toBeNull();
+    expect(hamburgerBox).not.toBeNull();
+    expect(searchBox).not.toBeNull();
+
+    expect(brandBox!.x, 'brand mark left edge (header px-4)').toBeCloseTo(16, 0);
+    expect(hamburgerBox!.x + hamburgerBox!.width, 'nav cluster right edge (header px-4)').toBeCloseTo(
+      375 - 16,
+      0,
+    );
+    expect(
+      searchBox!.x,
+      'the search control overlaps the brand mark',
+    ).toBeGreaterThanOrEqual(brandBox!.x + brandBox!.width);
+    expect(
+      searchBox!.x + searchBox!.width,
+      'the search control overlaps the nav cluster',
+    ).toBeLessThanOrEqual(hamburgerBox!.x);
+    for (const [label, box] of [
+      ['brand mark', brandBox!],
+      ['search control', searchBox!],
+      ['hamburger', hamburgerBox!],
+    ] as const) {
+      expect(box.y, `${label} sits outside the header row`).toBeGreaterThanOrEqual(headerBox!.y - 1);
+      expect(box.y + box.height, `${label} overflows the header row`).toBeLessThanOrEqual(
+        headerBox!.y + headerBox!.height + 1,
+      );
+    }
+  });
+});
+
+/**
  * Spec 059 — User Story 5, T088 (FR-014, SC-007).
  *
  * `AppHeader` replaced its permanent hard `border-b` divider with a

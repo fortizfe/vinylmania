@@ -1,7 +1,10 @@
-import type { InputHTMLAttributes } from 'react';
+import type { ComponentProps } from 'react';
 import clsx from 'clsx';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+// `ComponentProps<'input'>` rather than `InputHTMLAttributes`: React 19 passes
+// `ref` as an ordinary prop, and only this form declares it — HeaderSearchBox
+// focuses the field through one (069 US1, FR-003).
+interface InputProps extends ComponentProps<'input'> {
   label: string;
   id: string;
   hideLabel?: boolean;

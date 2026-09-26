@@ -101,3 +101,26 @@ export async function getMasterReleaseVersions(
   );
   return res.json();
 }
+
+/**
+ * Wire shape of `GET /api/discogs/suggest` (069, data-model.md §2) — the
+ * frontend mirror of the backend's `CatalogSuggestion` domain type. Narrower
+ * than `CatalogSearchResult` on purpose: no rating, no country, no labels,
+ * no pagination.
+ */
+export interface CatalogSuggestion {
+  discogsId: number;
+  resultType: 'release' | 'master' | 'artist';
+  title: string;
+  artist?: string;
+  year?: number;
+  format?: string;
+  thumbnailUrl?: string;
+}
+
+export async function suggest(query: string): Promise<CatalogSuggestion[]> {
+  const params = new URLSearchParams({ q: query });
+  const res = await authorizedFetch(`/api/discogs/suggest?${params.toString()}`);
+  const body: { suggestions: CatalogSuggestion[] } = await res.json();
+  return body.suggestions;
+}

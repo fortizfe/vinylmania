@@ -383,8 +383,16 @@ export async function searchCatalog(
   // release/master ones and fails mapping), so the `type` param is left
   // unset for a release-scoped search and the two wanted types are kept by
   // filtering the raw response ourselves instead (research.md Decision 1).
-  const discogsType = resultType === 'release' ? undefined : options.resultType;
-  const KEPT_RAW_TYPES_FOR_RELEASE_SEARCH = new Set(['release', 'master']);
+  //
+  // `'any'` (feature 069) needs artists *and* albums from one request, so
+  // it leaves `type` unset for the same reason and simply keeps one more
+  // raw type. `'release'` and `'artist'` are unchanged.
+  const KEPT_RAW_TYPES: Record<string, Set<string>> = {
+    release: new Set(['release', 'master']),
+    any: new Set(['release', 'master', 'artist']),
+  };
+  const keptRawTypes = KEPT_RAW_TYPES[resultType];
+  const discogsType = keptRawTypes ? undefined : options.resultType;
 
   const response = await getClientForCredential(credential).get('/database/search', {
     params: {
@@ -406,17 +414,14 @@ export async function searchCatalog(
   // Defensive filter: only map the raw hit types this search actually
   // wants, so an unexpected/unfiltered type from Discogs (e.g. `label`)
   // degrades to "not included" rather than crashing the whole response.
-  const wantedResults =
-    resultType === 'release'
-      ? results.filter(
-          (r) =>
-            typeof r === 'object' &&
-            r !== null &&
-            KEPT_RAW_TYPES_FOR_RELEASE_SEARCH.has(
-              (r as { type?: unknown }).type as string,
-            ),
-        )
-      : results;
+  const wantedResults = keptRawTypes
+    ? results.filter(
+        (r) =>
+          typeof r === 'object' &&
+          r !== null &&
+          keptRawTypes.has((r as { type?: unknown }).type as string),
+      )
+    : results;
 
   const mappedResults = wantedResults.map(mapSearchResult);
 

@@ -191,7 +191,9 @@ test.describe('Record rating badges on search-result cards (feature 017, US1)', 
 
     // Every card shows a badge (feature 019): the enriched result shows its
     // numeric value, the unrated result shows the gray placeholder.
-    await expect(page.getByRole('status')).toHaveCount(2);
+    // Scoped to main: the header search keeps its own polite status region
+    // (spec 069, contracts/header-search-ui.md §5).
+    await expect(page.getByRole('main').getByRole('status')).toHaveCount(2);
 
     const ratedCard = page.locator('li', { hasText: 'Highly Rated Release' });
     await expect(ratedCard.getByRole('status')).toHaveText('4.5');
@@ -230,6 +232,9 @@ test.describe('Record rating badges on search-result cards (feature 017, US1)', 
     await signInAsFakeGoogleUser(page);
 
     await page.setViewportSize({ width: 375, height: 812 });
+    // Below 640 px the field is hidden behind the Search icon control until it
+    // is activated (spec 069, contracts/header-search-ui.md §2).
+    await page.getByRole('button', { name: /^search$/i }).click();
     await page.getByLabel(/search discogs/i).fill('narrow');
     await page.getByRole('button', { name: /^search$/i }).click();
     await expect(page).toHaveURL(/\/app\/search/);

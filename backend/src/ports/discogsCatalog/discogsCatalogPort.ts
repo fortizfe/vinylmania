@@ -9,7 +9,12 @@ import type {
 } from '../../domain/discogsCatalog/types';
 
 export interface SearchCatalogOptions {
-  resultType?: 'release' | 'artist';
+  /**
+   * `'release'` also keeps Discogs' `master` hits; `'any'` (feature 069)
+   * keeps `release | master | artist` in one upstream request. Neither
+   * sends a `type` param upstream — see the adapter.
+   */
+  resultType?: 'release' | 'artist' | 'any';
   page?: number;
   perPage?: number;
   /** Free-text filter on genre (spec FR-002, feature 021). */

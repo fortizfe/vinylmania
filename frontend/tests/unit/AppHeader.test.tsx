@@ -1,19 +1,25 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AppHeader } from '../../src/components/AppHeader';
+import { createTestQueryClient } from '../testUtils';
 
 vi.mock('../../src/auth/AuthContext', () => ({
   useAuth: () => ({ signOut: vi.fn() }),
 }));
 
 function renderHeader() {
+  // The header search looks suggestions up through TanStack Query (069 US2),
+  // so the header needs a client even where no lookup ever runs.
   return render(
-    <MemoryRouter>
-      <AppHeader />
-    </MemoryRouter>,
+    <QueryClientProvider client={createTestQueryClient()}>
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -142,6 +148,64 @@ describe('AppHeader', () => {
       // that satisfies the touch-target rule also prevents layout shift.
       const brandLink = screen.getByRole('link', { name: 'Vinylmania' });
       expect(brandLink).toHaveClass('min-h-11');
+    });
+  });
+
+  describe('header search expansion (069 US1 — FR-006, SC-008)', () => {
+    /** The backdrop, or null while the search is collapsed. */
+    function scrim(): HTMLElement | null {
+      return document.querySelector<HTMLElement>('div.overlay-scrim');
+    }
+
+    /** The control that opens the search — the "Search" button carrying `aria-expanded`. */
+    function opener(expanded: boolean): HTMLElement {
+      return screen.getByRole('button', { name: /search/i, expanded });
+    }
+
+    it('grows the middle cell for the expanded form without moving the side cells or changing the header height', async () => {
+      const user = userEvent.setup();
+      renderHeader();
+
+      const header = screen.getByRole('banner');
+      await user.click(opener(false));
+
+      // The three-cell grid and the shared height token survive the expansion:
+      // nothing below the header can move (SC-008).
+      expect(header).toHaveClass('h-(--header-h)');
+      expect(header.className).toMatch(/grid-cols-\[1fr_auto_1fr\]/);
+
+      // Left cell, then the expanded search, then the right cell — the side
+      // cells keep their rendered order.
+      const brand = screen.getByRole('link', { name: 'Vinylmania' });
+      const search = screen.getByRole('search');
+      const signOut = screen.getByRole('button', { name: /sign out/i });
+      expect(
+        brand.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        search.compareDocumentPosition(signOut) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('mounts the backdrop below the header — z-30 against the header’s z-40', async () => {
+      const user = userEvent.setup();
+      renderHeader();
+
+      await user.click(opener(false));
+
+      expect(screen.getByRole('banner')).toHaveClass('z-40');
+      expect(scrim()).toHaveClass('fixed', 'inset-0', 'z-30');
+    });
+
+    it('leaves the header markup as it is today while the search is collapsed', () => {
+      renderHeader();
+
+      expect(scrim()).toBeNull();
+      expect(opener(false)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Vinylmania' })).toBeInTheDocument();
+      expect(screen.getByRole('search')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
+      expect(screen.getByRole('banner')).toHaveClass('h-(--header-h)');
     });
   });
 });

@@ -1,0 +1,177 @@
+# Agent Assignments
+# Feature: 069-header-search-redesign — Header Search Bar Redesign (instant suggestions, WCAG 2.1 AA, Apple HIG)
+# Generated: 2026-09-21T11:06:57+02:00
+# Command: /speckit.agent-assign.assign
+# Source: the `— owner:` field carried by every task in tasks.md
+
+agents_scanned:
+  - name: "architect-agent"
+    source: "project"
+    description: "Spec-kit phase design; writes spec artifacts, never source code"
+  - name: "backend-agent"
+    source: "project"
+    description: "backend/ work: Express + TypeScript, hexagonal architecture, Firestore, Discogs, Redis; TDD/YAGNI/SOLID/KISS"
+  - name: "docs-agent"
+    source: "project"
+    description: "End-user documentation under docs/"
+  - name: "frontend-agent"
+    source: "project"
+    description: "frontend/ work: React 19 + TS, Tailwind v4, TanStack Query; Apple design skills; WCAG 2.1 AA; TDD with Vitest + RTL"
+  - name: "qa-agent"
+    source: "project"
+    description: "Test-First/TDD discipline and test quality across backend, frontend, e2e"
+  - name: "reviewer-agent"
+    source: "project"
+    description: "Code-reviews a PR and posts comments; read-only"
+
+assignments:
+  T001:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 1: Setup (Shared Infrastructure))"
+  T002:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 1: Setup (Shared Infrastructure))"
+  T003:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 2: Foundational (Blocking Prerequisites))"
+  T004:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 3: User Story 1 — Start a search from anywhere, on any screen size (Priority: P1) 🎯 MVP)"
+  T005:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 3: User Story 1 — Start a search from anywhere, on any screen size (Priority: P1) 🎯 MVP)"
+  T006:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 3: User Story 1 — Start a search from anywhere, on any screen size (Priority: P1) 🎯 MVP)"
+  T007:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 3: User Story 1 — Start a search from anywhere, on any screen size (Priority: P1) 🎯 MVP)"
+  T008:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 3: User Story 1 — Start a search from anywhere, on any screen size (Priority: P1) 🎯 MVP)"
+  T009:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 3: User Story 1 — Start a search from anywhere, on any screen size (Priority: P1) 🎯 MVP)"
+  T010:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 3: User Story 1 — Start a search from anywhere, on any screen size (Priority: P1) 🎯 MVP)"
+  T011:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 3: User Story 1 — Start a search from anywhere, on any screen size (Priority: P1) 🎯 MVP)"
+  T012:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T013:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T014:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T015:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T016:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T017:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T018:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T019:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T020:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T021:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T022:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T023:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T024:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T025:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T026:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T027:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T028:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T029:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T030:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 4: User Story 2 — See instant suggestions while typing (Priority: P1))"
+  T031:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 5: User Story 3 — Operate the whole search with keyboard or screen reader (Priority: P1))"
+  T032:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 5: User Story 3 — Operate the whole search with keyboard or screen reader (Priority: P1))"
+  T033:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 5: User Story 3 — Operate the whole search with keyboard or screen reader (Priority: P1))"
+  T034:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 5: User Story 3 — Operate the whole search with keyboard or screen reader (Priority: P1))"
+  T035:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 5: User Story 3 — Operate the whole search with keyboard or screen reader (Priority: P1))"
+  T036:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 5: User Story 3 — Operate the whole search with keyboard or screen reader (Priority: P1))"
+  T037:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 5: User Story 3 — Operate the whole search with keyboard or screen reader (Priority: P1))"
+  T038:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 6: User Story 4 — Understand when there is nothing to show or something went wrong (Priority: P2))"
+  T039:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 6: User Story 4 — Understand when there is nothing to show or something went wrong (Priority: P2))"
+  T040:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 6: User Story 4 — Understand when there is nothing to show or something went wrong (Priority: P2))"
+  T041:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 6: User Story 4 — Understand when there is nothing to show or something went wrong (Priority: P2))"
+  T042:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 6: User Story 4 — Understand when there is nothing to show or something went wrong (Priority: P2))"
+  T043:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 6: User Story 4 — Understand when there is nothing to show or something went wrong (Priority: P2))"
+  T044:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 6: User Story 4 — Understand when there is nothing to show or something went wrong (Priority: P2))"
+  T045:
+    agent: "backend-agent"
+    reason: "backend/ work — domain, application, ports or adapters under Express + TypeScript hexagonal layers, Jest suites included; matches backend-agent's scope (Phase 7: Polish & Cross-Cutting Concerns)"
+  T046:
+    agent: "frontend-agent"
+    reason: "frontend/ work — React 19 + TypeScript components, hooks or queries and their Vitest + RTL tests, under WCAG 2.1 AA; matches frontend-agent's scope (Phase 7: Polish & Cross-Cutting Concerns)"
+  T047:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 7: Polish & Cross-Cutting Concerns)"
+  T048:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 7: Polish & Cross-Cutting Concerns)"
+  T049:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 7: Polish & Cross-Cutting Concerns)"
+  T050:
+    agent: "qa-agent"
+    reason: "e2e spec, targeted verification run, TDD audit or release gate; matches qa-agent's Test-First/quality role (Phase 7: Polish & Cross-Cutting Concerns)"

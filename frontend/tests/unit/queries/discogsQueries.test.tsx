@@ -1,16 +1,25 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createTestQueryClient } from '../../testUtils';
 
 const mockSearch = vi.fn();
 const mockGetRelease = vi.fn();
+const mockSuggest = vi.fn();
+const mockAuthorizedFetch = vi.fn();
 
 vi.mock('../../../src/services/discogsApi', () => ({
   search: (...args: unknown[]) => mockSearch(...args),
   getRelease: (...args: unknown[]) => mockGetRelease(...args),
+  suggest: (...args: unknown[]) => mockSuggest(...args),
+}));
+
+// Only the suggest-route test below reaches the real `discogsApi` (through
+// `vi.importActual`); for every other test in this file this mock is inert.
+vi.mock('../../../src/services/apiClient', () => ({
+  authorizedFetch: (...args: unknown[]) => mockAuthorizedFetch(...args),
 }));
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -140,5 +149,106 @@ describe('discogsQueries', () => {
 
     expect(result.current.fetchStatus).toBe('idle');
     expect(mockGetRelease).not.toHaveBeenCalled();
+  });
+});
+
+// --- 069 US2: header suggestion lookups (research D8) ----------------------
+
+describe('discogsQueries — header suggestions (069 US2)', () => {
+  beforeEach(() => {
+    mockSuggest.mockReset();
+    mockAuthorizedFetch.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('keys every trimmed query separately, so two queries never share a cache entry (FR-013, SC-005)', async () => {
+    const { discogsKeys } = await import('../../../src/queries/discogsQueries');
+
+    expect(discogsKeys.suggest('miles')).not.toEqual(discogsKeys.suggest('davis'));
+    // The lookup key is the trimmed text, so padding cannot fragment the cache.
+    expect(discogsKeys.suggest('  miles  ')).toEqual(discogsKeys.suggest('miles'));
+  });
+
+  it('useCatalogSuggestions stays disabled below two non-whitespace characters (FR-010)', async () => {
+    const { useCatalogSuggestions } = await import('../../../src/queries/discogsQueries');
+    const { result } = renderHook(() => useCatalogSuggestions('m', true), { wrapper });
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(mockSuggest).not.toHaveBeenCalled();
+  });
+
+  it('useCatalogSuggestions stays disabled until the collector has edited the field (FR-004, research D10)', async () => {
+    const { useCatalogSuggestions } = await import('../../../src/queries/discogsQueries');
+    const { result } = renderHook(() => useCatalogSuggestions('miles davis', false), {
+      wrapper,
+    });
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(mockSuggest).not.toHaveBeenCalled();
+  });
+
+  it('useCatalogSuggestions serves a repeated query from its five-minute window instead of asking again (FR-017)', async () => {
+    mockSuggest.mockResolvedValue([]);
+
+    // This client has no `staleTime` default, so a remount refetches unless
+    // the hook itself sets `staleTime: 5 * 60_000`.
+    const client = createTestQueryClient();
+    const localWrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const { useCatalogSuggestions } = await import('../../../src/queries/discogsQueries');
+    const first = renderHook(() => useCatalogSuggestions('miles davis', true), {
+      wrapper: localWrapper,
+    });
+    await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+    first.unmount();
+
+    const second = renderHook(() => useCatalogSuggestions('miles davis', true), {
+      wrapper: localWrapper,
+    });
+    await waitFor(() => expect(second.result.current.isSuccess).toBe(true));
+
+    expect(mockSuggest).toHaveBeenCalledTimes(1);
+  });
+
+  it('useCatalogSuggestions surfaces a failure immediately instead of retrying (FR-019, research D8)', async () => {
+    mockSuggest.mockRejectedValue(new Error('suggest upstream down'));
+
+    // Retries are on by default here, so a single call proves the hook opted
+    // out with `retry: false` rather than inheriting the client's default.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: 3, retryDelay: 1, gcTime: Infinity } },
+    });
+    const localWrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const { useCatalogSuggestions } = await import('../../../src/queries/discogsQueries');
+    const { result } = renderHook(() => useCatalogSuggestions('miles davis', true), {
+      wrapper: localWrapper,
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockSuggest).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks Vinylmania's own backend for suggestions through authorizedFetch, and nothing else (Principle IX, FR-016)", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    mockAuthorizedFetch.mockResolvedValue({ json: async () => ({ suggestions: [] }) });
+
+    const discogsApi = await vi.importActual<
+      typeof import('../../../src/services/discogsApi')
+    >('../../../src/services/discogsApi');
+    await discogsApi.suggest('miles davis');
+
+    expect(mockAuthorizedFetch).toHaveBeenCalledWith(
+      '/api/discogs/suggest?q=miles+davis',
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

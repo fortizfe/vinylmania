@@ -14,7 +14,7 @@ describe('createRateLimitStore', () => {
   });
 
   it('always returns a Store synchronously', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createRateLimitStore } = require('../../../src/adapters/rateLimit/rateLimitStore');
     const store = createRateLimitStore();
     expect(typeof store.increment).toBe('function');
@@ -22,7 +22,7 @@ describe('createRateLimitStore', () => {
 
   it('counts correctly via the in-memory fallback when REDIS_URL is not configured', async () => {
     process.env.REDIS_URL = '';
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createRateLimitStore } = require('../../../src/adapters/rateLimit/rateLimitStore');
     const store = createRateLimitStore();
 
@@ -38,7 +38,7 @@ describe('createRateLimitStore', () => {
 
   it('counts correctly via the Redis-backed store (INCR/PEXPIRE, no Lua scripting) when REDIS_URL is configured', async () => {
     process.env.REDIS_URL = 'redis://localhost:6379/0';
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createRateLimitStore } = require('../../../src/adapters/rateLimit/rateLimitStore');
     const store = createRateLimitStore();
 
@@ -59,10 +59,10 @@ describe('createRateLimitStore', () => {
     // discogsRetryResilience.test.ts, which populates its cache before the
     // assertion that depends on it).
     process.env.REDIS_URL = '';
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const redisClientModule = require('../../../src/adapters/cache/redisClient');
     const getRedisClientSpy = jest.spyOn(redisClientModule, 'getRedisClient');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createRateLimitStore } = require('../../../src/adapters/rateLimit/rateLimitStore');
 
     const store = createRateLimitStore();
