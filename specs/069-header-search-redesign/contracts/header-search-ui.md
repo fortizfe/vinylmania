@@ -105,7 +105,7 @@ Choosing a suggestion also collapses the search. The first two match `SearchResu
 | Reduced motion | `MotionConfig reducedMotion="user"` already drops the transform; `usePrefersReducedMotion` additionally drops the fade → instant change. Backdrop, focus and announcements unchanged (FR-009) |
 | Reduced transparency / increased contrast | inherited from `.overlay-scrim`'s existing media-query blocks — **no new CSS** |
 | Press feedback | the existing `pressable` |
-| Skeleton | `bg-stone-200 dark:bg-surface-raised animate-pulse rounded-md`, mirroring a real row's shape and height (Constitution "Skeleton loading states") |
+| Skeleton | `bg-stone-200 dark:bg-border-dark animate-pulse rounded-md`, mirroring a real row's shape and height (Constitution "Skeleton loading states") |
 | Surface | the existing `<Card>`; `shadow-lg` as a floating element |
 | Palette | stone + `--color-surface` tokens; the kind label is text, never colour alone |
 

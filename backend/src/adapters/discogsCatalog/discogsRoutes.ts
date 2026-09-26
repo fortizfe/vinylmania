@@ -3,6 +3,7 @@ import { rateLimit } from 'express-rate-limit';
 
 import { logger } from '../../config/logger';
 import { createSearchCatalogWithRatingsUseCase } from '../../application/discogsCatalog/searchCatalogWithRatings';
+import { createSuggestCatalogMatchesUseCase } from '../../application/discogsCatalog/suggestCatalogMatches';
 import { resolveCatalogCredential } from '../../application/discogsCatalog/resolveCatalogCredential';
 import type { CatalogCredential } from '../../domain/discogsCatalog/types';
 import {
@@ -29,6 +30,11 @@ import {
 } from './discogsCatalogAdapter';
 
 const { searchCatalogWithRatings } = createSearchCatalogWithRatingsUseCase({
+  discogsCatalog: discogsCatalogAdapter,
+  cache: cacheAdapter,
+});
+
+const { suggestCatalogMatches } = createSuggestCatalogMatchesUseCase({
   discogsCatalog: discogsCatalogAdapter,
   cache: cacheAdapter,
 });
@@ -69,6 +75,80 @@ const standardRateLimit = rateLimit({
   handler: rateLimitHandler,
   store: createRateLimitStore(),
 });
+
+// Its own bucket, not `standardRateLimit`'s (research D6): typing in the
+// header is an order of magnitude chattier than the detail routes, and
+// sharing one bucket lets either starve the other. Declared inline, per the
+// CodeQL note in rateLimitOptions.ts.
+const suggestRateLimit = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  limit: RATE_LIMIT_THRESHOLDS.standard,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: RATE_LIMIT_MESSAGE,
+  handler: rateLimitHandler,
+  store: createRateLimitStore('suggest'),
+});
+
+discogsRouter.get(
+  '/suggest',
+  suggestRateLimit,
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const query = typeof req.query.q === 'string' ? req.query.q : '';
+
+    let credential: CatalogCredential | undefined;
+    try {
+      credential = await resolveCatalogCredential(discogsConnectionAdapter, req.auth!.uid);
+      const suggestions = await suggestCatalogMatches(credential, query);
+      logger.info({
+        route: '/api/discogs/suggest',
+        outcome: 'success',
+        uid: req.auth?.uid,
+        // `q` is deliberately never logged (research D7) — only its length.
+        meta: {
+          queryLength: query.trim().length,
+          artists: suggestions.filter((s) => s.resultType === 'artist').length,
+          albums: suggestions.filter((s) => s.resultType !== 'artist').length,
+          returned: suggestions.length,
+        },
+      });
+      res.status(200).json({ suggestions });
+    } catch (err) {
+      const authErrorResponse = credential && respondDiscogsAuthError(credential.type, err);
+      if (authErrorResponse) {
+        logger.warn({ route: '/api/discogs/suggest', outcome: 'auth_failed', uid: req.auth?.uid });
+        res.status(authErrorResponse.status).json(authErrorResponse.body);
+        return;
+      }
+
+      if (err instanceof DiscogsRateLimitError || err instanceof DiscogsUnavailableError) {
+        logger.warn({
+          route: '/api/discogs/suggest',
+          outcome: 'unavailable',
+          uid: req.auth?.uid,
+          message: err.message,
+        });
+        res.status(502).json({
+          error: 'catalog_unavailable',
+          message: 'The catalog service is temporarily unavailable. Please try again.',
+        });
+        return;
+      }
+
+      logger.error({
+        route: '/api/discogs/suggest',
+        outcome: 'error',
+        uid: req.auth?.uid,
+        message: err instanceof Error ? err.message : 'unknown error',
+      });
+      res.status(500).json({
+        error: 'internal_error',
+        message: 'Something went wrong. Please try again.',
+      });
+    }
+  },
+);
 
 discogsRouter.get('/search', standardRateLimit, requireAuth, async (req: Request, res: Response) => {
   const query = typeof req.query.q === 'string' ? req.query.q : '';

@@ -173,7 +173,9 @@ describe('Search results flow (US2)', () => {
     // The enriched result shows its numeric badge; the unrated result shows
     // the placeholder badge instead of no badge at all (feature 019).
     expect(screen.getByText('4.2')).toBeInTheDocument();
-    expect(screen.getAllByRole('status')).toHaveLength(2);
+    // Three since 069: the two rating badges plus the header search's own
+    // announcement region, which is mounted on every screen (contracts §5).
+    expect(screen.getAllByRole('status')).toHaveLength(3);
     expect(
       screen.getByRole('status', { name: 'Rating not available' }),
     ).toBeInTheDocument();
@@ -306,8 +308,8 @@ describe('Search results flow (US2)', () => {
     });
 
     const user = userEvent.setup();
-    await user.clear(screen.getByRole('searchbox', { name: /search discogs/i }));
-    await user.type(screen.getByRole('searchbox', { name: /search discogs/i }), 'fresh');
+    await user.clear(screen.getByRole('combobox', { name: /search discogs/i }));
+    await user.type(screen.getByRole('combobox', { name: /search discogs/i }), 'fresh');
     await act(async () => {
       await user.click(screen.getByRole('button', { name: /^search$/i }));
     });
@@ -543,9 +545,9 @@ describe('Search results flow (US2)', () => {
       });
 
       const user = userEvent.setup();
-      await user.clear(screen.getByRole('searchbox', { name: /search discogs/i }));
+      await user.clear(screen.getByRole('combobox', { name: /search discogs/i }));
       await user.type(
-        screen.getByRole('searchbox', { name: /search discogs/i }),
+        screen.getByRole('combobox', { name: /search discogs/i }),
         'fresh',
       );
       await act(async () => {

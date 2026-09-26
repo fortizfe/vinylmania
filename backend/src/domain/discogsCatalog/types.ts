@@ -41,6 +41,23 @@ export interface CatalogSearchResponse {
   };
 }
 
+/**
+ * The narrow projection of `CatalogSearchResult` a suggestion panel needs
+ * (feature 069). It is the wire shape of `GET /api/discogs/suggest` and the
+ * value cached in Redis. `resultType` is the only kind discriminator — there
+ * is no `kind` field (research D17). Optional fields are omitted, never null.
+ */
+export interface CatalogSuggestion {
+  discogsId: number;
+  resultType: 'release' | 'master' | 'artist';
+  title: string;
+  artist?: string;
+  year?: number;
+  /** First format only — the panel has one line for it. */
+  format?: string;
+  thumbnailUrl?: string;
+}
+
 interface ReleaseArtistCredit {
   discogsArtistId: number;
   name: string;

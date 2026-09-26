@@ -333,6 +333,67 @@ test.describe('Reduced motion — overlays, disclosures, toggles, gallery (spec 
     expectNoTransformMotion(swapFrames.image, 'Gallery viewer image (swap) under reduced motion');
   });
 
+  /**
+   * Spec 069 — User Story 1, T008 (FR-009, contracts/header-search-ui.md §7).
+   *
+   * Written before the implementation (T010), per Constitution Principle I.
+   * The header search expands on `spring.sheet` and cross-fades its backdrop;
+   * under a reduced-motion preference that becomes an instant state change —
+   * no transform on the form or the scrim, in either direction — while the
+   * *behaviour* is untouched: the backdrop still appears, the field still
+   * takes focus with no second interaction, and collapsing still restores
+   * focus to the opener.
+   *
+   * The scrim selector is the contract's `<div aria-hidden="true">` carrying
+   * `.overlay-scrim`; `motion/Overlay`'s scrim shares the class but is not
+   * `aria-hidden` (it holds the dialog), so the two cannot collide.
+   */
+  test('the header search opens and closes with no transform under reduced motion, keeping backdrop and focus behaviour (spec 069, FR-009)', async ({
+    page,
+  }) => {
+    const BACKDROP = 'div[aria-hidden="true"].overlay-scrim';
+    const SEARCH_FORM = '[role="search"]';
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await mockLibrary(page);
+    await page.goto('/');
+    await signInAsFakeGoogleUser(page);
+    await page.goto('/app/library');
+    await expect(page.getByText('Stockholm')).toBeVisible();
+
+    const opener = page.getByRole('button', { name: 'Search', exact: true });
+    await expect(opener).toHaveAttribute('aria-expanded', 'false');
+
+    await startMotionRecorder(page, { scrim: BACKDROP, form: SEARCH_FORM }, 900);
+    await opener.click();
+    const openFrames = await collectMotionFrames(page);
+
+    expectNoTransformMotion(openFrames.scrim, 'Header search backdrop (open) under reduced motion');
+    expectNoTransformMotion(openFrames.form, 'Header search form (open) under reduced motion');
+
+    // Behaviour is unchanged: backdrop present, field focused with no second
+    // interaction (FR-003).
+    await expect(page.locator(BACKDROP)).toBeVisible();
+    expect(
+      await page.evaluate(() => document.activeElement?.id),
+      'the field must take focus even under reduced motion',
+    ).toBe('header-search');
+
+    await startMotionRecorder(page, { scrim: BACKDROP, form: SEARCH_FORM }, 900);
+    await page.keyboard.press('Escape');
+    const closeFrames = await collectMotionFrames(page);
+
+    expectNoTransformMotion(
+      closeFrames.scrim,
+      'Header search backdrop (close) under reduced motion',
+    );
+    expectNoTransformMotion(closeFrames.form, 'Header search form (close) under reduced motion');
+
+    // Collapse still removes the backdrop and restores focus to the opener.
+    await expect(page.locator(BACKDROP)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeFocused();
+  });
+
   test('skeleton loaders do not pulse under reduced motion (animation-name: none)', async ({
     page,
   }) => {

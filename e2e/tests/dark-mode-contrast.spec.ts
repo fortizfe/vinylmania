@@ -1,13 +1,16 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 import { signInAsFakeGoogleUser } from '../helpers/fakeGoogleSignIn';
 import {
   assertOverlayContentContrast,
   assertReadableContrast,
   assertUiComponentContrast,
+  getContrastRatio,
+  getResolvedComputedStyle,
   relativeLuminance,
   toRgb,
 } from '../helpers/contrast';
+import { installSuggestFixture, TITLE_SEPARATOR } from '../helpers/suggestFixture';
 
 // The current (pre-darkening) `dark:bg-gray-900` card surface has a relative
 // luminance of ~0.0105; the target `dark:bg-gray-950` surface is ~0.0022.
@@ -189,4 +192,101 @@ test.describe('Overlay material & contrast (spec 059 US3, T066)', () => {
       );
     });
   }
+});
+
+/**
+ * Spec 069 — User Story 3 (T034, FR-025 / SC-007).
+ *
+ * The suggestion panel is the newest floating surface in the app and the one
+ * place a `loading` state is drawn as bare shapes with no text of its own.
+ * Both of its displayable states are checked here, in dark mode, where this
+ * palette is tightest:
+ *   • `loading` — the skeleton rows are the only thing the state renders, so
+ *     they are its sole carrier of meaning and must be perceivable against
+ *     the panel they sit on (WCAG 1.4.11, and FR-025's "never colour alone");
+ *   • `suggestions` — the row title, the secondary detail and the kind label,
+ *     each against the surface it is actually drawn on.
+ *
+ * Written before T036, per Constitution Principle I.
+ */
+
+const SUGGESTION_PANEL = '#header-search-panel';
+const SUGGESTION_ROWS = '#header-search-listbox > li:not([aria-hidden="true"])';
+const SUGGESTION_SKELETONS = '#header-search-listbox > li[aria-hidden="true"]';
+const SUGGEST_QUERY = 'iron ma';
+
+/** WCAG 2.1 AA floor for normal-size text. */
+const AA_TEXT_RATIO = 4.5;
+
+/**
+ * Signs in dark, opens the header search and types — leaving the panel in
+ * whichever state the installed suggest route produces.
+ */
+async function typeInHeaderSearch(page: Page, email: string): Promise<void> {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/');
+  await signInAsFakeGoogleUser(page, { email });
+  // At the default 1280 px viewport the field is its own opener (069
+  // contracts §2), so one click activates the search.
+  await page.locator('input#header-search').click();
+  await page.keyboard.type(SUGGEST_QUERY, { delay: 40 });
+}
+
+test.describe('Header suggestion panel contrast in dark mode (spec 069 US3, T034)', () => {
+  test('the loading skeletons are perceivable against the panel surface', async ({ page }) => {
+    await installSuggestFixture(page, 'mixed');
+    // Hold the lookup in flight so `loading` cannot resolve underneath the
+    // measurements: a later `page.route` wins, and never fulfilling keeps the
+    // request pending.
+    await page.route('**/api/discogs/suggest*', () => {});
+    await typeInHeaderSearch(page, 'e2e-dark-suggest-loading@example.com');
+
+    const panel = page.locator(SUGGESTION_PANEL);
+    await expect(page.locator(SUGGESTION_SKELETONS)).toHaveCount(5);
+
+    await assertUiComponentContrast(
+      page,
+      page.locator(SUGGESTION_SKELETONS).first(),
+      panel,
+      'Suggestion skeleton row against the panel surface (dark)',
+    );
+  });
+
+  test('the row title, the secondary detail and the kind label clear their floors', async ({
+    page,
+  }) => {
+    await installSuggestFixture(page, 'mixed');
+    await typeInHeaderSearch(page, 'e2e-dark-suggest-rows@example.com');
+
+    const panel = page.locator(SUGGESTION_PANEL);
+    await expect(page.locator(SUGGESTION_ROWS)).toHaveCount(5);
+
+    // Every visible string drawn on the panel — the row titles and their
+    // secondary details included — against the panel's own opaque surface.
+    await assertOverlayContentContrast(page, panel, 'Header suggestion panel (dark, suggestions)');
+
+    // `mixed` is 2 artists then 3 albums (data-model §3), so row 2 is the
+    // first album: the only row kind that carries a secondary detail.
+    const albumRow = page.locator(SUGGESTION_ROWS).nth(2);
+    await expect(albumRow).toContainText(`${SUGGEST_QUERY}${TITLE_SEPARATOR}Record 1`);
+    await expect(albumRow).toContainText(`${SUGGEST_QUERY}${TITLE_SEPARATOR}Band 1`);
+
+    // The kind label is a filled badge, so its floor is against its own fill
+    // rather than the panel behind it (FR-011/FR-025 — it is text, never
+    // colour alone, which only helps if the text itself is readable).
+    const kindLabel = albumRow.getByText('Album', { exact: true });
+    const [kindColor, kindBackground] = await Promise.all([
+      getResolvedComputedStyle(kindLabel, 'color'),
+      getResolvedComputedStyle(kindLabel, 'backgroundColor'),
+    ]);
+    const [kindFg, kindBg] = await Promise.all([
+      toRgb(page, kindColor),
+      toRgb(page, kindBackground),
+    ]);
+    const kindRatio = getContrastRatio(kindFg, kindBg);
+    expect(
+      kindRatio,
+      `"Album" kind label ${kindColor} on its badge ${kindBackground} is ${kindRatio.toFixed(2)}:1 (< ${AA_TEXT_RATIO}:1)`,
+    ).toBeGreaterThanOrEqual(AA_TEXT_RATIO);
+  });
 });

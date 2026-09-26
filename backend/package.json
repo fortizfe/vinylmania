@@ -11,7 +11,7 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "pretest": "node ../scripts/check-emulator-ports.js",
-    "test": "node ../scripts/run-with-timeout.js 300 -- firebase emulators:exec --only auth,firestore \"jest --detectOpenHandles --forceExit\""
+    "test": "sh -c 'node ../scripts/run-with-timeout.js 300 -- firebase emulators:exec --only auth,firestore \"jest --detectOpenHandles --forceExit $*\"' --"
   },
   "keywords": [],
   "author": "",

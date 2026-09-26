@@ -15,6 +15,9 @@ out/
 .vercel/
 .turbo/
 
+# Redis snapshot, written into the cwd a local `redis-server` was started from
+dump.rdb
+
 # Environment variables
 .env
 .env.local

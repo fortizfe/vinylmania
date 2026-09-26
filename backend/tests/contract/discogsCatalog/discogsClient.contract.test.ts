@@ -19,6 +19,7 @@ import {
 import { MAX_WAIT_MS } from '../../../src/discogs/discogsRateLimiter';
 import { MAX_ATTEMPTS } from '../../../src/discogs/discogsRetry';
 import type { CatalogCredential } from '../../../src/domain/discogsCatalog/types';
+import type { SearchCatalogOptions } from '../../../src/ports/discogsCatalog/discogsCatalogPort';
 
 const CREDENTIAL: CatalogCredential = { type: 'vinylmania' };
 
@@ -134,6 +135,136 @@ describe('Discogs client contract: searchCatalog', () => {
     await expect(
       searchCatalog({ type: 'vinylmania' }, 'anything', { resultType: 'release' }),
     ).rejects.toBeInstanceOf(DiscogsUnavailableError);
+  });
+
+  // -------------------------------------------------------------------
+  // Feature 069, T014: the new `resultType: 'any'` mode, which lets a
+  // single upstream request serve the suggestion panel's artists *and*
+  // albums (contracts/suggest-api.md §5, research D2). This describe is
+  // the home of `searchCatalog`'s adapter contract, so the regression
+  // guard for `/api/discogs/search`'s two existing modes lives here too.
+  // -------------------------------------------------------------------
+  describe("resultType: 'any' (feature 069)", () => {
+    const ANY_OPTIONS: SearchCatalogOptions = {
+      resultType: 'any',
+      page: 1,
+      perPage: 20,
+    };
+
+    /** Captures the query params nock actually received for `/database/search`. */
+    function captureSearchQuery(results: unknown[]): () => Record<string, string> | undefined {
+      let sent: Record<string, string> | undefined;
+      discogsScope()
+        .get('/database/search')
+        .query((actual) => {
+          sent = actual as Record<string, string>;
+          return true;
+        })
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: results.length, per_page: 20 },
+          results,
+        });
+      return () => sent;
+    }
+
+    it('sends no type param upstream and keeps release, master and artist hits', async () => {
+      const sentQuery = captureSearchQuery([
+        { id: 11, type: 'artist', title: 'Iron Maiden', thumb: '', cover_image: '' },
+        {
+          id: 12,
+          type: 'master',
+          title: 'Iron Maiden - The Number Of The Beast',
+          year: '1982',
+          format: ['Vinyl'],
+          thumb: '',
+          cover_image: '',
+        },
+        {
+          id: 13,
+          type: 'release',
+          title: 'Iron Maiden - Powerslave',
+          year: '1984',
+          format: ['Vinyl'],
+          thumb: '',
+          cover_image: '',
+        },
+      ]);
+
+      const result = await searchCatalog(CREDENTIAL, 'Iron Mai', ANY_OPTIONS);
+
+      expect(sentQuery()?.type).toBeUndefined();
+      expect(sentQuery()).toEqual({ q: 'Iron Mai', page: '1', per_page: '20' });
+      expect(result.results.map((r) => r.resultType)).toEqual(['artist', 'master', 'release']);
+      expect(result.results.map((r) => r.discogsId)).toEqual([11, 12, 13]);
+    });
+
+    it('drops a label-typed raw hit instead of rejecting the whole search', async () => {
+      discogsScope()
+        .get('/database/search')
+        .query(true)
+        .reply(200, {
+          pagination: { page: 1, pages: 1, items: 3, per_page: 20 },
+          results: [
+            {
+              id: 21,
+              type: 'label',
+              title: 'Warner Bros. Records',
+              resource_url: 'https://api.discogs.com/labels/21',
+            },
+            { id: 22, type: 'artist', title: 'Warner Sisters', thumb: '', cover_image: '' },
+            {
+              id: 23,
+              type: 'release',
+              title: 'Warner Sisters - Debut',
+              thumb: '',
+              cover_image: '',
+            },
+          ],
+        });
+
+      const result = await searchCatalog(CREDENTIAL, 'Warner Any', ANY_OPTIONS);
+
+      expect(result.results.map((r) => r.discogsId)).toEqual([22, 23]);
+    });
+
+    it("regression guard: 'release' still sends no type param and still keeps only release and master hits", async () => {
+      const sentQuery = captureSearchQuery([
+        {
+          id: 31,
+          type: 'label',
+          title: 'Some Label',
+          resource_url: 'https://api.discogs.com/labels/31',
+        },
+        { id: 32, type: 'artist', title: 'Some Artist', thumb: '', cover_image: '' },
+        { id: 33, type: 'master', title: 'Some Artist - A Master', thumb: '', cover_image: '' },
+        { id: 34, type: 'release', title: 'Some Artist - A Release', thumb: '', cover_image: '' },
+      ]);
+
+      const result = await searchCatalog(CREDENTIAL, 'Release Guard', {
+        resultType: 'release',
+        page: 1,
+        perPage: 20,
+      });
+
+      expect(sentQuery()?.type).toBeUndefined();
+      expect(result.results.map((r) => r.discogsId)).toEqual([33, 34]);
+    });
+
+    it("regression guard: 'artist' still sends type=artist and is not filtered", async () => {
+      const sentQuery = captureSearchQuery([
+        { id: 41, type: 'artist', title: 'Guarded Artist', thumb: '', cover_image: '' },
+        { id: 42, type: 'release', title: 'Guarded Artist - Record', thumb: '', cover_image: '' },
+      ]);
+
+      const result = await searchCatalog(CREDENTIAL, 'Artist Guard', {
+        resultType: 'artist',
+        page: 1,
+        perPage: 20,
+      });
+
+      expect(sentQuery()?.type).toBe('artist');
+      expect(result.results.map((r) => r.discogsId)).toEqual([41, 42]);
+    });
   });
 
   describe('master result rating enrichment (feature 026, US1)', () => {

@@ -19,13 +19,15 @@ const KEY_PREFIX = 'ratelimit:';
 class RedisIncrExpireStore implements Store {
   private windowMs = 60_000;
 
+  constructor(private readonly keyPrefix: string) {}
+
   init(options: Options): void {
     this.windowMs = options.windowMs;
   }
 
   async increment(key: string): Promise<IncrementResponse> {
     const client = getRedisClient()!;
-    const redisKey = KEY_PREFIX + key;
+    const redisKey = this.keyPrefix + key;
     const totalHits = await client.incr(redisKey);
     if (totalHits === 1) {
       await client.pexpire(redisKey, this.windowMs);
@@ -36,16 +38,16 @@ class RedisIncrExpireStore implements Store {
   }
 
   async decrement(key: string): Promise<void> {
-    await getRedisClient()!.decr(KEY_PREFIX + key);
+    await getRedisClient()!.decr(this.keyPrefix + key);
   }
 
   async resetKey(key: string): Promise<void> {
-    await getRedisClient()!.del(KEY_PREFIX + key);
+    await getRedisClient()!.del(this.keyPrefix + key);
   }
 
   async get(key: string): Promise<ClientRateLimitInfo | undefined> {
     const client = getRedisClient()!;
-    const redisKey = KEY_PREFIX + key;
+    const redisKey = this.keyPrefix + key;
     const [hits, ttl] = await Promise.all([client.get(redisKey), client.pttl(redisKey)]);
     if (hits === null) {
       return undefined;
@@ -80,9 +82,13 @@ class LazyRedisOrMemoryStore implements Store {
   private delegate: Store | undefined;
   private pendingInitOptions: Options | undefined;
 
+  constructor(private readonly keyPrefix: string) {}
+
   private resolve(): Store {
     if (!this.delegate) {
-      this.delegate = getRedisClient() ? new RedisIncrExpireStore() : new MemoryStore();
+      this.delegate = getRedisClient()
+        ? new RedisIncrExpireStore(this.keyPrefix)
+        : new MemoryStore();
       if (this.pendingInitOptions) {
         void this.delegate.init?.(this.pendingInitOptions);
       }
@@ -117,7 +123,17 @@ class LazyRedisOrMemoryStore implements Store {
  * deployment can run — an in-memory store would not be, per research.md §2)
  * once REDIS_URL is configured, and express-rate-limit's own in-memory
  * MemoryStore otherwise (local dev, tests) — decided lazily, see above.
+ *
+ * `namespace` gives one limiter its own counter. Redis keys are derived
+ * from the request key (the client IP) alone, so without it every
+ * rateLimit(...) instance backed by Redis shares one bucket per IP —
+ * separate instances are separate buckets only under MemoryStore. Callers
+ * that pass nothing keep today's shared default bucket unchanged; a route
+ * that must not be starved by its neighbours (e.g. `/api/discogs/suggest`,
+ * feature 069 research D6) passes a stable name. Stable, not generated: on
+ * Vercel the point of the Redis store is that concurrent isolates of the
+ * same route agree on the counter.
  */
-export function createRateLimitStore(): Store {
-  return new LazyRedisOrMemoryStore();
+export function createRateLimitStore(namespace?: string): Store {
+  return new LazyRedisOrMemoryStore(namespace ? `${KEY_PREFIX}${namespace}:` : KEY_PREFIX);
 }
