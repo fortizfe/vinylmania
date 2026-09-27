@@ -352,7 +352,7 @@ export function HeaderSearchBox() {
           size="icon"
           variant="secondary"
           aria-label="Search"
-          aria-expanded={expanded}
+          aria-expanded={isWide ? undefined : expanded}
           onClick={handleActivate}
           // Safari never focuses a clicked button: without this the field's
           // `focusout` has no `relatedTarget`, collapses the search, and the

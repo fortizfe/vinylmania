@@ -8,7 +8,7 @@ Scope: `frontend/src/components/HeaderSearchBox.tsx` and the new `HeaderSuggesti
 
 | Event | Result |
 |---|---|
-| Activate (click/tap the collapsed control, or focus the field ≥ 640 px) | Expands on `spring.sheet`; the backdrop fades in; the field takes DOM focus with **no** second interaction (FR-003) |
+| Activate (click/tap the collapsed control < 640 px; ≥ 640 px, click the field or its first edit — focus alone does not expand) | Expands on `spring.sheet`; the backdrop fades in; the field takes DOM focus with **no** second interaction (FR-003) |
 | Activate on `/app/search` | The field is pre-filled with the query in effect and its text is **selected** (`focus()` then `select()`); `hasEdited` is false, so **no lookup and no panel** (FR-004, clarification 4) |
 | First `onChange` after activation | `hasEdited = true`; the debounce starts |
 | Submit (Enter with no active option, or the search button) | `navigate(buildSearchPath(trimmed, 1, onResultsPage ? activeFilters : undefined), { replace: onResultsPage })` — **unchanged from today** (FR-008), then collapse |
