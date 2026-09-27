@@ -1,10 +1,11 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { HeaderSearchBox } from '../../src/components/HeaderSearchBox';
+import { ApiError } from '../../src/services/apiClient';
 import type { CatalogSuggestion } from '../../src/services/discogsApi';
 import { createTestQueryClient } from '../testUtils';
 
@@ -144,6 +145,29 @@ describe('HeaderSearchBox', () => {
     await user.click(screen.getByRole('button', { name: /search/i }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/app/search?q=stockholm');
+    wide.mockRestore();
+  });
+
+  it('from 640 px up, the Search button submits a pre-filled query the Tab-focused field holds, unedited (contracts §1)', async () => {
+    const wide = vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query === '(min-width: 640px)',
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+    const user = userEvent.setup();
+    renderBox(['/app/search?q=miles&page=3']);
+
+    await user.tab();
+    expect(searchField()).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: /search/i }));
+
+    // A submit restarts at page 1; opening would have left the URL alone.
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/app\/search\?q=miles$/);
+    expect(scrim()).toBeNull();
     wide.mockRestore();
   });
 
@@ -357,6 +381,17 @@ describe('HeaderSearchBox — debounced, gated suggestion lookups (069 US2)', ()
 
     expect(mockSuggest).toHaveBeenCalledTimes(1);
     expect(mockSuggest).toHaveBeenCalledWith('john coltrane blue train');
+  });
+
+  it('looks nothing up for a single non-whitespace character (FR-010)', async () => {
+    const user = userEvent.setup();
+    renderBox();
+
+    await user.click(opener(false));
+    await user.type(searchField(), ' m ');
+    await sleep(AFTER_DEBOUNCE_MS);
+
+    expect(mockSuggest).not.toHaveBeenCalled();
   });
 
   it('looks nothing up for a pre-filled query until the collector actually edits it (FR-004, clarification 4)', async () => {
@@ -659,5 +694,69 @@ describe('HeaderSearchBox — combobox semantics, keyboard model and announcemen
     expect(announcement().textContent).toBe('');
     expect(searchField()).toHaveAttribute('aria-expanded', 'false');
     expectNoActiveOption();
+  });
+});
+
+// Safari (macOS and iOS) never focuses a button on click, and no browser
+// focuses panel padding or message text: an un-prevented mousedown there drops
+// focus to <body>, so the field's `focusout` carries `relatedTarget: null`
+// before `click` fires (contracts §1, §3).
+describe('HeaderSearchBox — pointer presses that do not move focus (069 US1, US4)', () => {
+  beforeEach(() => {
+    mockSuggest.mockReset();
+    mockSuggest.mockResolvedValue([]);
+  });
+
+  /** A press the way Safari delivers it. */
+  function safariPress(target: HTMLElement): void {
+    if (fireEvent.mouseDown(target)) {
+      act(() => (document.activeElement as HTMLElement | null)?.blur());
+    }
+    fireEvent.mouseUp(target);
+    fireEvent.click(target);
+  }
+
+  it('submits from the expanded bar Search button instead of collapsing and re-opening', async () => {
+    const user = userEvent.setup();
+    renderBox();
+
+    await user.click(opener(false));
+    await user.type(searchField(), 'miles');
+    safariPress(opener(true));
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/app/search?q=miles');
+  });
+
+  it('stays expanded when the panel padding or its message is pressed', async () => {
+    const user = userEvent.setup();
+    renderBox();
+
+    await user.click(opener(false));
+    await user.type(searchField(), 'zzqx');
+    const message = await screen.findByText(/try fewer or different words/i, undefined, {
+      timeout: 2000,
+    });
+
+    safariPress(message);
+    expect(scrim()).not.toBeNull();
+    safariPress(screen.getByTestId('header-search-panel'));
+    expect(scrim()).not.toBeNull();
+    expect(searchField()).toHaveFocus();
+  });
+
+  it('re-runs the lookup when Retry is pressed', async () => {
+    mockSuggest.mockRejectedValue(new ApiError('Upstream failed', 502, 'upstream_error'));
+    const user = userEvent.setup();
+    renderBox();
+
+    await user.click(opener(false));
+    await user.type(searchField(), 'miles');
+    const retry = await screen.findByRole('button', { name: 'Retry' }, { timeout: 2000 });
+    const calls = mockSuggest.mock.calls.length;
+
+    safariPress(retry);
+
+    await waitFor(() => expect(mockSuggest.mock.calls.length).toBeGreaterThan(calls));
+    expect(scrim()).not.toBeNull();
   });
 });

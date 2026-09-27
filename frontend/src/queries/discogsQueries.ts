@@ -38,10 +38,10 @@ export const discogsKeys = {
   master: (discogsId: number) => [...discogsKeys.all, 'master', discogsId] as const,
   masterVersions: (discogsId: number, page?: number) =>
     [...discogsKeys.all, 'master-versions', discogsId, page] as const,
-  // Trimmed, so padding cannot fragment the cache; keyed per query string so
+  // The caller trims, so padding cannot fragment the cache; keyed per query string so
   // a superseded lookup lands in its own entry and is never read (069,
   // data-model §4 "staleness is structural").
-  suggest: (query: string) => [...discogsKeys.all, 'suggest', query.trim()] as const,
+  suggest: (query: string) => [...discogsKeys.all, 'suggest', query] as const,
 };
 
 /**
@@ -106,9 +106,9 @@ export function useCatalogMasterVersions(
 }
 
 /**
- * Header suggestion lookups (069 US2, research D8). `enabled` carries the
- * caller's own gate (has the collector edited the field yet?); the two-character
- * floor is enforced here so no caller can spend a request on one letter.
+ * Header suggestion lookups (069 US2, research D8). The caller passes an
+ * already-trimmed query and owns the whole gate in `enabled` (edited field,
+ * two-character floor).
  */
 export function useCatalogSuggestions(
   query: string,
@@ -117,7 +117,7 @@ export function useCatalogSuggestions(
   return useQuery({
     queryKey: discogsKeys.suggest(query),
     queryFn: () => discogsApi.suggest(query),
-    enabled: enabled && query.trim().length >= 2,
+    enabled,
     // The panel is a typing aid: re-typing the same query inside five minutes
     // must cost nothing (FR-017).
     staleTime: 5 * 60_000,

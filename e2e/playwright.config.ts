@@ -78,6 +78,9 @@ export default defineConfig({
         'release-detail-responsive.spec.ts',
         'master-release-detail-responsive.spec.ts',
         'record-detail-responsive.spec.ts',
+        // Spec 069: WebKit never focuses a clicked button, which chromium
+        // cannot reproduce.
+        'header-search-webkit.spec.ts',
       ],
     },
   ],

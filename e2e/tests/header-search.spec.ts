@@ -547,7 +547,7 @@ test.describe("Header search — collapse paths (spec 069 US1, FR-007)", () => {
  * ------------------------------------------------------------------ */
 
 /** contracts §3: the panel surface, and the rows inside its listbox. */
-const PANEL = "#header-search-panel";
+const PANEL = "[data-testid='header-search-panel']";
 /** Real suggestion rows. The `role="option"` wiring arrives with T036. */
 const ROWS = '#header-search-listbox > li:not([aria-hidden="true"])';
 /** The 5 loading placeholders (contracts §3: `role="presentation"`). */

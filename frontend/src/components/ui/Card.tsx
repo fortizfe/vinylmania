@@ -1,13 +1,12 @@
-import type { ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
 import clsx from 'clsx';
 
 interface CardProps {
   children: ReactNode;
   className?: string;
-  /** Only for the few Cards another element must point at (e.g. `aria-controls`). */
-  id?: string;
   padding?: 'sm' | 'md';
   'data-testid'?: string;
+  onMouseDown?: MouseEventHandler<HTMLDivElement>;
 }
 
 const paddingClasses: Record<NonNullable<CardProps['padding']>, string> = {
@@ -18,14 +17,14 @@ const paddingClasses: Record<NonNullable<CardProps['padding']>, string> = {
 export function Card({
   children,
   className,
-  id,
   padding = 'md',
   'data-testid': testId,
+  onMouseDown,
 }: CardProps) {
   return (
     <div
-      id={id}
       data-testid={testId}
+      onMouseDown={onMouseDown}
       className={clsx(
         // border-stone-500 (not the much lighter default border-stone-200)
         // against the surfaces a Card sits on — Card's own bg-stone-50 is

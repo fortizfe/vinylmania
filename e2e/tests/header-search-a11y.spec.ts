@@ -60,7 +60,7 @@ const OPENER_BUTTON = 'button[aria-label="Search"]';
 /** contracts §2/§3 — the decorative backdrop; the one expanded-state signal shared by both widths. */
 const BACKDROP = 'div[aria-hidden="true"].overlay-scrim';
 /** contracts §3 — the panel surface, its listbox, its real rows and its skeletons. */
-const PANEL = "#header-search-panel";
+const PANEL = "[data-testid='header-search-panel']";
 const LISTBOX = "#header-search-listbox";
 const ROWS = '#header-search-listbox > li:not([aria-hidden="true"])';
 const SKELETON_ROWS = '#header-search-listbox > li[aria-hidden="true"]';
@@ -251,26 +251,34 @@ for (const theme of THEMES) {
 
         const field = page.locator(SEARCH_INPUT);
         const statusRegion = page.locator(STATUS);
-        const openerButton = page.locator(OPENER_BUTTON);
+        // contracts §1/§2: below 640 px the collapsed icon button opens the
+        // search. From 640 px up the field is always visible and the button
+        // beside it only submits, so there the field is the opener and typing
+        // into it is the activation.
+        const onPhone = viewport.width < 640;
+        const openerSelector = onPhone ? OPENER_BUTTON : SEARCH_INPUT;
+        const opener = page.locator(openerSelector);
 
         // ── open ─────────────────────────────────────────────────────────
-        await tabUntil(page, OPENER_BUTTON, label);
-        await expect(
-          openerButton,
-          `${label}: collapsed opener state`,
-        ).toHaveAttribute("aria-expanded", "false");
-        // The opener is a `Button`, so it carries the shared `focusRing`
-        // (contracts §4). The field's own indicator is `Input`'s
-        // `focus:border-primary`, asserted further down with the helper that
-        // resolves whichever of the three mechanisms a control uses.
-        await assertSharedFocusRing(openerButton, `search opener (${label})`);
+        await tabUntil(page, openerSelector, label);
+        if (onPhone) {
+          await expect(
+            opener,
+            `${label}: collapsed opener state`,
+          ).toHaveAttribute("aria-expanded", "false");
+          // The opener is a `Button`, so it carries the shared `focusRing`
+          // (contracts §4). The field's own indicator is `Input`'s
+          // `focus:border-primary`, asserted further down with the helper that
+          // resolves whichever of the three mechanisms a control uses.
+          await assertSharedFocusRing(opener, `search opener (${label})`);
 
-        await page.keyboard.press("Enter");
-        await expect(
-          page.locator(BACKDROP),
-          `${label}: Enter must expand the search`,
-        ).toBeVisible();
-        await expect(openerButton).toHaveAttribute("aria-expanded", "true");
+          await page.keyboard.press("Enter");
+          await expect(
+            page.locator(BACKDROP),
+            `${label}: Enter must expand the search`,
+          ).toBeVisible();
+          await expect(opener).toHaveAttribute("aria-expanded", "true");
+        }
         await expectFieldFocused(page, `${label}: after activation`);
 
         // `idle` (data-model §5): no panel, nothing active, nothing announced.
@@ -303,6 +311,10 @@ for (const theme of THEMES) {
 
         // ── type → loading ───────────────────────────────────────────────
         await page.keyboard.type(QUERY, { delay: 40 });
+        await expect(
+          page.locator(BACKDROP),
+          `${label}: the search is expanded once typing starts`,
+        ).toBeVisible();
         await expect(
           statusRegion,
           `${label}: the started lookup must be announced (contracts §5)`,
@@ -397,9 +409,11 @@ for (const theme of THEMES) {
         // No need to watch `loading` a second time.
         suggest.use("mixed");
 
-        await tabUntil(page, OPENER_BUTTON, `${label}: reopening`);
-        await page.keyboard.press("Enter");
-        await expect(page.locator(BACKDROP)).toBeVisible();
+        await tabUntil(page, openerSelector, `${label}: reopening`);
+        if (onPhone) {
+          await page.keyboard.press("Enter");
+          await expect(page.locator(BACKDROP)).toBeVisible();
+        }
         await page.keyboard.type(QUERY, { delay: 40 });
         await expect(page.locator(ROWS)).toHaveCount(5);
         await page.keyboard.press("ArrowDown");
@@ -436,15 +450,17 @@ for (const theme of THEMES) {
           `${label}: the second Escape collapses`,
         ).toHaveCount(0);
         await expect(
-          openerButton,
+          opener,
           `${label}: focus returns to the opener`,
         ).toBeFocused();
         await expect(statusRegion).toHaveText("");
 
         // ── no keyboard trap, panel open, at either width (FR-021) ───────
         // Focus is already on the opener (asserted just above); tabbing to it
-        // again would first Tab *away* and have to cycle the whole page.
-        await page.keyboard.press("Enter");
+        // again would first Tab *away* and have to cycle the whole page. From
+        // 640 px up that opener is the field, still holding the kept text:
+        // Enter would submit it, so select it and type over it instead.
+        await page.keyboard.press(onPhone ? "Enter" : "ControlOrMeta+A");
         await page.keyboard.type(QUERY, { delay: 40 });
         await expect(page.locator(ROWS)).toHaveCount(5);
 

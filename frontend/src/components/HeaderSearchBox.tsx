@@ -143,8 +143,12 @@ export function HeaderSearchBox() {
     refetch,
   } = useCatalogSuggestions(lookupQuery, showPanel);
   // data-model §5. A 401 belongs to the existing sign-in path (apiClient's
-  // unauthorized handler), never to the panel's error state.
-  const sessionExpired = error instanceof ApiError && error.status === 401;
+  // unauthorized handler), never to the panel's error state — except a
+  // revoked Discogs link, which apiClient keeps out of that path too.
+  const sessionExpired =
+    error instanceof ApiError &&
+    error.status === 401 &&
+    error.code !== 'discogs_link_invalid';
   let panelState: SuggestionPanelState = 'idle';
   if (showPanel && !sessionExpired) {
     if (error && !isFetching) panelState = 'error';
@@ -199,7 +203,9 @@ export function HeaderSearchBox() {
   }
 
   function handleActivate(event: FormEvent) {
-    if (expanded) return;
+    // From 640 px up the field is always visible, so this is only ever the
+    // submit button (contracts §1).
+    if (expanded || isWide) return;
     // Collapsed, this control opens the search instead of submitting it.
     event.preventDefault();
     open();
@@ -348,6 +354,10 @@ export function HeaderSearchBox() {
           aria-label="Search"
           aria-expanded={expanded}
           onClick={handleActivate}
+          // Safari never focuses a clicked button: without this the field's
+          // `focusout` has no `relatedTarget`, collapses the search, and the
+          // click re-opens it instead of submitting.
+          onMouseDown={expanded ? (event) => event.preventDefault() : undefined}
         >
           <SearchIcon />
         </Button>

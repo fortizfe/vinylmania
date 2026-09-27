@@ -64,6 +64,42 @@ function parseFilterParams(
   return filters;
 }
 
+/** Shared error mapping for the catalog search routes: auth → 401/403, Discogs down → 502, else 500. */
+function respondCatalogError(
+  route: string,
+  req: Request,
+  res: Response,
+  credential: CatalogCredential | undefined,
+  err: unknown,
+): void {
+  const authErrorResponse = credential && respondDiscogsAuthError(credential.type, err);
+  if (authErrorResponse) {
+    logger.warn({ route, outcome: 'auth_failed', uid: req.auth?.uid });
+    res.status(authErrorResponse.status).json(authErrorResponse.body);
+    return;
+  }
+
+  if (err instanceof DiscogsRateLimitError || err instanceof DiscogsUnavailableError) {
+    logger.warn({ route, outcome: 'unavailable', uid: req.auth?.uid, message: err.message });
+    res.status(502).json({
+      error: 'catalog_unavailable',
+      message: 'The catalog service is temporarily unavailable. Please try again.',
+    });
+    return;
+  }
+
+  logger.error({
+    route,
+    outcome: 'error',
+    uid: req.auth?.uid,
+    message: err instanceof Error ? err.message : 'unknown error',
+  });
+  res.status(500).json({
+    error: 'internal_error',
+    message: 'Something went wrong. Please try again.',
+  });
+}
+
 export const discogsRouter = Router();
 
 const standardRateLimit = rateLimit({
@@ -115,37 +151,7 @@ discogsRouter.get(
       });
       res.status(200).json({ suggestions });
     } catch (err) {
-      const authErrorResponse = credential && respondDiscogsAuthError(credential.type, err);
-      if (authErrorResponse) {
-        logger.warn({ route: '/api/discogs/suggest', outcome: 'auth_failed', uid: req.auth?.uid });
-        res.status(authErrorResponse.status).json(authErrorResponse.body);
-        return;
-      }
-
-      if (err instanceof DiscogsRateLimitError || err instanceof DiscogsUnavailableError) {
-        logger.warn({
-          route: '/api/discogs/suggest',
-          outcome: 'unavailable',
-          uid: req.auth?.uid,
-          message: err.message,
-        });
-        res.status(502).json({
-          error: 'catalog_unavailable',
-          message: 'The catalog service is temporarily unavailable. Please try again.',
-        });
-        return;
-      }
-
-      logger.error({
-        route: '/api/discogs/suggest',
-        outcome: 'error',
-        uid: req.auth?.uid,
-        message: err instanceof Error ? err.message : 'unknown error',
-      });
-      res.status(500).json({
-        error: 'internal_error',
-        message: 'Something went wrong. Please try again.',
-      });
+      respondCatalogError('/api/discogs/suggest', req, res, credential, err);
     }
   },
 );
@@ -190,38 +196,7 @@ discogsRouter.get('/search', standardRateLimit, requireAuth, async (req: Request
     const nonMasterResults = result.results.filter((r) => r.resultType !== 'master');
     res.status(200).json({ ...result, results: [...masterResults, ...nonMasterResults] });
   } catch (err) {
-    const authErrorResponse =
-      credential && respondDiscogsAuthError(credential.type, err);
-    if (authErrorResponse) {
-      logger.warn({ route: '/api/discogs/search', outcome: 'auth_failed', uid: req.auth?.uid });
-      res.status(authErrorResponse.status).json(authErrorResponse.body);
-      return;
-    }
-
-    if (err instanceof DiscogsRateLimitError || err instanceof DiscogsUnavailableError) {
-      logger.warn({
-        route: '/api/discogs/search',
-        outcome: 'unavailable',
-        uid: req.auth?.uid,
-        message: err.message,
-      });
-      res.status(502).json({
-        error: 'catalog_unavailable',
-        message: 'The catalog service is temporarily unavailable. Please try again.',
-      });
-      return;
-    }
-
-    logger.error({
-      route: '/api/discogs/search',
-      outcome: 'error',
-      uid: req.auth?.uid,
-      message: err instanceof Error ? err.message : 'unknown error',
-    });
-    res.status(500).json({
-      error: 'internal_error',
-      message: 'Something went wrong. Please try again.',
-    });
+    respondCatalogError('/api/discogs/search', req, res, credential, err);
   }
 });
 

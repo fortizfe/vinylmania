@@ -210,7 +210,7 @@ test.describe('Overlay material & contrast (spec 059 US3, T066)', () => {
  * Written before T036, per Constitution Principle I.
  */
 
-const SUGGESTION_PANEL = '#header-search-panel';
+const SUGGESTION_PANEL = '[data-testid="header-search-panel"]';
 const SUGGESTION_ROWS = '#header-search-listbox > li:not([aria-hidden="true"])';
 const SUGGESTION_SKELETONS = '#header-search-listbox > li[aria-hidden="true"]';
 const SUGGEST_QUERY = 'iron ma';
