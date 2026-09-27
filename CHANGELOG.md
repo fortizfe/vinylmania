@@ -17,6 +17,17 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.14.0] - 2026-09-27
+
+### Added
+
+- implement header-search-redesign ([2475228])
+
+### Fixed
+
+- drop aria-expanded from the wide submit button; align contract §1 ([b79c981])
+- address PR #60 review findings ([e136f53])
+
 ## [1.13.0] - 2026-09-20
 
 ### Added
