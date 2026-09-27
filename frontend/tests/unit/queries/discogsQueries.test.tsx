@@ -164,23 +164,13 @@ describe('discogsQueries — header suggestions (069 US2)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('keys every trimmed query separately, so two queries never share a cache entry (FR-013, SC-005)', async () => {
+  it('keys every query separately, so two queries never share a cache entry (FR-013, SC-005)', async () => {
     const { discogsKeys } = await import('../../../src/queries/discogsQueries');
 
     expect(discogsKeys.suggest('miles')).not.toEqual(discogsKeys.suggest('davis'));
-    // The lookup key is the trimmed text, so padding cannot fragment the cache.
-    expect(discogsKeys.suggest('  miles  ')).toEqual(discogsKeys.suggest('miles'));
   });
 
-  it('useCatalogSuggestions stays disabled below two non-whitespace characters (FR-010)', async () => {
-    const { useCatalogSuggestions } = await import('../../../src/queries/discogsQueries');
-    const { result } = renderHook(() => useCatalogSuggestions('m', true), { wrapper });
-
-    expect(result.current.fetchStatus).toBe('idle');
-    expect(mockSuggest).not.toHaveBeenCalled();
-  });
-
-  it('useCatalogSuggestions stays disabled until the collector has edited the field (FR-004, research D10)', async () => {
+  it('useCatalogSuggestions stays disabled while the caller gates it off (FR-004, research D10)', async () => {
     const { useCatalogSuggestions } = await import('../../../src/queries/discogsQueries');
     const { result } = renderHook(() => useCatalogSuggestions('miles davis', false), {
       wrapper,

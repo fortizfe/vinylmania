@@ -67,19 +67,20 @@ export function HeaderSuggestionPanel({
 
   return (
     <Card
-      id="header-search-panel"
+      data-testid="header-search-panel"
       padding="sm"
       className="absolute inset-x-0 top-full z-10 mt-2 shadow-lg max-sm:mx-4"
+      // Keeps DOM focus in the field while anything in the panel is pressed —
+      // a row, the padding, a message, Retry (Safari never focuses a clicked
+      // button): without it the pointer-down blurs the input, the search
+      // collapses on `focusout` (contracts §1) and the click never lands.
+      onMouseDown={(event) => event.preventDefault()}
     >
       <ul
         role="listbox"
         id="header-search-listbox"
         aria-label="Search suggestions"
         className="flex flex-col gap-1"
-        // Keeps DOM focus in the field while a row is pressed: without it the
-        // pointer-down blurs the input, the search collapses on `focusout`
-        // (contracts §1) and the click never reaches the row.
-        onMouseDown={(event) => event.preventDefault()}
       >
         {state === 'loading' &&
           Array.from({ length: SKELETON_ROWS }, (_unused, index) => (

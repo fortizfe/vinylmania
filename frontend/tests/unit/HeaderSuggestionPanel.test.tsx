@@ -138,8 +138,7 @@ describe('HeaderSuggestionPanel (069 US2)', () => {
       />,
     );
 
-    const panel = document.getElementById('header-search-panel');
-    expect(panel).not.toBeNull();
+    const panel = screen.getByTestId('header-search-panel');
     // Card's own surface classes plus the floating elevation (contracts §7).
     expect(panel).toHaveClass('rounded-xl', 'border', 'bg-stone-50', 'shadow-lg');
     expect(listbox()).toHaveAttribute('id', 'header-search-listbox');
@@ -271,9 +270,7 @@ describe('HeaderSuggestionPanel — empty and error states (069 US4)', () => {
   const FIVE_ROW_BLOCK_HEIGHT_CLASS = 'h-74';
 
   function panel(): HTMLElement {
-    const element = document.getElementById('header-search-panel');
-    if (!element) throw new Error('panel not rendered');
-    return element;
+    return screen.getByTestId('header-search-panel');
   }
 
   it('names the searched text and suggests broadening it, outside the listbox, when nothing matches (FR-018)', () => {

@@ -42,7 +42,7 @@ A collapse never navigates and never discards the typed text from the URL — it
 | Collapsed icon button (< 640 px) | `button` | "Search" | `aria-expanded` mirrors the search's expanded state |
 | Field | `<input type="search">` + `role="combobox"` | "Search Discogs" — persistent, via the existing `Input label` + `hideLabel` (FR-024) | `aria-expanded` (panel displayed), `aria-controls="header-search-listbox"`, `aria-autocomplete="list"`, `aria-activedescendant` (only while an option is active) |
 | Submit button | `button` | "Search" | — |
-| Panel surface | the existing `<Card>`, `id="header-search-panel"` | — | — |
+| Panel surface | the existing `<Card>`, `data-testid="header-search-panel"` | — | — |
 | Suggestion list | `<ul role="listbox" id="header-search-listbox">` — **always rendered while the panel is displayed**, so `aria-controls` never dangles | "Search suggestions" (`aria-label`) | — |
 | Suggestion | `<li role="option" id="header-search-option-{index}">` | "<title>, <secondary detail>, Artist \| Album" | `aria-selected="true"` on the active option only |
 | Kind label on a row | visible text ("Artist" / "Album") beside an icon | — | **Never colour alone** (FR-011, FR-025) |

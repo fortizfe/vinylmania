@@ -364,4 +364,38 @@ describe('Header search — empty and error states (069 US4)', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
     expect(status()).not.toHaveTextContent(UNAVAILABLE);
   });
+
+  it('shows the error state for a revoked Discogs link, which is not a session expiry (spec 053)', async () => {
+    const actual = await vi.importActual<typeof import('../../src/services/discogsApi')>(
+      '../../src/services/discogsApi',
+    );
+    mockSuggest.mockImplementation(actual.suggest);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({
+          error: 'discogs_link_invalid',
+          message: 'Your Discogs link is no longer valid.',
+        }),
+      }),
+    );
+    setSessionToken('valid-token');
+    const onUnauthorized = vi.fn();
+    setUnauthorizedHandler(onUnauthorized);
+
+    const user = userEvent.setup();
+    renderHeader();
+
+    await user.click(opener());
+    await user.type(searchField(), 'miles');
+
+    expect(
+      await screen.findByRole('button', { name: 'Retry' }, { timeout: 2000 }),
+    ).toBeInTheDocument();
+    expect(status()).toHaveTextContent(UNAVAILABLE);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+    expect(getSessionToken()).toBe('valid-token');
+  });
 });
