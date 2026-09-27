@@ -117,7 +117,9 @@ describe('HeaderSearchBox', () => {
 
     await user.tab();
     await user.keyboard('stockholm');
-    expect(opener(true)).toBeInTheDocument();
+    expect(scrim()).not.toBeNull();
+    // From 640 px up the button only submits, so it expands nothing (contracts §3).
+    expect(screen.getByRole('button', { name: /search/i })).not.toHaveAttribute('aria-expanded');
     expect(searchField()).toHaveValue('stockholm');
     await user.keyboard('{Enter}');
 
