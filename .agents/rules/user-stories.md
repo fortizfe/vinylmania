@@ -16,7 +16,7 @@ Estas reglas son de obligado cumplimiento para cualquier agente (`product-owner-
 
 ---
 
-## 2. Conformidad Mandatoria con la Constitución (`.specify/memory/constitution.md`)
+## 2. Conformidad Mandatoria con la Constitución (`CONSTITUTION.md`)
 
 Toda Historia de Usuario debe alinearse estrictamente con los principios rectores de Vinylmania:
 
@@ -118,7 +118,7 @@ Todo documento de HU en `.hu/` debe contener las siguientes secciones:
 - Lista taxativa de lo que NO se desarrollará en este incremento.
 
 ## 8. Directrices de Handoff para architect-agent
-- Puntos clave para las fases: speckit-specify, speckit-clarify, speckit-plan y speckit-tasks.
+- Puntos clave para el diseño técnico: alcance, plan y desglose de tareas.
 ```
 
 ---

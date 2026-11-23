@@ -11,7 +11,7 @@ if a task needs those, say so and stop rather than drifting into them.
 ## Source of truth
 
 Before making architectural or process decisions, check
-`.specify/memory/constitution.md` — specifically:
+`CONSTITUTION.md` — specifically:
 - **Principle I (Test-First, NON-NEGOTIABLE)**
 - **Principle III (Simplicity, YAGNI & KISS)**
 - **Principle IV (SOLID Design)**

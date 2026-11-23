@@ -4,7 +4,7 @@ When the Jira MCP server is active, you have access to tools for managing Jira i
 
 ## Available Capabilities
 - **Issue Lookup & Search**: Use `jira_get_issue` with the issue key (e.g., `VM-123`) or `jira_search_jql` to search for open tasks, bugs, or user stories.
-- **Issue Creation**: Use `jira_create_issue` when converting User Stories (`.hu/`) or SpecKit tasks (`tasks.md`) into Jira tickets. Supports Markdown formatting (converted to ADF).
+- **Issue Creation**: Use `jira_create_issue` when converting User Stories (`.hu/`) or feature tasks (`specs/*/tasks.md`) into Jira tickets. Supports Markdown formatting (converted to ADF).
 - **Issue Updates & Comments**: Use `jira_edit_issue`, `jira_add_comment`, and `jira_transition_issue` to reflect progress, link PRs, or update statuses (e.g. *In Progress*, *Done*).
 
 ## Best Practices
