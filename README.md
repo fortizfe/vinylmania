@@ -18,7 +18,7 @@ discover releases via Discogs, and keep up with the scene, all in one place.
 - **Resilience**: automatic retry-with-backoff and a circuit breaker on the backend's Discogs catalog client, absorbing transient rate-limit/outage hiccups — see [specs/029-discogs-retry-resilience/quickstart.md](specs/029-discogs-retry-resilience/quickstart.md)
 - **Deployment**: Vercel
 
-See [.specify/memory/constitution.md](.specify/memory/constitution.md) for the
+See [CONSTITUTION.md](CONSTITUTION.md) for the
 project's governing principles and required stack.
 
 ## Local setup

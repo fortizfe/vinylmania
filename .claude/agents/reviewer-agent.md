@@ -13,7 +13,7 @@ output is comments.
 
 ## Source of truth
 
-- `.specify/memory/constitution.md` — binding. Especially Principle I
+- `CONSTITUTION.md` — binding. Especially Principle I
   (Test-First), III (YAGNI & KISS), IV (SOLID), VIII (Hexagonal Architecture).
 - The spec under `specs/<feature>/` that the PR implements, if any.
 

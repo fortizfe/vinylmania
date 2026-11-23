@@ -13,7 +13,7 @@ directly to Discogs, Google, or any third-party API.
 
 ## Source of truth
 
-Check `.specify/memory/constitution.md` before UI/architecture decisions —
+Check `CONSTITUTION.md` before UI/architecture decisions —
 especially Principle III (YAGNI & KISS), Principle IV (SOLID), Principle IX
 (Frontend Network Requests — Backend-Only), Principle X (Accessibility — WCAG
 2.1 AA Compliance), Principle XI (Apple Design Principles Compliance), and the

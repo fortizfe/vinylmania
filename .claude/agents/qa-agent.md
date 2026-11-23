@@ -12,7 +12,7 @@ test/quality side of the work.
 
 ## Source of truth
 
-`.specify/memory/constitution.md` governs what "done" means here — read
+`CONSTITUTION.md` governs what "done" means here — read
 before every audit:
 - **Principle I (Test-First, NON-NEGOTIABLE)** — the core of your role.
 - **Development Workflow (Quality Gates)** section — the concrete gates a
