@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Vinylmania
 
 Vinyl-collector web app: Discogs catalog data + collector ratings + rock/metal music news.
-Three independent npm projects (no workspace): `backend/`, `frontend/`, `e2e/`. The root `package.json`
+Three independent npm projects (no workspace): `backend/`, `frontend/`, `e2e/`, plus the planned Flutter app
+`flutter_app/` (desktop, Android, iOS; not created yet). The root `package.json`
 only holds release tooling tests. Governing rules live in `CONSTITUTION.md` — read it
 before non-trivial design work; reviewers reject PRs that break it.
 
@@ -43,6 +44,13 @@ npm test                                # node --test for scripts/ (release + te
   `export $(grep "^DISCOGS_TOKEN=" backend/.env | xargs)`. CI sets it and is unaffected.
 - Backend env vars are documented in `backend/README.md`.
 
+## Rules for all code
+
+- **One class per file** (constitution §XII), file named after the class; in React one component per file. Exceptions:
+  a Flutter `StatefulWidget` + its private `State`; Dart `sealed` subclasses go in `part` files. Legacy multi-class
+  files are split when touched, never extended.
+- SOLID, KISS and separation of responsibilities everywhere; ponytail ladder before adding anything.
+
 ## Architecture
 
 **Backend — hexagonal (constitution §VIII, mandatory).** Global layer folders under `backend/src/`, one
@@ -63,6 +71,10 @@ subfolder per business domain (`library`, `wantlist`, `discogsCatalog`, `discogs
 (TanStack Query hooks) → `pages/` + `components/`. Constitution §IX: the frontend talks **only** to our
 backend — no Firebase/Discogs SDKs. Login is a backend-mediated full-page Google OAuth redirect.
 
+**Flutter app (`flutter_app/`).** Client of the same backend (§IX applies): Views + ChangeNotifier ViewModels →
+repositories → one service per backend resource → `ApiClient`. Design tokens ported from `global.css`. See the
+`flutter-architecture`, `flutter-design` and `flutter-platforms` skills.
+
 **UI rules (constitution §X, §XI, Tailwind section) are merge gates:** WCAG 2.1 AA, 44×44px touch targets
 (`min-h-11 min-w-11`), purpose-built desktop *and* mobile layouts, skeleton loaders matching final shape
 (no spinners), no layout shift between states, dark mode via `@theme` tokens, `stone` neutrals with
@@ -82,6 +94,15 @@ skills before building or restyling UI.
 - CI (`.github/workflows/ci.yml`): backend, frontend, e2e (chromium + webkit) and CodeQL; Critical/High
   CodeQL alerts block deploy. Backend and frontend deploy as two separate Vercel projects
   (`docs/deployment-vercel.md`).
+
+## Agents & skills (`.claude/`)
+
+- Agents: `product-owner-agent` (HU in `.hu/`) → `architect-agent` (`specs/`) → `backend-agent` / `frontend-agent`
+  / `flutter-agent` (Dart in `flutter_app/`) / `flutter-platform-agent` (native folders, builds, CI, signing) / `qa-agent`
+  → `reviewer-agent` (posts PR review). `docs-agent` for end-user docs.
+- Project skills: `hexagonal-architecture` (backend placement + dependency check), `frontend-design` (design system +
+  Apple skills + UI merge gates), `test-first` (test layer, helpers, local gotchas), `code-review-ponytail`
+  (ponytail + correctness review of a diff/PR), `user-story` (Jira → `.hu/`), `flutter-architecture`, `flutter-design`, `flutter-platforms`.
 
 ## HU desde Jira
 

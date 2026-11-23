@@ -149,6 +149,13 @@ assumes the integration lives in `backend/` without saying so explicitly). `e2e/
 doubles that stand in for these external providers (e.g. an OAuth provider stub) are
 exempt from this principle, since their entire purpose is to simulate the external third
 parties this principle restricts production frontend code from calling directly.
+The same rule governs the native Flutter client under `flutter_app/`: every data request
+it initiates (`package:http`, `dart:io` `HttpClient`, or any SDK) MUST target Vinylmania's
+own backend only, and no Firebase/Discogs/Google SDK MAY be used there for data requests.
+Opening the provider's authorization page in the system browser (or an
+`ASWebAuthenticationSession` / Custom Tab) and receiving the callback through a deep link
+or loopback redirect is the native equivalent of the web's full-page OAuth redirect and is
+covered by the same carve-out.
 **Rationale**: A frontend that talks directly to third-party services (an identity
 provider's SDK, a catalog API) duplicates integration logic the backend already owns,
 scatters credentials and rate-limit handling across two codebases, and makes it
@@ -215,6 +222,22 @@ design principles as an explicit standard — already applied in practice via th
 reviewers an objective, external reference point for interaction and motion quality
 instead of leaving it to individual taste.
 
+### XII. One Class per File
+Every source file in the repository (`backend/`, `frontend/`, `e2e/`, `flutter_app/`,
+`scripts/`) MUST declare at most one class. In React, where components are functions,
+the unit is the component: a file MUST export at most one React component. In Flutter,
+the unit is the class, widgets included. Types, interfaces and non-exported helpers used
+only by that file's class MAY live beside it; anything reused elsewhere moves to its own
+file. Two narrow exceptions apply: a Flutter `StatefulWidget` and its private `State`
+form one unit and MAY share a file, and a Dart `sealed` hierarchy (whose subclasses must
+share a library) MUST place each subclass in its own `part` file. The file is named after
+its class (`DiscogsNotFoundError` → `discogsNotFoundError.ts`;
+`LibraryViewModel` → `library_view_model.dart`). Existing files that break this rule MUST
+be split when a PR materially modifies them; they MUST NOT be extended with another class.
+**Rationale**: One class per file makes every responsibility addressable by its file
+name, keeps diffs and reviews scoped to one unit, and turns a growing file into a visible
+Single Responsibility (Principle IV) signal instead of a silent one.
+
 ## Additional Constraints (Web Application Standards)
 
 - The application MUST be delivered as a web application; any API MUST be documented
@@ -228,7 +251,16 @@ instead of leaving it to individual taste.
 
 ## Technology Stack
 
-- **Frontend**: React with TypeScript is the required stack for all UI code. New
+- **Native clients**: Flutter (Dart, null-safe, latest stable) is the required stack
+  for the desktop (macOS, Windows, Linux), Android and iOS applications, living in
+  `flutter_app/` as a fourth independent project. It is a client of the same backend
+  (Principle IX) and MUST NOT duplicate backend business rules. Its UI MUST honour the
+  intent of every rule in "UI Design System & Styling" through Flutter theming instead of
+  Tailwind: brand tokens defined once in the app theme (mirroring `@theme`), shared atomic
+  widgets instead of repeated styling, skeleton loading states matching the final shape,
+  no layout shift between states, light and dark themes, purpose-built compact and
+  expanded layouts, and minimum touch targets of 44×44 logical px (48×48 dp on Android).
+- **Frontend**: React with TypeScript is the required stack for all web UI code. New
   frontend code MUST NOT be written in plain JavaScript; existing plain-JS code
   MUST be migrated to TypeScript before material extension.
 - **Styling**: Tailwind CSS v4 is the required styling solution for all UI code.
@@ -428,4 +460,4 @@ introduced against these principles MUST be justified in the PR description. Use
 this document as the source of truth for runtime development guidance until a
 project-specific guidance file is established.
 
-**Version**: 2.7.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-09-05
+**Version**: 2.8.0 | **Ratified**: 2026-07-03 | **Last Amended**: 2026-11-23
