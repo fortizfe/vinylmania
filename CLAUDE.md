@@ -34,7 +34,13 @@ npm test                                # node --test for scripts/ (release + te
 ```
 
 - Backend and e2e `pretest` fails fast if emulator ports are already held — don't run both suites concurrently.
-- Local e2e needs Redis reachable at `backend/.env` `REDIS_URL`; some backend contract tests need `DISCOGS_TOKEN` exported.
+- Local e2e loads `backend/.env`, so Redis must be listening on its `REDIS_URL` (otherwise every test fails at
+  sign-in with `internal_error`; a throwaway `redis-server --daemonize yes --save "" --appendonly no` works).
+  Cached `discogs:release:*` keys survive between runs, so a local-only failure on Discogs data (e.g.
+  `discogs-catalog-relink.spec.ts`) is likely stale Redis, not a regression. CI has no Redis and is unaffected.
+- 2 tests in `backend/tests/contract/discogsCatalog/discogsSearch.contract.test.ts` fail locally unless
+  `DISCOGS_TOKEN` is exported in the shell (`.env` alone isn't enough):
+  `export $(grep "^DISCOGS_TOKEN=" backend/.env | xargs)`. CI sets it and is unaffected.
 - Backend env vars are documented in `backend/README.md`.
 
 ## Architecture
