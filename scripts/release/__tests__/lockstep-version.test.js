@@ -12,3 +12,12 @@ test('backend and frontend package.json versions match each other (lockstep inva
 
   assert.equal(backendPkg.version, frontendPkg.version, 'backend and frontend versions must always match');
 });
+
+test('flutter_app/pubspec.yaml version matches the backend/frontend version (lockstep invariant)', () => {
+  const fs = require('node:fs');
+  const { readPubspecVersion } = require('../pubspec-version');
+  const backendPkg = require(path.join(REPO_ROOT, 'backend', 'package.json'));
+  const pubspec = fs.readFileSync(path.join(REPO_ROOT, 'flutter_app', 'pubspec.yaml'), 'utf8');
+
+  assert.equal(readPubspecVersion(pubspec).version, backendPkg.version, 'flutter_app version must match backend/frontend');
+});

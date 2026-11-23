@@ -9,11 +9,13 @@ const { parseCommit } = require('./parse-commit');
 const { classifyCommit } = require('./classify-commit');
 const { computeReleasePlan } = require('./compute-release-plan');
 const { renderChangelogSection } = require('./render-changelog-section');
+const { readPubspecVersion, bumpPubspecVersion } = require('./pubspec-version');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const ROOT_CHANGELOG_PATH = path.join(REPO_ROOT, 'CHANGELOG.md');
 const BACKEND_PKG_PATH = path.join(REPO_ROOT, 'backend', 'package.json');
 const FRONTEND_PKG_PATH = path.join(REPO_ROOT, 'frontend', 'package.json');
+const PUBSPEC_PATH = path.join(REPO_ROOT, 'flutter_app', 'pubspec.yaml');
 const UNIFIED_MARKER = '## Unified versioning';
 
 const RECORD_SEP = '\x1f';
@@ -82,6 +84,16 @@ function main() {
     return;
   }
 
+  const pubspecContent = fs.readFileSync(PUBSPEC_PATH, 'utf8');
+  const pubspecVersion = readPubspecVersion(pubspecContent).version;
+  if (pubspecVersion !== backendPkg.version) {
+    console.error(
+      `::error::Lockstep version mismatch: flutter_app/pubspec.yaml is ${pubspecVersion}, backend/frontend are ${backendPkg.version}`
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   const previousVersion = backendPkg.version;
   const lastTag = getLastReleaseTag();
   const rawCommits = getCommitsSinceTag(lastTag);
@@ -107,12 +119,13 @@ function main() {
   frontendPkg.version = plan.nextVersion;
   writeJson(BACKEND_PKG_PATH, backendPkg);
   writeJson(FRONTEND_PKG_PATH, frontendPkg);
+  fs.writeFileSync(PUBSPEC_PATH, bumpPubspecVersion(pubspecContent, plan.nextVersion));
 
   const section = renderChangelogSection(plan);
   const changelogContent = fs.readFileSync(ROOT_CHANGELOG_PATH, 'utf8');
   fs.writeFileSync(ROOT_CHANGELOG_PATH, insertChangelogSection(changelogContent, section));
 
-  git(['add', 'CHANGELOG.md', 'backend/package.json', 'frontend/package.json']);
+  git(['add', 'CHANGELOG.md', 'backend/package.json', 'frontend/package.json', 'flutter_app/pubspec.yaml']);
   git(['commit', '-m', `chore(release): v${plan.nextVersion} [skip ci]`]);
   git(['tag', '-a', `v${plan.nextVersion}`, '-m', `v${plan.nextVersion}`]);
 

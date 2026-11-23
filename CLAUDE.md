@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Vinylmania
 
 Vinyl-collector web app: Discogs catalog data + collector ratings + rock/metal music news.
-Three independent npm projects (no workspace): `backend/`, `frontend/`, `e2e/`, plus the planned Flutter app
-`flutter_app/` (desktop, Android, iOS; not created yet). The root `package.json`
+Three independent npm projects (no workspace): `backend/`, `frontend/`, `e2e/`, plus the Flutter app
+`flutter_app/` (desktop, Android, iOS; id `com.fortizfe.vinylmania`). The root `package.json`
 only holds release tooling tests. Governing rules live in `CONSTITUTION.md` — read it
 before non-trivial design work; reviewers reject PRs that break it.
 
@@ -29,6 +29,11 @@ npx vitest run tests/unit/AppHeader.test.tsx  # single file
 # e2e/ (Playwright; boots emulators, Google/Discogs OAuth stubs, backend and frontend itself)
 npm test
 npm test -- tests/library-filters.spec.ts
+
+# flutter_app/ (Flutter stable, Dart 3; flutter_test)
+flutter run -d macos --dart-define=API_BASE_URL=http://localhost:3001   # Android emulator: http://10.0.2.2:3001
+flutter test | flutter analyze | dart format .
+flutter emulators --launch vinylmania_pixel                             # local Android AVD
 
 # root
 npm test                                # node --test for scripts/ (release + test tooling)
@@ -90,8 +95,8 @@ skills before building or restyling UI.
   feature needs them, are plain Markdown written by `architect-agent` in the same layout.
 - Commits are conventional commits: CI on `main` derives the version bump and `CHANGELOG.md` from them
   (`scripts/release/`; `feat` → minor, `fix` → patch, `chore/docs/test/ci/style/refactor` → no release).
-  Backend and frontend are versioned in lockstep.
-- CI (`.github/workflows/ci.yml`): backend, frontend, e2e (chromium + webkit) and CodeQL; Critical/High
+  Backend, frontend and `flutter_app/pubspec.yaml` are versioned in lockstep.
+- CI (`.github/workflows/ci.yml`): backend, frontend, flutter, e2e (chromium + webkit) and CodeQL; Critical/High
   CodeQL alerts block deploy. Backend and frontend deploy as two separate Vercel projects
   (`docs/deployment-vercel.md`).
 

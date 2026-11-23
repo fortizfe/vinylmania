@@ -10,17 +10,11 @@ platform-agnostic (`flutter-architecture`); platform differences live in the
 native folders and, when Dart must branch, in one place behind a class in
 `lib/data/services/` — never `Platform.isX` scattered across widgets.
 
-## Create (once)
+## Project
 
-```bash
-flutter create --platforms=android,ios,macos,windows,linux \
-  --org <reverse-domain> --project-name vinylmania flutter_app
-```
-
-`--org` fixes the bundle/application id forever in the stores — the user
-decides it before the first commit. Then delete the counter demo, add
-`flutter_lints`, and commit the generated native folders (no `build/`, no
-`.dart_tool/`, no `local.properties`, no keystores).
+Created with `flutter create --platforms=android,ios,macos,windows,linux --org com.fortizfe --project-name vinylmania`
+→ application / bundle id `com.fortizfe.vinylmania` (fixed forever in the stores). Native
+folders are committed; `build/`, `.dart_tool/`, `local.properties` and keystores are not.
 
 ## Run
 
@@ -54,19 +48,16 @@ native ones — that is a backend change (`backend-agent`) designed in a spec by
 
 ## CI (`.github/workflows/ci.yml`)
 
-First job, when `flutter_app/` exists: `subosito/flutter-action` (stable,
-cached) on `ubuntu-latest` → `flutter pub get` → `dart format --set-exit-if-changed .`
-→ `flutter analyze` → `flutter test`. Platform build matrix (macOS runner for
-iOS/macOS, Windows runner) only when there is something to release — YAGNI
-until then. Keep `actionlint` green.
+Job `flutter-test` (`subosito/flutter-action`, stable, cached, `ubuntu-latest`):
+`flutter pub get` → `dart format --set-exit-if-changed` → `flutter analyze` → `flutter test`.
+The `release` job needs it. Platform build matrix (macOS runner for iOS/macOS, Windows
+runner) only when there is something to release — YAGNI until then. Keep `actionlint` green.
 
 ## Versioning
 
-Backend and frontend are versioned in lockstep by `scripts/release/run-release.js`
-from conventional commits. The app's `pubspec.yaml` `version: x.y.z+build` must
-join the lockstep: extend the release script (test-first, `scripts/__tests__`)
-in the same PR that creates `flutter_app/`. `build` number = monotonic CI run
-number, never hand-edited.
+`scripts/release/run-release.js` keeps `flutter_app/pubspec.yaml` in lockstep with
+backend/frontend: it fails on a version mismatch and, on release, sets `x.y.z` and
+increments `+build` (`scripts/release/pubspec-version.js`). Never edit either by hand.
 
 ## Signing & stores (when the first release is planned, not before)
 
