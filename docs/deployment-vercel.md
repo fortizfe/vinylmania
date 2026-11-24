@@ -58,6 +58,14 @@ and variables → Actions), on top of the ones already used by the test jobs:
 | `VERCEL_PROJECT_ID_BACKEND` | Identifies the backend project | `.vercel/project.json` after running `vercel link` inside `backend/` |
 | `VERCEL_PROJECT_ID_FRONTEND` | Identifies the frontend project | `.vercel/project.json` after running `vercel link` inside `frontend/` |
 
+**Commit author must be a Vercel team member.** Vercel blocks a deployment
+(`The commit author doesn't have access to this team`) when the deployed
+commit's author email isn't linked to a member of the team. GitHub-created merge
+commits (merge button, `gh pr merge`) are authored by
+`…@users.noreply.github.com` and get blocked, so merge PRs into `main` locally
+with `git merge --no-ff` as `fortizfe@gmail.com` (see `CLAUDE.md` → Workflow).
+A blocked deployment can't be re-run: push a new commit with a valid author.
+
 **Never paste any of these values into this file, into a commit, or into any
 file tracked by git** — they only ever live as GitHub Secrets.
 

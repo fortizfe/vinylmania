@@ -99,6 +99,11 @@ skills before building or restyling UI.
 - CI (`.github/workflows/ci.yml`): backend, frontend, flutter, e2e (chromium + webkit) and CodeQL; Critical/High
   CodeQL alerts block deploy. Backend and frontend deploy as two separate Vercel projects
   (`docs/deployment-vercel.md`).
+- **Merge PRs into `main` from the local CLI, never with GitHub's merge button or `gh pr merge`.** Vercel blocks
+  production deploys whose commit author isn't a team member, and GitHub authors its merge commits with the
+  `…@users.noreply.github.com` address, which Vercel doesn't recognise. Merge with a commit authored by `fortizfe@gmail.com`:
+  `git checkout main && git pull --ff-only && git merge --no-ff <branch> -m "Merge pull request #N from fortizfe/<branch>"
+  && git push` (check `git log -1 --format=%ae` first). GitHub marks the PR as merged on its own.
 
 ## Agents & skills (`.claude/`)
 
