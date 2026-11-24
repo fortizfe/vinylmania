@@ -440,11 +440,17 @@ export async function getRelease(
   credential: CatalogCredential,
   discogsReleaseId: number,
 ): Promise<Release> {
+  // Re-derive the id here: callers pass JSON-body ids (wantlist add), and this
+  // is the single place they all reach the Discogs URL (CodeQL js/request-forgery).
+  const id = Number(discogsReleaseId);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new DiscogsNotFoundError();
+  }
   return cacheAdapter.withCache(
-    `discogs:release:${discogsReleaseId}`,
+    `discogs:release:${id}`,
     RELEASE_CACHE_TTL_SECONDS,
     async () => {
-      const response = await getClientForCredential(credential).get(`/releases/${discogsReleaseId}`);
+      const response = await getClientForCredential(credential).get(`/releases/${id}`);
       return mapRelease(response.data);
     },
   );
