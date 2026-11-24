@@ -47,6 +47,15 @@ describe('mapFeedItem', () => {
     expect(mapFeedItem({ link: 'https://example.com/x' }, source)).toBeUndefined();
   });
 
+  it.each([
+    'javascript:alert(1)',
+    'intent://x#Intent;end',
+    'file:///etc/passwd',
+    'vinylmania://auth/callback?code=x',
+  ])('drops an item whose link is not http(s) (%s)', (link) => {
+    expect(mapFeedItem({ title: 'Bad link', link }, source)).toBeUndefined();
+  });
+
   it('drops an item missing a link', () => {
     expect(mapFeedItem({ title: 'No link here' }, source)).toBeUndefined();
   });

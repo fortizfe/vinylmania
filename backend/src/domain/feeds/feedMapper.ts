@@ -204,7 +204,7 @@ export function mapFeedItem(
   source: FeedSourceConfig,
 ): Article | undefined {
   const title = cleanText(item.title);
-  const link = item.link?.trim();
+  const link = safeUrl(item.link?.trim());
 
   if (!title || !link) {
     return undefined;
