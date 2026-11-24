@@ -41,8 +41,10 @@ export function createCompleteLoginUseCase(deps: {
       throw new GoogleAuthFlowError('expired_state', 'This sign-in attempt expired. Please try signing in again.');
     }
 
-    // Native logins are bound to the app instance that started them (PKCE S256).
-    // The pending login is kept on mismatch so the real app can still complete.
+    // Native logins are bound to the app instance that started them (PKCE S256). Google enforces
+    // the same challenge on the code exchange; this local check fails fast with `invalid_state`
+    // (Google's `invalid_grant` can't be told apart from an expired/reused code) and without
+    // spending the code. The pending login is kept on mismatch so the real app can still complete.
     if (
       pending.client === 'native' &&
       !(
@@ -65,6 +67,7 @@ export function createCompleteLoginUseCase(deps: {
     const identity = await deps.googleIdentity.exchangeCodeForIdentity(
       input.code!,
       pending.client,
+      pending.client === 'native' ? input.codeVerifier : undefined,
     );
     const { uid } = await deps.identityResolver.resolveOrCreateUser({
       email: identity.email,

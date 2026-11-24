@@ -22,7 +22,7 @@ describe('startLogin', () => {
     const result = await startLogin({ client: 'web' });
 
     expect(port.createPendingLogin).toHaveBeenCalledWith({ client: 'web' });
-    expect(port.getAuthorizeUrl).toHaveBeenCalledWith('abc', 'web');
+    expect(port.getAuthorizeUrl).toHaveBeenCalledWith('abc', 'web', undefined);
     expect(result).toEqual({
       authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth?state=abc',
     });
@@ -38,6 +38,6 @@ describe('startLogin', () => {
       client: 'native',
       codeChallenge: 'the-challenge',
     });
-    expect(port.getAuthorizeUrl).toHaveBeenCalledWith('abc', 'native');
+    expect(port.getAuthorizeUrl).toHaveBeenCalledWith('abc', 'native', 'the-challenge');
   });
 });

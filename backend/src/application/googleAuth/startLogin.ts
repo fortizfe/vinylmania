@@ -8,7 +8,11 @@ export function createStartLoginUseCase(deps: { googleIdentity: GoogleIdentityPo
     codeChallenge?: string;
   }): Promise<{ authorizeUrl: string }> {
     const { state } = await deps.googleIdentity.createPendingLogin(input);
-    const authorizeUrl = deps.googleIdentity.getAuthorizeUrl(state, input.client);
+    const authorizeUrl = deps.googleIdentity.getAuthorizeUrl(
+      state,
+      input.client,
+      input.codeChallenge,
+    );
     logger.info({ route: 'google-auth', outcome: 'login_started' });
     return { authorizeUrl };
   };

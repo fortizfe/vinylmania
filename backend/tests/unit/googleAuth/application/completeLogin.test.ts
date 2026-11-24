@@ -215,11 +215,12 @@ describe('completeLogin', () => {
     expect(googleIdentity.exchangeCodeForIdentity).toHaveBeenCalledWith(
       'auth-code',
       'web',
+      undefined,
     );
   });
 
-  it('ignores a codeVerifier on a web pending login', async () => {
-    const { completeLogin } = makeUseCase();
+  it('ignores a codeVerifier on a web pending login (not forwarded to Google)', async () => {
+    const { completeLogin, googleIdentity } = makeUseCase();
 
     await expect(
       completeLogin({
@@ -228,6 +229,11 @@ describe('completeLogin', () => {
         codeVerifier: 'whatever',
       }),
     ).resolves.toEqual({ sessionToken: 'session-1', user: USER_PROFILE });
+    expect(googleIdentity.exchangeCodeForIdentity).toHaveBeenCalledWith(
+      'auth-code',
+      'web',
+      undefined,
+    );
   });
 
   describe('native pending login (PKCE)', () => {
@@ -239,7 +245,7 @@ describe('completeLogin', () => {
       });
     }
 
-    it('completes with a matching verifier and exchanges with the native client', async () => {
+    it('completes with a matching verifier and exchanges with the native client and verifier', async () => {
       const { completeLogin, googleIdentity } = nativeUseCase();
 
       const result = await completeLogin({
@@ -252,6 +258,7 @@ describe('completeLogin', () => {
       expect(googleIdentity.exchangeCodeForIdentity).toHaveBeenCalledWith(
         'auth-code',
         'native',
+        VERIFIER,
       );
     });
 

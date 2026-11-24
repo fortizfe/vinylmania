@@ -42,10 +42,13 @@ export async function createPendingRequest(
   uid: string,
   client: OAuthClient,
 ): Promise<{ authorizeUrl: string }> {
-  const callbackUrl =
-    (client === 'native'
-      ? process.env.DISCOGS_OAUTH_NATIVE_CALLBACK_URL
-      : process.env.DISCOGS_OAUTH_CALLBACK_URL) ?? '';
+  const callbackVar =
+    client === 'native' ? 'DISCOGS_OAUTH_NATIVE_CALLBACK_URL' : 'DISCOGS_OAUTH_CALLBACK_URL';
+  const callbackUrl = process.env[callbackVar];
+  if (!callbackUrl) {
+    // An empty oauth_callback makes Discogs fall back to the app's registered (web) callback.
+    throw new Error(`${callbackVar} is not configured`);
+  }
   const header = buildRequestTokenHeader(getCredentials(), callbackUrl);
 
   const response = await createOauthHttpClient().get('/oauth/request_token', {

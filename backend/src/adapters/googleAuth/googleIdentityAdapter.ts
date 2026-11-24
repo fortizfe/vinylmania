@@ -45,7 +45,7 @@ function pendingDoc(state: string) {
   return getFirestoreDb().collection(PENDING_COLLECTION).doc(state);
 }
 
-function getAuthorizeUrl(state: string, client: OAuthClient): string {
+function getAuthorizeUrl(state: string, client: OAuthClient, codeChallenge?: string): string {
   const { clientId, callbackUrl } = getClientCredentials(client);
   const url = new URL('/o/oauth2/v2/auth', getOauthBaseUrl());
   url.searchParams.set('client_id', clientId);
@@ -53,10 +53,19 @@ function getAuthorizeUrl(state: string, client: OAuthClient): string {
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', 'openid email profile');
   url.searchParams.set('state', state);
+  if (codeChallenge) {
+    // Binds Google's code to this attempt: Google itself rejects a code redeemed without the verifier.
+    url.searchParams.set('code_challenge', codeChallenge);
+    url.searchParams.set('code_challenge_method', 'S256');
+  }
   return url.toString();
 }
 
-async function exchangeCodeForIdentity(code: string, client: OAuthClient): Promise<GoogleIdentity> {
+async function exchangeCodeForIdentity(
+  code: string,
+  client: OAuthClient,
+  codeVerifier?: string,
+): Promise<GoogleIdentity> {
   const { clientId, clientSecret, callbackUrl } = getClientCredentials(client);
 
   let accessToken: string;
@@ -69,6 +78,7 @@ async function exchangeCodeForIdentity(code: string, client: OAuthClient): Promi
         client_secret: clientSecret,
         redirect_uri: callbackUrl,
         grant_type: 'authorization_code',
+        ...(codeVerifier ? { code_verifier: codeVerifier } : {}),
       }),
       { timeout: 10_000 },
     );

@@ -49,16 +49,18 @@ describe('Google native login API contract', () => {
   });
 
   describe('GET /api/auth/google/authorize', () => {
-    it('uses the native redirect_uri for client=native with a valid code_challenge', async () => {
+    // Requests are budgeted: the strict limiter allows 20/min for this whole file (shared via Redis locally).
+    it('uses the native redirect_uri and forwards the PKCE challenge to Google for client=native', async () => {
       const res = await request(app)
         .get('/api/auth/google/authorize')
         .query({ client: 'native', code_challenge: CHALLENGE });
 
       expect(res.status).toBe(302);
       expect(res.headers.location).toContain(GOOGLE_OAUTH_BASE_URL);
-      expect(new URL(res.headers.location).searchParams.get('redirect_uri')).toBe(
-        NATIVE_CALLBACK_URL,
-      );
+      const params = new URL(res.headers.location).searchParams;
+      expect(params.get('redirect_uri')).toBe(NATIVE_CALLBACK_URL);
+      expect(params.get('code_challenge')).toBe(CHALLENGE);
+      expect(params.get('code_challenge_method')).toBe('S256');
     });
 
     it.each([
@@ -117,10 +119,13 @@ describe('Google native login API contract', () => {
   });
 
   describe('POST /api/auth/google/complete', () => {
-    it('returns 200 with a matching codeVerifier and exchanges with the native redirect_uri', async () => {
+    it('returns 200 with a matching codeVerifier and exchanges it with Google on the native redirect_uri', async () => {
       const state = await startNativeLogin();
       const tokenScope = nock(GOOGLE_TOKEN_BASE_URL)
-        .post('/token', (body) => body.redirect_uri === NATIVE_CALLBACK_URL)
+        .post(
+          '/token',
+          (body) => body.redirect_uri === NATIVE_CALLBACK_URL && body.code_verifier === VERIFIER,
+        )
         .reply(200, { access_token: 'google-access-token', token_type: 'Bearer', expires_in: 3600 });
       nock(GOOGLE_USERINFO_BASE_URL)
         .get('/v1/userinfo')
@@ -164,11 +169,19 @@ describe('Google native login API contract', () => {
       expect(res.body.error).toBe('validation_error');
     });
 
-    it('ignores a codeVerifier on a web login', async () => {
+    it('sends no PKCE to Google and ignores a codeVerifier on a web login', async () => {
       const webAuthorize = await request(app).get('/api/auth/google/authorize');
-      const state = new URL(webAuthorize.headers.location).searchParams.get('state')!;
+      const authorizeParams = new URL(webAuthorize.headers.location).searchParams;
+      expect(authorizeParams.has('code_challenge')).toBe(false);
+      expect(authorizeParams.has('code_challenge_method')).toBe(false);
+      const state = authorizeParams.get('state')!;
       nock(GOOGLE_TOKEN_BASE_URL)
-        .post('/token', (body) => body.redirect_uri === 'http://localhost:5173/login/callback')
+        .post(
+          '/token',
+          (body) =>
+            body.redirect_uri === 'http://localhost:5173/login/callback' &&
+            body.code_verifier === undefined,
+        )
         .reply(200, { access_token: 'google-access-token', token_type: 'Bearer', expires_in: 3600 });
       nock(GOOGLE_USERINFO_BASE_URL)
         .get('/v1/userinfo')

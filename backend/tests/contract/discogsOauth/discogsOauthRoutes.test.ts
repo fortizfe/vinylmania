@@ -1,3 +1,4 @@
+import nock from 'nock';
 import request from 'supertest';
 
 import { createApp } from '../../../src/app';
@@ -76,6 +77,26 @@ describe('Discogs OAuth API contract', () => {
       expect(res.status).toBe(200);
       expect(res.body.authorizeUrl).toContain('oauth_token=req-tok');
       expect(scope.isDone()).toBe(true);
+    });
+
+    it('returns 500 internal_error without calling Discogs when the native callback is not configured', async () => {
+      const { sessionToken } = await createTestSession('oauth-request-native-unset');
+      const scope = discogsScope().get('/oauth/request_token').reply(200, REQUEST_TOKEN_BODY, URLENCODED);
+      delete process.env.DISCOGS_OAUTH_NATIVE_CALLBACK_URL;
+
+      try {
+        const res = await request(app)
+          .post('/api/discogs/oauth/request')
+          .set('Authorization', `Bearer ${sessionToken}`)
+          .send({ client: 'native' });
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('internal_error');
+        expect(scope.isDone()).toBe(false);
+      } finally {
+        process.env.DISCOGS_OAUTH_NATIVE_CALLBACK_URL = NATIVE_CALLBACK_URL;
+        nock.cleanAll();
+      }
     });
 
     it('returns 400 validation_error for an unknown client', async () => {
