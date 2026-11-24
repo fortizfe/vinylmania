@@ -34,25 +34,14 @@ class LibraryRepository extends ChangeNotifier {
     return entry;
   }
 
-  /// Saves exactly one field (the record detail autosaves field by field).
-  /// `rating: 0` clears the rating, `notes: ''` clears the notes.
+  /// Saves one copy field (the record detail autosaves field by field).
+  /// `rating` 0 clears the rating, `notes` '' clears the notes.
   Future<LibraryEntry> updateCopy(
-    String entryId, {
-    int? rating,
-    String? mediaCondition,
-    String? sleeveCondition,
-    String? notes,
-  }) async {
-    final patch = <String, Object>{
-      'rating': ?rating,
-      'mediaCondition': ?mediaCondition,
-      'sleeveCondition': ?sleeveCondition,
-      'notes': ?notes,
-    };
-    if (patch.length != 1) {
-      throw ArgumentError('updateCopy takes exactly one field, got $patch');
-    }
-    final entry = await _api.update(entryId, patch);
+    String entryId,
+    String field,
+    Object value,
+  ) async {
+    final entry = await _api.update(entryId, {field: value});
     notifyListeners();
     return entry;
   }

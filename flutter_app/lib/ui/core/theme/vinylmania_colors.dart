@@ -13,6 +13,7 @@ class VinylmaniaColors extends ThemeExtension<VinylmaniaColors> {
     required this.warningSurface,
     required this.onWarningSurface,
     required this.warningBorder,
+    required this.cardShadow,
   });
 
   /// Amber as a fill or on dark surfaces.
@@ -33,6 +34,9 @@ class VinylmaniaColors extends ThemeExtension<VinylmaniaColors> {
   final Color onWarningSurface;
   final Color warningBorder;
 
+  /// Card drop shadow (web `shadow-sm`, same in both themes).
+  final Color cardShadow;
+
   static VinylmaniaColors of(BuildContext context) =>
       Theme.of(context).extension<VinylmaniaColors>()!;
 
@@ -48,6 +52,7 @@ class VinylmaniaColors extends ThemeExtension<VinylmaniaColors> {
     Color? warningSurface,
     Color? onWarningSurface,
     Color? warningBorder,
+    Color? cardShadow,
   }) => VinylmaniaColors(
     accent: accent ?? this.accent,
     accentText: accentText ?? this.accentText,
@@ -59,6 +64,7 @@ class VinylmaniaColors extends ThemeExtension<VinylmaniaColors> {
     warningSurface: warningSurface ?? this.warningSurface,
     onWarningSurface: onWarningSurface ?? this.onWarningSurface,
     warningBorder: warningBorder ?? this.warningBorder,
+    cardShadow: cardShadow ?? this.cardShadow,
   );
 
   @override
@@ -79,6 +85,7 @@ class VinylmaniaColors extends ThemeExtension<VinylmaniaColors> {
         t,
       )!,
       warningBorder: Color.lerp(warningBorder, other.warningBorder, t)!,
+      cardShadow: Color.lerp(cardShadow, other.cardShadow, t)!,
     );
   }
 }

@@ -79,11 +79,8 @@ void main() {
       const reason = 'no layout shift between skeleton and loaded';
       expect(loaded.topLeft, totals.topLeft, reason: reason);
       expect(loaded.width, totals.width, reason: reason);
-      // Compact wraps the totals into two runs here (test font), as the
-      // skeleton's ponytail note says; the single-run height must match.
-      if (layout == StatsExpandedLayout) {
-        expect(loaded.height, totals.height, reason: reason);
-      }
+      // Compact wraps the totals into two runs (test font); both must match.
+      expect(loaded.height, totals.height, reason: reason);
     });
 
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {

@@ -52,18 +52,11 @@ class FakeLibraryRepository extends ChangeNotifier
 
   @override
   Future<LibraryEntry> updateCopy(
-    String entryId, {
-    int? rating,
-    String? mediaCondition,
-    String? sleeveCondition,
-    String? notes,
-  }) async {
-    final entry = await onUpdateCopy(entryId, {
-      'rating': ?rating,
-      'mediaCondition': ?mediaCondition,
-      'sleeveCondition': ?sleeveCondition,
-      'notes': ?notes,
-    });
+    String entryId,
+    String field,
+    Object value,
+  ) async {
+    final entry = await onUpdateCopy(entryId, {field: value});
     notifyListeners();
     return entry;
   }

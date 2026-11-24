@@ -10,6 +10,7 @@ const _amber = Color(0xFFF59E0B);
 const _amber700 = Color(0xFFB45309);
 const _surfaceDark = Color(0xFF0B0B10);
 const _surfaceRaisedDark = Color(0xFF16161F);
+const _shadowSm = Color(0x0D000000); // black / 5 %, Tailwind `shadow-sm`
 
 /// Light theme: white shell, stone-50 cards, stone-500 borders.
 ThemeData buildLightTheme() => _build(
@@ -47,6 +48,7 @@ ThemeData buildLightTheme() => _build(
     warningSurface: Color(0xFFFFFBEB),
     onWarningSurface: Color(0xFF78350F),
     warningBorder: Color(0xFFFDE68A),
+    cardShadow: _shadowSm,
   ),
 );
 
@@ -88,6 +90,7 @@ ThemeData buildDarkTheme() => _build(
     warningSurface: Color(0xFF451A03),
     onWarningSurface: Color(0xFFFDE68A),
     warningBorder: Color(0xFF78350F),
+    cardShadow: _shadowSm,
   ),
 );
 

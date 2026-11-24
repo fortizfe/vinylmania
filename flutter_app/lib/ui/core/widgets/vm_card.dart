@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../theme/vinylmania_colors.dart';
 import 'pressable.dart';
 
 /// Web `Card`: raised surface, 1 px outline, 12 px corners. Presses at
@@ -30,9 +31,9 @@ class VmCard extends StatelessWidget {
         color: scheme.surfaceContainer,
         border: Border.all(color: scheme.outline),
         borderRadius: _radius,
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0D000000),
+            color: VinylmaniaColors.of(context).cardShadow,
             blurRadius: 2,
             offset: Offset(0, 1),
           ),

@@ -27,6 +27,7 @@ class LibraryViewModel extends ChangeNotifier {
   ApiException? _loadError;
   String? _announcement;
   bool _listening = false;
+  bool _disposed = false;
 
   /// Bumped by every new selection (and dispose): a response from an older
   /// generation is dropped, so an abandoned sort can't render or announce.
@@ -125,11 +126,12 @@ class LibraryViewModel extends ChangeNotifier {
         filters: _filters,
         refresh: true,
       );
-      if (generation != _generation) return;
-      _show(first.items, first.page, first.hasMore, first.totalItems);
+      // A newer selection or reload owns the list; only the button resets.
+      if (generation == _generation) {
+        _show(first.items, first.page, first.hasMore, first.totalItems);
+      }
     } on ApiException {
-      if (generation != _generation) return;
-      _refreshFailed = true;
+      if (generation == _generation) _refreshFailed = true;
     }
     _isRefreshing = false;
     notifyListeners();
@@ -199,7 +201,13 @@ class LibraryViewModel extends ChangeNotifier {
   static String _records(int n) => n == 1 ? 'record' : 'records';
 
   @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
   void dispose() {
+    _disposed = true;
     _generation++;
     if (_listening) libraryRepository.removeListener(_reloadSilently);
     super.dispose();

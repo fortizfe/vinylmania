@@ -188,6 +188,49 @@ void main() {
     expect(viewModel.entries, hasLength(2));
   });
 
+  test('a refresh overtaken by a sort change stops loading', () async {
+    await viewModel.load();
+    final slow = Completer<Paged<LibraryEntry>>();
+    repository.onList = (p, _, _, refresh) =>
+        refresh ? slow.future : Future.value(page(p, size: 1));
+
+    final refreshing = viewModel.refresh();
+    await viewModel.setSort(LibrarySort.albumDesc);
+    slow.complete(page(1, size: 5));
+    await refreshing;
+
+    expect(viewModel.isRefreshing, isFalse);
+    expect(viewModel.entries, hasLength(1));
+  });
+
+  test('a refresh overtaken by a silent reload stops loading', () async {
+    await viewModel.load();
+    final slow = Completer<Paged<LibraryEntry>>();
+    repository.onList = (p, _, _, refresh) =>
+        refresh ? slow.future : Future.value(page(p, size: 1));
+
+    final refreshing = viewModel.refresh();
+    await repository.remove('entry-1');
+    await pumpEventQueue();
+    slow.complete(page(1, size: 5));
+    await refreshing;
+
+    expect(viewModel.isRefreshing, isFalse);
+    expect(viewModel.entries, hasLength(1));
+  });
+
+  test('a refresh pending at dispose finishes quietly', () async {
+    final vm = LibraryViewModel(libraryRepository: repository);
+    await vm.load();
+    final slow = Completer<Paged<LibraryEntry>>();
+    repository.onList = (_, _, _, _) => slow.future;
+
+    final refreshing = vm.refresh();
+    vm.dispose();
+    slow.complete(page(1));
+    await refreshing;
+  });
+
   test('reloads the first page when the repository changes', () async {
     await viewModel.load();
     await repository.remove('entry-1');

@@ -48,32 +48,17 @@ void main() {
     expect(notifications, 1);
   });
 
-  test('updateCopy sends exactly the one given field and notifies', () async {
+  test('updateCopy sends the one given field and notifies', () async {
     final repository = repositoryReturning(libraryEntryJson);
 
-    await repository.updateCopy('entry-1', rating: 0);
-    await repository.updateCopy('entry-1', notes: '');
+    await repository.updateCopy('entry-1', 'rating', 0);
+    await repository.updateCopy('entry-1', 'notes', '');
 
     expect(requests.map((r) => jsonDecode(r.body)), [
       {'rating': 0},
       {'notes': ''},
     ]);
     expect(notifications, 2);
-  });
-
-  test('updateCopy rejects zero or several fields without a request', () {
-    final repository = repositoryReturning(libraryEntryJson);
-
-    expect(() => repository.updateCopy('entry-1'), throwsArgumentError);
-    expect(
-      () => repository.updateCopy(
-        'entry-1',
-        rating: 3,
-        mediaCondition: 'Mint (M)',
-      ),
-      throwsArgumentError,
-    );
-    expect(requests, isEmpty);
   });
 
   test('remove notifies listeners', () async {

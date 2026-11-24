@@ -20,6 +20,7 @@ class WishlistViewModel extends ChangeNotifier {
   bool _removeFailed = false;
   ApiException? _loadError;
   bool _listening = false;
+  bool _disposed = false;
   int _generation = 0;
 
   int get page => _page;
@@ -56,12 +57,13 @@ class WishlistViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       final result = await wantlistRepository.list(page: _page, refresh: true);
-      if (generation != _generation) return;
-      _entries = result.items;
-      _hasNext = result.hasMore;
+      // A newer page or reload owns the list; only the button resets.
+      if (generation == _generation) {
+        _entries = result.items;
+        _hasNext = result.hasMore;
+      }
     } on ApiException {
-      if (generation != _generation) return;
-      _refreshFailed = true;
+      if (generation == _generation) _refreshFailed = true;
     }
     _isRefreshing = false;
     notifyListeners();
@@ -126,7 +128,13 @@ class WishlistViewModel extends ChangeNotifier {
   }
 
   @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
   void dispose() {
+    _disposed = true;
     _generation++;
     if (_listening) wantlistRepository.removeListener(_reloadSilently);
     super.dispose();

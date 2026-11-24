@@ -99,24 +99,12 @@ class RecordDetailViewModel extends ChangeNotifier {
     _saveStatus[field] = SaveStatus.saving;
     notifyListeners();
     try {
-      final updated = await switch (field) {
-        CopyField.rating => libraryRepository.updateCopy(
-          entryId,
-          rating: value as int,
-        ),
-        CopyField.mediaCondition => libraryRepository.updateCopy(
-          entryId,
-          mediaCondition: value as String,
-        ),
-        CopyField.sleeveCondition => libraryRepository.updateCopy(
-          entryId,
-          sleeveCondition: value as String,
-        ),
-        CopyField.notes => libraryRepository.updateCopy(
-          entryId,
-          notes: value as String,
-        ),
-      };
+      // CopyField names are the PATCH body keys.
+      final updated = await libraryRepository.updateCopy(
+        entryId,
+        field.name,
+        value,
+      );
       copy = updated.discogs ?? copy;
       _saveStatus[field] = SaveStatus.saved;
     } on ApiException {

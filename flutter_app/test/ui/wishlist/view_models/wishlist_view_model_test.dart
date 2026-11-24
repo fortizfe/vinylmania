@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vinylmania/domain/api_exception.dart';
 import 'package:vinylmania/domain/models/paged.dart';
@@ -72,6 +74,56 @@ void main() {
     await viewModel.refresh();
     expect(viewModel.refreshFailed, isTrue);
     expect(viewModel.entries, [wantEntry]);
+  });
+
+  test('a refresh overtaken by a page change stops loading', () async {
+    await viewModel.load();
+    final slow = Completer<Paged<WantEntry>>();
+    repository.onList = (page, refresh) => refresh
+        ? slow.future
+        : Future.value(
+            Paged(items: [minimalWantEntry], page: page, hasMore: false),
+          );
+
+    final refreshing = viewModel.refresh();
+    await viewModel.nextPage();
+    slow.complete(Paged(items: [wantEntry], page: 1, hasMore: true));
+    await refreshing;
+
+    expect(viewModel.isRefreshing, isFalse);
+    expect(viewModel.page, 2);
+    expect(viewModel.entries, [minimalWantEntry]);
+  });
+
+  test('a refresh overtaken by a removal stops loading', () async {
+    await viewModel.load();
+    final slow = Completer<Paged<WantEntry>>();
+    repository.onList = (page, refresh) => refresh
+        ? slow.future
+        : Future.value(
+            Paged(items: [minimalWantEntry], page: page, hasMore: false),
+          );
+
+    final refreshing = viewModel.refresh();
+    await viewModel.remove(249504);
+    await pumpEventQueue();
+    slow.complete(Paged(items: [wantEntry], page: 1, hasMore: true));
+    await refreshing;
+
+    expect(viewModel.isRefreshing, isFalse);
+    expect(viewModel.entries, [minimalWantEntry]);
+  });
+
+  test('a refresh pending at dispose finishes quietly', () async {
+    final vm = WishlistViewModel(wantlistRepository: repository);
+    await vm.load();
+    final slow = Completer<Paged<WantEntry>>();
+    repository.onList = (_, _) => slow.future;
+
+    final refreshing = vm.refresh();
+    vm.dispose();
+    slow.complete(Paged(items: [wantEntry], page: 1, hasMore: false));
+    await refreshing;
   });
 
   test('remove deletes the release and reloads the page', () async {
