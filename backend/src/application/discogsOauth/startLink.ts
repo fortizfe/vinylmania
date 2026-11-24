@@ -1,9 +1,13 @@
 import { logger } from '../../config/logger';
+import type { OAuthClient } from '../../domain/auth/types';
 import { DiscogsOauthFlowError } from '../../domain/discogsOauth/discogsOauthErrors';
 import type { DiscogsConnectionPort } from '../../ports/discogsOauth/discogsConnectionPort';
 
 export function createStartLinkUseCase(deps: { discogsConnection: DiscogsConnectionPort }) {
-  return async function startLink(uid: string): Promise<{ authorizeUrl: string }> {
+  return async function startLink(
+    uid: string,
+    client: OAuthClient = 'web',
+  ): Promise<{ authorizeUrl: string }> {
     const existing = await deps.discogsConnection.getConnection(uid);
     if (existing) {
       throw new DiscogsOauthFlowError(
@@ -12,7 +16,7 @@ export function createStartLinkUseCase(deps: { discogsConnection: DiscogsConnect
       );
     }
 
-    const { authorizeUrl } = await deps.discogsConnection.createPendingRequest(uid);
+    const { authorizeUrl } = await deps.discogsConnection.createPendingRequest(uid, client);
     logger.info({ route: 'discogs-oauth', outcome: 'link_started', uid });
     return { authorizeUrl };
   };

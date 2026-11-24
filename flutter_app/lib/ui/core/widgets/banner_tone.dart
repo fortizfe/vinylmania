@@ -1,0 +1,1 @@
+enum BannerTone { success, warning }

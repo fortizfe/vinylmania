@@ -1,0 +1,1 @@
+enum ThemePreference { light, dark }

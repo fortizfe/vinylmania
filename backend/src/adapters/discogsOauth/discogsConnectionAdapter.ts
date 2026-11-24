@@ -1,6 +1,7 @@
 import { isAxiosError } from 'axios';
 
 import { getFirestoreDb } from '../../config/firebase-admin';
+import type { OAuthClient } from '../../domain/auth/types';
 import { DiscogsOauthFlowError } from '../../domain/discogsOauth/discogsOauthErrors';
 import type { DiscogsConnection, PendingOAuthRequest } from '../../domain/discogsOauth/types';
 import type { DiscogsConnectionPort } from '../../ports/discogsOauth/discogsConnectionPort';
@@ -37,8 +38,17 @@ function connectionDoc(uid: string) {
   return getFirestoreDb().collection(CONNECTIONS_COLLECTION).doc(uid);
 }
 
-export async function createPendingRequest(uid: string): Promise<{ authorizeUrl: string }> {
-  const callbackUrl = process.env.DISCOGS_OAUTH_CALLBACK_URL ?? '';
+export async function createPendingRequest(
+  uid: string,
+  client: OAuthClient,
+): Promise<{ authorizeUrl: string }> {
+  const callbackVar =
+    client === 'native' ? 'DISCOGS_OAUTH_NATIVE_CALLBACK_URL' : 'DISCOGS_OAUTH_CALLBACK_URL';
+  const callbackUrl = process.env[callbackVar];
+  if (!callbackUrl) {
+    // An empty oauth_callback makes Discogs fall back to the app's registered (web) callback.
+    throw new Error(`${callbackVar} is not configured`);
+  }
   const header = buildRequestTokenHeader(getCredentials(), callbackUrl);
 
   const response = await createOauthHttpClient().get('/oauth/request_token', {

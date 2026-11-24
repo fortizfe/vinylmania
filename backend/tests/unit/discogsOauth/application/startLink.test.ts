@@ -37,7 +37,16 @@ describe('startLink', () => {
     const result = await startLink('user-a');
 
     expect(result).toEqual({ authorizeUrl: 'https://discogs.example/authorize' });
-    expect(port.createPendingRequest).toHaveBeenCalledWith('user-a');
+    expect(port.createPendingRequest).toHaveBeenCalledWith('user-a', 'web');
+  });
+
+  it('forwards the native client to the pending request', async () => {
+    const port = fakeConnectionPort();
+    const startLink = createStartLinkUseCase({ discogsConnection: port });
+
+    await startLink('user-a', 'native');
+
+    expect(port.createPendingRequest).toHaveBeenCalledWith('user-a', 'native');
   });
 
   it('rejects with already_connected and never calls createPendingRequest when a connection exists', async () => {

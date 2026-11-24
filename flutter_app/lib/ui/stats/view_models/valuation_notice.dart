@@ -1,0 +1,1 @@
+enum ValuationNotice { sellerSettings, unavailable }

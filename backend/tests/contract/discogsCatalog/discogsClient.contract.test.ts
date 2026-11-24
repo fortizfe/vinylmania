@@ -337,6 +337,13 @@ describe('Discogs client contract: searchCatalog', () => {
 });
 
 describe('Discogs client contract: getRelease', () => {
+  it.each([0, -1, 1.5, Number.NaN])(
+    'rejects id %p with DiscogsNotFoundError without calling Discogs',
+    async (id) => {
+      await expect(getRelease({ type: 'vinylmania' }, id)).rejects.toBeInstanceOf(DiscogsNotFoundError);
+    },
+  );
+
   it('returns the mapped release for a valid ID', async () => {
     discogsScope()
       .get('/releases/1')

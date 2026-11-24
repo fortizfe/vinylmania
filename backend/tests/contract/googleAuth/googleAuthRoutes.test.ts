@@ -56,6 +56,9 @@ describe('Google login API contract', () => {
       expect(res.headers.location).toContain(GOOGLE_OAUTH_BASE_URL);
       expect(res.headers.location).toContain('client_id=contract-test-client-id');
       expect(res.headers.location).toMatch(/state=[^&]+/);
+      expect(new URL(res.headers.location).searchParams.get('redirect_uri')).toBe(
+        'http://localhost:5173/login/callback',
+      );
     });
   });
 

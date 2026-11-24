@@ -9,17 +9,32 @@ import { createCompleteLoginUseCase } from '../../../../src/application/googleAu
 
 const FRESH_PENDING: PendingGoogleLogin = {
   state: 'fresh-state',
+  client: 'web',
   createdAt: new Date(Date.now() - 60_000).toISOString(),
   expiresAt: new Date(Date.now() + 60_000).toISOString(),
 };
 
 const EXPIRED_PENDING: PendingGoogleLogin = {
   state: 'expired-state',
+  client: 'web',
   createdAt: new Date(Date.now() - 20 * 60_000).toISOString(),
   expiresAt: new Date(Date.now() - 5 * 60_000).toISOString(),
 };
 
-const IDENTITY = { sub: 'google-sub-1', email: 'jane@example.com', name: 'Jane Doe', picture: 'https://example.com/p.png' };
+// RFC 7636 Appendix B
+const VERIFIER = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
+const NATIVE_PENDING: PendingGoogleLogin = {
+  ...FRESH_PENDING,
+  client: 'native',
+  codeChallenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+};
+
+const IDENTITY = {
+  sub: 'google-sub-1',
+  email: 'jane@example.com',
+  name: 'Jane Doe',
+  picture: 'https://example.com/p.png',
+};
 const USER_PROFILE: UserProfile = {
   uid: 'uid-1',
   displayName: 'Jane Doe',
@@ -190,5 +205,77 @@ describe('completeLogin', () => {
       exchangeError,
     );
     expect(googleIdentity.deletePendingLogin).not.toHaveBeenCalled();
+  });
+
+  it('exchanges the code with the pending login client', async () => {
+    const { completeLogin, googleIdentity } = makeUseCase();
+
+    await completeLogin({ code: 'auth-code', state: 'fresh-state' });
+
+    expect(googleIdentity.exchangeCodeForIdentity).toHaveBeenCalledWith(
+      'auth-code',
+      'web',
+      undefined,
+    );
+  });
+
+  it('ignores a codeVerifier on a web pending login (not forwarded to Google)', async () => {
+    const { completeLogin, googleIdentity } = makeUseCase();
+
+    await expect(
+      completeLogin({
+        code: 'auth-code',
+        state: 'fresh-state',
+        codeVerifier: 'whatever',
+      }),
+    ).resolves.toEqual({ sessionToken: 'session-1', user: USER_PROFILE });
+    expect(googleIdentity.exchangeCodeForIdentity).toHaveBeenCalledWith(
+      'auth-code',
+      'web',
+      undefined,
+    );
+  });
+
+  describe('native pending login (PKCE)', () => {
+    function nativeUseCase() {
+      return makeUseCase({
+        googleIdentity: fakeGoogleIdentity({
+          getPendingLogin: jest.fn().mockResolvedValue(NATIVE_PENDING),
+        }),
+      });
+    }
+
+    it('completes with a matching verifier and exchanges with the native client and verifier', async () => {
+      const { completeLogin, googleIdentity } = nativeUseCase();
+
+      const result = await completeLogin({
+        code: 'auth-code',
+        state: 'fresh-state',
+        codeVerifier: VERIFIER,
+      });
+
+      expect(result).toEqual({ sessionToken: 'session-1', user: USER_PROFILE });
+      expect(googleIdentity.exchangeCodeForIdentity).toHaveBeenCalledWith(
+        'auth-code',
+        'native',
+        VERIFIER,
+      );
+    });
+
+    it.each([
+      ['missing', undefined],
+      ['wrong', `${VERIFIER.slice(0, -1)}A`],
+    ])(
+      'rejects invalid_state with a %s verifier and keeps the pending login',
+      async (_label, codeVerifier) => {
+        const { completeLogin, googleIdentity } = nativeUseCase();
+
+        await expect(
+          completeLogin({ code: 'auth-code', state: 'fresh-state', codeVerifier }),
+        ).rejects.toMatchObject({ code: 'invalid_state' });
+        expect(googleIdentity.exchangeCodeForIdentity).not.toHaveBeenCalled();
+        expect(googleIdentity.deletePendingLogin).not.toHaveBeenCalled();
+      },
+    );
   });
 });

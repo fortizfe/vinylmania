@@ -1,5 +1,6 @@
 import { logger } from '../../config/logger';
 import { GoogleAuthFlowError } from '../../domain/googleAuth/googleAuthErrors';
+import { matchesPkceS256 } from '../../domain/googleAuth/pkceS256';
 import type { VerifiedIdentity, UserProfile } from '../../domain/users/types';
 import type { IdentityResolverPort } from '../../ports/auth/identityResolverPort';
 import type { SessionStorePort } from '../../ports/auth/sessionStorePort';
@@ -9,6 +10,7 @@ interface CompleteLoginInput {
   state: string;
   code?: string;
   denied?: boolean;
+  codeVerifier?: string;
 }
 
 interface CompleteLoginResult {
@@ -39,7 +41,34 @@ export function createCompleteLoginUseCase(deps: {
       throw new GoogleAuthFlowError('expired_state', 'This sign-in attempt expired. Please try signing in again.');
     }
 
-    const identity = await deps.googleIdentity.exchangeCodeForIdentity(input.code!);
+    // Native logins are bound to the app instance that started them (PKCE S256). Google enforces
+    // the same challenge on the code exchange; this local check fails fast with `invalid_state`
+    // (Google's `invalid_grant` can't be told apart from an expired/reused code) and without
+    // spending the code. The pending login is kept on mismatch so the real app can still complete.
+    if (
+      pending.client === 'native' &&
+      !(
+        input.codeVerifier &&
+        pending.codeChallenge &&
+        matchesPkceS256(input.codeVerifier, pending.codeChallenge)
+      )
+    ) {
+      logger.warn({
+        route: 'google-auth',
+        outcome: 'login_failed',
+        message: 'PKCE verifier mismatch',
+      });
+      throw new GoogleAuthFlowError(
+        'invalid_state',
+        'This sign-in attempt is not valid. Please try signing in again.',
+      );
+    }
+
+    const identity = await deps.googleIdentity.exchangeCodeForIdentity(
+      input.code!,
+      pending.client,
+      pending.client === 'native' ? input.codeVerifier : undefined,
+    );
     const { uid } = await deps.identityResolver.resolveOrCreateUser({
       email: identity.email,
       name: identity.name,
