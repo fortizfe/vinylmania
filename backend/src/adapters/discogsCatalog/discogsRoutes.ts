@@ -200,12 +200,26 @@ discogsRouter.get('/search', standardRateLimit, requireAuth, async (req: Request
   }
 });
 
+// Guards every `:discogsId` before it reaches a Discogs URL (SSRF, CodeQL js/request-forgery).
+const DISCOGS_ID_PATTERN = /^[1-9]\d{0,11}$/;
+
+/** The `:discogsId` as a number, or undefined after answering 400 when it isn't a positive integer. */
+function parseDiscogsId(req: Request, res: Response): number | undefined {
+  const raw = req.params.discogsId;
+  if (!DISCOGS_ID_PATTERN.test(raw)) {
+    res.status(400).json({ error: 'invalid_request', message: 'discogsId must be a positive integer.' });
+    return undefined;
+  }
+  return Number(raw);
+}
+
 discogsRouter.get(
   '/releases/:discogsId',
   standardRateLimit,
   requireAuth,
   async (req: Request, res: Response) => {
-    const discogsId = Number(req.params.discogsId);
+    const discogsId = parseDiscogsId(req, res);
+    if (discogsId === undefined) return;
 
     let credential: CatalogCredential | undefined;
     try {
@@ -279,7 +293,8 @@ discogsRouter.get(
   standardRateLimit,
   requireAuth,
   async (req: Request, res: Response) => {
-    const discogsId = Number(req.params.discogsId);
+    const discogsId = parseDiscogsId(req, res);
+    if (discogsId === undefined) return;
 
     let credential: CatalogCredential | undefined;
     try {
@@ -355,7 +370,8 @@ discogsRouter.get(
   standardRateLimit,
   requireAuth,
   async (req: Request, res: Response) => {
-    const discogsId = Number(req.params.discogsId);
+    const discogsId = parseDiscogsId(req, res);
+    if (discogsId === undefined) return;
     const page = Math.max(1, Number(req.query.page) || 1);
     const perPage = Math.max(
       1,

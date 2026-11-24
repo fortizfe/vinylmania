@@ -336,3 +336,24 @@ describe('Discogs master versions API contract: GET /api/discogs/masters/:discog
     expect(res.body.error).toBe('master_not_found');
   });
 });
+
+describe('Discogs master routes: :discogsId guard', () => {
+  afterEach(async () => {
+    await clearEmulatorUsers();
+    await clearEmulatorFirestore();
+  });
+
+  it.each([
+    ['/api/discogs/masters/abc', 'abc'],
+    ['/api/discogs/masters/0', '0'],
+    ['/api/discogs/masters/1e3/versions', '1e3'],
+    ['/api/discogs/masters/-5/versions', '-5'],
+  ])('returns 400 invalid_request without calling Discogs for %s', async (path, id) => {
+    const { sessionToken } = await createTestSession(`master-bad-id-${id}`);
+
+    const res = await request(app).get(path).set('Authorization', `Bearer ${sessionToken}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('invalid_request');
+  });
+});

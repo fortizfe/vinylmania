@@ -213,4 +213,17 @@ describe('Discogs release preview API contract: GET /api/discogs/releases/:disco
     expect(res.status).toBe(502);
     expect(res.body.error).toBe('catalog_unavailable');
   });
+  it.each(['abc', '1e3', '-5', '0', '12.5'])(
+    'returns 400 invalid_request without calling Discogs for a non-numeric id (%s)',
+    async (id) => {
+      const { sessionToken } = await createTestSession(`preview-bad-id-${id}`);
+
+      const res = await request(app)
+        .get(`/api/discogs/releases/${id}`)
+        .set('Authorization', `Bearer ${sessionToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('invalid_request');
+    },
+  );
 });
