@@ -12,6 +12,7 @@ const REQUEST_TOKEN_BODY =
   'oauth_token=req-tok&oauth_token_secret=req-sec&oauth_callback_confirmed=true';
 const ACCESS_TOKEN_BODY = 'oauth_token=acc-tok&oauth_token_secret=acc-sec';
 const IDENTITY_BODY = { id: 99, username: 'discogs-jane' };
+const NATIVE_CALLBACK_URL = 'https://backend.test/api/discogs/oauth/native/callback';
 const URLENCODED = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
 async function seedConnection(uid: string): Promise<void> {
@@ -34,6 +35,7 @@ describe('Discogs OAuth API contract', () => {
     process.env.DISCOGS_CONSUMER_SECRET = 'contract-test-secret';
     process.env.DISCOGS_OAUTH_CALLBACK_URL =
       'http://localhost:5173/app/profile/discogs/callback';
+    process.env.DISCOGS_OAUTH_NATIVE_CALLBACK_URL = NATIVE_CALLBACK_URL;
   });
 
   afterEach(async () => {
@@ -57,6 +59,37 @@ describe('Discogs OAuth API contract', () => {
       expect(res.body.authorizeUrl).toContain('oauth_token=req-tok');
     });
 
+    it('sends the native oauth_callback for {client: "native"}', async () => {
+      const { sessionToken } = await createTestSession('oauth-request-native');
+      const scope = discogsScope()
+        .get('/oauth/request_token')
+        .matchHeader('authorization', (value: string) =>
+          value.includes(`oauth_callback="${NATIVE_CALLBACK_URL}"`),
+        )
+        .reply(200, REQUEST_TOKEN_BODY, URLENCODED);
+
+      const res = await request(app)
+        .post('/api/discogs/oauth/request')
+        .set('Authorization', `Bearer ${sessionToken}`)
+        .send({ client: 'native' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.authorizeUrl).toContain('oauth_token=req-tok');
+      expect(scope.isDone()).toBe(true);
+    });
+
+    it('returns 400 validation_error for an unknown client', async () => {
+      const { sessionToken } = await createTestSession('oauth-request-badclient');
+
+      const res = await request(app)
+        .post('/api/discogs/oauth/request')
+        .set('Authorization', `Bearer ${sessionToken}`)
+        .send({ client: 'desktop' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('validation_error');
+    });
+
     it('returns 401 without a bearer token', async () => {
       const res = await request(app).post('/api/discogs/oauth/request');
 
@@ -74,6 +107,35 @@ describe('Discogs OAuth API contract', () => {
 
       expect(res.status).toBe(409);
       expect(res.body.error).toBe('already_connected');
+    });
+  });
+
+  describe('GET /api/discogs/oauth/native/callback', () => {
+    it('relays only oauth_token, oauth_verifier and denied to the app callback, without auth', async () => {
+      const res = await request(app)
+        .get('/api/discogs/oauth/native/callback')
+        .query({ oauth_token: 'req-tok', oauth_verifier: 'the-verifier', foo: 'bar' });
+
+      expect(res.status).toBe(302);
+      const location = new URL(res.headers.location);
+      expect(`${location.protocol}//${location.host}${location.pathname}`).toBe(
+        'vinylmania://discogs/callback',
+      );
+      expect(Object.fromEntries(location.searchParams)).toEqual({
+        oauth_token: 'req-tok',
+        oauth_verifier: 'the-verifier',
+      });
+    });
+
+    it('relays denied', async () => {
+      const res = await request(app)
+        .get('/api/discogs/oauth/native/callback')
+        .query({ denied: 'req-tok' });
+
+      expect(res.status).toBe(302);
+      expect(Object.fromEntries(new URL(res.headers.location).searchParams)).toEqual({
+        denied: 'req-tok',
+      });
     });
   });
 

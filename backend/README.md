@@ -18,11 +18,13 @@ Configuration is loaded from `backend/.env` (gitignored — never commit real va
 | `DISCOGS_CONSUMER_KEY` | yes | Discogs OAuth 1.0a consumer key (account linking) |
 | `DISCOGS_CONSUMER_SECRET` | yes | Discogs OAuth 1.0a consumer secret (account linking) |
 | `DISCOGS_OAUTH_CALLBACK_URL` | yes | Absolute URL of the frontend callback route, e.g. `http://localhost:5173/app/profile/discogs/callback` |
+| `DISCOGS_OAUTH_NATIVE_CALLBACK_URL` | native app only | Backend relay for the Flutter app's Discogs link, `https://<backend>/api/discogs/oauth/native/callback` (it redirects to `vinylmania://discogs/callback`). No Discogs console change: `oauth_callback` is sent per request |
 | `DISCOGS_OAUTH_BASE_URL` | test only | Overrides `https://api.discogs.com` for OAuth token/identity endpoints (e2e stub) |
 | `DISCOGS_AUTHORIZE_BASE_URL` | test only | Overrides `https://www.discogs.com/oauth/authorize` (e2e stub) |
 | `GOOGLE_OAUTH_CLIENT_ID` | yes | Google OAuth 2.0 client id (login) |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | yes | Google OAuth 2.0 client secret (login) |
 | `GOOGLE_OAUTH_CALLBACK_URL` | yes | Absolute URL of the frontend login callback route, e.g. `http://localhost:5173/login/callback` |
+| `GOOGLE_OAUTH_NATIVE_CALLBACK_URL` | native app only | Backend relay for the Flutter app's Google sign-in, `https://<backend>/api/auth/google/native/callback` (it redirects to `vinylmania://auth/callback`). **Also add this URL as an authorized redirect URI on the existing Google web OAuth client**, or native sign-in fails with `redirect_uri_mismatch` |
 | `GOOGLE_OAUTH_BASE_URL` | test only | Overrides `https://accounts.google.com` for the authorize endpoint (e2e stub) |
 | `GOOGLE_TOKEN_BASE_URL` | test only | Overrides `https://oauth2.googleapis.com` for the token endpoint (e2e stub) |
 | `GOOGLE_USERINFO_BASE_URL` | test only | Overrides `https://openidconnect.googleapis.com` for the userinfo endpoint (e2e stub) |

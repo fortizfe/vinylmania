@@ -50,6 +50,12 @@ const ALREADY_CONNECTED = {
   message: 'Your Discogs account is already linked. Disconnect it first to link again.',
 } as const;
 
+const APP_CALLBACK_URL = 'vinylmania://discogs/callback';
+const RELAYED_PARAMS = ['oauth_token', 'oauth_verifier', 'denied'] as const;
+
+// Optional body: missing, {} or {client:'web'} keep the web flow.
+const requestBodySchema = z.object({ client: z.enum(['web', 'native']).default('web') });
+
 const completeBodySchema = z.object({
   oauthToken: z.string().min(1),
   oauthVerifier: z.string().min(1),
@@ -124,8 +130,18 @@ function handleFailure(
 
 discogsOauthRouter.post('/request', strictRateLimit, requireAuth, async (req: Request, res: Response) => {
   const uid = req.auth!.uid;
+  const parsed = requestBodySchema.safeParse(req.body ?? {});
+
+  if (!parsed.success) {
+    res.status(400).json({
+      error: 'validation_error',
+      message: 'The link request is malformed.',
+    });
+    return;
+  }
+
   try {
-    const { authorizeUrl } = await startLink(uid);
+    const { authorizeUrl } = await startLink(uid, parsed.data.client);
     res.status(200).json({ authorizeUrl });
   } catch (err) {
     handleFailure(res, '/api/discogs/oauth/request', uid, err);
@@ -173,4 +189,16 @@ discogsOauthRouter.get('/status', standardRateLimit, requireAuth, async (req: Re
   } catch (err) {
     handleFailure(res, '/api/discogs/oauth/status', uid, err);
   }
+});
+
+// Public on purpose (no requireAuth): Discogs sends the system browser here for
+// native links. Relays only the whitelisted params to the fixed app URL; the app
+// then calls /complete with its session, which is checked against the pending uid.
+discogsOauthRouter.get('/native/callback', strictRateLimit, (req: Request, res: Response) => {
+  const params = new URLSearchParams();
+  for (const key of RELAYED_PARAMS) {
+    const value = req.query[key];
+    if (typeof value === 'string') params.set(key, value);
+  }
+  res.redirect(302, `${APP_CALLBACK_URL}?${params}`);
 });

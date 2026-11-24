@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import axios from 'axios';
 
 import { getFirestoreDb } from '../../config/firebase-admin';
+import type { OAuthClient } from '../../domain/auth/types';
 import { GoogleAuthFlowError } from '../../domain/googleAuth/googleAuthErrors';
 import type { GoogleIdentity, PendingGoogleLogin } from '../../domain/googleAuth/types';
 import type { GoogleIdentityPort } from '../../ports/googleAuth/googleIdentityPort';
@@ -22,13 +23,19 @@ function getUserinfoBaseUrl(): string {
   return process.env.GOOGLE_USERINFO_BASE_URL || 'https://openidconnect.googleapis.com';
 }
 
-function getClientCredentials(): { clientId: string; clientSecret: string; callbackUrl: string } {
+function getClientCredentials(client: OAuthClient): {
+  clientId: string;
+  clientSecret: string;
+  callbackUrl: string;
+} {
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-  const callbackUrl = process.env.GOOGLE_OAUTH_CALLBACK_URL;
+  const callbackVar =
+    client === 'native' ? 'GOOGLE_OAUTH_NATIVE_CALLBACK_URL' : 'GOOGLE_OAUTH_CALLBACK_URL';
+  const callbackUrl = process.env[callbackVar];
   if (!clientId || !clientSecret || !callbackUrl) {
     throw new Error(
-      'GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET / GOOGLE_OAUTH_CALLBACK_URL are not configured',
+      `GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET / ${callbackVar} are not configured`,
     );
   }
   return { clientId, clientSecret, callbackUrl };
@@ -38,8 +45,8 @@ function pendingDoc(state: string) {
   return getFirestoreDb().collection(PENDING_COLLECTION).doc(state);
 }
 
-function getAuthorizeUrl(state: string): string {
-  const { clientId, callbackUrl } = getClientCredentials();
+function getAuthorizeUrl(state: string, client: OAuthClient): string {
+  const { clientId, callbackUrl } = getClientCredentials(client);
   const url = new URL('/o/oauth2/v2/auth', getOauthBaseUrl());
   url.searchParams.set('client_id', clientId);
   url.searchParams.set('redirect_uri', callbackUrl);
@@ -49,8 +56,8 @@ function getAuthorizeUrl(state: string): string {
   return url.toString();
 }
 
-async function exchangeCodeForIdentity(code: string): Promise<GoogleIdentity> {
-  const { clientId, clientSecret, callbackUrl } = getClientCredentials();
+async function exchangeCodeForIdentity(code: string, client: OAuthClient): Promise<GoogleIdentity> {
+  const { clientId, clientSecret, callbackUrl } = getClientCredentials(client);
 
   let accessToken: string;
   try {
@@ -93,10 +100,15 @@ async function exchangeCodeForIdentity(code: string): Promise<GoogleIdentity> {
   }
 }
 
-async function createPendingLogin(): Promise<{ state: string }> {
+async function createPendingLogin(input: {
+  client: OAuthClient;
+  codeChallenge?: string;
+}): Promise<{ state: string }> {
   const state = randomUUID();
   const now = new Date();
   await pendingDoc(state).set({
+    client: input.client,
+    ...(input.codeChallenge ? { codeChallenge: input.codeChallenge } : {}),
     createdAt: now,
     expiresAt: new Date(now.getTime() + PENDING_TTL_MS),
   });
@@ -111,6 +123,8 @@ async function getPendingLogin(state: string): Promise<PendingGoogleLogin | null
   const data = snapshot.data()!;
   return {
     state,
+    client: data.client ?? 'web', // docs written before feature 070 have no client
+    ...(data.codeChallenge ? { codeChallenge: data.codeChallenge } : {}),
     createdAt: data.createdAt.toDate().toISOString(),
     expiresAt: data.expiresAt.toDate().toISOString(),
   };

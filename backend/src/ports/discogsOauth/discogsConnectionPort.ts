@@ -1,15 +1,16 @@
+import type { OAuthClient } from '../../domain/auth/types';
 import type { DiscogsConnection, PendingOAuthRequest } from '../../domain/discogsOauth/types';
 
 export interface DiscogsConnectionPort {
   /**
    * Performs the OAuth request-token handshake call and persists the
    * resulting pending request. Returns the URL the user is sent to on
-   * Discogs to authorize the link. Reads `DISCOGS_OAUTH_CALLBACK_URL` from
-   * `process.env` internally — adapter-owned configuration, not a
+   * Discogs to authorize the link. Reads `DISCOGS_OAUTH_CALLBACK_URL` (web) or
+   * `DISCOGS_OAUTH_NATIVE_CALLBACK_URL` (native) from `process.env` internally — adapter-owned configuration, not a
    * caller-supplied argument, mirroring `getCredentials()`'s existing
    * handling of `DISCOGS_CONSUMER_KEY`/`DISCOGS_CONSUMER_SECRET`.
    */
-  createPendingRequest(uid: string): Promise<{ authorizeUrl: string }>;
+  createPendingRequest(uid: string, client: OAuthClient): Promise<{ authorizeUrl: string }>;
 
   /** Returns null when the token is unknown or already consumed. */
   getPendingRequest(oauthToken: string): Promise<PendingOAuthRequest | null>;

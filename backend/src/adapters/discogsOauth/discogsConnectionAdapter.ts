@@ -1,6 +1,7 @@
 import { isAxiosError } from 'axios';
 
 import { getFirestoreDb } from '../../config/firebase-admin';
+import type { OAuthClient } from '../../domain/auth/types';
 import { DiscogsOauthFlowError } from '../../domain/discogsOauth/discogsOauthErrors';
 import type { DiscogsConnection, PendingOAuthRequest } from '../../domain/discogsOauth/types';
 import type { DiscogsConnectionPort } from '../../ports/discogsOauth/discogsConnectionPort';
@@ -37,8 +38,14 @@ function connectionDoc(uid: string) {
   return getFirestoreDb().collection(CONNECTIONS_COLLECTION).doc(uid);
 }
 
-export async function createPendingRequest(uid: string): Promise<{ authorizeUrl: string }> {
-  const callbackUrl = process.env.DISCOGS_OAUTH_CALLBACK_URL ?? '';
+export async function createPendingRequest(
+  uid: string,
+  client: OAuthClient,
+): Promise<{ authorizeUrl: string }> {
+  const callbackUrl =
+    (client === 'native'
+      ? process.env.DISCOGS_OAUTH_NATIVE_CALLBACK_URL
+      : process.env.DISCOGS_OAUTH_CALLBACK_URL) ?? '';
   const header = buildRequestTokenHeader(getCredentials(), callbackUrl);
 
   const response = await createOauthHttpClient().get('/oauth/request_token', {

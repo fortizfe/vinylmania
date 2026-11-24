@@ -19,12 +19,25 @@ describe('startLogin', () => {
     const port = fakeGoogleIdentity();
     const startLogin = createStartLoginUseCase({ googleIdentity: port });
 
-    const result = await startLogin();
+    const result = await startLogin({ client: 'web' });
 
-    expect(port.createPendingLogin).toHaveBeenCalledTimes(1);
-    expect(port.getAuthorizeUrl).toHaveBeenCalledWith('abc');
+    expect(port.createPendingLogin).toHaveBeenCalledWith({ client: 'web' });
+    expect(port.getAuthorizeUrl).toHaveBeenCalledWith('abc', 'web');
     expect(result).toEqual({
       authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth?state=abc',
     });
+  });
+
+  it('stores the native client and its PKCE challenge, and builds the native authorize URL', async () => {
+    const port = fakeGoogleIdentity();
+    const startLogin = createStartLoginUseCase({ googleIdentity: port });
+
+    await startLogin({ client: 'native', codeChallenge: 'the-challenge' });
+
+    expect(port.createPendingLogin).toHaveBeenCalledWith({
+      client: 'native',
+      codeChallenge: 'the-challenge',
+    });
+    expect(port.getAuthorizeUrl).toHaveBeenCalledWith('abc', 'native');
   });
 });

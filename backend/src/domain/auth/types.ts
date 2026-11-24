@@ -7,3 +7,6 @@ export interface AuthenticatedUser {
   name?: string;
   picture?: string;
 }
+
+/** Which OAuth client started a sign-in or Discogs link: the web SPA or the native app. */
+export type OAuthClient = 'web' | 'native';
