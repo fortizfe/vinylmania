@@ -105,12 +105,12 @@ skills before building or restyling UI.
   `git checkout main && git pull --ff-only && git merge --no-ff <branch> -m "Merge pull request #N from fortizfe/<branch>"
   && git push` (check `git log -1 --format=%ae` first). GitHub marks the PR as merged on its own.
 
-## Agents & skills (`.claude/`)
+## Agents & skills (user-level in `~/.claude/agents/` and `~/.claude/skills/`, not in the repo)
 
 - Agents: `product-owner-agent` (HU in `.hu/`) → `architect-agent` (`specs/`) → `backend-agent` / `frontend-agent`
   / `flutter-agent` (Dart in `flutter_app/`) / `flutter-platform-agent` (native folders, builds, CI, signing) / `qa-agent`
   → `reviewer-agent` (posts PR review). `docs-agent` for end-user docs.
-- Project skills: `hexagonal-architecture` (backend placement + dependency check), `frontend-design` (design system +
+- Skills (installed per user in `~/.claude/skills/`): `hexagonal-architecture` (backend placement + dependency check), `frontend-design` (design system +
   Apple skills + UI merge gates), `test-first` (test layer, helpers, local gotchas), `code-review-ponytail`
   (ponytail + correctness review of a diff/PR), `user-story` (Jira → `.hu/`), `flutter-architecture`, `flutter-design`, `flutter-platforms`.
 
