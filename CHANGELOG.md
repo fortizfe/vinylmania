@@ -17,6 +17,21 @@ Conventional Commits (see the project constitution's Development Workflow).
 Entries in this section are added automatically by CI, newest first, above
 the historical section below.
 
+## [1.15.0] - 2026-11-24
+
+### Added
+
+- native app with feature parity with the web app ([8d43230])
+- native OAuth sign-in and Discogs linking for the Flutter app ([27c6f3e])
+
+### Fixed
+
+- bind native Google sign-in to PKCE at Google ([d7bf280])
+- apply PR review — refresh flag, single-field copy update, theme shadow, stats skeleton ([50aedfa])
+- validate the release id where every caller reaches the Discogs URL ([c2893f2])
+- drop articles whose link is not http(s) ([00abc97])
+- reject non-numeric :discogsId before building Discogs URLs ([efa27f1])
+
 ## [1.14.0] - 2026-09-27
 
 ### Added
