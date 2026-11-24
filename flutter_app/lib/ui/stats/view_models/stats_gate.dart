@@ -1,0 +1,1 @@
+enum StatsGate { notLinked, relink }
